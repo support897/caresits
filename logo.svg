@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240">
+  <rect width="240" height="240" rx="52" fill="#F1DDBF"/>
+  <!-- REDUCTION for 32px and under: figures enlarged + merged into two clean
+       silhouettes so big + small survives; at 16 the heart carries (flagged). -->
+  <path d="M120 212 C 58 170 36 132 36 96 C 36 66 58 50 82 50 C 99 50 113 60 120 74 C 127 60 141 50 158 50 C 182 50 204 66 204 96 C 204 132 182 170 120 212 Z" fill="#E6AD9E"/>
+  <g fill="#F3DDBB">
+    <circle cx="90" cy="82" r="9"/>
+    <circle cx="90" cy="102" r="19"/>
+    <path d="M90 118 L58 128 L54 150 L74 138 L70 182 L114 182 L110 138 L140 148 L146 130 L112 118 Z"/>
+    <circle cx="158" cy="110" r="16"/>
+    <path d="M158 124 L140 130 L146 148 L150 140 L148 178 L172 178 L170 140 L182 148 L188 132 L168 124 Z"/>
+  </g>
+</svg>
