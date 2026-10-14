@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Caresits · Find care. Share the day.</title>
+<meta name="description" content="Caresits helps families and carers find each other, see why they match, and share each day as a story. Free. No card.">
+<meta property="og:title" content="Caresits · Find care. Share the day.">
+<meta property="og:description" content="Find a nanny, au pair or babysitter you can trust, and share each day as a story.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="store/listing/feature-graphic-1024x500.png">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+@font-face { font-family: "Newsreader"; src: url("fonts/Newsreader.ttf") format("truetype"); font-weight: 400 800; font-display: swap; }
+@font-face { font-family: "Atkinson Hyperlegible"; src: url("fonts/Atkinson-Regular.ttf") format("truetype"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Atkinson Hyperlegible"; src: url("fonts/Atkinson-Bold.ttf") format("truetype"); font-weight: 700; font-display: swap; }
+:root { --bg:#FDF8F0; --panel:#FFFFFF; --ink:#1E4D44; --muted:#57736A; --line:#EAE0CC; --teal:#9CC5B5; --butter:#F6D67C; --soft:#E4EFE8; --blush:#F6CBD3; --lav:#CFC3E8; --sky:#B9D6EC; --lemon:#FBE7A1; }
+* { margin:0; box-sizing:border-box; }
+body { font-family:"Atkinson Hyperlegible", -apple-system, "Segoe UI", sans-serif; background:var(--bg); color:var(--ink); line-height:1.5; }
+h1, h2, h3, .brand { font-family:"Newsreader", Georgia, serif; }
+.wrap { max-width:1060px; margin:0 auto; padding:0 20px; }
+header.top { position:sticky; top:0; background:var(--bg); border-bottom:1px solid var(--line); z-index:10; }
+.top .wrap { display:flex; align-items:center; gap:12px; padding-top:12px; padding-bottom:12px; }
+.top img { width:36px; height:36px; border-radius:9px; }
+.brand { font-size:24px; font-weight:700; }
+.top .spacer { flex:1; }
+.btn { display:inline-block; background:var(--ink); color:var(--bg); font-weight:700; border-radius:999px; padding:13px 26px; text-decoration:none; font-size:17px; border:none; cursor:pointer; min-height:44px; }
+.btn.light { background:var(--soft); color:var(--ink); }
+.hero { padding:52px 0 30px; }
+.hero .wrap { display:grid; grid-template-columns:1.05fr .95fr; gap:36px; align-items:center; }
+.hero h1 { font-size:52px; line-height:1.05; font-weight:700; }
+.hero p.lede { font-size:20px; color:var(--muted); margin:18px 0 24px; max-width:30em; }
+.freeline { margin-top:12px; color:var(--muted); font-size:15px; }
+.heroShot { width:100%; max-width:400px; justify-self:center; border-radius:26px; box-shadow:0 18px 44px rgba(30,77,68,.16); }
+section { padding:38px 0; }
+h2 { font-size:34px; margin-bottom:12px; }
+.sub { color:var(--muted); font-size:18px; max-width:38em; }
+.grid3 { display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; margin-top:22px; }
+.grid2 { display:grid; grid-template-columns:repeat(2, 1fr); gap:16px; margin-top:22px; }
+.card { background:var(--panel); border:1px solid var(--line); border-radius:20px; padding:22px; }
+.card h3 { font-size:21px; margin-bottom:8px; }
+.card p { color:var(--muted); }
+.stepnum { width:38px; height:38px; border-radius:50%; background:var(--teal); color:var(--ink); font-weight:700; display:flex; align-items:center; justify-content:center; margin-bottom:12px; font-size:18px; }
+.tintB { background:#FBF1F2; } .tintL { background:#F6F2FB; } .tintS { background:#EFF5FA; } .tintY { background:#FDF6DC; }
+.shotrow { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:22px; align-items:start; }
+.shotrow img { width:100%; border-radius:22px; box-shadow:0 12px 30px rgba(30,77,68,.13); }
+.price { text-align:center; }
+.price .big { font-family:"Newsreader", Georgia, serif; font-size:44px; font-weight:700; }
+details { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:16px 20px; margin-top:10px; }
+summary { font-weight:700; cursor:pointer; font-size:17px; }
+details p { color:var(--muted); margin-top:8px; }
+footer { padding:34px 0 90px; color:var(--muted); font-size:15px; }
+footer a { color:var(--ink); }
+.stickybar { position:fixed; left:0; right:0; bottom:0; background:var(--panel); border-top:1px solid var(--line); padding:10px 16px; display:none; }
+.stickybar .btn { width:100%; text-align:center; }
+@media (max-width: 820px) {
+  .hero .wrap { grid-template-columns:1fr; }
+  .hero h1 { font-size:40px; }
+  .grid3, .grid2, .shotrow { grid-template-columns:1fr; }
+  .stickybar { display:block; }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <img src="icon.svg" alt="">
+    <span class="brand">Caresits</span>
+    <span class="spacer"></span>
+    <a class="btn" href="index.html">Open the app</a>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="wrap">
+    <div>
+      <h1>Find care your child will love</h1>
+      <p class="lede">Caresits matches families with nannies, au pairs and babysitters by how a day should run, not just by a photo and a suburb.</p>
+      <a class="btn" href="index.html">Open the app</a>
+      <div class="freeline">Free · No card · Works on your phone</div>
+    </div>
+    <img class="heroShot" src="store/listing/screenshots/framed-play-1-find.png" alt="The Caresits Find screen showing a carer and the reasons for the match">
+  </div>
+</div>
+
+<section>
+  <div class="wrap">
+    <h2>Finding care is hard to judge</h2>
+    <p class="sub">A short profile tells you almost nothing. You cannot see how a carer runs a day, what their checks really prove, or whether your pay and hours are written down anywhere. Caresits puts all of that in one calm place, for families and for carers.</p>
+    <div class="grid3">
+      <div class="card"><h3>See why you match</h3><p>Both sides answer the same questions about days, food, learning and routines. Every match shows its reasons in plain words.</p></div>
+      <div class="card"><h3>See the check, and its limit</h3><p>Checks sit beside the words that prove them. Where a free official register exists, Caresits points you to it. The app never sells a check.</p></div>
+      <div class="card"><h3>Share the day as a story</h3><p>Meals, naps, outings and photo moments land in one gentle timeline, like a story in a calendar that both sides can read.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Three steps to cared for</h2>
+    <div class="grid3">
+      <div class="card"><div class="stepnum">1</div><h3>Say what your days need</h3><p>Pick your country and your role. Families answer as a family. Carers answer as themselves. It takes a few calm minutes.</p></div>
+      <div class="card"><div class="stepnum">2</div><h3>Meet your matches</h3><p>See who fits and why, look at checks with their proof, shortlist the ones you like, and say hello inside the app.</p></div>
+      <div class="card"><div class="stepnum">3</div><h3>Share every day</h3><p>Rosters, timesheets, emergency details and the Day Story keep the whole week in one place after you hire.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Made for both sides of the door</h2>
+    <div class="grid2">
+      <div class="card tintB"><h3>Seven kinds of care</h3><p>Babysitter, nanny, au pair and demi pair, mothers help, newborn and overnight care, governess, and family day care. Each role gets its own fair questions.</p></div>
+      <div class="card tintL"><h3>Pay said plainly</h3><p>A nanny sees a wage. An au pair sees pocket money and their room. The words never mix, because the law treats them differently.</p></div>
+      <div class="card tintS"><h3>Twenty one country packs</h3><p>Checks, visas and pay rules change by country. Caresits carries a pack for each of its twenty one countries, with links to the official pages.</p></div>
+      <div class="card tintY"><h3>Your words stay yours</h3><p>This first version keeps everything on your phone. No account, no tracking, nothing sold. Your background photo, if you pick one, stays on your phone too.</p></div>
+    </div>
+    <div class="shotrow">
+      <img src="store/listing/screenshots/framed-play-4-daystory.png" alt="The Day Story screen with one tap tiles for meals, naps and outings" loading="lazy">
+      <img src="store/listing/screenshots/framed-play-2-checks.png" alt="The Trust Centre screen showing checks and what each one proves" loading="lazy">
+    </div>
+  </div>
+</section>
+
+<!-- FOUNDER SLOT: this section ships when Ilse's own why line arrives from HQ.
+     Shape per the page laws: her real photo, her name, 100 to 200 of her own
+     words in five beats (lived problem, failed alternatives, decided to build,
+     one real proof point, the same call to action). Never invent her words. -->
+
+<section>
+  <div class="wrap">
+    <div class="card price">
+      <div class="big">Free</div>
+      <p>This version of Caresits costs nothing, for families and for carers. No card, no trial clock. If paid plans ever arrive, this page will say so plainly before anything changes.</p>
+      <p style="margin-top:16px"><a class="btn" href="index.html">Open the app</a></p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Questions, answered plainly</h2>
+    <details><summary>Is Caresits really free?</summary><p>Yes. This version costs nothing for families and nothing for carers, and it asks for no card. The app earns nothing from checks either, because it never sells one. If a paid plan is ever offered, it will be written here in plain words first, and the free version will keep working for the people already using it.</p></details>
+    <details><summary>How does matching work?</summary><p>Families and carers answer the same set of questions about how a day runs: days and hours, food, learning, screens, routines and must haves like checks. Caresits first applies the hard rules, like country, role and free days, then scores what is left. Every match shows its reasons, so you can judge the fit yourself instead of trusting a number.</p></details>
+    <details><summary>Are carers checked?</summary><p>Caresits shows what each carer has, and the proof beside it. In Australia, working with children checks can be verified free on the official state registers, and the app links you straight there. Where no free register exists, the honest top mark is that a document was sighted. No badge word appears without its proof and its limit beside it.</p></details>
+    <details><summary>Is my child information safe?</summary><p>In this version, yes, in the simplest way possible: it never leaves your phone. There is no account, no server and no tracking, so there is nothing to leak and nothing to sell. You can download your data from Settings at any time, and deleting the app deletes the record with it. The full policy is one tap away below.</p></details>
+    <details><summary>Do carers pay anything?</summary><p>No. Carers never pay in Caresits, in this version or in the plan for later ones. Finding work should not cost the person who does the caring. Carers make a profile in their own role, with pay spoken about the right way for that role, and families do the reaching out first.</p></details>
+    <details><summary>Which countries does it cover?</summary><p>Caresits carries country packs for twenty one countries across Europe, the Americas, Asia and Oceania, plus Australia at home. Each pack covers the checks that exist there, the visa routes people actually use, and the pay rules that apply, with links to official sources. If your country has no pack yet, the app says so honestly at the start.</p></details>
+    <details><summary>What happens after we hire?</summary><p>The app stays useful. You get a shared roster, timesheets that add hours up for you, reminders for expiring checks, an emergency page both sides can see, and the Day Story: one tap tiles for meals, naps, nappies, outings, health and photo moments, kept like a story in a calendar. Parents can also ask for a photo of their child during the day as that feature opens up.</p></details>
+  </div>
+</section>
+
+<section>
+  <div class="wrap" style="text-align:center">
+    <h2>Care you can see clearly</h2>
+    <p class="sub" style="margin:0 auto 20px">Open Caresits on your phone, add it to your home screen, and take the first calm step.</p>
+    <a class="btn" href="index.html">Open the app</a>
+    <div class="freeline">Free · No card</div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Caresits · Find care. Share the day. · <a href="privacy.html">Privacy policy</a> · <a href="index.html">Open the app</a>
+  </div>
+</footer>
+
+<div class="stickybar"><a class="btn" href="index.html">Open the app</a></div>
+
+</body>
+</html>
