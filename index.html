@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Caresits</title>
+<meta name="theme-color" content="#FDF8F0">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="styles.css">
+<script>
+/* Paint saved settings before first render (Pace pattern). */
+try { var s = JSON.parse(localStorage.getItem("nannyapp-v1") || "{}"); var tm = { blush: "brand", sky: "brand", mint: "brand", lavender: "brand", dark: "black" }; var th = tm[s.theme] || s.theme; if (th) document.documentElement.dataset.theme = th; if (th === "photo" && s.bgPhoto) document.documentElement.style.setProperty("--bgimg", "url(\"" + s.bgPhoto + "\")"); if (s.cute === false) document.documentElement.dataset.cute = "off"; document.documentElement.dataset.sb = "hidden"; } catch (e) {}
+</script>
+</head>
+<body>
+<header id="topStrip">
+  <button id="sidebarToggle" class="stripToggle" aria-label="Hide or show the side menu" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="3.5"/><line x1="9.5" y1="4.5" x2="9.5" y2="19.5"/></svg></button>
+  <img class="stripLogo" src="logo.svg" alt="">
+  <span class="stripName">Caresits</span>
+  <span class="stripSide" id="stripSide"></span>
+</header>
+<div id="app">
+  <aside id="sidebar">
+    <div class="brand"><img class="brandLogo" src="logo.svg" alt=""><div><div class="brandName">Caresits</div><div class="brandSub">Find care. Share the day.</div></div></div>
+    <nav id="mainNav"></nav>
+    <div class="sideCard"><div class="sideCardTitle">Your setup</div><div id="setupCard" class="sideCardBody">Loading.</div></div>
+  </aside>
+  <main id="main">
+    <section id="view-home" class="view"></section>
+    <section id="view-find" class="view"></section>
+    <section id="view-shortlist" class="view"></section>
+    <section id="view-messages" class="view"></section>
+    <section id="view-profile" class="view"></section>
+    <section id="view-children" class="view"></section>
+    <section id="view-daystory" class="view"></section>
+    <section id="view-roster" class="view"></section>
+    <section id="view-timesheet" class="view"></section>
+    <section id="view-trust" class="view"></section>
+    <section id="view-emergency" class="view"></section>
+    <section id="view-reviews" class="view"></section>
+    <section id="view-reminders" class="view"></section>
+    <section id="view-settings" class="view"></section>
+    <section id="view-privacy" class="view"></section>
+  </main>
+</div>
+
+<button id="lioCorner" class="hidden" aria-label="Show Lio, your guide"></button>
+<div id="modal" class="modal hidden"><div class="modalCard" id="modalCard"></div></div>
+<div id="toast" class="toast hidden"></div>
+
+<script src="data.js"></script>
+<script src="logic.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
