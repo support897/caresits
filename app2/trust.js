@@ -1,3 +1,4 @@
+import { t as tr, currentLang, setLang } from "./lang.js";
 // Caresits app2 — Phase D trust surfaces: Checks, Reviews,
 // My Profile, Privacy, Settings (with Law E appearance).
 // Checks speak in the honest badge words only: Register
@@ -17,21 +18,21 @@ const emptyBox = (root, title, words) => {
   const box = el("div", "cardIn");
   const img = el("img", "bunnyBig");
   img.src = "bunny/bunny-rest-calm.png";
-  img.alt = "The Caresits bunny, resting calmly";
+  img.alt = tr("find.bunnyRest");
   box.append(img, el("h3", null, title), el("p", null, words));
   root.append(box);
 };
 
 export function renderChecks(root, docs) {
   root.replaceChildren();
-  root.append(el("h2", "findTitle", "Checks"));
-  root.append(el("p", "findPool", "Every badge says exactly what stands behind it, and its limit sits beside it."));
-  if (!docs.length) { emptyBox(root, "No checks yet", "When a carer shares their checks, each one will stand here with its proof level in plain words."); return; }
+  root.append(el("h2", "findTitle", tr("shell.checksNav")));
+  root.append(el("p", "findPool", tr("checks.lead")));
+  if (!docs.length) { emptyBox(root, tr("checks.emptyTitle"), tr("checks.emptyBody")); return; }
   const list = el("div", "findList");
   for (const d of docs) {
     const card = el("article", "findCard");
-    card.append(el("h3", "findName", d.title || "Check"));
-    card.append(el("p", "findPlace", d.level || "Provided by the carer"));
+    card.append(el("h3", "findName", d.title || tr("checks.fallbackTitle")));
+    card.append(el("p", "findPlace", d.level || tr("checks.providedBy")));
     if (d.limit) card.append(el("p", "findGate", d.limit));
     list.append(card);
   }
@@ -40,12 +41,12 @@ export function renderChecks(root, docs) {
 
 export function renderReviews(root, reviews) {
   root.replaceChildren();
-  root.append(el("h2", "findTitle", "Reviews"));
-  if (!reviews.length) { emptyBox(root, "No reviews yet", "Reviews from families and carers you have worked with will gather here."); return; }
+  root.append(el("h2", "findTitle", tr("shell.reviews")));
+  if (!reviews.length) { emptyBox(root, tr("trust.reviewsEmpty"), tr("trust.reviewsEmptyBody")); return; }
   const list = el("div", "findList");
   for (const r of reviews) {
     const card = el("article", "findCard");
-    card.append(el("h3", "findName", r.from || "A member"));
+    card.append(el("h3", "findName", r.from || tr("find.member")));
     card.append(el("p", "findPlace", "★".repeat(Math.max(1, Math.min(5, r.stars || 5)))));
     if (r.text) card.append(el("p", null, r.text));
     list.append(card);
@@ -55,12 +56,12 @@ export function renderReviews(root, reviews) {
 
 export function renderProfile(root, me) {
   root.replaceChildren();
-  root.append(el("h2", "findTitle", "My Profile"));
+  root.append(el("h2", "findTitle", tr("shell.profile")));
   const card = el("div", "findCard");
-  card.append(el("h3", "findName", me.name || "Your name waits in the tour"));
-  card.append(el("p", "findPlace", (me.side === "carer" ? "Carer" : "Family") + (me.postcode ? " · Postcode " + me.postcode : "")));
-  card.append(el("p", null, "Your questionnaire answers live in your private space. Your card shows only what matching needs."));
-  const go = el("button", "mainBtn", "See the questionnaire");
+  card.append(el("h3", "findName", me.name || tr("trust.nameWaits")));
+  card.append(el("p", "findPlace", (me.side === "carer" ? tr("trust.sideCarer") : tr("trust.sideFamily")) + (me.postcode ? " · " + tr("find.postcode", undefined, { n: me.postcode }) : "")));
+  card.append(el("p", null, tr("trust.profileBody")));
+  const go = el("button", "mainBtn", tr("trust.seeQ"));
   go.type = "button";
   go.addEventListener("click", () => document.querySelector('[data-nav="questionnaire"]')?.click());
   card.append(go);
@@ -69,9 +70,9 @@ export function renderProfile(root, me) {
 
 export function renderPrivacy(root) {
   root.replaceChildren();
-  root.append(el("h2", "findTitle", "Privacy policy"));
-  const p = el("p", null, "The full policy stands on the Caresits site, in plain words, with its date on it.");
-  const a = el("a", "mainBtn privacyLink", "Read the privacy policy");
+  root.append(el("h2", "findTitle", tr("shell.privacy")));
+  const p = el("p", null, tr("trust.privacyBody"));
+  const a = el("a", "mainBtn privacyLink", tr("trust.privacyBtn"));
   a.href = "https://support897.github.io/caresits/privacy.html";
   a.target = "_blank";
   a.rel = "noopener";
@@ -88,13 +89,13 @@ export function applyBackground(choice, dataUrl) {
 
 export function renderSettings(root) {
   root.replaceChildren();
-  root.append(el("h2", "findTitle", "Settings"));
+  root.append(el("h2", "findTitle", tr("shell.settings")));
   const card = el("div", "findCard");
-  card.append(el("h3", "findName", "Background"));
-  card.append(el("p", null, "Pick the look that suits your eyes. Words stay readable on every choice."));
+  card.append(el("h3", "findName", tr("trust.background")));
+  card.append(el("p", null, tr("trust.backgroundBody")));
   const row = el("div", "chipRow");
   const saved = (() => { try { return JSON.parse(localStorage.getItem(BG_KEY)) || { choice: "brand" }; } catch { return { choice: "brand" }; } })();
-  for (const [key, label] of [["brand", "Brand colours"], ["white", "White"], ["black", "Black"], ["upload", "My picture"]]) {
+  for (const [key, label] of [["brand", tr("trust.bg.brand")], ["white", tr("trust.bg.white")], ["black", tr("trust.bg.black")], ["upload", tr("trust.bg.upload")]]) {
     const b = el("button", "chipBtn" + (saved.choice === key ? " on" : ""), label);
     b.type = "button";
     b.dataset.bg = key;
@@ -133,7 +134,7 @@ export function renderSettings(root) {
   });
   card.append(fileIn);
   if (saved.choice === "upload") {
-    const rm = el("button", "quietBtn", "Remove my picture");
+    const rm = el("button", "quietBtn", tr("trust.removePic"));
     rm.type = "button";
     rm.addEventListener("click", () => {
       localStorage.setItem(BG_KEY, JSON.stringify({ choice: "brand" }));
@@ -145,10 +146,21 @@ export function renderSettings(root) {
     card.append(rm);
   }
   root.append(card);
+  const langCard = el("div", "findCard");
+  langCard.append(el("h3", "findName", tr("common.language")));
+  const langRow = el("div", "chipRow");
+  for (const [code, label] of [["en", "English"], ["es", "Español"]]) {
+    const b = el("button", "chipBtn" + (currentLang() === code ? " on" : ""), label);
+    b.type = "button";
+    b.addEventListener("click", () => { setLang(code); location.reload(); });
+    langRow.append(b);
+  }
+  langCard.append(langRow);
+  root.append(langCard);
   const acct = el("div", "findCard");
-  acct.append(el("h3", "findName", "Your account"));
-  acct.append(el("p", null, "Download your data, or delete your account, from the account page. Only you can ever delete your things."));
-  const link = el("a", "mainBtn privacyLink", "Open the account page");
+  acct.append(el("h3", "findName", tr("trust.account")));
+  acct.append(el("p", null, tr("trust.accountBody")));
+  const link = el("a", "mainBtn privacyLink", tr("trust.openAccount"));
   link.href = "../accounts/account.html";
   acct.append(link);
   root.append(acct);
