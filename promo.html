@@ -163,5 +163,27 @@ footer a { color:var(--ink); }
 
 <div class="stickybar"><a class="btn" href="index.html">Open the app</a></div>
 
+
+<style>
+.dl-get{max-width:720px;margin:40px auto;padding:0 20px;text-align:center}
+.dl-card{border:2px solid rgba(128,128,128,.4);border-radius:20px;padding:28px 22px}
+.dl-card h2{margin:0 0 10px}
+.dl-card p{margin:0 auto 18px;max-width:520px}
+.dl-device{margin:16px auto 0;font-weight:600;max-width:520px}
+</style>
+<section class="dl-get" id="get-the-app">
+  <div class="dl-card">
+    <h2>Get the app</h2>
+    <p>Caresits is free. It is not in the Apple or Google stores yet. Until then, the real app opens right here, on this device, with the button below. Phone or computer, it just works.</p>
+    <a class="btn" href="index.html">Open the app</a>
+    <p class="dl-device" id="dl-device">Works on phone, tablet and computer.</p>
+  </div>
+</section>
+<script>
+(function(){var el=document.getElementById('dl-device');if(!el)return;var ua=navigator.userAgent||'';
+if(/iPhone|iPad|iPod/i.test(ua)){el.textContent='You are on an iPhone or iPad. Tap Open the app above: it works right away. To keep it on your home screen, tap Share, then Add to Home Screen. The App Store version is on its way.';}
+else if(/Android/i.test(ua)){el.textContent='You are on an Android phone. Tap Open the app above: it works right away. To keep it on your home screen, tap the menu (three dots), then Add to Home screen. The Google Play version is on its way.';}
+else{el.textContent='You are on a computer. Tap Open the app above: it opens right here in your browser. Nothing to install.';}})();
+</script>
 </body>
 </html>
