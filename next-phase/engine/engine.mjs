@@ -29,6 +29,41 @@
 
 export const CHECK_RANK = { none: 0, sighted: 1, register: 2 };
 
+// VALUE CODING (the language build's last pass): answers may be
+// stored as the English words or as stable slugs of them. The
+// engine normalises every string it compares to its slug, so a
+// word and its code are the same fact here, forever, in any
+// language the words were answered in. Inputs are never mutated;
+// each public function works on normalised copies.
+export const slugify = (v) => (typeof v === "string" ? v.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") : v);
+const normValue = (v) => (Array.isArray(v) ? v.map(slugify) : slugify(v));
+const SKIP_KEYS = new Set(["displayName", "postcode", "photoUrl", "side", "level", "uid", "feed"]);
+function normDeep(deep) {
+  if (!deep || typeof deep !== "object") return deep;
+  const out = {};
+  for (const [code, entry] of Object.entries(deep)) {
+    if (entry && typeof entry === "object" && !Array.isArray(entry) && "v" in entry) {
+      out[code] = { ...entry, v: normValue(entry.v), ...(entry.s ? { s: slugify(entry.s) } : {}) };
+    } else out[code] = normValue(entry);
+  }
+  return out;
+}
+function normWalk(node, depth) {
+  if (depth > 5 || node == null) return node;
+  if (typeof node === "string") return slugify(node);
+  if (Array.isArray(node)) return node.map((x) => normWalk(x, depth + 1));
+  if (typeof node === "object") {
+    const out = {};
+    for (const [k, v] of Object.entries(node)) {
+      if (SKIP_KEYS.has(k)) { out[k] = v; continue; }
+      out[k] = k === "deep" ? normDeep(v) : normWalk(v, depth + 1);
+    }
+    return out;
+  }
+  return node;
+}
+export const normSide = (side) => normWalk(side, 0);
+
 function partsCovered(need, have) {
   let total = 0, covered = 0;
   for (const [day, parts] of Object.entries(need || {})) {
@@ -55,6 +90,7 @@ const share = (wanted, held) => {
 
 // Gate 1, family direction. Returns the failed gate name or null.
 export function gateFamily(family, carer, distanceKm) {
+  family = normSide(family); carer = normSide(carer);
   const m = family.musts || {};
   if (!daysTouched(family.scheduleNeed, carer.availability)) return "not free on a day you need";
   const maxD = Math.min(m.maxDistanceKm ?? Infinity, carer.maxDistanceKm ?? Infinity);
@@ -78,6 +114,7 @@ export function gateFamily(family, carer, distanceKm) {
 
 // Gate 1, carer direction. Returns the failed gate name or null.
 export function gateCarer(family, carer) {
+  family = normSide(family); carer = normSide(carer);
   if ((family.childrenBands || []).some((b) => !(carer.agesAccepted || []).includes(b))) return "children's ages they take";
   if (carer.payFloor && (family.payOffered || 0) < carer.payFloor) return "their pay floor";
   if (carer.nonSmokerHousehold && family.smokerHousehold) return "a non smoking home, as they set";
@@ -86,6 +123,7 @@ export function gateCarer(family, carer) {
 }
 
 export function scoreFamily(family, carer, distanceKm) {
+  family = normSide(family); carer = normSide(carer);
   const parts = {};
   parts.trustWarmth =
     (carer.checksLevel === "register" ? 10 : carer.checksLevel === "sighted" ? 6 : 2) +
@@ -113,6 +151,7 @@ export function scoreFamily(family, carer, distanceKm) {
 }
 
 export function scoreCarer(family, carer, distanceKm) {
+  family = normSide(family); carer = normSide(carer);
   const parts = {};
   const accepted = (family.childrenBands || []).filter((b) => (carer.agesAccepted || []).includes(b)).length;
   const preferred = (family.childrenBands || []).filter((b) => (carer.agesPreferred || []).includes(b)).length;
@@ -137,44 +176,44 @@ export function scoreCarer(family, carer, distanceKm) {
 // Paired questions share a number unless this map says otherwise.
 export const PAIR_OF = { F16: "C15", F21: "C22", F25: "C28", F26: "C29", F27: "C30", F32: "C33", F38: "C42", F46: "C51" };
 const carerPairOf = (fCode) => PAIR_OF[fCode] || "C" + fCode.slice(1);
-const GROUP_NUM = { One: 1, Two: 2, Three: 3, "Four or more": 4, "No set limit": Infinity };
-const STAY_RANK = { "A few weeks": 1, "One school term": 2, "About six months": 3, "A year or more": 4, "As long as it works": 5, "I hope to stay as long as it works": 5 };
+const GROUP_NUM = { one: 1, two: 2, three: 3, "four-or-more": 4, "no-set-limit": Infinity };
+const STAY_RANK = { "a-few-weeks": 1, "one-school-term": 2, "about-six-months": 3, "a-year-or-more": 4, "as-long-as-it-works": 5, "i-hope-to-stay-as-long-as-it-works": 5 };
 
 function deepGateFamily(family, carer) {
   const md = family.musts?.deep || {};
   const cp = carer.prefs?.deep || {};
   const cv = (fCode) => cp[carerPairOf(fCode)]?.v;
-  if (Array.isArray(md.F8) && md.F8.some((f) => f !== "None")) {
+  if (Array.isArray(md.F8) && md.F8.some((f) => f !== "none")) {
     const exp = cv("F8");
-    if (!exp || exp === "Not yet") return "a food allergy they cannot manage yet";
+    if (!exp || exp === "not-yet") return "a food allergy they cannot manage yet";
   }
-  if (md.F21 && !String(cv("F21") || "").startsWith("Yes")) return "a first aid certificate, as you set";
+  if (md.F21 && !String(cv("F21") || "").startsWith("yes")) return "a first aid certificate, as you set";
   if (md.F38) {
     const settings = cv("F38") || [];
-    if (!settings.includes("A childcare centre") && !settings.includes("A school")) return "centre or school experience, as you set";
+    if (!settings.includes("a-childcare-centre") && !settings.includes("a-school")) return "centre or school experience, as you set";
   }
   if (md.F32) {
     const need = GROUP_NUM[md.F32] ?? 1;
     const limit = GROUP_NUM[cv("F32")] ?? Infinity;
     if (need > limit) return "more children at once than they take";
     const fp = family.prefs?.deep || {};
-    if (fp.F46?.v === "Shared with another family" && cv("F46") === "No") return "more children at once than they take";
+    if (fp.F46?.v === "shared-with-another-family" && cv("F46") === "no") return "more children at once than they take";
   }
   if (md.F16 && (STAY_RANK[cv("F16")] ?? 5) < (STAY_RANK[md.F16] ?? 1)) return "a shorter stay than you need";
   if (md.F25) {
-    if (md.F25 === "No guests" && cv("F25") !== "I do not have guests") return "no guests at home, as you set";
-    if (md.F25 === "Yes, if they ask first" && cv("F25") === "I would rather have free visiting") return "guests only when they ask first, as you set";
+    if (md.F25 === "no-guests" && cv("F25") !== "i-do-not-have-guests") return "no guests at home, as you set";
+    if (md.F25 === "yes-if-they-ask-first" && cv("F25") === "i-would-rather-have-free-visiting") return "guests only when they ask first, as you set";
   }
-  if (md.F26 === "No" && cv("F26") === "Yes") return "no overnight guests, as you set";
-  if (md.F27 && md.F27 !== "No set time" && cv("F27") === "I would rather not") return "the home by time you set";
+  if (md.F26 === "no" && cv("F26") === "yes") return "no overnight guests, as you set";
+  if (md.F27 && md.F27 !== "no-set-time" && cv("F27") === "i-would-rather-not") return "the home by time you set";
   return null;
 }
 
 function deepGateCarer(family, carer) {
   const cmd = carer.musts?.deep || {};
   const fp = family.prefs?.deep || {};
-  if (cmd.C39 === "No" && (fp.F36?.v || []).includes("Pool")) return "a home with a pool, as they set";
-  if (cmd.C57 === "No" && fp.F50?.v === "Yes") return "cameras in shared areas, as they set";
+  if (cmd.C39 === "no" && (fp.F36?.v || []).includes("pool")) return "a home with a pool, as they set";
+  if (cmd.C57 === "no" && fp.F50?.v === "yes") return "cameras in shared areas, as they set";
   return null;
 }
 
@@ -223,18 +262,63 @@ export function labelFor(pair, familyScore, carerScore) {
   return "Good Fit";
 }
 
+// Stable codes for every gate name and reason, so renderers can
+// speak the user's language while the English stays the record.
+export const GATE_CODES = {
+  "not free on a day you need": "schedule",
+  "too far away": "distance",
+  "a language you must have": "language",
+  "a check at the level you asked for": "checksLevel",
+  "the age band you set": "ageBand",
+  "the nationality you set": "nationality",
+  "non smoker, as you set": "nonSmoker",
+  "experience with your children's ages": "experience",
+  "drives, as you set": "drives",
+  "their own car, as you set": "ownCar",
+  "at home with your pets": "pets",
+  "cooking, as you set": "cooking",
+  "a task you must have covered": "tasks",
+  "special needs experience, as you set": "specialNeeds",
+  "children's ages they take": "agesTaken",
+  "their pay floor": "payFloor",
+  "a non smoking home, as they set": "nonSmokerHome",
+  "a task they do not do": "taskRefused",
+  "a food allergy they cannot manage yet": "allergy",
+  "a first aid certificate, as you set": "firstAid",
+  "centre or school experience, as you set": "centreSchool",
+  "more children at once than they take": "groupSize",
+  "a shorter stay than you need": "stay",
+  "no guests at home, as you set": "guestsNone",
+  "guests only when they ask first, as you set": "guestsAsk",
+  "no overnight guests, as you set": "guestsOvernight",
+  "the home by time you set": "homeBy",
+  "a home with a pool, as they set": "pool",
+  "cameras in shared areas, as they set": "cameras",
+};
+export const REASON_CODES = {
+  "Meets every must you set ✓": "musts",
+  "Free all your days ✓": "days",
+  "Speaks your languages ✓": "languages",
+  "Lives close by ✓": "close",
+  "You fit their musts too ✓": "theirMusts",
+  "Quick profile, rough match": "quick",
+};
+export const gateCodeFor = (text) => GATE_CODES[text] || null;
+export const reasonCodeFor = (text) => REASON_CODES[text] || null;
+
 export function matchPair(family, carer, distanceKm, levels) {
   const failedFamily = gateFamily(family, carer, distanceKm);
-  if (failedFamily) return { shown: false, failedGate: failedFamily, toldTo: "family" };
+  if (failedFamily) return { shown: false, failedGate: failedFamily, failedGateCode: gateCodeFor(failedFamily), toldTo: "family" };
   const failedCarer = gateCarer(family, carer);
-  if (failedCarer) return { shown: false, failedGate: failedCarer, toldTo: "family" };
+  if (failedCarer) return { shown: false, failedGate: failedCarer, failedGateCode: gateCodeFor(failedCarer), toldTo: "family" };
   const f = scoreFamily(family, carer, distanceKm);
   const c = scoreCarer(family, carer, distanceKm);
   const pair = Math.round((f.total + c.total) / 2);
   const capFull = !levels || ((!levels.family || levels.family === "full") && (!levels.carer || levels.carer === "full"));
+  const nf = normSide(family), nc = normSide(carer);
   const reasons = ["Meets every must you set ✓"];
-  if (partsCovered(family.scheduleNeed, carer.availability) === 1) reasons.push("Free all your days ✓");
-  if (share(family.languages, carer.languages) === 1 && (family.languages || []).length) reasons.push("Speaks your languages ✓");
+  if (partsCovered(nf.scheduleNeed, nc.availability) === 1) reasons.push("Free all your days ✓");
+  if (share(nf.languages, nc.languages) === 1 && (nf.languages || []).length) reasons.push("Speaks your languages ✓");
   if (distanceKm <= 3) reasons.push("Lives close by ✓");
   reasons.push("You fit their musts too ✓");
   if (!capFull && (levels.family === "quick" || levels.carer === "quick")) reasons.push("Quick profile, rough match");
@@ -247,6 +331,7 @@ export function matchPair(family, carer, distanceKm, levels) {
     pair,
     label: capFull ? labelFor(pair, f.total, c.total) : (labelFor(pair, f.total, c.total) === "Perfect Pair" ? "Strong Fit" : labelFor(pair, f.total, c.total)),
     reasons,
+    reasonCodes: reasons.map(reasonCodeFor),
   };
 }
 
