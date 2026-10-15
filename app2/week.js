@@ -1,3 +1,4 @@
+import { t as tr } from "./lang.js";
 // Caresits app2 — Phase D week surfaces: Roster, Timesheet,
 // Reminders. All read through CARESITS_WEEK when the live
 // layer provides it; writes ride CARESITS_WRITE. The roster
@@ -15,23 +16,23 @@ const emptyBox = (root, title, words) => {
   const box = el("div", "cardIn");
   const img = el("img", "bunnyBig");
   img.src = "bunny/bunny-rest-calm.png";
-  img.alt = "The Caresits bunny, resting calmly";
+  img.alt = tr("find.bunnyRest");
   box.append(img, el("h3", null, title), el("p", null, words));
   root.append(box);
 };
 
 export function renderRoster(root, sessions) {
   root.replaceChildren();
-  root.append(el("h2", "findTitle", "Roster"));
-  if (!sessions.length) { emptyBox(root, "No week planned yet", "When a match begins, the agreed week will stand here."); return; }
+  root.append(el("h2", "findTitle", tr("shell.roster")));
+  if (!sessions.length) { emptyBox(root, tr("week.rosterEmpty"), tr("week.rosterEmptyBody")); return; }
   for (const day of DAYS) {
     const rows = sessions.filter((s) => s.day === day);
     if (!rows.length) continue;
     const sec = el("section", "calPair");
-    sec.append(el("h3", "findName", day));
+    sec.append(el("h3", "findName", tr("journey.day." + day)));
     for (const s of rows) {
       const chip = el("div", "calBlock regular");
-      chip.append(el("span", "calTime", (s.start || "") + (s.end ? " to " + s.end : "")), el("span", "calWith", " with " + (s.withName || "your carer")));
+      chip.append(el("span", "calTime", (s.start || "") + (s.end ? tr("week.to") + s.end : "")), el("span", "calWith", tr("week.with", undefined, { name: s.withName || tr("week.yourCarer") })));
       sec.append(chip);
     }
     root.append(sec);
@@ -40,9 +41,9 @@ export function renderRoster(root, sessions) {
 
 export function renderTimesheet(root, entries) {
   root.replaceChildren();
-  root.append(el("h2", "findTitle", "Timesheet"));
+  root.append(el("h2", "findTitle", tr("shell.timesheet")));
   const total = entries.reduce((a, e) => a + (Number(e.hours) || 0), 0);
-  root.append(el("p", "findPool", "Hours this week: " + (Math.round(total * 100) / 100)));
+  root.append(el("p", "findPool", tr("week.hours", undefined, { n: Math.round(total * 100) / 100 })));
   const list = el("div", "findList");
   for (const e of entries) {
     const card = el("article", "findCard");
@@ -51,15 +52,15 @@ export function renderTimesheet(root, entries) {
   }
   root.append(list);
   const form = el("div", "findCard");
-  form.append(el("h3", "findName", "Add hours"));
+  form.append(el("h3", "findName", tr("week.addHours")));
   const day = el("select", "txtIn");
   for (const d of DAYS) day.append(el("option", null, d));
   const hours = el("input", "txtIn");
   hours.type = "number";
   hours.min = "0";
   hours.step = "0.25";
-  hours.placeholder = "Hours, like 4.5";
-  const add = el("button", "mainBtn", "Add");
+  hours.placeholder = tr("week.hoursPh");
+  const add = el("button", "mainBtn", tr("family.add"));
   add.type = "button";
   add.addEventListener("click", () => {
     const h = Number(hours.value);
@@ -73,8 +74,8 @@ export function renderTimesheet(root, entries) {
 
 export function renderReminders(root, reminders) {
   root.replaceChildren();
-  root.append(el("h2", "findTitle", "Reminders"));
-  if (!reminders.length) emptyBox(root, "No reminders", "Little nudges you ask for will wait here.");
+  root.append(el("h2", "findTitle", tr("shell.reminders")));
+  if (!reminders.length) emptyBox(root, tr("week.remEmpty"), tr("week.remEmptyBody"));
   const list = el("div", "findList");
   for (const r of reminders) {
     const card = el("article", "findCard");
@@ -84,10 +85,10 @@ export function renderReminders(root, reminders) {
   root.append(list);
   const form = el("div", "findCard");
   const text = el("input", "txtIn");
-  text.placeholder = "Remind me to...";
+  text.placeholder = tr("week.remPh");
   const when = el("input", "txtIn");
-  when.placeholder = "When, like Friday";
-  const add = el("button", "mainBtn", "Add");
+  when.placeholder = tr("week.whenPh");
+  const add = el("button", "mainBtn", tr("family.add"));
   add.type = "button";
   add.addEventListener("click", () => {
     if (!text.value.trim()) return;
@@ -100,22 +101,22 @@ export function renderReminders(root, reminders) {
 
 export function renderEmergency(root, contacts) {
   root.replaceChildren();
-  root.append(el("h2", "findTitle", "Emergency"));
-  if (!contacts.length) { emptyBox(root, "No emergency contacts yet", "Add the people a carer should call first. They stand here, one tap away."); }
+  root.append(el("h2", "findTitle", tr("shell.emergency")));
+  if (!contacts.length) { emptyBox(root, tr("week.emEmpty"), tr("week.emEmptyBody")); }
   const list = el("div", "findList");
   for (const c of contacts) {
     const card = el("article", "findCard");
-    card.append(el("h3", "findName", c.name || "Contact"));
+    card.append(el("h3", "findName", c.name || tr("week.contact")));
     card.append(el("p", "findPlace", c.phone || ""));
     list.append(card);
   }
   root.append(list);
   const form = el("div", "findCard");
   const name = el("input", "txtIn");
-  name.placeholder = "Name";
+  name.placeholder = tr("week.namePh");
   const phone = el("input", "txtIn");
-  phone.placeholder = "Phone";
-  const add = el("button", "mainBtn", "Add");
+  phone.placeholder = tr("week.phonePh");
+  const add = el("button", "mainBtn", tr("family.add"));
   add.type = "button";
   add.addEventListener("click", () => {
     if (!name.value.trim()) return;
