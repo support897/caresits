@@ -6,6 +6,7 @@
 // step closes unanswered, the bunny offers it once more on
 // the NEXT visit as one small quiet bubble, then never
 // again (the fleet rule). A missing name blocks nothing.
+import { t as tr } from "./lang.js";
 const LS_NAME = "caresits-name";
 const LS_TOUR = "caresits-tour-state";
 const el = (tag, cls, text) => {
@@ -23,11 +24,11 @@ function setName(v) {
 }
 
 const STEPS = [
-  { title: "Hello, I am the Caresits bunny", body: "I will walk you around. First things first: what is your name?", name: true },
-  { title: "This is your menu", body: "Everything lives in here. It stays tucked away until you tap Menu, so your screen stays calm.", menu: true },
-  { title: "Find care, or be found", body: "Find lines up the people who fit. Matches and the urgent board live in Finding care too." },
-  { title: "Your family spaces", body: "Children, Day Story and the roster grow here as you use them. Your things are yours alone." },
-  { title: "You are all set", body: "That is the whole tour. I am here in the corner whenever you need me.", done: true },
+  { title: tr("tour.t1t"), body: tr("tour.t1b"), name: true },
+  { title: tr("tour.t2t"), body: tr("tour.t2b"), menu: true },
+  { title: tr("tour.t3t"), body: tr("tour.t3b") },
+  { title: tr("tour.t4t"), body: tr("tour.t4b") },
+  { title: tr("tour.t5t"), body: tr("tour.t5b"), done: true },
 ];
 
 function closeTour(answered) {
@@ -44,7 +45,7 @@ function runTour() {
   const card = el("div", "sheetCard tourCard");
   const x = el("button", "closeBtn sheetX", "✕");
   x.type = "button";
-  x.setAttribute("aria-label", "Close the tour");
+  x.setAttribute("aria-label", tr("tour.close"));
   let i = 0;
   const body = el("div", "tourBody");
   const render = () => {
@@ -52,22 +53,22 @@ function runTour() {
     const step = STEPS[i];
     const img = el("img", "bunnyBig");
     img.src = "bunny/bunny-hello.png";
-    img.alt = "The Caresits bunny waving hello";
+    img.alt = tr("tour.bunnyAlt");
     body.append(img, el("h3", "findName", step.title), el("p", null, step.body));
     document.getElementById("layout")?.classList.toggle("open", !!step.menu);
     if (step.name && !myName()) {
       const input = el("input", "txtIn tourName");
-      input.placeholder = "Your name";
+      input.placeholder = tr("tour.namePh");
       input.id = "tourNameIn";
       body.append(input);
     }
     if (step.done) {
-      const done = el("button", "mainBtn", "Done");
+      const done = el("button", "mainBtn", tr("tour.done"));
       done.type = "button";
       done.addEventListener("click", () => closeTour(true));
       body.append(done);
     } else {
-      const next = el("button", "mainBtn", "Next");
+      const next = el("button", "mainBtn", tr("tour.next"));
       next.type = "button";
       next.addEventListener("click", () => {
         if (step.name) {
@@ -79,7 +80,7 @@ function runTour() {
       });
       body.append(next);
     }
-    body.append(el("p", "tourCount", "Step " + (i + 1) + " of " + STEPS.length));
+    body.append(el("p", "tourCount", tr("tour.step", undefined, { a: i + 1, b: STEPS.length })));
   };
   x.addEventListener("click", () => closeTour(!!myName()));
   card.append(x, body);
@@ -97,13 +98,13 @@ function quietBubble() {
   const img = el("img", "bubbleBunny");
   img.src = "bunny/bunny-hello.png";
   img.alt = "";
-  bub.append(img, el("p", "bubbleText", "What should we call you?"));
+  bub.append(img, el("p", "bubbleText", tr("tour.bubble")));
   const input = el("input", "txtIn tourName");
-  input.placeholder = "Your name";
-  const save = el("button", "mainBtn actBtn", "Save");
+  input.placeholder = tr("tour.namePh");
+  const save = el("button", "mainBtn actBtn", tr("tour.save"));
   save.type = "button";
   save.addEventListener("click", () => { const v = input.value.trim(); if (v) setName(v); bub.remove(); });
-  const x = el("button", "quietBtn", "Not now");
+  const x = el("button", "quietBtn", tr("tour.notNow"));
   x.type = "button";
   x.addEventListener("click", () => bub.remove());
   bub.append(input, save, x);
