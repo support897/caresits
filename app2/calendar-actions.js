@@ -70,3 +70,11 @@ export function clashLine(request, blocks) {
   const hit = (blocks || []).find((b) => b.day === request.day && b.state === "live");
   return hit ? `Heads up: ${request.day} already has a one time block (${hit.start || ""} to ${hit.end || ""}). Accepting adds this on top.` : null;
 }
+
+// The clash as parts, so the render layer can speak it in the
+// user's language; clashLine above stays the English of record.
+export function clashParts(request, blocks) {
+  if (!request?.day) return null;
+  const hit = (blocks || []).find((b) => b.day === request.day && b.state === "live");
+  return hit ? { day: request.day, start: hit.start || "", end: hit.end || "" } : null;
+}
