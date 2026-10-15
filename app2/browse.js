@@ -55,7 +55,7 @@ export function assembleBrowse(viewerDoc, candidateDocs) {
     if (result.shown) {
       entries.push({ doc, result, distanceKm: km, family: engineFamily(familyDoc), carer: engineCarer(carerDoc) });
     } else if (viewerIsFamily && viewerDoc.level !== "explore") {
-      nearly.push({ doc, failedGate: result.failedGate });
+      nearly.push({ doc, failedGate: result.failedGate, failedGateCode: result.failedGateCode || null });
     }
   }
   const ranked = rank(entries);
