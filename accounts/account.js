@@ -88,37 +88,28 @@ export async function initAccounts(config, onUser) {
 }
 
 // The profile doc is created EMPTY at first sign in (Empty Start
-// law): no plan keys, no answers, nothing prefilled. In the same
-// batch, the CEO people counter rises by the paired write the
-// rules allow (signup total plus this ISO week bucket).
+// law): no plan keys, no answers, nothing prefilled. The signup IS
+// this create, so the CEO people counter rides in the SAME batch
+// (the programme writer's exact shape: no aggregate read, increment
+// writes with merge). If the batch fails, the profile create
+// retries alone, so a counter can never break a sign in.
 async function ensureProfile(fsMod, u) {
-  const { doc, getDoc, writeBatch } = fsMod;
+  const { doc, getDoc, setDoc, writeBatch, increment } = fsMod;
   const ref = doc(_db, "users", u.uid);
   const snap = await getDoc(ref);
   if (snap.exists()) return;
-  const batch = writeBatch(_db);
-  batch.set(ref, { createdAt: new Date().toISOString(), side: "" });
-  const aggRef = doc(_db, "_owner", "aggregates", "people", "main");
-  const agg = await getDoc(aggRef);
-  const week = isoWeekKey(new Date());
-  if (!agg.exists()) {
-    batch.set(aggRef, {
-      total: 1,
-      weekly: { [week]: 1 },
-      activatedWithin7d: 0,
-      returning7d: 0,
-    });
-  } else {
-    const d = agg.data();
-    const weekly = { ...(d.weekly || {}) };
-    weekly[week] = (weekly[week] || 0) + 1;
-    batch.update(aggRef, { total: (d.total || 0) + 1, weekly });
-  }
+  const profile = { createdAt: new Date().toISOString(), side: "" };
   try {
+    const batch = writeBatch(_db);
+    batch.set(ref, profile);
+    batch.set(
+      doc(_db, "_owner", "aggregates", "people", "main"),
+      { total: increment(1), weekly: { [isoWeekKey(new Date())]: increment(1) } },
+      { merge: true }
+    );
     await batch.commit();
   } catch (e) {
-    // The counter is a paired write; if the rules have not been
-    // published yet it fails quietly and sign in still succeeds.
+    await setDoc(ref, profile);
   }
 }
 
