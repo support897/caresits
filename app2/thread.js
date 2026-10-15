@@ -1,3 +1,4 @@
+import { t as tr } from "./lang.js";
 // Caresits app2 — the message thread + the free taste wall.
 // The account layer's own logic decides (canSendMessage): a
 // family on the free taste gets one message a day; carers and
@@ -30,18 +31,18 @@ export function showUpgradePopup(edge) {
   const card = el("div", "sheetCard tourCard");
   const img = el("img", "bunnyBig");
   img.src = "bunny/bunny-encourage.png";
-  img.alt = "The Caresits bunny, cheering you on";
-  card.append(img, el("h3", "findName", "You found someone worth writing to"));
-  card.append(el("p", null, "Your free message for today is on its way. Finding members can keep the conversation going, with as many messages as they like."));
-  card.append(el("p", null, "Finding is A$14.95 a month, and you can stop any time."));
-  card.append(el("p", null, "Family Plus is the everything plan: A$24.95 a month, with the first month free."));
-  const finding = el("button", "mainBtn popBtn", "Join Finding");
+  img.alt = tr("popup.bunnyAlt");
+  card.append(img, el("h3", "findName", tr("popup.title")));
+  card.append(el("p", null, tr("popup.body")));
+  card.append(el("p", null, tr("popup.finding")));
+  card.append(el("p", null, tr("popup.plus")));
+  const finding = el("button", "mainBtn popBtn", tr("popup.joinFinding"));
   finding.type = "button";
   finding.addEventListener("click", () => { write("plans", { plan: "finding" }); wrap.remove(); });
-  const plus = el("button", "mainBtn popBtn", "Join Family Plus");
+  const plus = el("button", "mainBtn popBtn", tr("popup.joinPlus"));
   plus.type = "button";
   plus.addEventListener("click", () => { write("plans", { plan: "family-plus" }); wrap.remove(); });
-  const notNow = el("button", "mainBtn popBtn", "Not now");
+  const notNow = el("button", "mainBtn popBtn", tr("popup.notNow"));
   notNow.type = "button";
   notNow.addEventListener("click", () => { if (edge) latchedEdges.add(edge); wrap.remove(); });
   card.append(finding, plus, notNow);
@@ -51,20 +52,20 @@ export function showUpgradePopup(edge) {
 
 export function renderThread(root, { pairId, otherName, messages, plan, tasteUsedToday }) {
   root.replaceChildren();
-  root.append(el("h2", "findTitle", otherName || "Messages"));
+  root.append(el("h2", "findTitle", otherName || tr("thread.title")));
   const list = el("div", "findList threadList");
   for (const m of messages) {
     const row = el("div", "msgRow " + (m.mine ? "mine" : "theirs"));
     row.append(el("p", "msgText", m.text));
     list.append(row);
   }
-  if (!messages.length) list.append(el("p", null, "No messages yet. The first hello is yours."));
+  if (!messages.length) list.append(el("p", null, tr("thread.empty")));
   root.append(list);
   const box = el("div", "findCard");
   const input = el("textarea", "txtIn");
-  input.placeholder = "Write a message";
+  input.placeholder = tr("thread.ph");
   input.rows = 2;
-  const send = el("button", "mainBtn", "Send");
+  const send = el("button", "mainBtn", tr("thread.send"));
   send.type = "button";
   send.addEventListener("click", () => {
     const text = input.value.trim();
