@@ -1,0 +1,184 @@
+// Caresits accounts — the account layer.
+// Identity: Firebase Authentication, three doors (Google, Apple,
+// email plus password — HQ order 15 Oct 2026). Every record is
+// keyed to the Firebase uid under users/{uid}.
+// DORMANT while firebase-config.js is empty: connects to nothing,
+// changes nothing, and the certified app runs as it does today.
+
+// ---------- Pure plan logic (unit tested in accounts/tests.mjs) ----------
+
+export const PLANS = {
+  FREE: "free",
+  FINDING: "finding",
+  FAMILY_PLUS: "familyplus",
+  CARER: "carer",
+};
+
+// Finding has NO free month (her word, 15 Oct 2026). There is no
+// trial state for Finding anywhere in this layer, on purpose.
+export function isPassOpen(pass, now) {
+  if (!pass || !pass.endsAt) return false;
+  return now < pass.endsAt;
+}
+
+// comp: null or { plan: "finding", forever: true } from _comp/{uid}
+// payment: null or { plan, status, currentPeriodEnd, pass: {endsAt} }
+export function resolvePlan({ side, comp, payment, now }) {
+  if (side === "carer") {
+    return { tier: PLANS.CARER, doorOpen: true, source: "carers free forever" };
+  }
+  if (comp && comp.plan === PLANS.FINDING && comp.forever) {
+    return { tier: PLANS.FINDING, doorOpen: true, source: "comp" };
+  }
+  if (payment && payment.status === "active") {
+    if (payment.plan === PLANS.FINDING || payment.plan === PLANS.FAMILY_PLUS) {
+      return { tier: payment.plan, doorOpen: true, source: "subscription" };
+    }
+  }
+  if (payment && isPassOpen(payment.pass, now)) {
+    return { tier: PLANS.FINDING, doorOpen: true, source: "search pass" };
+  }
+  return { tier: PLANS.FREE, doorOpen: false, source: "free taste" };
+}
+
+// The free taste: families browse and view free, and send ONE
+// message per day (her word, standing since 14 Oct 2026). A paid
+// door or a carer side sends without the taste limit.
+export function canSendMessage({ plan, tasteUsedToday }) {
+  if (!plan) return false;
+  if (plan.tier === PLANS.CARER) return true;
+  if (plan.doorOpen) return true;
+  return (tasteUsedToday || 0) < 1;
+}
+
+export function tasteDayKey(date) {
+  const d = date instanceof Date ? date : new Date(date);
+  return d.toISOString().slice(0, 10);
+}
+
+// ---------- Browser shell (dormant until the config lands) ----------
+
+const SDK = "https://www.gstatic.com/firebasejs/10.12.2";
+let _auth = null;
+let _db = null;
+let _user = null;
+
+export function currentUser() {
+  return _user;
+}
+
+export async function initAccounts(config, onUser) {
+  if (!config || !config.apiKey || !config.projectId || !config.appId) {
+    return { on: false };
+  }
+  const { initializeApp } = await import(`${SDK}/firebase-app.js`);
+  const authMod = await import(`${SDK}/firebase-auth.js`);
+  const fsMod = await import(`${SDK}/firebase-firestore.js`);
+  const app = initializeApp(config);
+  _auth = authMod.getAuth(app);
+  _db = fsMod.getFirestore(app);
+  authMod.onAuthStateChanged(_auth, async (u) => {
+    _user = u;
+    if (u && !u.isAnonymous) {
+      await ensureProfile(fsMod, u);
+    }
+    if (onUser) onUser(u);
+  });
+  return { on: true };
+}
+
+// The profile doc is created EMPTY at first sign in (Empty Start
+// law): no plan keys, no answers, nothing prefilled. In the same
+// batch, the CEO people counter rises by the paired write the
+// rules allow (signup total plus this ISO week bucket).
+async function ensureProfile(fsMod, u) {
+  const { doc, getDoc, writeBatch } = fsMod;
+  const ref = doc(_db, "users", u.uid);
+  const snap = await getDoc(ref);
+  if (snap.exists()) return;
+  const batch = writeBatch(_db);
+  batch.set(ref, { createdAt: new Date().toISOString(), side: "" });
+  const aggRef = doc(_db, "_owner", "aggregates", "people", "main");
+  const agg = await getDoc(aggRef);
+  const week = isoWeekKey(new Date());
+  if (!agg.exists()) {
+    batch.set(aggRef, {
+      total: 1,
+      weekly: { [week]: 1 },
+      activatedWithin7d: 0,
+      returning7d: 0,
+    });
+  } else {
+    const d = agg.data();
+    const weekly = { ...(d.weekly || {}) };
+    weekly[week] = (weekly[week] || 0) + 1;
+    batch.update(aggRef, { total: (d.total || 0) + 1, weekly });
+  }
+  try {
+    await batch.commit();
+  } catch (e) {
+    // The counter is a paired write; if the rules have not been
+    // published yet it fails quietly and sign in still succeeds.
+  }
+}
+
+export function isoWeekKey(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const week = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
+}
+
+// ---------- The three doors ----------
+
+export async function signInGoogle() {
+  const m = await import(`${SDK}/firebase-auth.js`);
+  return m.signInWithPopup(_auth, new m.GoogleAuthProvider());
+}
+
+export async function signInApple() {
+  const m = await import(`${SDK}/firebase-auth.js`);
+  const provider = new m.OAuthProvider("apple.com");
+  return m.signInWithPopup(_auth, provider);
+}
+
+export async function signInEmail(email, password) {
+  const m = await import(`${SDK}/firebase-auth.js`);
+  try {
+    return await m.signInWithEmailAndPassword(_auth, email, password);
+  } catch (e) {
+    if (e && e.code === "auth/user-not-found") {
+      return m.createUserWithEmailAndPassword(_auth, email, password);
+    }
+    throw e;
+  }
+}
+
+export async function signOutUser() {
+  const m = await import(`${SDK}/firebase-auth.js`);
+  return m.signOut(_auth);
+}
+
+// Account deletion is the user's own act (Never Delete law): the
+// app never deletes for them. This removes the user's folder and
+// then the account itself; it needs a fresh sign in, which the
+// page asks for. A hire shared with another user keeps only the
+// other side's own copy, per the isolation model.
+export async function deleteMyAccount() {
+  if (!_user) throw new Error("not signed in");
+  const fsMod = await import(`${SDK}/firebase-firestore.js`);
+  const { doc, collection, getDocs, writeBatch } = fsMod;
+  const subs = ["children", "dayStory", "roster", "timesheets", "documents", "messages", "jobs"];
+  const batch = writeBatch(_db);
+  for (const sub of subs) {
+    const snap = await getDocs(collection(_db, "users", _user.uid, sub));
+    snap.forEach((d) => batch.delete(d.ref));
+  }
+  batch.delete(doc(_db, "users", _user.uid, "meta", "app"));
+  batch.delete(doc(_db, "users", _user.uid));
+  await batch.commit();
+  const m = await import(`${SDK}/firebase-auth.js`);
+  await m.deleteUser(_user);
+}
