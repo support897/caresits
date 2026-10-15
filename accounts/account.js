@@ -98,7 +98,9 @@ async function ensureProfile(fsMod, u) {
   const ref = doc(_db, "users", u.uid);
   const snap = await getDoc(ref);
   if (snap.exists()) return;
-  const profile = { createdAt: new Date().toISOString(), side: "" };
+  // The name asked at sign up (her 16:28 ruling) rides the profile
+  // from birth, so the app can greet the user by their own name.
+  const profile = { createdAt: new Date().toISOString(), side: "", displayName: u.displayName || _pendingName || "" };
   try {
     const batch = writeBatch(_db);
     batch.set(ref, profile);
@@ -135,13 +137,23 @@ export async function signInApple() {
   return m.signInWithPopup(_auth, provider);
 }
 
-export async function signInEmail(email, password) {
+let _pendingName = "";
+export async function signInEmail(email, password, name) {
   const m = await import(`${SDK}/firebase-auth.js`);
   try {
     return await m.signInWithEmailAndPassword(_auth, email, password);
   } catch (e) {
-    if (e && e.code === "auth/user-not-found") {
-      return m.createUserWithEmailAndPassword(_auth, email, password);
+    if (e && (e.code === "auth/user-not-found" || e.code === "auth/invalid-credential")) {
+      // A refused sign in may be a first visit in disguise: try the
+      // create once, and let its own error speak if it is not.
+      try {
+        _pendingName = name || "";
+        const cred = await m.createUserWithEmailAndPassword(_auth, email, password);
+        if (name) { try { await m.updateProfile(cred.user, { displayName: name }); } catch { /* name rides the profile doc */ } }
+        return cred;
+      } catch {
+        throw e;
+      }
     }
     throw e;
   }
