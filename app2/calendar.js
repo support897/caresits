@@ -6,7 +6,7 @@
 // lands the block. A combined view heads the screen: every
 // pair together, every block carrying the other person's
 // name, and nothing from one pair inside another.
-import { planRequest, planDecision, planBlockLanding, planWeekVersion, clashLine } from "./calendar-actions.js";
+import { planRequest, planDecision, planBlockLanding, planWeekVersion, clashLine, clashParts } from "./calendar-actions.js";
 
 const el = (tag, cls, text) => {
   const n = document.createElement(tag);
@@ -17,43 +17,44 @@ const el = (tag, cls, text) => {
 const nowIso = () => new Date().toISOString();
 const write = (kind, payload) => { if (typeof window.CARESITS_WRITE === "function") window.CARESITS_WRITE(kind, payload); };
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const KIND_WORDS = { extra: "Extra help", off: "A day off", move: "Move a session", "week-change": "Change the regular week" };
+import { t as tr } from "./lang.js";
+const KIND_WORDS = { extra: tr("cal.kind.extra"), off: tr("cal.kind.off"), move: tr("cal.kind.move"), "week-change": tr("cal.kind.week-change") };
 
 function blockChip(b, otherName) {
   const chip = el("div", "calBlock " + (b.kind === "regular" ? "regular" : b.kind === "off" ? "offBlock" : "onceBlock"));
-  chip.append(el("span", "calTime", (b.start || "") + (b.end ? " to " + b.end : "")));
-  chip.append(el("span", "calWith", " with " + otherName));
-  if (b.kind === "off") chip.append(el("span", "calTag", " Day off"));
-  else if (b.kind !== "regular") chip.append(el("span", "calTag", " One time"));
+  chip.append(el("span", "calTime", (b.start || "") + (b.end ? tr("week.to") + b.end : "")));
+  chip.append(el("span", "calWith", tr("week.with", undefined, { name: otherName })));
+  if (b.kind === "off") chip.append(el("span", "calTag", tr("cal.tagOff")));
+  else if (b.kind !== "regular") chip.append(el("span", "calTag", tr("cal.tagOnce")));
   return chip;
 }
 
 export function renderPairCalendar(root, viewerUid, pair) {
   const sec = el("section", "calPair");
-  sec.append(el("h3", "findName", "Calendar with " + pair.otherName));
+  sec.append(el("h3", "findName", tr("cal.withTitle", undefined, { name: pair.otherName })));
   for (const day of DAYS) {
     const regular = (pair.pattern || []).filter((p) => p.day === day);
     const blocks = (pair.blocks || []).filter((b) => b.day === day);
     if (!regular.length && !blocks.length) continue;
     const row = el("div", "calDay");
-    row.append(el("p", "calDayName", day));
+    row.append(el("p", "calDayName", tr("journey.day." + day)));
     for (const p of regular) row.append(blockChip({ ...p, kind: "regular" }, pair.otherName));
     for (const b of blocks) row.append(blockChip(b, pair.otherName));
     sec.append(row);
   }
   const waiting = (pair.requests || []).filter((r) => r.state === "waiting");
   if (waiting.length) {
-    sec.append(el("h4", "calReqTitle", "Waiting requests"));
+    sec.append(el("h4", "calReqTitle", tr("cal.waiting")));
     for (const r of waiting) {
       const box = el("div", "findCard calReq");
       box.append(el("p", "findPlace", KIND_WORDS[r.kind] + " · " + (r.day || "") + (r.start ? " · " + r.start + " to " + (r.end || "") : "")));
       if (r.askedBy === viewerUid) {
-        box.append(el("p", "gateMsg", "Waiting for " + pair.otherName + " to answer."));
+        box.append(el("p", "gateMsg", tr("cal.waitingFor", undefined, { name: pair.otherName })));
       } else {
-        const clash = clashLine(r, pair.blocks);
-        if (clash) box.append(el("p", "gateMsg clash", clash));
+        const cp = clashParts(r, pair.blocks);
+        if (cp) box.append(el("p", "gateMsg clash", tr("cal.clash", undefined, { day: tr("journey.day." + cp.day), start: cp.start, end: cp.end })));
         const row = el("div", "actRow");
-        const accept = el("button", "mainBtn actBtn", "Accept");
+        const accept = el("button", "mainBtn actBtn", tr("cal.accept"));
         accept.type = "button";
         accept.addEventListener("click", () => {
           const dec = planDecision(r, viewerUid, true);
@@ -68,7 +69,7 @@ export function renderPairCalendar(root, viewerUid, pair) {
           }
           box.remove();
         });
-        const decline = el("button", "closeBtn", "Decline");
+        const decline = el("button", "closeBtn", tr("cal.decline"));
         decline.type = "button";
         decline.addEventListener("click", () => {
           const dec = planDecision(r, viewerUid, false);
@@ -82,15 +83,15 @@ export function renderPairCalendar(root, viewerUid, pair) {
     }
   }
   const form = el("div", "findCard");
-  form.append(el("h4", "calReqTitle", "Ask for a change"));
+  form.append(el("h4", "calReqTitle", tr("cal.ask")));
   const kind = el("select", "txtIn");
   for (const [k, w] of Object.entries(KIND_WORDS)) { const o = el("option", null, w); o.value = k; kind.append(o); }
   const day = el("select", "txtIn");
-  for (const d of DAYS) day.append(el("option", null, d));
-  const start = el("input", "txtIn"); start.placeholder = "Start, like 09:00";
-  const end = el("input", "txtIn"); end.placeholder = "End, like 12:00";
-  const from = el("input", "txtIn"); from.placeholder = "For a week change: starts on, like 2026-11-02";
-  const send = el("button", "mainBtn", "Send the request");
+  for (const d of DAYS) { const o = el("option", null, tr("journey.day." + d)); o.value = d; day.append(o); }
+  const start = el("input", "txtIn"); start.placeholder = tr("cal.startPh");
+  const end = el("input", "txtIn"); end.placeholder = tr("cal.endPh");
+  const from = el("input", "txtIn"); from.placeholder = tr("cal.fromPh");
+  const send = el("button", "mainBtn", tr("cal.send"));
   send.type = "button";
   send.addEventListener("click", () => {
     const versionId = "v" + Date.now();
@@ -101,7 +102,7 @@ export function renderPairCalendar(root, viewerUid, pair) {
       write("week-version", ver);
     }
     write("request", plan);
-    form.append(el("p", "gateMsg", "Sent. The calendar changes only if " + pair.otherName + " accepts."));
+    form.append(el("p", "gateMsg", tr("cal.sent", undefined, { name: pair.otherName })));
   });
   form.append(kind, day, start, end, from, send);
   sec.append(form);
@@ -110,17 +111,17 @@ export function renderPairCalendar(root, viewerUid, pair) {
 
 export function renderCalendar(root, viewerUid, pairs) {
   root.replaceChildren();
-  root.append(el("h2", "findTitle", "Pair calendar"));
+  root.append(el("h2", "findTitle", tr("shell.calendar")));
   if (!pairs.length) {
     const box = el("div", "cardIn");
     const img = el("img", "bunnyBig");
     img.src = "bunny/bunny-rest-calm.png";
-    img.alt = "The Caresits bunny, resting calmly";
-    box.append(img, el("h3", null, "No pair calendar yet"), el("p", null, "A calendar opens here the moment a match begins."));
+    img.alt = tr("find.bunnyRest");
+    box.append(img, el("h3", null, tr("cal.empty")), el("p", null, tr("cal.emptyBody")));
     root.append(box);
     return;
   }
-  root.append(el("p", "findPool", "Every pair, one view. Each block says who it is with."));
+  root.append(el("p", "findPool", tr("cal.lead")));
   for (const pair of pairs) renderPairCalendar(root, viewerUid, pair);
 }
 
