@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Caresits · Your account</title>
+<title data-i18n="acct.title">Caresits · Your account</title>
 <link rel="icon" href="../icon.svg">
 <style>
 @font-face { font-family:"Newsreader"; src:url("../fonts/Newsreader.ttf") format("truetype"); font-weight:400 800; }
@@ -31,46 +31,48 @@ button.dangerBtn { background:#A33B2E; border-color:#A33B2E; color:#fff; }
 <body>
 <main>
   <img src="../icon.svg" alt="" width="54" height="54">
-  <h1>Your Caresits account</h1>
-  <p>One account, yours alone. Your answers, your children, your plans. Nothing of yours is ever shared with another account.</p>
+  <h1 data-i18n="acct.h1">Your Caresits account</h1>
+  <p data-i18n="legal.intro">One account, yours alone. Your answers, your children, your plans. Nothing of yours is ever shared with another account.</p>
 
   <div class="card" id="doorsCard">
-    <h2>Sign in</h2>
-    <p class="small">Three doors, and only these three.</p>
-    <button class="door primary" id="doorGoogle">Continue with Google</button>
-    <button class="door" id="doorApple">Continue with Apple</button>
-    <label for="name">Your name, if you are new here</label>
-    <input id="name" type="text" autocomplete="name" placeholder="Your name">
-    <label for="email">Email</label>
+    <h2 data-i18n="acct.signIn">Sign in</h2>
+    <p class="small" data-i18n="acct.doors">Three doors, and only these three.</p>
+    <button class="door primary" id="doorGoogle" data-i18n="acct.google">Continue with Google</button>
+    <button class="door" id="doorApple" data-i18n="acct.apple">Continue with Apple</button>
+    <label for="name" data-i18n="acct.nameLabel">Your name, if you are new here</label>
+    <input id="name" type="text" autocomplete="name" placeholder="Your name" data-i18n-ph="acct.namePh">
+    <label for="email" data-i18n="acct.email">Email</label>
     <input id="email" type="email" autocomplete="email" placeholder="you@example.com">
-    <label for="password">Password</label>
-    <input id="password" type="password" autocomplete="current-password" placeholder="Your password">
-    <button class="door" id="doorEmail">Continue with email</button>
+    <label for="password" data-i18n="acct.password">Password</label>
+    <input id="password" type="password" autocomplete="current-password" placeholder="Your password" data-i18n-ph="acct.passwordPh">
+    <button class="door" id="doorEmail" data-i18n="acct.emailBtn">Continue with email</button>
     <p id="msg" role="status"></p>
-    <p class="small" id="dormantNote" hidden>Accounts are being switched on. This page is ready, and the doors open the moment the Caresits account service goes live.</p>
+    <p class="small" id="dormantNote" hidden data-i18n="acct.dormant">Accounts are being switched on. This page is ready, and the doors open the moment the Caresits account service goes live.</p>
   </div>
 
   <div class="card" id="planCard" hidden>
     <h2 id="helloLine">Your plan</h2>
     <p><span class="tag" id="planTier">Free taste</span></p>
     <p class="small" id="planText" style="margin-top:8px"></p>
-    <button class="door" id="signOut">Sign out</button>
+    <button class="door" id="signOut" data-i18n="acct.signOut">Sign out</button>
   </div>
 
   <div class="card">
-    <h2>The free taste, plainly</h2>
-    <p class="small">Families browse and view free, and can send one message a day free. Finding opens full messaging. Finding is paid from day one: it has no free month. Carers are free forever, in full.</p>
+    <h2 data-i18n="acct.tasteTitle">The free taste, plainly</h2>
+    <p class="small" data-i18n="legal.taste">Families browse and view free, and can send one message a day free. Finding opens full messaging. Finding is paid from day one: it has no free month. Carers are free forever, in full.</p>
   </div>
 
   <div class="card danger" id="deleteCard">
-    <h2>Delete your account</h2>
-    <p class="small">Only you can delete your account. Caresits never deletes your data for you. Deleting removes your profile, your children, your Day Story, your documents and your messages from your account, for good. If you share a hire with a carer, their own copy of that hire stays theirs.</p>
-    <p class="small" style="margin-top:8px">Before you delete, you can download your data from inside the app. If you are signed in, the button below does the deletion now. If you cannot sign in, write to us from the email on your account and we will verify it is you and delete the account within 30 days.</p>
-    <button class="door dangerBtn" id="deleteBtn">Delete my account</button>
+    <h2 data-i18n="acct.deleteTitle">Delete your account</h2>
+    <p class="small" data-i18n="legal.delete1">Only you can delete your account. Caresits never deletes your data for you. Deleting removes your profile, your children, your Day Story, your documents and your messages from your account, for good. If you share a hire with a carer, their own copy of that hire stays theirs.</p>
+    <p class="small" style="margin-top:8px" data-i18n="legal.delete2">Before you delete, you can download your data from inside the app. If you are signed in, the button below does the deletion now. If you cannot sign in, write to us from the email on your account and we will verify it is you and delete the account within 30 days.</p>
+    <button class="door dangerBtn" id="deleteBtn" data-i18n="acct.deleteBtn">Delete my account</button>
   </div>
 </main>
 <script type="module">
 import { firebaseConfig, FIREBASE_ON } from "./firebase-config.js";
+import { t as tr, applyI18n } from "../app2/lang.js";
+applyI18n();
 import { initAccounts, signInGoogle, signInApple, signInEmail, signOutUser, deleteMyAccount, resolvePlan, PLANS } from "./account.js";
 const msg = document.getElementById("msg");
 const setMsg = (t) => { msg.textContent = t || ""; };
@@ -82,18 +84,18 @@ if (!FIREBASE_ON) {
     document.getElementById("planCard").hidden = !u;
     document.getElementById("doorsCard").hidden = !!u;
     if (u) {
-      document.getElementById("helloLine").textContent = u.displayName ? `Hello, ${u.displayName}` : "Your plan";
+      document.getElementById("helloLine").textContent = u.displayName ? tr("acct.hello", undefined, { name: u.displayName }) : tr("acct.plan");
       const plan = resolvePlan({ side: "family", comp: null, payment: null, now: Date.now() });
-      document.getElementById("planTier").textContent = plan.tier === PLANS.FREE ? "Free taste" : plan.tier;
-      document.getElementById("planText").textContent = "Your plan settles here the moment payments and your account meet. Until then, the free taste applies.";
+      document.getElementById("planTier").textContent = plan.tier === PLANS.FREE ? tr("acct.freeTaste") : plan.tier;
+      document.getElementById("planText").textContent = tr("acct.planText");
     }
   });
-  const wrap = (fn) => async () => { setMsg(""); try { await fn(); } catch (e) { setMsg("That did not work. Please try again."); } };
+  const wrap = (fn) => async () => { setMsg(""); try { await fn(); } catch (e) { setMsg(tr("acct.fail")); } };
   document.getElementById("doorGoogle").onclick = wrap(signInGoogle);
   document.getElementById("doorApple").onclick = wrap(signInApple);
   document.getElementById("doorEmail").onclick = wrap(() => signInEmail(document.getElementById("email").value.trim(), document.getElementById("password").value, document.getElementById("name").value.trim()));
   document.getElementById("signOut").onclick = wrap(signOutUser);
-  document.getElementById("deleteBtn").onclick = wrap(async () => { await deleteMyAccount(); setMsg("Your account is deleted."); });
+  document.getElementById("deleteBtn").onclick = wrap(async () => { await deleteMyAccount(); setMsg(tr("acct.deleted")); });
 }
 </script>
 </body>
