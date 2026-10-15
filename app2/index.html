@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en" data-theme="brand">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Caresits</title>
+<meta name="description" content="Caresits. Find care. Share the day.">
+<link rel="icon" href="../icon.svg">
+<link rel="stylesheet" href="shell.css">
+</head>
+<body>
+<div id="layout" class="layout">
+  <aside id="menu" class="menu" aria-label="Menu">
+    <div class="menuHead">
+      <img class="menuBunny" src="bunny/bunny-hello.png" alt="">
+      <p class="menuTitle">Caresits</p>
+      <button type="button" id="closeBtn" class="closeBtn" aria-label="Close menu">Close</button>
+    </div>
+    <button type="button" class="navBtn top" data-nav="home">Home</button>
+    <div class="navGroup">
+      <button type="button" class="navGroupHead" data-group="finding">Finding care</button>
+      <div class="navGroupBody">
+        <button type="button" class="navBtn" data-nav="questionnaire">Questionnaire</button>
+        <button type="button" class="navBtn" data-nav="find">Find</button>
+        <button type="button" class="navBtn" data-nav="matches">Matches</button>
+        <button type="button" class="navBtn" data-nav="board">Urgent board</button>
+      </div>
+    </div>
+    <div class="navGroup">
+      <button type="button" class="navGroupHead" data-group="family">Our family</button>
+      <div class="navGroupBody">
+        <button type="button" class="navBtn" data-nav="children">Children</button>
+        <button type="button" class="navBtn" data-nav="daystory">Day Story</button>
+        <button type="button" class="navBtn" data-nav="emergency">Emergency</button>
+      </div>
+    </div>
+    <div class="navGroup">
+      <button type="button" class="navGroupHead" data-group="week">The week</button>
+      <div class="navGroupBody">
+        <button type="button" class="navBtn" data-nav="calendar">Pair calendar</button>
+        <button type="button" class="navBtn" data-nav="roster">Roster</button>
+        <button type="button" class="navBtn" data-nav="timesheet">Timesheet</button>
+        <button type="button" class="navBtn" data-nav="reminders">Reminders</button>
+      </div>
+    </div>
+    <div class="navGroup">
+      <button type="button" class="navGroupHead" data-group="trust">Trust and us</button>
+      <div class="navGroupBody">
+        <button type="button" class="navBtn" data-nav="checks">Checks</button>
+        <button type="button" class="navBtn" data-nav="reviews">Reviews</button>
+        <button type="button" class="navBtn" data-nav="profile">My Profile</button>
+        <button type="button" class="navBtn" data-nav="privacy">Privacy policy</button>
+      </div>
+    </div>
+    <button type="button" class="navBtn top" data-nav="settings">Settings</button>
+  </aside>
+  <div id="sliver" class="sliver" aria-hidden="true"></div>
+  <main id="content" class="content">
+    <header class="topBar">
+      <button type="button" id="menuBtn" class="menuBtn" aria-label="Open menu">Menu</button>
+      <p class="brandLine"><img class="brandHeart" src="../icon.svg" alt=""> Caresits</p>
+    </header>
+    <section id="surface-home" class="surface">
+      <div class="cardIn">
+        <img class="bunnyBig" src="bunny/bunny-hello.png" alt="The Caresits bunny waving hello">
+        <h1>A calm place to find care</h1>
+        <p class="lead">Start with the questionnaire. It takes about 5 to 10 minutes, and it is how we match you properly.</p>
+        <button type="button" class="mainBtn" data-goto="questionnaire">Start the questionnaire</button>
+        <p id="todayLine" class="todayLine" hidden></p>
+      </div>
+    </section>
+    <section id="surface-find" class="surface" hidden>
+      <div id="findRoot"></div>
+    </section>
+    <section id="surface-matches" class="surface" hidden>
+      <div id="matchesRoot"></div>
+    </section>
+    <section id="surface-board" class="surface" hidden>
+      <div id="boardRoot"></div>
+    </section>
+    <section id="surface-calendar" class="surface" hidden>
+      <div id="calendarRoot"></div>
+    </section>
+    <section id="surface-children" class="surface" hidden>
+      <div id="childrenRoot"></div>
+    </section>
+    <section id="surface-daystory" class="surface" hidden>
+      <div id="daystoryRoot"></div>
+    </section>
+    <section id="surface-questionnaire" class="surface" hidden>
+      <iframe id="journeyFrame" title="Caresits questionnaire" src="journey.html"></iframe>
+    </section>
+    <section id="surface-emergency" class="surface" hidden>
+      <div id="emergencyRoot"></div>
+    </section>
+    <section id="surface-roster" class="surface" hidden>
+      <div id="rosterRoot"></div>
+    </section>
+    <section id="surface-timesheet" class="surface" hidden>
+      <div id="timesheetRoot"></div>
+    </section>
+    <section id="surface-reminders" class="surface" hidden>
+      <div id="remindersRoot"></div>
+    </section>
+    <section id="surface-checks" class="surface" hidden>
+      <div id="checksRoot"></div>
+    </section>
+    <section id="surface-reviews" class="surface" hidden>
+      <div id="reviewsRoot"></div>
+    </section>
+    <section id="surface-profile" class="surface" hidden>
+      <div id="profileRoot"></div>
+    </section>
+    <section id="surface-privacy" class="surface" hidden>
+      <div id="privacyRoot"></div>
+    </section>
+    <section id="surface-settings" class="surface" hidden>
+      <div id="settingsRoot"></div>
+    </section>
+    <section id="surface-thread" class="surface" hidden>
+      <div id="threadRoot"></div>
+    </section>
+    <section id="surface-soon" class="surface" hidden>
+      <div class="cardIn">
+        <img class="bunnyBig" src="bunny/bunny-rest-calm.png" alt="The Caresits bunny, resting calmly">
+        <h2 id="soonTitle">Coming with the build</h2>
+        <p>This part of Caresits is being built now, in the open, phase by phase. Nothing here is a promise of a date. It lands when it is proven.</p>
+      </div>
+    </section>
+  </main>
+</div>
+<script type="module" src="shell.js"></script>
+<script type="module" src="find.js"></script>
+<script type="module" src="matches.js"></script>
+<script type="module" src="safety.js"></script>
+<script type="module" src="calendar.js"></script>
+<script type="module" src="tour.js"></script>
+<script type="module" src="family.js"></script>
+<script type="module" src="week.js"></script>
+<script type="module" src="trust.js"></script>
+<script type="module" src="thread.js"></script>
+<script type="module" src="live.js"></script>
+</body>
+</html>
