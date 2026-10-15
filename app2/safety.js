@@ -1,3 +1,4 @@
+import { t as tr } from "./lang.js";
 // Caresits app2 — the safety sheet (Amendment 4 build).
 // One quiet sheet serves every surface: pick a reason, add
 // your own words if you like, send. The filer then sees the
@@ -21,7 +22,7 @@ function openSheet(build) {
   const wrap = el("div", "sheetWrap");
   wrap.id = "safetySheet";
   const sheet = el("div", "sheetCard");
-  const x = el("button", "closeBtn sheetX", "Close");
+  const x = el("button", "closeBtn sheetX", tr("safety.close"));
   x.type = "button";
   x.addEventListener("click", closeSheet);
   sheet.append(x);
@@ -33,29 +34,29 @@ function openSheet(build) {
 window.CARESITS_REPORT = (reportedUid, ctx = {}) => {
   const me = window.CARESITS_ME || {};
   openSheet((sheet) => {
-    sheet.append(el("h3", "findName", "Report"));
-    sheet.append(el("p", null, "Tell the operator what happened. The person is not told, and their account keeps working while the operator looks."));
+    sheet.append(el("h3", "findName", tr("safety.report")));
+    sheet.append(el("p", null, tr("safety.reportBody")));
     let picked = "other";
     const chips = el("div", "chipRow");
     for (const [key, label] of REPORT_CATEGORIES) {
-      const c = el("button", "chipBtn" + (key === picked ? " on" : ""), label);
+      const c = el("button", "chipBtn" + (key === picked ? " on" : ""), tr("safety.cat." + key));
       c.type = "button";
-      c.addEventListener("click", () => { picked = key; chips.querySelectorAll(".chipBtn").forEach((b) => b.classList.toggle("on", b.textContent === label)); });
+      c.addEventListener("click", () => { picked = key; chips.querySelectorAll(".chipBtn").forEach((b) => b.classList.toggle("on", b === c)); });
       chips.append(c);
     }
     sheet.append(chips);
     const words = el("textarea", "txtIn sheetWords");
     words.rows = 3;
-    words.placeholder = "Your words, if you want to add any";
+    words.placeholder = tr("safety.wordsPh");
     sheet.append(words);
-    const send = el("button", "mainBtn", "Send the report");
+    const send = el("button", "mainBtn", tr("safety.send"));
     send.type = "button";
     send.addEventListener("click", () => {
       const plan = planReport({ reporterUid: me.uid, reportedUid, surface: ctx.surface || "profile", category: picked, words: words.value, snapshot: ctx.snapshot || { items: [], text: "", title: "" }, nowIso: nowIso() });
       if (!plan.ok) return;
       write("report", plan);
-      sheet.replaceChildren(el("h3", "findName", "Thank you"), el("p", null, plan.acknowledgement));
-      const done = el("button", "mainBtn", "Done");
+      sheet.replaceChildren(el("h3", "findName", tr("safety.thanks")), el("p", null, tr("safety.ack")));
+      const done = el("button", "mainBtn", tr("safety.done"));
       done.type = "button";
       done.addEventListener("click", closeSheet);
       sheet.append(done);
@@ -67,16 +68,16 @@ window.CARESITS_REPORT = (reportedUid, ctx = {}) => {
 window.CARESITS_BLOCK = (otherUid, cardEl) => {
   const me = window.CARESITS_ME || {};
   openSheet((sheet) => {
-    sheet.append(el("h3", "findName", "Block this person"));
-    sheet.append(el("p", null, "You will not see each other, messages stop, and any match between you ends. They are never told. Nothing is deleted."));
-    const yes = el("button", "mainBtn", "Block");
+    sheet.append(el("h3", "findName", tr("safety.blockTitle")));
+    sheet.append(el("p", null, tr("safety.blockBody")));
+    const yes = el("button", "mainBtn", tr("safety.block"));
     yes.type = "button";
     yes.addEventListener("click", () => {
       const plan = planBlock({ uid: me.uid, otherUid, nowIso: nowIso() });
       if (plan.ok) { write("block", plan); cardEl?.remove(); window.CARESITS_EXCLUDE?.(otherUid); }
       closeSheet();
     });
-    const no = el("button", "closeBtn", "Not now");
+    const no = el("button", "closeBtn", tr("safety.notNow"));
     no.type = "button";
     no.addEventListener("click", closeSheet);
     sheet.append(yes, no);
