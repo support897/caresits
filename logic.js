@@ -66,7 +66,7 @@ function normaliseState(raw) {
   if (s.theme === "photo" && !s.bgPhoto) s.theme = "brand";
   s.guideHidden = asBool(raw.guideHidden);
   s.cute = raw.cute !== false;
-  /* Sidebar Adaptive Law (Ilse, 14 Oct 2026): the menu starts hidden on EVERY load,
+  /* Sidebar Adaptive Law (14 Oct 2026): the menu starts hidden on EVERY load,
      whatever was saved. The top bar toggle shows or hides it for this session only. */
   s.sidebarHidden = true;
   s.notifAsked = asBool(raw.notifAsked);
