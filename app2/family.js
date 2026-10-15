@@ -24,13 +24,13 @@ const todayKey = () => new Date().toISOString().slice(0, 10);
 
 export function renderChildren(root, children) {
   root.replaceChildren();
-  root.append(el("h2", "findTitle", "Children"));
+  root.append(el("h2", "findTitle", tr("shell.children")));
   if (!children.length) {
     const box = el("div", "cardIn");
     const img = el("img", "bunnyBig");
     img.src = "bunny/bunny-hello.png";
-    img.alt = "The Caresits bunny waving hello";
-    box.append(img, el("h3", null, "No children here yet"), el("p", null, "Add your first child below. Their card is private: only you, and a carer you are working with, can ever see it."));
+    img.alt = tr("tour.bunnyAlt");
+    box.append(img, el("h3", null, tr("family.noKids")), el("p", null, tr("family.noKidsBody")));
     root.append(box);
   }
   const list = el("div", "findList");
@@ -39,8 +39,8 @@ export function renderChildren(root, children) {
     const card = el("article", "findCard kidCard");
     card.style.borderTop = "6px solid " + theme[2];
     card.append(el("h3", "findName", kid.name));
-    card.append(el("p", "findPlace", theme[1] + " theme"));
-    const rm = el("button", "quietBtn", "Remove");
+    card.append(el("p", "findPlace", tr("family.themeWord", undefined, { t: themeName(theme[0], theme[1]) })));
+    const rm = el("button", "quietBtn", tr("family.remove"));
     rm.type = "button";
     rm.addEventListener("click", () => confirmRemove(kid, card));
     card.append(rm);
@@ -48,14 +48,14 @@ export function renderChildren(root, children) {
   }
   root.append(list);
   const form = el("div", "findCard");
-  form.append(el("h3", "findName", "Add a child"));
+  form.append(el("h3", "findName", tr("family.addChild")));
   const name = el("input", "txtIn");
-  name.placeholder = "Their first name";
+  name.placeholder = tr("family.namePh");
   name.id = "kName";
   const themeSel = el("select", "txtIn");
   themeSel.id = "kTheme";
-  for (const [id, label] of THEMES) { const o = el("option", null, label); o.value = id; themeSel.append(o); }
-  const add = el("button", "mainBtn", "Add");
+  for (const [id, label] of THEMES) { const o = el("option", null, themeName(id, label)); o.value = id; themeSel.append(o); }
+  const add = el("button", "mainBtn", tr("family.add"));
   add.type = "button";
   add.id = "kAdd";
   add.addEventListener("click", () => {
@@ -74,12 +74,12 @@ function confirmRemove(kid, card) {
   const wrap = el("div", "sheetWrap");
   wrap.id = "safetySheet";
   const sheet = el("div", "sheetCard");
-  sheet.append(el("h3", "findName", "Remove " + kid.name + "?"));
-  sheet.append(el("p", null, "This removes " + kid.name + " and their Day Story notes from your app. It cannot be undone. Download your data first if you want a copy."));
-  const yes = el("button", "mainBtn", "Yes, remove");
+  sheet.append(el("h3", "findName", tr("family.removeTitle", undefined, { name: kid.name })));
+  sheet.append(el("p", null, tr("family.removeBody", undefined, { name: kid.name })));
+  const yes = el("button", "mainBtn", tr("family.yesRemove"));
   yes.type = "button";
   yes.addEventListener("click", () => { write("child-remove", { id: kid.id }); card.remove(); wrap.remove(); });
-  const no = el("button", "closeBtn", "Keep");
+  const no = el("button", "closeBtn", tr("family.keep"));
   no.type = "button";
   no.addEventListener("click", () => wrap.remove());
   sheet.append(yes, no);
@@ -89,24 +89,24 @@ function confirmRemove(kid, card) {
 
 export function renderDayStory(root, entries, side) {
   root.replaceChildren();
-  root.append(el("h2", "findTitle", "Day Story"));
-  root.append(el("p", "findPool", "The story of the day, saved day by day like a calendar."));
+  root.append(el("h2", "findTitle", tr("shell.daystory")));
+  root.append(el("p", "findPool", tr("family.storyLead")));
   const form = el("div", "findCard");
-  form.append(el("h3", "findName", "Today"));
+  form.append(el("h3", "findName", tr("family.today")));
   let picked = "Meal";
   const chips = el("div", "chipRow");
   for (const t of TILES) {
-    const c = el("button", "chipBtn" + (t === picked ? " on" : ""), t);
+    const c = el("button", "chipBtn" + (t === picked ? " on" : ""), tileName(t));
     c.type = "button";
     c.dataset.tile = t.toLowerCase().split(" ")[0];
-    c.addEventListener("click", () => { picked = t; chips.querySelectorAll(".chipBtn").forEach((b) => b.classList.toggle("on", b.textContent === t)); });
+    c.addEventListener("click", () => { picked = t; chips.querySelectorAll(".chipBtn").forEach((b) => b.classList.toggle("on", b === c)); });
     chips.append(c);
   }
   form.append(chips);
   const note = el("textarea", "txtIn");
   note.id = "tileNote";
-  note.placeholder = "A few words about it";
-  const save = el("button", "mainBtn", "Save to today");
+  note.placeholder = tr("family.notePh");
+  const save = el("button", "mainBtn", tr("family.saveToday"));
   save.type = "button";
   save.id = "tileSave";
   save.addEventListener("click", () => {
@@ -116,11 +116,11 @@ export function renderDayStory(root, entries, side) {
   });
   form.append(note, save);
   if (side === "family") {
-    const ask = el("button", "closeBtn", "Ask for a photo of the kids");
+    const ask = el("button", "closeBtn", tr("family.askPhoto"));
     ask.type = "button";
     ask.addEventListener("click", () => {
       write("photo-request", { day: todayKey(), at: new Date().toISOString() });
-      form.append(el("p", "gateMsg", "Asked. Your carer will see the request in today's story."));
+      form.append(el("p", "gateMsg", tr("family.asked")));
       ask.remove();
     });
     form.append(ask);
@@ -132,21 +132,24 @@ export function renderDayStory(root, entries, side) {
     sec.append(el("h3", "findName", day));
     for (const e of entries.filter((x) => x.day === day)) {
       const row = el("div", "findCard");
-      row.append(el("p", "findPlace", e.tile + (e.note ? " · " + e.note : "")));
+      row.append(el("p", "findPlace", tileName(e.tile) + (e.note ? " · " + e.note : "")));
       sec.append(row);
     }
     root.append(sec);
   }
   if (!entries.length) {
     const box = el("div", "cardIn");
-    box.append(el("h3", null, "Nothing logged yet"), el("p", null, "The first tile you save starts today's story."));
+    box.append(el("h3", null, tr("family.nothing")), el("p", null, tr("family.nothingBody")));
     root.append(box);
   }
 }
 
+import { t as tr } from "./lang.js";
+const themeName = (id, fallback) => tr("family.theme." + id) === "family.theme." + id ? fallback : tr("family.theme." + id);
+const tileName = (name) => tr("family.tile." + name) === "family.tile." + name ? name : tr("family.tile." + name);
 export function todayLineText(count) {
   if (!count) return "";
-  return count === 1 ? "1 thing logged today" : count + " things logged today";
+  return count === 1 ? tr("family.todayLine1") : tr("family.todayLineN", undefined, { n: count });
 }
 
 function bootFamily() {
