@@ -39,6 +39,8 @@ button.dangerBtn { background:#A33B2E; border-color:#A33B2E; color:#fff; }
     <p class="small">Three doors, and only these three.</p>
     <button class="door primary" id="doorGoogle">Continue with Google</button>
     <button class="door" id="doorApple">Continue with Apple</button>
+    <label for="name">Your name, if you are new here</label>
+    <input id="name" type="text" autocomplete="name" placeholder="Your name">
     <label for="email">Email</label>
     <input id="email" type="email" autocomplete="email" placeholder="you@example.com">
     <label for="password">Password</label>
@@ -49,7 +51,7 @@ button.dangerBtn { background:#A33B2E; border-color:#A33B2E; color:#fff; }
   </div>
 
   <div class="card" id="planCard" hidden>
-    <h2>Your plan</h2>
+    <h2 id="helloLine">Your plan</h2>
     <p><span class="tag" id="planTier">Free taste</span></p>
     <p class="small" id="planText" style="margin-top:8px"></p>
     <button class="door" id="signOut">Sign out</button>
@@ -80,6 +82,7 @@ if (!FIREBASE_ON) {
     document.getElementById("planCard").hidden = !u;
     document.getElementById("doorsCard").hidden = !!u;
     if (u) {
+      document.getElementById("helloLine").textContent = u.displayName ? `Hello, ${u.displayName}` : "Your plan";
       const plan = resolvePlan({ side: "family", comp: null, payment: null, now: Date.now() });
       document.getElementById("planTier").textContent = plan.tier === PLANS.FREE ? "Free taste" : plan.tier;
       document.getElementById("planText").textContent = "Your plan settles here the moment payments and your account meet. Until then, the free taste applies.";
@@ -88,7 +91,7 @@ if (!FIREBASE_ON) {
   const wrap = (fn) => async () => { setMsg(""); try { await fn(); } catch (e) { setMsg("That did not work. Please try again."); } };
   document.getElementById("doorGoogle").onclick = wrap(signInGoogle);
   document.getElementById("doorApple").onclick = wrap(signInApple);
-  document.getElementById("doorEmail").onclick = wrap(() => signInEmail(document.getElementById("email").value.trim(), document.getElementById("password").value));
+  document.getElementById("doorEmail").onclick = wrap(() => signInEmail(document.getElementById("email").value.trim(), document.getElementById("password").value, document.getElementById("name").value.trim()));
   document.getElementById("signOut").onclick = wrap(signOutUser);
   document.getElementById("deleteBtn").onclick = wrap(async () => { await deleteMyAccount(); setMsg("Your account is deleted."); });
 }
