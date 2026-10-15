@@ -1,0 +1,133 @@
+@font-face { font-family: "Newsreader"; src: url("../fonts/Newsreader.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Atkinson Hyperlegible"; src: url("../fonts/Atkinson-Regular.ttf") format("truetype"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Atkinson Hyperlegible"; src: url("../fonts/Atkinson-Bold.ttf") format("truetype"); font-weight: 700; font-display: swap; }
+
+:root {
+  --ink: #1E4D44;
+  --ground: #FDF8F0;
+  --teal: #9CC5B5;
+  --blush: #F6CBD3;
+  --card: #FFFFFF;
+  --line: #D8E4DC;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--ground); color: var(--ink); font-family: "Atkinson Hyperlegible", system-ui, sans-serif; font-size: 17px; line-height: 1.5; }
+h1, h2 { font-family: "Newsreader", Georgia, serif; font-weight: 600; line-height: 1.15; }
+.lead { font-size: 19px; }
+
+/* The layout: menu hidden on load, content full screen.
+   Her shape (15 Oct 2026): menu open means the menu takes most
+   of the screen and the content shrinks to a thin sliver at the
+   edge. Tapping the sliver or closing returns full content. */
+.layout { display: flex; height: 100dvh; overflow: hidden; }
+.menu {
+  flex: 0 0 0; width: 0; overflow: hidden; background: #F7EFE3;
+  border-right: 1px solid var(--line); transition: flex-basis .28s ease;
+  display: flex; flex-direction: column; padding: 0; visibility: hidden;
+}
+.layout.open .menu { flex-basis: 76%; visibility: visible; padding: 16px 14px; overflow-y: auto; }
+.sliver {
+  flex: 0 0 0; width: 0; overflow: hidden; background: var(--teal);
+  opacity: 0; transition: flex-basis .28s ease, opacity .28s ease; cursor: pointer;
+}
+.layout.open .sliver { flex-basis: 24%; opacity: .45; }
+.content { flex: 1 1 auto; min-width: 0; overflow-y: auto; transition: opacity .28s ease; }
+.layout.open .content { overflow: hidden; }
+
+.menuHead { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.menuBunny { width: 54px; height: auto; }
+.menuTitle { font-family: "Newsreader", Georgia, serif; font-size: 24px; font-weight: 600; margin: 0; flex: 1; }
+.closeBtn, .menuBtn { background: none; border: 1.5px solid var(--ink); color: var(--ink); border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+.navBtn, .navGroupHead {
+  display: block; width: 100%; text-align: left; background: none; border: none;
+  font: inherit; color: var(--ink); padding: 11px 12px; border-radius: 12px; cursor: pointer;
+}
+.navBtn:hover, .navGroupHead:hover { background: #EFE3D2; }
+.navBtn.on { background: var(--teal); font-weight: 700; }
+.navGroupHead { font-weight: 700; margin-top: 8px; }
+.navGroupBody { display: none; padding-left: 12px; }
+.navGroup.open .navGroupBody { display: block; }
+.navBtn.top { font-weight: 700; }
+
+.topBar { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--card); position: sticky; top: 0; }
+.brandHeart { width: 22px; height: 22px; vertical-align: -4px; }
+.brandLine { font-family: "Newsreader", Georgia, serif; font-size: 21px; font-weight: 600; margin: 0; }
+.surface { padding: 20px 16px 48px; max-width: 720px; margin: 0 auto; }
+.cardIn { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 26px 22px; text-align: center; }
+.bunnyBig { width: 140px; height: auto; }
+.mainBtn { background: var(--ink); color: #fff; border: none; border-radius: 999px; padding: 14px 22px; font: inherit; font-weight: 700; cursor: pointer; }
+#journeyFrame { width: 100%; height: calc(100dvh - 140px); border: none; border-radius: 18px; background: var(--ground); }
+
+.findTitle { font-family: "Newsreader", Georgia, serif; font-size: 28px; margin: 4px 0 6px; }
+.findPool { margin: 0 0 14px; font-weight: 700; }
+.findList { display: grid; gap: 14px; margin-bottom: 16px; }
+.findCard { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 18px; }
+.findCard.nearly { opacity: .82; }
+.findHead { display: flex; gap: 14px; align-items: center; }
+.findPhoto { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; }
+.findInitial { width: 56px; height: 56px; border-radius: 50%; background: var(--blush); display: grid; place-items: center; font-family: "Newsreader", Georgia, serif; font-size: 26px; font-weight: 700; flex: none; }
+.findName { margin: 0; font-size: 20px; }
+.findPlace { margin: 2px 0 0; }
+.findFit { margin: 12px 0 6px; }
+.fitChip { background: var(--teal); border-radius: 999px; padding: 4px 12px; font-weight: 700; font-size: 14px; }
+.fitScore { font-weight: 700; }
+.findReasons { margin: 6px 0 14px; padding-left: 20px; }
+.findMsg { width: 100%; }
+.findMore { width: 100%; margin-bottom: 16px; }
+.findNearlyTitle { font-family: "Newsreader", Georgia, serif; font-size: 22px; margin: 20px 0 2px; }
+.findNearlyNote { margin: 0 0 12px; }
+.findGate { margin: 8px 0 0; font-weight: 700; }
+
+.actRow { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.actBtn { padding: 10px 16px; }
+.txtIn { display: block; width: 100%; box-sizing: border-box; font: inherit; padding: 11px 13px; border: 1.5px solid var(--line); border-radius: 12px; margin: 0 0 10px; background: #fff; color: var(--ink); }
+.gateMsg { font-weight: 700; margin: 10px 0 0; }
+
+.quietRow { display: flex; gap: 14px; margin-top: 12px; }
+.quietBtn { background: none; border: none; font: inherit; font-size: 15px; color: var(--ink); opacity: .75; cursor: pointer; padding: 4px 2px; text-decoration: underline; }
+.sheetWrap { position: fixed; inset: 0; background: rgba(30, 77, 68, .45); display: grid; place-items: center; padding: 18px; z-index: 40; }
+.sheetCard { background: var(--card); border-radius: 22px; padding: 22px; max-width: 430px; width: 100%; box-sizing: border-box; }
+.sheetX { float: right; }
+.chipRow { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.chipBtn { background: #fff; border: 1.5px solid var(--line); border-radius: 999px; padding: 8px 13px; font: inherit; font-size: 15px; cursor: pointer; color: var(--ink); }
+.chipBtn.on { background: var(--blush); border-color: var(--ink); font-weight: 700; }
+.sheetWords { min-height: 74px; }
+
+.calPair { margin-bottom: 26px; }
+.calDay { margin: 10px 0; }
+.calDayName { font-weight: 700; margin: 0 0 6px; }
+.calBlock { border-radius: 14px; padding: 10px 14px; margin: 0 0 8px; }
+.calBlock.regular { background: var(--teal); }
+.calBlock.onceBlock { background: #fff; border: 2px solid var(--teal); }
+.calBlock.offBlock { background: #fff; border: 2px dashed var(--ink); }
+.calTag { font-weight: 700; font-size: 13px; background: var(--blush); border-radius: 999px; padding: 2px 8px; margin-left: 6px; }
+.calReqTitle { font-family: "Newsreader", Georgia, serif; font-size: 19px; margin: 16px 0 8px; }
+.calReq { margin-bottom: 10px; }
+.clash { color: #8A4B0F; }
+
+.tourCard { text-align: center; }
+.tourCount { opacity: .7; font-size: 14px; margin-top: 12px; }
+.quietBubble { position: fixed; right: 14px; bottom: 14px; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 14px; width: 250px; z-index: 30; box-shadow: 0 8px 28px rgba(30, 77, 68, .18); }
+.bubbleBunny { width: 52px; height: auto; }
+.bubbleText { font-weight: 700; margin: 4px 0 8px; }
+
+.privacyLink { display: inline-block; text-decoration: none; margin-top: 10px; }
+body.hasPhotoBg { background-size: cover; background-position: center; background-attachment: fixed; }
+body.hasPhotoBg .surface, body.hasPhotoBg .topBar { background: rgba(253, 248, 240, .88); }
+html[data-theme="black"] body { background: #141414; color: #F3EDE2; }
+html[data-theme="white"] body { background: #FFFFFF; }
+.threadList { margin-bottom: 14px; }
+.msgRow { max-width: 82%; padding: 10px 14px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); }
+.msgRow.mine { margin-left: auto; background: var(--teal); }
+.msgText { margin: 0; }
+.popBtn { display: block; width: 100%; margin-top: 10px; }
+
+.todayLine { font-weight: 700; margin-top: 16px; }
+
+.viewToggle { display: flex; gap: 8px; margin: 10px 0; }
+.mapPanel { position: relative; height: 320px; border-radius: 18px; background: #eaf3ee; border: 1px solid #cfe3d8; overflow: hidden; }
+.mapPin { position: absolute; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%; border: 2px solid #fff; background: #1e4d44; color: #fff; font-weight: 700; cursor: pointer; }
+.mapNote { position: absolute; left: 10px; bottom: 8px; font-size: 12px; color: #1e4d44; background: rgba(255,255,255,.8); padding: 2px 8px; border-radius: 999px; }
+.mapSlot { margin-top: 10px; }
+.qualLine { font-weight: 700; color: var(--ink); margin: 4px 0 0; }
