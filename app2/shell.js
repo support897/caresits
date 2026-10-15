@@ -1,3 +1,5 @@
+import { applyI18n } from "./lang.js";
+applyI18n();
 // Caresits app2 shell — her nav shape of 15 Oct 2026.
 // Menu hidden on load. Opening it gives the menu most of the
 // screen and shrinks the content to a thin sliver at the edge.
