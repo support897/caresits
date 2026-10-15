@@ -14,58 +14,58 @@
     <div class="menuHead">
       <img class="menuBunny" src="bunny/bunny-hello.png" alt="">
       <p class="menuTitle">Caresits</p>
-      <button type="button" id="closeBtn" class="closeBtn" aria-label="Close menu">Close</button>
+      <button type="button" id="closeBtn" class="closeBtn" data-i18n-aria="shell.closeMenu" aria-label="Close menu" data-i18n="shell.close">Close</button>
     </div>
-    <button type="button" class="navBtn top" data-nav="home">Home</button>
+    <button type="button" class="navBtn top" data-nav="home" data-i18n="shell.home">Home</button>
     <div class="navGroup">
-      <button type="button" class="navGroupHead" data-group="finding">Finding care</button>
+      <button type="button" class="navGroupHead" data-group="finding" data-i18n="shell.finding">Finding care</button>
       <div class="navGroupBody">
-        <button type="button" class="navBtn" data-nav="questionnaire">Questionnaire</button>
-        <button type="button" class="navBtn" data-nav="find">Find</button>
-        <button type="button" class="navBtn" data-nav="matches">Matches</button>
-        <button type="button" class="navBtn" data-nav="board">Urgent board</button>
+        <button type="button" class="navBtn" data-nav="questionnaire" data-i18n="shell.questionnaire">Questionnaire</button>
+        <button type="button" class="navBtn" data-nav="find" data-i18n="shell.find">Find</button>
+        <button type="button" class="navBtn" data-nav="matches" data-i18n="shell.matches">Matches</button>
+        <button type="button" class="navBtn" data-nav="board" data-i18n="shell.board">Urgent board</button>
       </div>
     </div>
     <div class="navGroup">
-      <button type="button" class="navGroupHead" data-group="family">Our family</button>
+      <button type="button" class="navGroupHead" data-group="family" data-i18n="shell.family">Our family</button>
       <div class="navGroupBody">
-        <button type="button" class="navBtn" data-nav="children">Children</button>
-        <button type="button" class="navBtn" data-nav="daystory">Day Story</button>
-        <button type="button" class="navBtn" data-nav="emergency">Emergency</button>
+        <button type="button" class="navBtn" data-nav="children" data-i18n="shell.children">Children</button>
+        <button type="button" class="navBtn" data-nav="daystory" data-i18n="shell.daystory">Day Story</button>
+        <button type="button" class="navBtn" data-nav="emergency" data-i18n="shell.emergency">Emergency</button>
       </div>
     </div>
     <div class="navGroup">
-      <button type="button" class="navGroupHead" data-group="week">The week</button>
+      <button type="button" class="navGroupHead" data-group="week" data-i18n="shell.week">The week</button>
       <div class="navGroupBody">
-        <button type="button" class="navBtn" data-nav="calendar">Pair calendar</button>
-        <button type="button" class="navBtn" data-nav="roster">Roster</button>
-        <button type="button" class="navBtn" data-nav="timesheet">Timesheet</button>
-        <button type="button" class="navBtn" data-nav="reminders">Reminders</button>
+        <button type="button" class="navBtn" data-nav="calendar" data-i18n="shell.calendar">Pair calendar</button>
+        <button type="button" class="navBtn" data-nav="roster" data-i18n="shell.roster">Roster</button>
+        <button type="button" class="navBtn" data-nav="timesheet" data-i18n="shell.timesheet">Timesheet</button>
+        <button type="button" class="navBtn" data-nav="reminders" data-i18n="shell.reminders">Reminders</button>
       </div>
     </div>
     <div class="navGroup">
-      <button type="button" class="navGroupHead" data-group="trust">Trust and us</button>
+      <button type="button" class="navGroupHead" data-group="trust" data-i18n="shell.trust">Trust and us</button>
       <div class="navGroupBody">
-        <button type="button" class="navBtn" data-nav="checks">Checks</button>
-        <button type="button" class="navBtn" data-nav="reviews">Reviews</button>
-        <button type="button" class="navBtn" data-nav="profile">My Profile</button>
-        <button type="button" class="navBtn" data-nav="privacy">Privacy policy</button>
+        <button type="button" class="navBtn" data-nav="checks" data-i18n="shell.checksNav">Checks</button>
+        <button type="button" class="navBtn" data-nav="reviews" data-i18n="shell.reviews">Reviews</button>
+        <button type="button" class="navBtn" data-nav="profile" data-i18n="shell.profile">My Profile</button>
+        <button type="button" class="navBtn" data-nav="privacy" data-i18n="shell.privacy">Privacy policy</button>
       </div>
     </div>
-    <button type="button" class="navBtn top" data-nav="settings">Settings</button>
+    <button type="button" class="navBtn top" data-nav="settings" data-i18n="shell.settings">Settings</button>
   </aside>
   <div id="sliver" class="sliver" aria-hidden="true"></div>
   <main id="content" class="content">
     <header class="topBar">
-      <button type="button" id="menuBtn" class="menuBtn" aria-label="Open menu">Menu</button>
+      <button type="button" id="menuBtn" class="menuBtn" data-i18n-aria="shell.openMenu" aria-label="Open menu" data-i18n="shell.menu">Menu</button>
       <p class="brandLine"><img class="brandHeart" src="../icon.svg" alt=""> Caresits</p>
     </header>
     <section id="surface-home" class="surface">
       <div class="cardIn">
-        <img class="bunnyBig" src="bunny/bunny-hello.png" alt="The Caresits bunny waving hello">
-        <h1>A calm place to find care</h1>
-        <p class="lead">Start with the questionnaire. It takes about 5 to 10 minutes, and it is how we match you properly.</p>
-        <button type="button" class="mainBtn" data-goto="questionnaire">Start the questionnaire</button>
+        <img class="bunnyBig" src="bunny/bunny-hello.png" data-i18n-aria="tour.bunnyAlt" alt="The Caresits bunny waving hello">
+        <h1 data-i18n="home.title">A calm place to find care</h1>
+        <p class="lead" data-i18n="home.lead">Start with the questionnaire. It takes about 5 to 10 minutes, and it is how we match you properly.</p>
+        <button type="button" class="mainBtn" data-goto="questionnaire" data-i18n="find.startQ">Start the questionnaire</button>
         <p id="todayLine" class="todayLine" hidden></p>
       </div>
     </section>
