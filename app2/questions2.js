@@ -1,4 +1,4 @@
-// Caresits — the LONGER questionnaire (expansion set).
+// Caresitters — the LONGER questionnaire (expansion set).
 // Built from QUESTIONNAIRE-EXPANSION-RESEARCH.md Part C,
 // approved in full by the founder on 15 Oct 2026 (22:54):
 // 52 family + 60 carer questions in 17 themes, word for word
