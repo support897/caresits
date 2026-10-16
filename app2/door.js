@@ -1,4 +1,4 @@
-// Caresits app2 — door v4 (founder approved shape, 15 Oct 2026).
+// Caresitters app2 — door v4 (founder approved shape, 15 Oct 2026).
 // The first page holds ONLY the sign up, big and centred:
 // the big heart mark, the icon doors, one email field and
 // the round next arrow. The password lives on step two.
