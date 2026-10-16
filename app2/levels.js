@@ -1,4 +1,4 @@
-// Caresits — the depth levels (founder approved 15 Oct 2026,
+// Caresitters — the depth levels (founder approved 15 Oct 2026,
 // 23:03, "build the 3 levels"; partition filed in
 // next-phase/QUESTIONNAIRE-LEVELS.md, taken from the research
 // file's own gate and bucket tags, never guessed).
