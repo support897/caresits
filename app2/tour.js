@@ -1,4 +1,4 @@
-// Caresits app2 — the bunny tour (door v4's second half).
+// Caresitters app2 — the bunny tour (door v4's second half).
 // After sign up the whole app is there as normal, and ONE
 // pop up stands in the middle: the tour. Step one asks the
 // name. Next walks the menu and the app. The cross closes
