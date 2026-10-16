@@ -1,4 +1,4 @@
-// Caresits accounts — the account layer.
+// Caresitters accounts — the account layer.
 // Identity: Firebase Authentication, three doors (Google, Apple,
 // email plus password — HQ order 15 Oct 2026). Every record is
 // keyed to the Firebase uid under users/{uid}.
