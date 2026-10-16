@@ -1,4 +1,4 @@
-// Caresits questionnaire journey — pager + card builder.
+// Caresitters questionnaire journey — pager + card builder.
 // Answers save as a draft on this device at every step. On finish
 // the bundle (private answers + the matching card + the looking
 // spec) goes to window.CARESITS_SAVE when the account layer wires
@@ -101,7 +101,7 @@ function render() {
   $("#fields").innerHTML = p.fields.map(fieldHtml).join("");
   $("#backBtn").textContent = tr("journey.back"); $("#backBtn").style.visibility = state.page === 0 ? "hidden" : "visible";
   $("#nextBtn").textContent = state.page === list.length - 1 ? tr("journey.finish") : tr("journey.next");
-  document.title = `Caresits · ${$("#pageTitle").textContent}`;
+  document.title = `Caresitters · ${$("#pageTitle").textContent}`;
 }
 
 function wire() {
