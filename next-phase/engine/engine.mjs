@@ -1,4 +1,4 @@
-// Caresits matching engine — the LOCKED design of 15 Oct 2026.
+// Caresitters matching engine — the LOCKED design of 15 Oct 2026.
 // AMENDMENT (founder approved 15 Oct 2026, 22:54, with the longer
 // questionnaire): the deep question pairs ride this engine. Pair
 // points blend inside the SAME buckets (a bucket with answered
