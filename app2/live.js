@@ -1,4 +1,4 @@
-// Caresits app2 — the live bridge.
+// Caresitters app2 — the live bridge.
 // Maps every CARESITS_WRITE kind the surfaces emit onto the
 // Firestore shapes the sealed rules accept, and fills the
 // CARESITS_* data hooks from the signed in member's own
