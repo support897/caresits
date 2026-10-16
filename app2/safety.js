@@ -1,5 +1,5 @@
 import { t as tr } from "./lang.js";
-// Caresits app2 — the safety sheet (Amendment 4 build).
+// Caresitters app2 — the safety sheet (Amendment 4 build).
 // One quiet sheet serves every surface: pick a reason, add
 // your own words if you like, send. The filer then sees the
 // acknowledgement and nothing more, ever. Blocking asks once,
