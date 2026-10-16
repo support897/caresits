@@ -1,5 +1,5 @@
 import { t as tr, currentLang, setLang } from "./lang.js";
-// Caresits app2 — Phase D trust surfaces: Checks, Reviews,
+// Caresitters app2 — Phase D trust surfaces: Checks, Reviews,
 // My Profile, Privacy, Settings (with Law E appearance).
 // Checks speak in the honest badge words only: Register
 // verified where a free official register backs it, Document
