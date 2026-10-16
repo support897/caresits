@@ -1,4 +1,4 @@
-// Caresits app2 — Phase D family surfaces: Children + Day
+// Caresitters app2 — Phase D family surfaces: Children + Day
 // Story on the account data model (users/{uid}/children and
 // users/{uid}/dayStory). Data arrives through CARESITS_FAMILY
 // when the live layer provides it; writes ride CARESITS_WRITE.
