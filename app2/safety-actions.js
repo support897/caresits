@@ -1,4 +1,4 @@
-// Caresits app2 — Amendment 4: report and block, planned as
+// Caresitters app2 — Amendment 4: report and block, planned as
 // pure shapes mirroring the sealed safety delta. A report is
 // write-only: the filer never reads it back and never hears
 // the outcome. Its snapshot obeys the envelope the rules
