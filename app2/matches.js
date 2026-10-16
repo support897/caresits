@@ -1,4 +1,4 @@
-// Caresits app2 — Matches and the urgent board (Phase C).
+// Caresitters app2 — Matches and the urgent board (Phase C).
 // Every button is planned by pair-actions.js first, so the app
 // never offers a move the rules would refuse. Writes ride
 // CARESITS_WRITE (the live account layer) when it is present.
