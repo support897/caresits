@@ -1,4 +1,4 @@
-// Caresits app2 — Amendment 5: pair calendar planners.
+// Caresitters app2 — Amendment 5: pair calendar planners.
 // Pure shapes mirroring the sealed calendar delta, so the app
 // never offers a move the rules would refuse. Requests are
 // proposals only; a block lands only when it EQUALS an
