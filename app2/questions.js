@@ -1,4 +1,4 @@
-// Caresits questionnaire journeys — the LOCKED design (amendment 3).
+// Caresitters questionnaire journeys — the LOCKED design (amendment 3).
 // Family: 5 pages, 23 questions (7 + 3 + 1 + 1 + 11).
 // Carer: 5 pages, 21 questions (6 + 6 + 1 + 2 + 6). Two over the
 // design's printed 19, both from her approved field set: the
