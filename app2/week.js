@@ -1,5 +1,5 @@
 import { t as tr } from "./lang.js";
-// Caresits app2 — Phase D week surfaces: Roster, Timesheet,
+// Caresitters app2 — Phase D week surfaces: Roster, Timesheet,
 // Reminders. All read through CARESITS_WEEK when the live
 // layer provides it; writes ride CARESITS_WRITE. The roster
 // wears the pair calendar's regular look; the timesheet adds
