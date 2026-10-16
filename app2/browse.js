@@ -1,4 +1,4 @@
-// Caresits app2 — Phase B: browse assembly on the engine.
+// Caresitters app2 — Phase B: browse assembly on the engine.
 // Takes profile docs in the published shape ({side, displayName,
 // suburb, card, looking}) and returns what the Find screen
 // renders: the live pool count, the Top 5, View more, and — for
