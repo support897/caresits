@@ -1,4 +1,4 @@
-// Caresits app2 — Phase A slice 2: the journey finish, saved.
+// Caresitters app2 — Phase A slice 2: the journey finish, saved.
 // journey.js calls window.CARESITS_SAVE(bundle) when this file
 // is loaded beside it. Three writes, in the shapes the rules
 // demand:
