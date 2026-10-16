@@ -1,4 +1,4 @@
-// Caresits app2 — the Find screen on browse.js.
+// Caresitters app2 — the Find screen on browse.js.
 // Browsing is never gated: anyone can look. The screen shows
 // the live pool count, the Top 5 first, View more for the
 // rest, and (families only) the nearly list. A Message button
