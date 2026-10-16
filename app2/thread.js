@@ -1,5 +1,5 @@
 import { t as tr } from "./lang.js";
-// Caresits app2 — the message thread + the free taste wall.
+// Caresitters app2 — the message thread + the free taste wall.
 // The account layer's own logic decides (canSendMessage): a
 // family on the free taste gets one message a day; carers and
 // door open plans write freely. The second message on the
