@@ -1,4 +1,4 @@
-// Caresits app2 — the pair calendar screen (Amendment 5).
+// Caresitters app2 — the pair calendar screen (Amendment 5).
 // One calendar per pair: the agreed regular week in the soft
 // brand colour, one time blocks as outlines with their tag,
 // a skipped day as an open outline. Changes are proposals;
