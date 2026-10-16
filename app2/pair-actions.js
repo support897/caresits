@@ -1,4 +1,4 @@
-// Caresits app2 — Phase C: pair actions, planned as pure shapes.
+// Caresitters app2 — Phase C: pair actions, planned as pure shapes.
 // Every planner here mirrors the cleared rules text, so the app
 // never offers a button the rules would refuse. The live writes
 // ride the account layer when the rules publish.
