@@ -218,6 +218,13 @@ export async function deleteMyAccount() {
   // hygiene under the Never Delete distinction.
   const devSnap = await getDocs(collection(_db, "profiles", _user.uid, "devices"));
   devSnap.forEach((d) => batch.delete(d.ref));
+  // Connect link invites live at the top level, keyed by the
+  // family who made them (Security's zero orphans fence): the
+  // walk enumerates the caller's own invites by familyUid and
+  // removes them, so no live code outlives its maker's account.
+  const { query, where } = fsMod;
+  const invSnap = await getDocs(query(collection(_db, "invites"), where("familyUid", "==", _user.uid)));
+  invSnap.forEach((d) => batch.delete(d.ref));
   batch.delete(doc(_db, "users", _user.uid, "meta", "app"));
   batch.delete(doc(_db, "users", _user.uid));
   await batch.commit();
