@@ -54,7 +54,15 @@ button.dangerBtn { background:#A33B2E; border-color:#A33B2E; color:#fff; }
     <h2 id="helloLine">Your plan</h2>
     <p><span class="tag" id="planTier">Free taste</span></p>
     <p class="small" id="planText" style="margin-top:8px"></p>
+    <p class="small" id="planPriceFinding" style="margin-top:8px"></p>
+    <p class="small" id="planPricePlus" style="margin-top:4px"></p>
     <button class="door" id="signOut" data-i18n="acct.signOut">Sign out</button>
+  </div>
+
+  <div class="card" id="downloadCard">
+    <h2 data-i18n="acct.download">Download your data</h2>
+    <p class="small" data-i18n="acct.downloadBody">Your copy is made inside the app. Open the app, go to Settings, and tap Download my data.</p>
+    <a class="door" href="../app2/index.html" data-i18n="acct.openApp">Open the app</a>
   </div>
 
   <div class="card">
@@ -72,7 +80,32 @@ button.dangerBtn { background:#A33B2E; border-color:#A33B2E; color:#fff; }
 <script type="module">
 import { firebaseConfig, FIREBASE_ON } from "./firebase-config.js";
 import { t as tr, applyI18n } from "../app2/lang.js";
+import { priceFor, localiseSentence } from "../app2/prices.js";
 applyI18n();
+// The plan price lines speak the viewer's own currency
+// (app2/prices.js): this device's saved questionnaire country,
+// else its draft country, else Australia. Display only: paying
+// stays behind the Paid Apps lock, and nothing here sells.
+const viewerCountry = () => {
+  try {
+    const q = JSON.parse(localStorage.getItem("caresits-app2-questionnaire") || "null");
+    if (q && (q.country || (q.answers && q.answers.country))) return q.country || q.answers.country;
+    const d = JSON.parse(localStorage.getItem("caresits-app2-draft") || "null");
+    if (d && d.answers && d.answers.country) return d.answers.country;
+  } catch { /* no local copy */ }
+  return "Australia";
+};
+const fillPlanPrices = () => {
+  const country = viewerCountry();
+  for (const [id, key, plan] of [["planPriceFinding", "popup.finding", "finding"], ["planPricePlus", "popup.plus", "plus"]]) {
+    const node = document.getElementById(id);
+    if (!node) continue;
+    const p = priceFor(plan, country);
+    const phrase = p && p.worth ? tr("price.worth", undefined, { worth: p.worth }) : null;
+    node.textContent = localiseSentence(tr(key), plan, country, phrase);
+  }
+};
+fillPlanPrices();
 import { initAccounts, signInGoogle, signInApple, signInEmail, signOutUser, deleteMyAccount, resolvePlan, PLANS } from "./account.js";
 const msg = document.getElementById("msg");
 const setMsg = (t) => { msg.textContent = t || ""; };
