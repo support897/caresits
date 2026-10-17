@@ -2,7 +2,7 @@
 // Paths are pure so they can be proven without a network
 // Uploads fail soft and never throw to the surface
 
-const SDK = "https://www.gstatic.com/firebasejs/10.12.2";
+const SDK = "../accounts/sdk";
 
 export function planPhotoPath(uid) {
   if (!uid) return null;
