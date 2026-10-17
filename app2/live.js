@@ -45,7 +45,7 @@ export function routeWrite(kind, payload, uid) {
   }
 }
 
-const SDK = "https://www.gstatic.com/firebasejs/10.12.2";
+const SDK = "../accounts/sdk";
 
 export async function bootLive() {
   const twin = new URLSearchParams(location.search).get("twin") === "1";
