@@ -200,9 +200,9 @@ async function bootFind() {
   }
   try {
     const cfgMod = await import("./firebase-config.js");
-    const appMod = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
-    const authMod = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
-    const fsMod = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+    const appMod = await import("../accounts/sdk/firebase-app.js");
+    const authMod = await import("../accounts/sdk/firebase-auth.js");
+    const fsMod = await import("../accounts/sdk/firebase-firestore.js");
     const app = appMod.getApps().length ? appMod.getApps()[0] : appMod.initializeApp(cfgMod.firebaseConfig, "app2-find");
     const user = authMod.getAuth(app).currentUser;
     if (!user || user.isAnonymous) { renderFind(root, null, []); return; }
