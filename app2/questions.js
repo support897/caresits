@@ -35,7 +35,7 @@ export const FAMILY_PAGES = [
   { title: "Your week", bunny: "point-guide", fields: [
     { id: "scheduleNeed", label: "When do you need care?", type: "grid", required: true },
     { id: "startWhen", label: "When would you like to start?", type: "select", options: ["As soon as possible", "In the next few weeks", "I am flexible"], required: true },
-    { id: "payOffered", label: "Pay you offer, per hour in dollars", type: "select", options: PAY_AMOUNTS, required: true },
+    { id: "payOffered", label: "Pay you offer, per hour in Australian dollars", type: "select", options: PAY_AMOUNTS, required: true },
   ]},
   { title: "Activities with kids", bunny: "encourage", fields: [
     { id: "activities", label: "What do your kids love doing?", type: "chips", options: ACTIVITIES, optional: true },
@@ -73,7 +73,7 @@ export const CARER_PAGES = [
     { id: "availability", label: "When are you free?", type: "grid", required: true },
     { id: "drivesCar", label: "Driving", type: "select", options: ["I drive, my own car", "I drive, family car is fine", "I do not drive"], required: true },
     { id: "smoker", label: "Do you smoke?", type: "yesno", required: true },
-    { id: "payFloor", label: "Lowest pay per hour you accept, in dollars", type: "select", options: PAY_AMOUNTS, required: true },
+    { id: "payFloor", label: "Lowest pay per hour you accept, in Australian dollars", type: "select", options: PAY_AMOUNTS, required: true },
   ]},
   { title: "Activities with kids", bunny: "encourage", fields: [
     { id: "activities", label: "Activities you love doing with kids", type: "chips", options: ACTIVITIES, optional: true },
