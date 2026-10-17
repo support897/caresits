@@ -31,6 +31,7 @@
       <div class="navGroupBody">
         <button type="button" class="navBtn" data-nav="children" data-i18n="shell.children">Children</button>
         <button type="button" class="navBtn" data-nav="daystory" data-i18n="shell.daystory">Day Story</button>
+        <button type="button" class="navBtn" data-nav="bin" data-i18n="shell.bin">Recently Deleted</button>
         <button type="button" class="navBtn" data-nav="emergency" data-i18n="shell.emergency">Emergency</button>
       </div>
     </div>
@@ -87,6 +88,9 @@
     <section id="surface-daystory" class="surface" hidden>
       <div id="daystoryRoot"></div>
     </section>
+    <section id="surface-bin" class="surface" hidden>
+      <div id="binRoot"></div>
+    </section>
     <section id="surface-questionnaire" class="surface" hidden>
       <iframe id="journeyFrame" title="Caresitters questionnaire" src="journey.html"></iframe>
     </section>
@@ -136,8 +140,10 @@
 <script type="module" src="calendar.js"></script>
 <script type="module" src="tour.js"></script>
 <script type="module" src="family.js"></script>
+<script type="module" src="bin.js"></script>
 <script type="module" src="week.js"></script>
 <script type="module" src="trust.js"></script>
+<script type="module" src="push.js"></script>
 <script type="module" src="thread.js"></script>
 <script type="module" src="live.js"></script>
 </body>
