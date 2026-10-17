@@ -1,4 +1,10 @@
 import { t as tr, currentLang, setLang } from "./lang.js";
+import { downloadExport } from "./export.js";
+import { pushAvailable, getPushState, registerPush, togglePushKind } from "./push.js";
+import { uploadProfilePhoto, uploadToStorage, planResumePath } from "./photo.js";
+import { draftFromText, buildHandoff } from "./resume.js";
+import { LANGS, NATIONALITIES } from "./questions.js";
+import { packById, packByName, checkFor } from "./countries.js";
 // Caresitters app2 — Phase D trust surfaces: Checks, Reviews,
 // My Profile, Privacy, Settings (with Law E appearance).
 // Checks speak in the honest badge words only: Register
@@ -23,10 +29,43 @@ const emptyBox = (root, title, words) => {
   root.append(box);
 };
 
+// The Checks surface speaks the viewer's own country's check
+// name and register kind (country packs). The country comes from
+// the signed in profile when present, else from this device's
+// saved questionnaire or draft, else Australia.
+function viewerCountryName() {
+  const me = (window.CARESITS_TRUST || {}).me || {};
+  if ((window.CARESITS_ME || {}).country) return window.CARESITS_ME.country;
+  if (me.country) return me.country;
+  try {
+    const q = JSON.parse(localStorage.getItem("caresits-app2-questionnaire") || "null");
+    if (q && (q.country || (q.answers && q.answers.country))) return q.country || q.answers.country;
+    const d = JSON.parse(localStorage.getItem("caresits-app2-draft") || "null");
+    if (d && d.answers && d.answers.country) return d.answers.country;
+  } catch { /* no local copy */ }
+  return "Australia";
+}
+
 export function renderChecks(root, docs) {
   root.replaceChildren();
   root.append(el("h2", "findTitle", tr("shell.checksNav")));
   root.append(el("p", "findPool", tr("checks.lead")));
+  const pack = packByName(viewerCountryName()) || packById("AU");
+  if (pack) {
+    const me = (window.CARESITS_TRUST || {}).me || {};
+    const facts = checkFor(pack, me.postcode || (window.CARESITS_ME || {}).postcode);
+    const card = el("article", "findCard countryCard");
+    card.append(el("h3", "findName", pack.name + (facts.place ? " · " + facts.place : "")));
+    card.append(el("p", "findPlace", facts.name));
+    card.append(el("p", null, tr(facts.register ? "country.registerLine" : "country.sightedLine")));
+    card.append(el("p", "findGate", facts.costText));
+    if (facts.checkUrl) {
+      const a = el("a", "quietBtn", tr("country.officialLink"));
+      a.href = facts.checkUrl; a.target = "_blank"; a.rel = "noopener";
+      card.append(a);
+    }
+    root.append(card);
+  }
   if (!docs.length) { emptyBox(root, tr("checks.emptyTitle"), tr("checks.emptyBody")); return; }
   const list = el("div", "findList");
   for (const d of docs) {
@@ -66,6 +105,82 @@ export function renderProfile(root, me) {
   go.addEventListener("click", () => document.querySelector('[data-nav="questionnaire"]')?.click());
   card.append(go);
   root.append(card);
+  const pcard = el("div", "cardIn");
+  pcard.append(el("h3", null, tr("photo.title")), el("p", null, tr("photo.body")));
+  if (me.photoUrl) { const im = el("img", "profilePhoto"); im.src = me.photoUrl; im.alt = ""; pcard.append(im); }
+  const pfile = el("input");
+  pfile.type = "file";
+  pfile.accept = "image/*";
+  pfile.hidden = true;
+  const pick = el("button", "mainBtn", tr(me.photoUrl ? "photo.change" : "photo.add"));
+  pick.type = "button";
+  pick.addEventListener("click", () => pfile.click());
+  pfile.addEventListener("change", async () => {
+    const f = pfile.files && pfile.files[0];
+    if (!f) return;
+    const uid = window.CARESITS_ME && window.CARESITS_ME.uid;
+    const res = await uploadProfilePhoto(uid, f);
+    if (res.ok && res.url) {
+      write("photo", { photoUrl: res.url });
+      if (window.CARESITS_ME) window.CARESITS_ME.photoUrl = res.url;
+      pcard.append(el("p", "gateMsg", tr("photo.saved")));
+    } else if (res.dataUrl) {
+      const im = el("img", "profilePhoto");
+      im.src = res.dataUrl;
+      im.alt = "";
+      pcard.append(im, el("p", "gateMsg", tr("photo.deviceOnly")));
+    }
+  });
+  pcard.append(pick, pfile);
+  root.append(pcard);
+  if (me.side === "carer") {
+    const rcard = el("div", "cardIn");
+    rcard.append(el("h3", null, tr("resume.title")), el("p", null, tr("resume.body")));
+    const rfile = el("input");
+    rfile.type = "file";
+    rfile.accept = ".txt,.md,.pdf,text/plain,application/pdf";
+    rfile.hidden = true;
+    const rpick = el("button", "mainBtn", tr("resume.pick"));
+    rpick.type = "button";
+    rpick.addEventListener("click", () => rfile.click());
+    const paste = el("textarea", "txtIn");
+    paste.placeholder = tr("resume.or");
+    const readBtn = el("button", "mainBtn", tr("resume.read"));
+    readBtn.type = "button";
+    const out = el("div");
+    const runDraft = (text) => {
+      out.replaceChildren();
+      if (!text || !text.trim()) { out.append(el("p", "gateMsg", tr("resume.none"))); return; }
+      const draft = draftFromText(text, { languages: LANGS, nationalities: NATIONALITIES });
+      if (!draft.ok) { out.append(el("p", "gateMsg", tr("resume.none"))); return; }
+      out.append(el("h4", null, tr("resume.draftTitle")));
+      for (const m of draft.marks) {
+        const val = m === "xC22" ? draft.deep.xC22 : draft.answers[m];
+        out.append(el("p", null, (Array.isArray(val) ? val.join(", ") : String(val)) + " · " + tr("resume.source", undefined, { span: draft.spans[m] || "" })));
+      }
+      if (draft.experienceYears != null) out.append(el("p", null, tr("resume.years", undefined, { n: draft.experienceYears })));
+      const use = el("button", "mainBtn", tr("resume.useBtn"));
+      use.type = "button";
+      use.addEventListener("click", () => {
+        try { localStorage.setItem("caresits-app2-resume-draft", JSON.stringify(buildHandoff(draft))); } catch { /* storage off */ }
+        out.append(el("p", "gateMsg", tr("resume.saved")));
+      });
+      out.append(use);
+    };
+    rfile.addEventListener("change", async () => {
+      const f = rfile.files && rfile.files[0];
+      if (!f) return;
+      const buf = await f.arrayBuffer();
+      const head = new TextDecoder().decode(new Uint8Array(buf.slice(0, 5)));
+      const uid = window.CARESITS_ME && window.CARESITS_ME.uid;
+      if (uid) { const path = planResumePath(uid, f.name); if (path) uploadToStorage(path, new Blob([buf])); }
+      if (head.startsWith("%PDF")) { out.replaceChildren(el("p", "gateMsg", tr("resume.unread"))); return; }
+      runDraft(new TextDecoder().decode(buf));
+    });
+    readBtn.addEventListener("click", () => runDraft(paste.value));
+    rcard.append(rpick, rfile, paste, readBtn, out);
+    root.append(rcard);
+  }
 }
 
 export function renderPrivacy(root) {
@@ -149,7 +264,7 @@ export function renderSettings(root) {
   const langCard = el("div", "findCard");
   langCard.append(el("h3", "findName", tr("common.language")));
   const langRow = el("div", "chipRow");
-  for (const [code, label] of [["en", "English"], ["es", "Español"]]) {
+  for (const [code, label] of [["en", "English"], ["es", "Español"], ["zh", "中文"], ["ar", "العربية"], ["vi", "Tiếng Việt"], ["yue", "繁體中文"], ["hi", "हिन्दी"]]) {
     const b = el("button", "chipBtn" + (currentLang() === code ? " on" : ""), label);
     b.type = "button";
     b.addEventListener("click", () => { setLang(code); location.reload(); });
@@ -157,6 +272,43 @@ export function renderSettings(root) {
   }
   langCard.append(langRow);
   root.append(langCard);
+  // Push switches stand only when the native seam is live on
+  // this device (Security fence: no controls that cannot
+  // work). The switches write this device's own doc, which
+  // the sender checks at send time.
+  if (pushAvailable()) {
+    const pushCard = el("div", "findCard");
+    pushCard.id = "pushCard";
+    pushCard.append(el("h3", "findName", tr("push.title")));
+    pushCard.append(el("p", null, tr("push.body")));
+    const kindsNow = getPushState().kinds;
+    for (const [kind, label] of [["message", tr("push.messages")], ["reminder", tr("push.reminders")]]) {
+      const row = el("label", "chipRow");
+      const box = el("input");
+      box.type = "checkbox";
+      box.checked = kindsNow[kind] !== false;
+      box.dataset.pushKind = kind;
+      box.addEventListener("change", () => { togglePushKind(kind, box.checked); });
+      row.append(box, el("span", null, label));
+      pushCard.append(row);
+    }
+    pushCard.append(el("p", "findGate", tr("push.note")));
+    root.append(pushCard);
+    registerPush().catch(() => {});
+  }
+  const dataCard = el("div", "findCard");
+  dataCard.append(el("h3", "findName", tr("export.title")));
+  dataCard.append(el("p", null, tr("export.body")));
+  const dl = el("button", "mainBtn", tr("export.button"));
+  dl.type = "button";
+  dl.id = "exportBtn";
+  dl.addEventListener("click", async () => {
+    const out = await downloadExport();
+    const note = el("p", "gateMsg", out && (out.children.length || out.dayStory.length || out.messagesSent.length || out.answers) ? tr("export.done") : tr("export.empty"));
+    dataCard.append(note);
+  });
+  dataCard.append(dl);
+  root.append(dataCard);
   const acct = el("div", "findCard");
   acct.append(el("h3", "findName", tr("trust.account")));
   acct.append(el("p", null, tr("trust.accountBody")));
