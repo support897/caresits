@@ -6,6 +6,7 @@
 import { FAMILY_PAGES, CARER_PAGES, DAYS, PARTS, BANDS, AGES } from "./questions.js";
 import { t as tr, applyI18n } from "./lang.js";
 import { slugify } from "../next-phase/engine/engine.mjs";
+import { COUNTRY_NAMES, packByName } from "./countries.js";
 // VALUE CODING at the bundle boundary: any string that IS one of
 // the questionnaire's answer words is stored as its stable slug,
 // so matching compares codes in every language. Prose (the write
@@ -29,26 +30,60 @@ const YEAR_PICKS = ["", "0", "1", "2", "3", "4", "5", "7", "10", "15", "20"];
 import { EXPANSION } from "./questions2.js";
 
 const $ = (s) => document.querySelector(s);
-const state = { side: null, page: 0, answers: {}, strengths: {} };
+const state = { side: null, page: 0, answers: {}, strengths: {}, resumeFeed: [], countryStep: null };
 const DRAFT_KEY = "caresits-app2-draft";
 const DONE_KEY = "caresits-app2-questionnaire";
 
+// The §12 order: Country, then Role, then the form. The country
+// step stands before the side pages whenever no country is stored
+// yet. It is decided once per journey (state.countryStep), so the
+// page list never shifts under the user mid journey.
+const COUNTRY_PAGE = {
+  title: "Your country", bunny: "point-guide", _tk: "country.title", _country: true,
+  fields: [{ id: "country", label: "Which country will the care happen in?", type: "select", options: COUNTRY_NAMES, required: true }],
+};
+const storedCountry = () => state.answers.country || (window.CARESITS_ME && window.CARESITS_ME.country) || null;
+
 const pages = () => {
+  if (state.countryStep === null) state.countryStep = !storedCountry();
   const base = state.side === "family" ? FAMILY_PAGES : CARER_PAGES;
   const xp = state.side === "family" ? EXPANSION.family : EXPANSION.carer;
   const tag = (p, k) => { p._tk = k; return p; };
-  return base.map((p, i) => tag(p, `page.${state.side}.${i}`)).concat(xp.map((p, i) => tag(p, `page.${state.side}x.${i}`)));
+  const list = base.map((p, i) => tag(p, `page.${state.side}.${i}`)).concat(xp.map((p, i) => tag(p, `page.${state.side}x.${i}`)));
+  if (state.countryStep) list.unshift(COUNTRY_PAGE);
+  return list;
 };
 
 function persistDraft() {
-  try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ side: state.side, page: state.page, answers: state.answers, strengths: state.strengths })); } catch { /* storage off */ }
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ side: state.side, page: state.page, answers: state.answers, strengths: state.strengths, resumeFeed: state.resumeFeed, countryStep: state.countryStep })); } catch { /* storage off */ }
 }
 function loadDraft() {
   try {
     const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
-    if (d?.side) { state.side = d.side; state.page = d.page || 0; state.answers = d.answers || {}; state.strengths = d.strengths || {}; return true; }
+    if (d?.side) { state.side = d.side; state.page = d.page || 0; state.answers = d.answers || {}; state.strengths = d.strengths || {}; state.resumeFeed = d.resumeFeed || []; state.countryStep = d.countryStep === undefined ? null : d.countryStep; return true; }
   } catch { /* fresh start */ }
   return false;
+}
+
+// Pay words come from the picked country's pack (§12 role terms):
+// an au pair is paid pocket money plus room and meals, a nanny is
+// paid a wage. The US caution shows as a plain note, never a number.
+function payHelp(f) {
+  if (f.id !== "payFloor" && f.id !== "payOffered") return "";
+  const pack = packByName(state.answers.country || "") || packByName((window.CARESITS_ME || {}).country || "");
+  const roleText = state.side === "family" ? (state.answers.role || "") : ((window.CARESITS_ME || {}).roles || []).join(" ");
+  const isAuPair = /au pair/i.test(roleText);
+  let txt;
+  if (isAuPair) {
+    txt = tr("country.payPocket");
+    if (pack && pack.aupairNote) txt += " " + pack.aupairNote;
+  } else {
+    txt = tr("country.payWage");
+    if (pack && pack.aupairScheme) txt += " " + tr("country.payPocketHint");
+    else if (pack && pack.aupairNote) txt += " " + pack.aupairNote;
+  }
+  if (pack && pack.caution && (isAuPair || state.side === "carer")) txt += " " + tr("country.usCaution");
+  return `<p class="fine payHelp">${txt}</p>`;
 }
 
 function fieldHtml(f) {
@@ -75,7 +110,7 @@ function fieldHtml(f) {
   const strength = f.strength
     ? `<div class="strength" role="group" aria-label="${tr("journey.strengthAria")}"><span>${tr("journey.strengthPre")}</span>${["Must have", "I prefer", "Either way"].map((s) => `<button type="button" class="chip sm ${(state.strengths[f.id] || "Either way") === s ? "on" : ""}" data-strength="${f.id}" data-value="${s}">${tr({ "Must have": "journey.must", "I prefer": "journey.prefer", "Either way": "journey.either" }[s])}</button>`).join("")}</div>`
     : "";
-  return `<div class="field"><p class="qLabel">${L(f)}</p>${opt}${body}${strength}</div>`;
+  return `<div class="field"><p class="qLabel">${L(f)}</p>${opt}${body}${payHelp(f)}${strength}</div>`;
 }
 
 function answered(f) {
@@ -183,7 +218,7 @@ function deepSets() {
       const v = state.answers[q.id];
       if (v === undefined || v === "" || (Array.isArray(v) && !v.length)) continue;
       const s = q.profileOnly ? null : q.strengthPick ? (v === "Must have" ? "must" : v === "I prefer" ? "pref" : "either") : (state.strengths[q.id] === "Must have" ? "must" : state.strengths[q.id] === "I prefer" ? "pref" : state.strengths[q.id] ? "either" : null);
-      deep[q.pair] = { v, s, feed: q.feed || null };
+      deep[q.pair] = { v, s, feed: (state.resumeFeed || []).includes(q.id) ? "resume" : (q.feed || null) };
       if (s === "must") deepMusts[q.pair] = v;
     }
   }
@@ -229,7 +264,7 @@ export function buildBundle() {
     const { deep, deepMusts } = deepSets();
     if (Object.keys(deep).length) looking.prefs.deep = deep;
     if (Object.keys(deepMusts).length) looking.musts.deep = deepMusts;
-    return { side: "family", answers: a, strengths: s, card: codeWalk({ ...card, ...looking }) };
+    return { side: "family", answers: a, strengths: s, country: a.country || "", card: codeWalk({ ...card, ...looking }) };
   }
   const card = {
     side: "carer", displayName: a.displayName, postcode: a.postcode, age: Number(a.age) || null,
@@ -251,7 +286,7 @@ export function buildBundle() {
   const looking = { musts: {}, prefs: {} };
   if (Object.keys(deep).length) looking.prefs.deep = deep;
   if (Object.keys(deepMusts).length) looking.musts.deep = deepMusts;
-  return { side: "carer", answers: a, strengths: s, card: codeWalk({ ...card, looking }) };
+  return { side: "carer", answers: a, strengths: s, country: a.country || "", card: codeWalk({ ...card, looking }) };
 }
 
 function finish() {
@@ -264,8 +299,25 @@ function finish() {
   window.scrollTo(0, 0);
 }
 
+const RESUME_KEY = "caresits-app2-resume-draft";
+function consumeResumeHandoff() {
+  try {
+    const raw = localStorage.getItem(RESUME_KEY);
+    if (!raw) return;
+    const h = JSON.parse(raw);
+    localStorage.removeItem(RESUME_KEY);
+    if (!h || h.side !== "carer" || state.side === "family") return;
+    state.side = "carer";
+    for (const [k, v] of Object.entries(h.answers || {})) if (state.answers[k] === undefined) state.answers[k] = v;
+    state.resumeFeed = [...new Set([...(state.resumeFeed || []), ...(h.marks || [])])];
+    persistDraft();
+  } catch { /* no handoff */ }
+}
+
 export function bootJourney() {
   applyI18n();
   wire();
-  if (loadDraft() && state.side) { $("#welcome").hidden = true; $("#journey").hidden = false; render(); }
+  loadDraft();
+  consumeResumeHandoff();
+  if (state.side) { $("#welcome").hidden = true; $("#journey").hidden = false; render(); }
 }
