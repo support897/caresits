@@ -131,3 +131,56 @@ html[data-theme="white"] body { background: #FFFFFF; }
 .mapNote { position: absolute; left: 10px; bottom: 8px; font-size: 12px; color: #1e4d44; background: rgba(255,255,255,.8); padding: 2px 8px; border-radius: 999px; }
 .mapSlot { margin-top: 10px; }
 .qualLine { font-weight: 700; color: var(--ink); margin: 4px 0 0; }
+
+/* The two homes (17 Oct 2026): posture switch, plan rows,
+   week strip, tiles, link + shopping + request cards. */
+.homeCard { text-align: left; margin-bottom: 16px; }
+.homeCard .findTitle { text-align: left; }
+.homeHead { text-align: center; margin-bottom: 14px; }
+.homeHello { font-size: 30px; margin: 6px 0 4px; }
+.homeBody { color: var(--soft); margin: 6px 0 10px; }
+.homeWarm { color: var(--ink); font-weight: 600; }
+.homePlace { font-weight: 700; margin: 2px 0 8px; }
+.homeBtnRow { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+.postureRow { display: flex; gap: 8px; justify-content: center; margin: 4px 0 18px; }
+.postureBtn { background: #fff; border: 1.5px solid var(--line); border-radius: 999px; padding: 9px 18px; font: inherit; font-weight: 600; cursor: pointer; color: var(--ink); }
+.postureBtn.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+.guideRow { display: flex; gap: 12px; align-items: center; background: var(--sageBg, #eef4ec); border-radius: 18px; padding: 12px 16px; margin-top: 4px; }
+.guideBunny { width: 54px; height: auto; }
+.guideText { margin: 0; font-weight: 600; }
+.homeSub { margin: 14px 0 6px; font-size: 17px; }
+.kidChipRow, .loveChipRow { display: flex; gap: 8px; flex-wrap: wrap; margin: 6px 0 10px; }
+.kidChip { background: var(--blush); border-radius: 999px; padding: 8px 14px; display: inline-flex; gap: 8px; align-items: baseline; }
+.kidChipName { font-weight: 700; }
+.kidChipAge { color: var(--soft); font-size: 14px; }
+.loveChip { background: #fff; border: 1.5px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: 14px; }
+.planRow { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); align-items: flex-start; }
+.planRow:last-of-type { border-bottom: none; }
+.planTime { font-weight: 800; min-width: 52px; }
+.planMain { flex: 1; display: flex; flex-direction: column; }
+.planTitle { font-weight: 700; }
+.planNote { color: var(--soft); font-size: 14px; }
+.planKids { color: var(--soft); font-size: 13px; text-align: right; }
+.weekStrip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 8px; }
+.weekCell { background: #fff; border: 1.5px solid var(--line); border-radius: 14px; padding: 8px 2px; text-align: center; display: flex; flex-direction: column; gap: 2px; }
+.weekCell.today { background: var(--butter, #f6d67c); border-color: var(--ink); }
+.weekDay { font-weight: 800; font-size: 13px; }
+.weekFirst { font-size: 11px; color: var(--soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.weekDot { color: var(--ink); font-size: 10px; line-height: 1; }
+.linkCode { background: #fff; border: 1.5px dashed var(--ink); border-radius: 14px; padding: 12px; font-weight: 700; text-align: center; word-break: break-all; }
+.openLink { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 6px; }
+.openRow { display: flex; gap: 8px; margin-top: 8px; }
+.codeInput { flex: 1; border: 1.5px solid var(--line); border-radius: 12px; padding: 12px; font: inherit; min-width: 0; }
+.tileGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+.homeTile { background: #fff; border: 1.5px solid var(--line); border-radius: 16px; padding: 16px 10px; font: inherit; font-weight: 700; cursor: pointer; color: var(--ink); }
+.reqRow { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.reqRow:last-child { border-bottom: none; }
+.reqWhat { font-weight: 700; margin: 0 0 2px; }
+.shopRow { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
+.shopBox { width: 20px; height: 20px; }
+.shopText.done { text-decoration: line-through; color: var(--soft); }
+.homeMatchRow { display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left; background: #fff; border: 1.5px solid var(--line); border-radius: 16px; padding: 12px 14px; margin-top: 8px; font: inherit; cursor: pointer; color: var(--ink); }
+.homeMatchWho { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.homeMatchName { font-weight: 800; }
+.homeMatchMeta { display: inline-flex; gap: 8px; align-items: center; }
+.homeMatchWhy { color: var(--soft); font-size: 14px; }
