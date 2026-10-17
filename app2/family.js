@@ -78,7 +78,11 @@ function confirmRemove(kid, card) {
   sheet.append(el("p", null, tr("family.removeBody", undefined, { name: kid.name })));
   const yes = el("button", "mainBtn", tr("family.yesRemove"));
   yes.type = "button";
-  yes.addEventListener("click", () => { write("child-remove", { id: kid.id }); card.remove(); wrap.remove(); });
+  yes.addEventListener("click", () => {
+    const uid = window.CARESITS_ME && window.CARESITS_ME.uid;
+    if (uid) { const plan = planBinMove({ uid, kind: "child", record: kid, nowIso: new Date().toISOString() }); if (plan.ok) write("bin-move", { path: plan.path, data: plan.data }); }
+    write("child-remove", { id: kid.id }); card.remove(); wrap.remove();
+  });
   const no = el("button", "closeBtn", tr("family.keep"));
   no.type = "button";
   no.addEventListener("click", () => wrap.remove());
@@ -133,6 +137,15 @@ export function renderDayStory(root, entries, side) {
     for (const e of entries.filter((x) => x.day === day)) {
       const row = el("div", "findCard");
       row.append(el("p", "findPlace", tileName(e.tile) + (e.note ? " · " + e.note : "")));
+      const rm = el("button", "quietBtn", tr("family.remove"));
+      rm.type = "button";
+      rm.addEventListener("click", () => {
+        const uid = window.CARESITS_ME && window.CARESITS_ME.uid;
+        if (uid) { const plan = planBinMove({ uid, kind: "dayStory", record: e, nowIso: new Date().toISOString() }); if (plan.ok) write("bin-move", { path: plan.path, data: plan.data }); }
+        if (e.id) write("dayStory-remove", { id: e.id });
+        renderDayStory(root, entries.filter((x) => x !== e), side);
+      });
+      row.append(rm);
       sec.append(row);
     }
     root.append(sec);
@@ -145,6 +158,7 @@ export function renderDayStory(root, entries, side) {
 }
 
 import { t as tr } from "./lang.js";
+import { planBinMove } from "./bin.js";
 const themeName = (id, fallback) => tr("family.theme." + id) === "family.theme." + id ? fallback : tr("family.theme." + id);
 const tileName = (name) => tr("family.tile." + name) === "family.tile." + name ? name : tr("family.tile." + name);
 export function todayLineText(count) {
