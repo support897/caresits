@@ -8,6 +8,7 @@ import { t as tr } from "./lang.js";
 // first, true prices plain, no invented claims, and Not now
 // standing as tall as every other button.
 import { canSendMessage } from "../accounts/account.js";
+import { priceFor, localiseSentence } from "./prices.js";
 
 const el = (tag, cls, text) => {
   const n = document.createElement(tag);
@@ -23,6 +24,37 @@ const write = (kind, payload) => { if (typeof window.CARESITS_WRITE === "functio
 // send, with no popup refire. A new session may speak once
 // per edge.
 const latchedEdges = new Set();
+
+// The viewer's country for price display, resolved exactly the
+// way the Checks surface resolves it (trust.js): the signed in
+// profile when present, else this device's saved questionnaire
+// or draft, else Australia.
+function viewerCountry() {
+  if ((window.CARESITS_ME || {}).country) return window.CARESITS_ME.country;
+  const me = (window.CARESITS_TRUST || {}).me || {};
+  if (me.country) return me.country;
+  try {
+    const q = JSON.parse(localStorage.getItem("caresits-app2-questionnaire") || "null");
+    if (q && (q.country || (q.answers && q.answers.country))) return q.country || q.answers.country;
+    const d = JSON.parse(localStorage.getItem("caresits-app2-draft") || "null");
+    if (d && d.answers && d.answers.country) return d.answers.country;
+  } catch { /* no local copy */ }
+  return "Australia";
+}
+
+// The popup's price lines in the viewer's own currency
+// (prices.js): the gate passed sentence stands, with its A$
+// figure swapped for the viewer's band price and the A$ worth
+// beside it. In Australia the sentence reads word for word as
+// passed. Buying itself stays inert: the Join buttons below
+// record plan interest, exactly as before.
+function popupPriceLine(key, plan) {
+  const country = viewerCountry();
+  const p = priceFor(plan, country);
+  const phrase = p && p.worth ? tr("price.worth", undefined, { worth: p.worth }) : null;
+  return localiseSentence(tr(key), plan, country, phrase);
+}
+
 export function showUpgradePopup(edge) {
   if (edge && latchedEdges.has(edge)) return;
   document.getElementById("upgradePop")?.remove();
@@ -34,8 +66,8 @@ export function showUpgradePopup(edge) {
   img.alt = tr("popup.bunnyAlt");
   card.append(img, el("h3", "findName", tr("popup.title")));
   card.append(el("p", null, tr("popup.body")));
-  card.append(el("p", null, tr("popup.finding")));
-  card.append(el("p", null, tr("popup.plus")));
+  card.append(el("p", null, popupPriceLine("popup.finding", "finding")));
+  card.append(el("p", null, popupPriceLine("popup.plus", "plus")));
   const finding = el("button", "mainBtn popBtn", tr("popup.joinFinding"));
   finding.type = "button";
   finding.addEventListener("click", () => { write("plans", { plan: "finding" }); wrap.remove(); });
