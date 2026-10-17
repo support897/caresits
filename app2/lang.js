@@ -12,6 +12,16 @@
 
 import { Q_EN } from "./lang-q.js";
 import { Q_ES } from "./lang-q-es.js";
+import { Q_ZH } from "./lang-q-zh.js";
+import { UI_ZH } from "./lang-zh-ui.js";
+import { Q_AR } from "./lang-q-ar.js";
+import { UI_AR } from "./lang-ar-ui.js";
+import { Q_VI } from "./lang-q-vi.js";
+import { UI_VI } from "./lang-vi-ui.js";
+import { Q_YUE } from "./lang-q-yue.js";
+import { UI_YUE } from "./lang-yue-ui.js";
+import { Q_HI } from "./lang-q-hi.js";
+import { UI_HI } from "./lang-hi-ui.js";
 
 export const STRINGS = {
   en: {
@@ -60,7 +70,7 @@ export const STRINGS = {
     "shell.emergency": "Emergency", "shell.week": "The week", "shell.calendar": "Pair calendar",
     "shell.roster": "Roster", "shell.timesheet": "Timesheet", "shell.reminders": "Reminders",
     "shell.trust": "Trust and us", "shell.checksNav": "Checks", "shell.reviews": "Reviews",
-    "shell.profile": "My Profile", "shell.privacy": "Privacy policy", "shell.settings": "Settings",
+    "shell.profile": "My Profile", "shell.privacy": "Privacy policy", "shell.settings": "Settings", "shell.bin": "Recently Deleted",
     "shell.close": "Close", "shell.closeMenu": "Close menu", "shell.menu": "Menu", "shell.openMenu": "Open menu",
     "journey.yes": "Yes", "journey.no": "No", "journey.back": "Back", "journey.next": "Keep going",
     "journey.finish": "Finish", "journey.page": "Page {a} of {b}", "journey.optional": "Optional · the more you answer, the better we match you",
@@ -125,7 +135,7 @@ export const STRINGS = {
     "family.noKidsBody": "Add your first child below. Their card is private: only you, and a carer you are working with, can ever see it.",
     "family.remove": "Remove", "family.addChild": "Add a child", "family.namePh": "Their first name", "family.add": "Add",
     "family.removeTitle": "Remove {name}?",
-    "family.removeBody": "This removes {name} and their Day Story notes from your app. It cannot be undone. Download your data first if you want a copy.",
+    "family.removeBody": "This moves {name} out of your app, into Recently Deleted, where it stays for 30 days. Deleting forever cannot be undone. Download your data first if you want a copy.",
     "family.yesRemove": "Yes, remove", "family.keep": "Keep",
     "family.storyLead": "The story of the day, saved day by day like a calendar.",
     "family.today": "Today", "family.notePh": "A few words about it", "family.saveToday": "Save to today",
@@ -166,6 +176,7 @@ export const STRINGS = {
     "popup.plus": "Family Plus is the everything plan: A$24.95 a month, with the first month free.",
     "popup.joinFinding": "Join Finding", "popup.joinPlus": "Join Family Plus", "popup.notNow": "Not now",
     "popup.bunnyAlt": "The Caresitters bunny, cheering you on",
+    "price.worth": "worth {worth}",
     "thread.title": "Messages", "thread.empty": "No messages yet. The first hello is yours.",
     "thread.ph": "Write a message", "thread.send": "Send",
     "safety.close": "Close", "safety.report": "Report",
@@ -227,6 +238,52 @@ export const STRINGS = {
     "acct.signOut": "Sign out", "acct.tasteTitle": "The free taste, plainly",
     "acct.deleteTitle": "Delete your account", "acct.deleteBtn": "Delete my account",
     "acct.fail": "That did not work. Please try again.", "acct.deleted": "Your account is deleted.",
+    "acct.download": "Download your data", "acct.openApp": "Open the app",
+    "acct.downloadBody": "Your copy is made inside the app. Open the app, go to Settings, and tap Download my data.",
+    "export.title": "Download my data",
+    "export.body": "One file with your profile, your answers, your children, your Day Story, your messages and your calendars. Yours to keep.",
+    "export.button": "Download my data",
+    "export.done": "Your copy is on its way to your downloads.",
+    "export.empty": "There is nothing to download yet.",
+    "bin.lead": "Things you removed stay here for 30 days. You can put them back, or delete them forever.",
+    "bin.emptyTitle": "Nothing here",
+    "bin.emptyBody": "When you remove a child or a Day Story note, it waits here for 30 days.",
+    "bin.dayStory": "Day Story note",
+    "bin.daysLeft": "{n} days left in here",
+    "bin.restore": "Put back",
+    "bin.forever": "Delete forever",
+    "photo.title": "Your photo",
+    "photo.body": "One photo for your card. People who find you will see it.",
+    "photo.add": "Add a photo",
+    "photo.change": "Change my photo",
+    "photo.saved": "Your photo is on your card.",
+    "photo.deviceOnly": "That photo lives on this device for now. It joins your card when you are back online.",
+    "resume.title": "Build from your resume",
+    "resume.body": "Share your resume and we draft some answers from its own words. Nothing is shared until you have read every word in the questionnaire and finished it yourself.",
+    "resume.pick": "Pick my resume",
+    "resume.or": "or paste the words here",
+    "resume.read": "Draft my answers",
+    "resume.unread": "We could not read that file. Paste the words instead, and we will draft from those.",
+    "resume.draftTitle": "Drafted from your resume",
+    "resume.useBtn": "Use these in my questionnaire",
+    "resume.none": "We could not find draft answers in those words yet.",
+    "resume.source": "From your resume: {span}",
+    "resume.years": "Your resume speaks of {n} years with children. The questionnaire will ask you to place them by age group.",
+    "resume.saved": "Saved. Open the questionnaire and these answers will be waiting for you.",
+    "q.country": "Which country will the care happen in?",
+    "country.title": "Your country",
+    "country.registerLine": "This check can be verified free on the official register.",
+    "country.sightedLine": "There is no free public register for this check, so the strongest proof is the document itself, sighted.",
+    "country.officialLink": "Official page",
+    "country.payWage": "This pay works as a wage, agreed as an hourly rate before the work starts.",
+    "country.payPocket": "An au pair is not paid a wage. They get pocket money, plus their room and meals.",
+    "country.payPocketHint": "Au pairs in this country get pocket money plus room and meals instead of a wage.",
+    "country.usCaution": "In the United States, the au pair amount is set by a formula and the courts are still deciding parts of it, so there is no single safe number. The sponsor agency sets the amount for each placement.",
+    "push.title": "Notifications",
+    "push.body": "Get a quiet note on this phone when something happens in the app.",
+    "push.messages": "New messages",
+    "push.reminders": "Day before reminders",
+    "push.note": "Notes carry no names and no message words. They only say what kind of thing happened.",
     "common.language": "Language",
   },
   es: {
@@ -275,7 +332,7 @@ export const STRINGS = {
     "shell.emergency": "Emergencia", "shell.week": "La semana", "shell.calendar": "Calendario compartido",
     "shell.roster": "Horarios", "shell.timesheet": "Registro de horas", "shell.reminders": "Recordatorios",
     "shell.trust": "Confianza y nosotros", "shell.checksNav": "Revisiones", "shell.reviews": "Reseñas",
-    "shell.profile": "Mi perfil", "shell.privacy": "Política de privacidad", "shell.settings": "Ajustes",
+    "shell.profile": "Mi perfil", "shell.privacy": "Política de privacidad", "shell.settings": "Ajustes", "shell.bin": "Eliminados recientemente",
     "shell.close": "Cerrar", "shell.closeMenu": "Cerrar el menú", "shell.menu": "Menú", "shell.openMenu": "Abrir el menú",
     "journey.yes": "Sí", "journey.no": "No", "journey.back": "Atrás", "journey.next": "Seguir",
     "journey.finish": "Terminar", "journey.page": "Página {a} de {b}", "journey.optional": "Opcional · cuanto más respondas, mejor te emparejamos",
@@ -339,7 +396,7 @@ export const STRINGS = {
     "family.noKidsBody": "Añade a tu primer niño abajo. Su tarjeta es privada: solo tú, y una cuidadora que trabaje contigo, pueden verla.",
     "family.remove": "Quitar", "family.addChild": "Añadir un niño", "family.namePh": "Su primer nombre", "family.add": "Añadir",
     "family.removeTitle": "¿Quitar a {name}?",
-    "family.removeBody": "Esto quita a {name} y sus notas de la Historia del día de tu app. No se puede deshacer. Descarga tus datos primero si quieres una copia.",
+    "family.removeBody": "Esto mueve a {name} fuera de tu app, a Eliminados recientemente, donde se queda por 30 días. Borrar para siempre no se puede deshacer. Descarga tus datos primero si quieres una copia.",
     "family.yesRemove": "Sí, quitar", "family.keep": "Mantener",
     "family.storyLead": "La historia del día, guardada día a día como un calendario.",
     "family.today": "Hoy", "family.notePh": "Unas palabras sobre eso", "family.saveToday": "Guardar en hoy",
@@ -376,6 +433,7 @@ export const STRINGS = {
     "popup.plus": "Family Plus es el plan completo: A$24.95 al mes, con el primer mes gratis.",
     "popup.joinFinding": "Unirme a Finding", "popup.joinPlus": "Unirme a Family Plus", "popup.notNow": "Ahora no",
     "popup.bunnyAlt": "El conejito de Caresitters, animándote",
+    "price.worth": "equivale a {worth}",
     "thread.title": "Mensajes", "thread.empty": "Todavía no hay mensajes. El primer hola es tuyo.",
     "thread.ph": "Escribe un mensaje", "thread.send": "Enviar",
     "safety.close": "Cerrar", "safety.report": "Reportar",
@@ -433,19 +491,78 @@ export const STRINGS = {
     "acct.signOut": "Cerrar sesión", "acct.tasteTitle": "La prueba gratuita, en claro",
     "acct.deleteTitle": "Borrar tu cuenta", "acct.deleteBtn": "Borrar mi cuenta",
     "acct.fail": "Eso no funcionó. Inténtalo otra vez.", "acct.deleted": "Tu cuenta está borrada.",
+    "acct.download": "Descarga tus datos", "acct.openApp": "Abrir la app",
+    "acct.downloadBody": "Tu copia se hace dentro de la app. Abre la app, ve a Ajustes y toca Descarga tus datos.",
+    "export.title": "Descarga tus datos",
+    "export.body": "Un archivo con tu perfil, tus respuestas, tus hijos, tu Historia del día, tus mensajes y tus calendarios. Tuyo para guardar.",
+    "export.button": "Descarga tus datos",
+    "export.done": "Tu copia va camino a tus descargas.",
+    "export.empty": "Todavía no hay nada para descargar.",
+    "bin.lead": "Las cosas que quitaste se quedan aquí por 30 días. Puedes devolverlas o borrarlas para siempre.",
+    "bin.emptyTitle": "Nada por aquí",
+    "bin.emptyBody": "Cuando quitas un niño o una nota de la Historia del día, espera aquí por 30 días.",
+    "bin.dayStory": "Nota de la Historia del día",
+    "bin.daysLeft": "Quedan {n} días aquí",
+    "bin.restore": "Devolver",
+    "bin.forever": "Borrar para siempre",
+    "photo.title": "Tu foto",
+    "photo.body": "Una foto para tu tarjeta. La verán las personas que te encuentren.",
+    "photo.add": "Agregar una foto",
+    "photo.change": "Cambiar mi foto",
+    "photo.saved": "Tu foto está en tu tarjeta.",
+    "photo.deviceOnly": "Esa foto vive en este dispositivo por ahora. Se suma a tu tarjeta cuando vuelvas a conectarte.",
+    "resume.title": "Desde tu currículum",
+    "resume.body": "Comparte tu currículum y preparamos algunas respuestas con sus propias palabras. Nada se comparte hasta que hayas leído cada palabra en el cuestionario y lo hayas terminado tú.",
+    "resume.pick": "Elegir mi currículum",
+    "resume.or": "o pega las palabras aquí",
+    "resume.read": "Preparar mis respuestas",
+    "resume.unread": "No pudimos leer ese archivo. Pega las palabras en su lugar y preparamos desde ellas.",
+    "resume.draftTitle": "Preparado desde tu currículum",
+    "resume.useBtn": "Usar esto en mi cuestionario",
+    "resume.none": "Todavía no encontramos respuestas para preparar en esas palabras.",
+    "resume.source": "De tu currículum: {span}",
+    "resume.years": "Tu currículum habla de {n} años con niños. El cuestionario te pedirá ubicarlos por grupo de edad.",
+    "resume.saved": "Guardado. Abre el cuestionario y estas respuestas estarán esperándote.",
+    "q.country": "¿En qué país será el cuidado?",
+    "country.title": "Tu país",
+    "country.registerLine": "Este certificado se puede verificar gratis en el registro oficial.",
+    "country.sightedLine": "No hay un registro público gratis para este certificado, así que la prueba más fuerte es el documento mismo, visto.",
+    "country.officialLink": "Página oficial",
+    "country.payWage": "Este pago funciona como un salario, acordado como tarifa por hora antes de que empiece el trabajo.",
+    "country.payPocket": "Una au pair no recibe un salario. Recibe dinero de bolsillo, más su habitación y sus comidas.",
+    "country.payPocketHint": "Las au pairs en este país reciben dinero de bolsillo más habitación y comidas en lugar de un salario.",
+    "country.usCaution": "En los Estados Unidos, el monto para au pairs se fija con una fórmula y los tribunales aún deciden partes de ella, así que no hay una sola cifra segura. La agencia patrocinadora fija el monto para cada colocación.",
+    "push.title": "Notificaciones",
+    "push.body": "Recibe una nota tranquila en este teléfono cuando pasa algo en la app.",
+    "push.messages": "Mensajes nuevos",
+    "push.reminders": "Recordatorios del día anterior",
+    "push.note": "Las notas no llevan nombres ni palabras de los mensajes. Solo dicen qué tipo de cosa pasó.",
     "common.language": "Idioma",
   },
 };
 
+STRINGS.zh = { ...UI_ZH };
+STRINGS.ar = { ...UI_AR };
+STRINGS.vi = { ...UI_VI };
+STRINGS.yue = { ...UI_YUE };
+STRINGS.hi = { ...UI_HI };
+
 Object.assign(STRINGS.en, Q_EN);
 Object.assign(STRINGS.es, Q_ES);
+Object.assign(STRINGS.zh, Q_ZH);
+Object.assign(STRINGS.ar, Q_AR);
+Object.assign(STRINGS.vi, Q_VI);
+Object.assign(STRINGS.yue, Q_YUE);
+Object.assign(STRINGS.hi, Q_HI);
 
 export function currentLang() {
   try {
     const pick = localStorage.getItem("caresits-lang");
     if (pick && STRINGS[pick]) return pick;
   } catch { /* storage may be closed */ }
-  const dev = (navigator.language || "en").slice(0, 2);
+  const full = (navigator.language || "en").toLowerCase();
+  if (full.startsWith("yue") || full.startsWith("zh-hk") || full.startsWith("zh-tw") || full.startsWith("zh-mo")) return "yue";
+  const dev = full.slice(0, 2);
   return STRINGS[dev] ? dev : "en";
 }
 
@@ -465,4 +582,5 @@ export function applyI18n(root = document, lang = currentLang()) {
   root.querySelectorAll("[data-i18n-aria]").forEach((el) => { el.setAttribute("aria-label", t(el.dataset.i18nAria, lang)); });
   root.querySelectorAll("[data-i18n-ph]").forEach((el) => { el.setAttribute("placeholder", t(el.dataset.i18nPh, lang)); });
   document.documentElement.lang = lang;
+  document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
 }
