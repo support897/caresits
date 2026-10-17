@@ -22,7 +22,8 @@ const el = (tag, cls, text) => {
 const write = (kind, payload) => { if (typeof window.CARESITS_WRITE === "function") window.CARESITS_WRITE(kind, payload); };
 const todayKey = () => new Date().toISOString().slice(0, 10);
 
-export function renderChildren(root, children) {
+export function renderChildren(root, rawChildren) {
+  const children = (rawChildren || []).map((kid) => normaliseChild(kid));
   root.replaceChildren();
   root.append(el("h2", "findTitle", tr("shell.children")));
   if (!children.length) {
@@ -40,6 +41,8 @@ export function renderChildren(root, children) {
     card.style.borderTop = "6px solid " + theme[2];
     card.append(el("h3", "findName", kid.name));
     card.append(el("p", "findPlace", tr("family.themeWord", undefined, { t: themeName(theme[0], theme[1]) })));
+    if (kid.ageYears != null) card.append(el("p", "findPlace", ageText(kid.ageYears)));
+    if (kid.loves.length) card.append(el("p", "findPlace", tr("family.kidLovesLine", undefined, { list: kid.loves.map((id) => tr("homes.love." + id)).join(", ") })));
     const rm = el("button", "quietBtn", tr("family.remove"));
     rm.type = "button";
     rm.addEventListener("click", () => confirmRemove(kid, card));
@@ -55,17 +58,40 @@ export function renderChildren(root, children) {
   const themeSel = el("select", "txtIn");
   themeSel.id = "kTheme";
   for (const [id, label] of THEMES) { const o = el("option", null, themeName(id, label)); o.value = id; themeSel.append(o); }
+  const ageSel = el("select", "txtIn");
+  ageSel.id = "kAge";
+  ageSel.setAttribute("aria-label", tr("family.agePick"));
+  const ageBlank = el("option", null, tr("family.agePick"));
+  ageBlank.value = "";
+  ageSel.append(ageBlank);
+  for (let a = 0; a <= 12; a += 1) { const o = el("option", null, ageText(a)); o.value = String(a); ageSel.append(o); }
+  const loveLabel = el("p", "findPlace", tr("family.lovesLabel"));
+  const loveRow = el("div", "chipRow");
+  loveRow.id = "kLoves";
+  const pickedLoves = new Set();
+  for (const love of INTERESTS) {
+    const c = el("button", "chipBtn", tr(love.key));
+    c.type = "button";
+    c.dataset.love = love.id;
+    c.addEventListener("click", () => {
+      if (pickedLoves.has(love.id)) pickedLoves.delete(love.id); else pickedLoves.add(love.id);
+      c.classList.toggle("on", pickedLoves.has(love.id));
+    });
+    loveRow.append(c);
+  }
   const add = el("button", "mainBtn", tr("family.add"));
   add.type = "button";
   add.id = "kAdd";
   add.addEventListener("click", () => {
     const n = name.value.trim();
     if (!n) return;
-    write("child-add", { name: n, theme: themeSel.value });
-    const kid = { id: "local-" + Date.now(), name: n, theme: themeSel.value };
+    const ageYears = ageSel.value === "" ? null : Number(ageSel.value);
+    const loves = INTERESTS.map((l) => l.id).filter((id) => pickedLoves.has(id));
+    write("child-add", { name: n, theme: themeSel.value, ageYears, loves });
+    const kid = { id: "local-" + Date.now(), name: n, theme: themeSel.value, ageYears, loves };
     renderChildren(root, [...children, kid]);
   });
-  form.append(name, themeSel, add);
+  form.append(name, themeSel, ageSel, loveLabel, loveRow, add);
   root.append(form);
 }
 
@@ -159,6 +185,13 @@ export function renderDayStory(root, entries, side) {
 
 import { t as tr } from "./lang.js";
 import { planBinMove } from "./bin.js";
+import { INTERESTS, normaliseChild } from "./activities.js";
+export const repairChild = normaliseChild;
+export function ageText(ageYears) {
+  if (ageYears === 0) return tr("family.ageBaby");
+  if (ageYears === 1) return tr("family.ageOne");
+  return tr("family.ageMany", undefined, { n: ageYears });
+}
 const themeName = (id, fallback) => tr("family.theme." + id) === "family.theme." + id ? fallback : tr("family.theme." + id);
 const tileName = (name) => tr("family.tile." + name) === "family.tile." + name ? name : tr("family.tile." + name);
 export function todayLineText(count) {
