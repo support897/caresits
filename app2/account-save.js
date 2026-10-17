@@ -68,7 +68,7 @@ export function planSave(bundle, opts) {
   return plan;
 }
 
-const SDK = "https://www.gstatic.com/firebasejs/10.12.2";
+const SDK = "../accounts/sdk";
 
 export async function saveBundle(bundle, firebaseConfig) {
   const { initializeApp } = await import(`${SDK}/firebase-app.js`);
