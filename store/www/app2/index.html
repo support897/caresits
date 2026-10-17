@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en" data-theme="brand">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Caresitters</title>
+<meta name="description" content="Caresitters. Find care. Share the day.">
+<link rel="icon" href="../icon.svg">
+<link rel="stylesheet" href="shell.css">
+</head>
+<body>
+<div id="layout" class="layout">
+  <aside id="menu" class="menu" aria-label="Menu">
+    <div class="menuHead">
+      <img class="menuBunny" src="bunny/bunny-hello.png" alt="">
+      <p class="menuTitle">Caresitters</p>
+      <button type="button" id="closeBtn" class="closeBtn" data-i18n-aria="shell.closeMenu" aria-label="Close menu" data-i18n="shell.close">Close</button>
+    </div>
+    <button type="button" class="navBtn top" data-nav="home" data-i18n="shell.home">Home</button>
+    <div class="navGroup">
+      <button type="button" class="navGroupHead" data-group="finding" data-i18n="shell.finding">Finding care</button>
+      <div class="navGroupBody">
+        <button type="button" class="navBtn" data-nav="questionnaire" data-i18n="shell.questionnaire">Questionnaire</button>
+        <button type="button" class="navBtn" data-nav="find" data-i18n="shell.find">Find</button>
+        <button type="button" class="navBtn" data-nav="matches" data-i18n="shell.matches">Matches</button>
+        <button type="button" class="navBtn" data-nav="board" data-i18n="shell.board">Urgent board</button>
+      </div>
+    </div>
+    <div class="navGroup">
+      <button type="button" class="navGroupHead" data-group="family" data-i18n="shell.family">Our family</button>
+      <div class="navGroupBody">
+        <button type="button" class="navBtn" data-nav="children" data-i18n="shell.children">Children</button>
+        <button type="button" class="navBtn" data-nav="daystory" data-i18n="shell.daystory">Day Story</button>
+        <button type="button" class="navBtn" data-nav="bin" data-i18n="shell.bin">Recently Deleted</button>
+        <button type="button" class="navBtn" data-nav="emergency" data-i18n="shell.emergency">Emergency</button>
+      </div>
+    </div>
+    <div class="navGroup">
+      <button type="button" class="navGroupHead" data-group="week" data-i18n="shell.week">The week</button>
+      <div class="navGroupBody">
+        <button type="button" class="navBtn" data-nav="calendar" data-i18n="shell.calendar">Pair calendar</button>
+        <button type="button" class="navBtn" data-nav="roster" data-i18n="shell.roster">Roster</button>
+        <button type="button" class="navBtn" data-nav="timesheet" data-i18n="shell.timesheet">Timesheet</button>
+        <button type="button" class="navBtn" data-nav="reminders" data-i18n="shell.reminders">Reminders</button>
+      </div>
+    </div>
+    <div class="navGroup">
+      <button type="button" class="navGroupHead" data-group="trust" data-i18n="shell.trust">Trust and us</button>
+      <div class="navGroupBody">
+        <button type="button" class="navBtn" data-nav="checks" data-i18n="shell.checksNav">Checks</button>
+        <button type="button" class="navBtn" data-nav="reviews" data-i18n="shell.reviews">Reviews</button>
+        <button type="button" class="navBtn" data-nav="profile" data-i18n="shell.profile">My Profile</button>
+        <button type="button" class="navBtn" data-nav="privacy" data-i18n="shell.privacy">Privacy policy</button>
+      </div>
+    </div>
+    <button type="button" class="navBtn top" data-nav="settings" data-i18n="shell.settings">Settings</button>
+  </aside>
+  <div id="sliver" class="sliver" aria-hidden="true"></div>
+  <main id="content" class="content">
+    <header class="topBar">
+      <button type="button" id="menuBtn" class="menuBtn" data-i18n-aria="shell.openMenu" aria-label="Open menu" data-i18n="shell.menu">Menu</button>
+      <p class="brandLine"><img class="brandHeart" src="../icon.svg" alt=""> Caresitters</p>
+    </header>
+    <section id="surface-home" class="surface">
+      <div class="cardIn">
+        <img class="bunnyBig" src="bunny/bunny-hello.png" data-i18n-aria="tour.bunnyAlt" alt="The Caresitters bunny waving hello">
+        <h1 data-i18n="home.title">A calm place to find care</h1>
+        <p class="lead" data-i18n="home.lead">Start with the questionnaire. It takes about 5 to 10 minutes, and it is how we match you properly.</p>
+        <button type="button" class="mainBtn" data-goto="questionnaire" data-i18n="find.startQ">Start the questionnaire</button>
+        <p id="todayLine" class="todayLine" hidden></p>
+      </div>
+    </section>
+    <section id="surface-find" class="surface" hidden>
+      <div id="findRoot"></div>
+    </section>
+    <section id="surface-matches" class="surface" hidden>
+      <div id="matchesRoot"></div>
+    </section>
+    <section id="surface-board" class="surface" hidden>
+      <div id="boardRoot"></div>
+    </section>
+    <section id="surface-calendar" class="surface" hidden>
+      <div id="calendarRoot"></div>
+    </section>
+    <section id="surface-children" class="surface" hidden>
+      <div id="childrenRoot"></div>
+    </section>
+    <section id="surface-daystory" class="surface" hidden>
+      <div id="daystoryRoot"></div>
+    </section>
+    <section id="surface-bin" class="surface" hidden>
+      <div id="binRoot"></div>
+    </section>
+    <section id="surface-questionnaire" class="surface" hidden>
+      <iframe id="journeyFrame" title="Caresitters questionnaire" src="journey.html"></iframe>
+    </section>
+    <section id="surface-emergency" class="surface" hidden>
+      <div id="emergencyRoot"></div>
+    </section>
+    <section id="surface-roster" class="surface" hidden>
+      <div id="rosterRoot"></div>
+    </section>
+    <section id="surface-timesheet" class="surface" hidden>
+      <div id="timesheetRoot"></div>
+    </section>
+    <section id="surface-reminders" class="surface" hidden>
+      <div id="remindersRoot"></div>
+    </section>
+    <section id="surface-checks" class="surface" hidden>
+      <div id="checksRoot"></div>
+    </section>
+    <section id="surface-reviews" class="surface" hidden>
+      <div id="reviewsRoot"></div>
+    </section>
+    <section id="surface-profile" class="surface" hidden>
+      <div id="profileRoot"></div>
+    </section>
+    <section id="surface-privacy" class="surface" hidden>
+      <div id="privacyRoot"></div>
+    </section>
+    <section id="surface-settings" class="surface" hidden>
+      <div id="settingsRoot"></div>
+    </section>
+    <section id="surface-thread" class="surface" hidden>
+      <div id="threadRoot"></div>
+    </section>
+    <section id="surface-soon" class="surface" hidden>
+      <div class="cardIn">
+        <img class="bunnyBig" src="bunny/bunny-rest-calm.png" alt="The Caresitters bunny, resting calmly">
+        <h2 id="soonTitle">Coming with the build</h2>
+        <p>This part of Caresitters is being built now, in the open, phase by phase. Nothing here is a promise of a date. It lands when it is proven.</p>
+      </div>
+    </section>
+  </main>
+</div>
+<script type="module" src="shell.js"></script>
+<script type="module" src="find.js"></script>
+<script type="module" src="matches.js"></script>
+<script type="module" src="safety.js"></script>
+<script type="module" src="calendar.js"></script>
+<script type="module" src="tour.js"></script>
+<script type="module" src="family.js"></script>
+<script type="module" src="bin.js"></script>
+<script type="module" src="week.js"></script>
+<script type="module" src="trust.js"></script>
+<script type="module" src="push.js"></script>
+<script type="module" src="thread.js"></script>
+<script type="module" src="live.js"></script>
+</body>
+</html>
