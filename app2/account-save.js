@@ -14,7 +14,7 @@
 // stands, and the save runs at the next signed in finish.
 
 export function planSave(bundle, opts) {
-  const { uid, displayName = "", alreadyActivated = false, nowIso } = opts;
+  const { uid, displayName = "", alreadyActivated = false, nowIso, photoUrl = "" } = opts;
   const cardIn = bundle.card || {};
   // Normalise both bundle shapes (the family card carries its
   // musts and prefs directly; the carer's rides in "looking")
@@ -40,7 +40,7 @@ export function planSave(bundle, opts) {
   const plan = {
     questionnaire: {
       path: `users/${uid}/meta/questionnaire`,
-      data: { side: bundle.side, answers: bundle.answers || {}, strengths: bundle.strengths || {}, savedAt: nowIso },
+      data: { side: bundle.side, answers: bundle.answers || {}, strengths: bundle.strengths || {}, savedAt: nowIso, country: bundle.country || (bundle.answers && bundle.answers.country) || "" },
     },
     card: {
       path: `profiles/${uid}`,
@@ -48,7 +48,7 @@ export function planSave(bundle, opts) {
         side: bundle.side,
         displayName: bundle.side === "carer" ? (cardIn.displayName || displayName) : displayName,
         postcode: cardIn.postcode || "",
-        photoUrl: "",
+        photoUrl: photoUrl || "",
         card,
         looking: looking || { musts: {}, prefs: {} },
         updatedAt: nowIso,
@@ -81,10 +81,13 @@ export async function saveBundle(bundle, firebaseConfig) {
   const db = fsMod.getFirestore(app);
   const profSnap = await fsMod.getDoc(fsMod.doc(db, "users", user.uid));
   const alreadyActivated = profSnap.exists() && "activatedAt" in profSnap.data();
+  const cardSnap = await fsMod.getDoc(fsMod.doc(db, "profiles", user.uid)).catch(() => null);
+  const keptPhoto = cardSnap && cardSnap.exists() ? (cardSnap.data().photoUrl || "") : "";
   const plan = planSave(bundle, {
     uid: user.uid,
     displayName: profSnap.exists() ? (profSnap.data().displayName || "") : "",
     alreadyActivated,
+    photoUrl: keptPhoto,
     nowIso: new Date().toISOString(),
   });
   const batch = fsMod.writeBatch(db);
