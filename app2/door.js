@@ -53,8 +53,8 @@ $("#forgotBtn").addEventListener("click", async () => {
   const email = $("#emailIn").value.trim();
   if (!email) { msg(tr("door.forgotNeed")); return; }
   try {
-    const appMod = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
-    const authMod = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
+    const appMod = await import("../accounts/sdk/firebase-app.js");
+    const authMod = await import("../accounts/sdk/firebase-auth.js");
     const app = appMod.getApps().length ? appMod.getApps()[0] : appMod.initializeApp(firebaseConfig);
     await authMod.sendPasswordResetEmail(authMod.getAuth(app), email);
     msg(tr("door.resetSent"));
