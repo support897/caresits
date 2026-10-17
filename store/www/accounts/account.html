@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-i18n="acct.title">Caresitters · Your account</title>
+<link rel="icon" href="../icon.svg">
+<style>
+@font-face { font-family:"Newsreader"; src:url("../fonts/Newsreader.ttf") format("truetype"); font-weight:400 800; }
+@font-face { font-family:"Atkinson Hyperlegible"; src:url("../fonts/Atkinson-Regular.ttf") format("truetype"); }
+@font-face { font-family:"Atkinson Hyperlegible"; src:url("../fonts/Atkinson-Bold.ttf") format("truetype"); font-weight:700; }
+:root { --teal:#9CC5B5; --porcelain:#FDF8F0; --butter:#F6D67C; --apricot:#F2B880; --sage:#BFD8C0; --ink:#1E4D44; --blush:#F6CBD3; --lav:#CFC3E8; --powder:#B9D6EC; --lemon:#FBE7A1; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:"Atkinson Hyperlegible", system-ui, sans-serif; background:var(--porcelain); color:var(--ink); font-size:17px; line-height:1.5; }
+main { max-width:560px; margin:0 auto; padding:28px 20px 60px; }
+h1 { font-family:"Newsreader", serif; font-size:36px; line-height:1.15; margin:10px 0 6px; }
+h2 { font-family:"Newsreader", serif; font-size:24px; margin:0 0 8px; }
+.card { background:#fff; border:2px solid var(--ink); border-radius:20px; padding:20px; margin-top:18px; }
+.door { display:block; width:100%; text-align:center; font:inherit; font-weight:700; border:2px solid var(--ink); border-radius:999px; padding:13px 18px; margin-top:10px; cursor:pointer; background:var(--porcelain); color:var(--ink); }
+.door.primary { background:var(--ink); color:var(--porcelain); }
+.door:disabled { opacity:.45; cursor:default; }
+label { display:block; font-weight:700; margin-top:14px; font-size:15px; }
+input { width:100%; font:inherit; padding:12px 14px; border:2px solid var(--ink); border-radius:14px; margin-top:6px; background:#fff; color:var(--ink); }
+.small { font-size:14.5px; opacity:.85; }
+.tag { display:inline-block; font-size:12.5px; font-weight:700; padding:2px 10px; border-radius:999px; background:var(--powder); }
+#msg { margin-top:14px; font-weight:700; }
+.danger { border-color:#A33B2E; }
+button.dangerBtn { background:#A33B2E; border-color:#A33B2E; color:#fff; }
+</style>
+</head>
+<body>
+<main>
+  <img src="../icon.svg" alt="" width="54" height="54">
+  <h1 data-i18n="acct.h1">Your Caresitters account</h1>
+  <p data-i18n="legal.intro">One account, yours alone. Your answers, your children, your plans. Nothing of yours is ever shared with another account.</p>
+
+  <div class="card" id="doorsCard">
+    <h2 data-i18n="acct.signIn">Sign in</h2>
+    <p class="small" data-i18n="acct.doors">Three doors, and only these three.</p>
+    <button class="door primary" id="doorGoogle" data-i18n="acct.google">Continue with Google</button>
+    <button class="door" id="doorApple" data-i18n="acct.apple">Continue with Apple</button>
+    <label for="name" data-i18n="acct.nameLabel">Your name, if you are new here</label>
+    <input id="name" type="text" autocomplete="name" placeholder="Your name" data-i18n-ph="acct.namePh">
+    <label for="email" data-i18n="acct.email">Email</label>
+    <input id="email" type="email" autocomplete="email" placeholder="you@example.com">
+    <label for="password" data-i18n="acct.password">Password</label>
+    <input id="password" type="password" autocomplete="current-password" placeholder="Your password" data-i18n-ph="acct.passwordPh">
+    <button class="door" id="doorEmail" data-i18n="acct.emailBtn">Continue with email</button>
+    <p id="msg" role="status"></p>
+    <p class="small" id="dormantNote" hidden data-i18n="acct.dormant">Accounts are being switched on. This page is ready, and the doors open the moment the Caresitters account service goes live.</p>
+  </div>
+
+  <div class="card" id="planCard" hidden>
+    <h2 id="helloLine">Your plan</h2>
+    <p><span class="tag" id="planTier">Free taste</span></p>
+    <p class="small" id="planText" style="margin-top:8px"></p>
+    <p class="small" id="planPriceFinding" style="margin-top:8px"></p>
+    <p class="small" id="planPricePlus" style="margin-top:4px"></p>
+    <button class="door" id="signOut" data-i18n="acct.signOut">Sign out</button>
+  </div>
+
+  <div class="card" id="downloadCard">
+    <h2 data-i18n="acct.download">Download your data</h2>
+    <p class="small" data-i18n="acct.downloadBody">Your copy is made inside the app. Open the app, go to Settings, and tap Download my data.</p>
+    <a class="door" href="../app2/index.html" data-i18n="acct.openApp">Open the app</a>
+  </div>
+
+  <div class="card">
+    <h2 data-i18n="acct.tasteTitle">The free taste, plainly</h2>
+    <p class="small" data-i18n="legal.taste">Families browse and view free, and can send one message a day free. Finding opens full messaging. Finding is paid from day one: it has no free month. Carers are free forever, in full.</p>
+  </div>
+
+  <div class="card danger" id="deleteCard">
+    <h2 data-i18n="acct.deleteTitle">Delete your account</h2>
+    <p class="small" data-i18n="legal.delete1">Only you can delete your account. Caresitters never deletes your data for you. Deleting removes your profile, your children, your Day Story, your documents and your messages from your account, for good. If you share a hire with a carer, their own copy of that hire stays theirs.</p>
+    <p class="small" style="margin-top:8px" data-i18n="legal.delete2">Before you delete, you can download your data from inside the app. If you are signed in, the button below does the deletion now. If you cannot sign in, write to us from the email on your account and we will verify it is you and delete the account within 30 days.</p>
+    <button class="door dangerBtn" id="deleteBtn" data-i18n="acct.deleteBtn">Delete my account</button>
+  </div>
+</main>
+<script type="module">
+import { firebaseConfig, FIREBASE_ON } from "./firebase-config.js";
+import { t as tr, applyI18n } from "../app2/lang.js";
+import { priceFor, localiseSentence } from "../app2/prices.js";
+applyI18n();
+// The plan price lines speak the viewer's own currency
+// (app2/prices.js): this device's saved questionnaire country,
+// else its draft country, else Australia. Display only: paying
+// stays behind the Paid Apps lock, and nothing here sells.
+const viewerCountry = () => {
+  try {
+    const q = JSON.parse(localStorage.getItem("caresits-app2-questionnaire") || "null");
+    if (q && (q.country || (q.answers && q.answers.country))) return q.country || q.answers.country;
+    const d = JSON.parse(localStorage.getItem("caresits-app2-draft") || "null");
+    if (d && d.answers && d.answers.country) return d.answers.country;
+  } catch { /* no local copy */ }
+  return "Australia";
+};
+const fillPlanPrices = () => {
+  const country = viewerCountry();
+  for (const [id, key, plan] of [["planPriceFinding", "popup.finding", "finding"], ["planPricePlus", "popup.plus", "plus"]]) {
+    const node = document.getElementById(id);
+    if (!node) continue;
+    const p = priceFor(plan, country);
+    const phrase = p && p.worth ? tr("price.worth", undefined, { worth: p.worth }) : null;
+    node.textContent = localiseSentence(tr(key), plan, country, phrase);
+  }
+};
+fillPlanPrices();
+import { initAccounts, signInGoogle, signInApple, signInEmail, signOutUser, deleteMyAccount, resolvePlan, PLANS } from "./account.js";
+const msg = document.getElementById("msg");
+const setMsg = (t) => { msg.textContent = t || ""; };
+if (!FIREBASE_ON) {
+  document.getElementById("dormantNote").hidden = false;
+  for (const id of ["doorGoogle", "doorApple", "doorEmail", "deleteBtn"]) document.getElementById(id).disabled = true;
+} else {
+  await initAccounts(firebaseConfig, (u) => {
+    document.getElementById("planCard").hidden = !u;
+    document.getElementById("doorsCard").hidden = !!u;
+    if (u) {
+      document.getElementById("helloLine").textContent = u.displayName ? tr("acct.hello", undefined, { name: u.displayName }) : tr("acct.plan");
+      const plan = resolvePlan({ side: "family", comp: null, payment: null, now: Date.now() });
+      document.getElementById("planTier").textContent = plan.tier === PLANS.FREE ? tr("acct.freeTaste") : plan.tier;
+      document.getElementById("planText").textContent = tr("acct.planText");
+    }
+  });
+  const wrap = (fn) => async () => { setMsg(""); try { await fn(); } catch (e) { setMsg(tr("acct.fail")); } };
+  document.getElementById("doorGoogle").onclick = wrap(signInGoogle);
+  document.getElementById("doorApple").onclick = wrap(signInApple);
+  document.getElementById("doorEmail").onclick = wrap(() => signInEmail(document.getElementById("email").value.trim(), document.getElementById("password").value, document.getElementById("name").value.trim()));
+  document.getElementById("signOut").onclick = wrap(signOutUser);
+  document.getElementById("deleteBtn").onclick = wrap(async () => { await deleteMyAccount(); setMsg(tr("acct.deleted")); });
+}
+</script>
+</body>
+</html>
