@@ -295,8 +295,8 @@ function weekCard() {
   const strip = el("div", "weekStrip");
   const today = todayISO();
   for (const day of week) {
-    const d = new Date(day.dateISO + "T12:00:00Z");
-    const cell = el("div", "weekCell" + (day.dateISO === today ? " today" : ""));
+    const d = new Date(day.date + "T12:00:00Z");
+    const cell = el("div", "weekCell" + (day.date === today ? " today" : ""));
     cell.append(el("span", "weekDay", tr("journey.day." + DAY_KEYS[d.getUTCDay()])));
     const first = day.slots[0];
     cell.append(el("span", "weekFirst", first ? tr("act." + first.id + ".t").split(" ")[0] : ""));
