@@ -160,8 +160,40 @@ export async function signInEmail(email, password, name) {
 }
 
 export async function signOutUser() {
+  // Push hygiene (Security fence 2): a signed out device must
+  // never receive the previous account's pushes. This device's
+  // push doc is stamped inactive BEFORE the session ends,
+  // while the write is still allowed. Fail soft throughout:
+  // hygiene never blocks a sign out.
+  await deactivateOwnDevice();
   const m = await import(`${SDK}/firebase-auth.js`);
   return m.signOut(_auth);
+}
+
+// The device id key is owned by app2/push.js
+// (DEVICE_STORAGE_KEY); the account layer reads the same key
+// because sign out lives here, on the account page, where the
+// app bridge does not run.
+const DEVICE_ID_KEY = "caresits-app2-device";
+async function deactivateOwnDevice() {
+  try {
+    if (typeof window !== "undefined" && typeof window.CARESITS_PUSH_DEACTIVATE === "function") {
+      await window.CARESITS_PUSH_DEACTIVATE();
+      return;
+    }
+    if (!_user || !_db) return;
+    let deviceId = null;
+    try {
+      const raw = localStorage.getItem(DEVICE_ID_KEY);
+      if (raw) deviceId = JSON.parse(raw).deviceId || null;
+    } catch { /* storage may be closed */ }
+    if (!deviceId) return;
+    const fsMod = await import(`${SDK}/firebase-firestore.js`);
+    await fsMod.updateDoc(
+      fsMod.doc(_db, "profiles", _user.uid, "devices", deviceId),
+      { active: false, updatedAt: new Date().toISOString() }
+    );
+  } catch { /* a missing doc or a closed network changes nothing */ }
 }
 
 // Account deletion is the user's own act (Never Delete law): the
@@ -179,6 +211,13 @@ export async function deleteMyAccount() {
     const snap = await getDocs(collection(_db, "users", _user.uid, sub));
     snap.forEach((d) => batch.delete(d.ref));
   }
+  // Device docs live under the card, not the user folder
+  // (Security fence 1), so the walk names them on their own
+  // (fence 2: enumerate, do not assume). A device token is a
+  // rotating credential, not user data, so it dies here as
+  // hygiene under the Never Delete distinction.
+  const devSnap = await getDocs(collection(_db, "profiles", _user.uid, "devices"));
+  devSnap.forEach((d) => batch.delete(d.ref));
   batch.delete(doc(_db, "users", _user.uid, "meta", "app"));
   batch.delete(doc(_db, "users", _user.uid));
   await batch.commit();
