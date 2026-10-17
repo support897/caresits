@@ -17,6 +17,11 @@ export function routeWrite(kind, payload, uid) {
     case "block": return { ok: true, op: "set", path: payload.path, data: payload.data };
     case "child-add": return { ok: true, op: "add", path: `users/${uid}/children`, data: { name: payload.name, theme: payload.theme } };
     case "child-remove": return { ok: true, op: "delete", path: `users/${uid}/children/${payload.id}` };
+    case "bin-move": return { ok: true, op: "set", path: payload.path, data: payload.data };
+    case "bin-delete": return { ok: true, op: "delete", path: payload.path };
+    case "bin-restore": return { ok: true, op: "binRestore", binPath: payload.binPath, originPath: payload.originPath, originId: payload.originId || null, data: payload.data };
+    case "dayStory-remove": return { ok: true, op: "delete", path: `users/${uid}/dayStory/${payload.id}` };
+    case "photo": return { ok: true, op: "merge", path: `profiles/${uid}`, data: { photoUrl: payload.photoUrl } };
     case "dayStory": return { ok: true, op: "add", path: `users/${uid}/dayStory`, data: { day: payload.day, tile: payload.tile, note: payload.note, at: payload.at } };
     case "photo-request": return { ok: true, op: "add", path: `users/${uid}/dayStory`, data: { day: payload.day, tile: "Photo moment", note: "A photo of the kids was asked for", at: payload.at } };
     case "timesheet": return { ok: true, op: "add", path: `users/${uid}/timesheets`, data: { day: payload.day, hours: payload.hours } };
@@ -31,6 +36,8 @@ export function routeWrite(kind, payload, uid) {
     case "week-version": return { ok: true, op: "set", path: payload.path, data: payload.data };
     case "pointer": return { ok: true, op: "pointerMove", pairId: payload.pairId, request: payload.request };
     case "plans": return { ok: true, op: "plans", plan: payload.plan };
+    case "device": return { ok: true, op: "merge", path: payload.path, data: payload.data };
+    case "device-off": return { ok: true, op: "update", path: `profiles/${uid}/devices/${payload.deviceId}`, data: payload.patch };
     default: return { ok: false, reason: "unknown-kind" };
   }
 }
@@ -61,6 +68,13 @@ export async function bootLive() {
           else if (r.op === "merge") await fs.setDoc(docAt(r.path), r.data, { merge: true });
           else if (r.op === "add") await fs.addDoc(colAt(r.path), r.data);
           else if (r.op === "delete") await fs.deleteDoc(docAt(r.path));
+          else if (r.op === "binRestore") {
+            const batch = fs.writeBatch(db);
+            if (r.originId) batch.set(docAt(r.originPath), r.data);
+            else batch.set(fs.doc(colAt(r.originPath)), r.data);
+            batch.delete(docAt(r.binPath));
+            await batch.commit();
+          }
           else if (r.op === "reportPair") {
             const batch = fs.writeBatch(db);
             batch.set(fs.doc(colAt("safetyReports")), r.data);
@@ -79,6 +93,26 @@ export async function bootLive() {
         window.CARESITS_ME = { uid, side: profile.side || "", name: profile.displayName || "" };
         window.CARESITS_PROFILE_COMPLETE = !!(profile.displayName && q.exists());
       } catch { /* the surfaces stand in their empty states */ }
+      try {
+        const grab = async (path) => {
+          const snap = await fs.getDocs(colAt(path));
+          return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        };
+        const binDocs = await grab(`users/${uid}/recentlyDeleted`);
+        window.CARESITS_BIN = binDocs;
+        const kids = await grab(`users/${uid}/children`);
+        const story = await grab(`users/${uid}/dayStory`);
+        const msgs = await grab(`users/${uid}/messages`);
+        const cardSnap = await fs.getDoc(docAt(`profiles/${uid}`));
+        window.CARESITS_FAMILY = { children: kids, entries: story, side: window.CARESITS_ME?.side || "family" };
+        window.CARESITS_EXPORT_DATA = {
+          profile: window.CARESITS_ME || null,
+          card: cardSnap.exists() ? cardSnap.data() : null,
+          questionnaire: null,
+          messages: msgs.filter((m) => m.mine === true),
+          calendar: null,
+        };
+      } catch { /* export and the bin stand in their empty states */ }
       resolve({ on: true, signedIn: true, uid });
     });
   });
