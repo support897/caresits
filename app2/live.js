@@ -15,7 +15,10 @@ export function routeWrite(kind, payload, uid) {
     case "interest": return { ok: true, op: "set", path: payload.path, data: payload.data };
     case "report": return { ok: true, op: "reportPair", path: "safetyReports", data: payload.data, counter: payload.counter };
     case "block": return { ok: true, op: "set", path: payload.path, data: payload.data };
-    case "child-add": return { ok: true, op: "add", path: `users/${uid}/children`, data: { name: payload.name, theme: payload.theme } };
+    case "child-add": return { ok: true, op: "add", path: `users/${uid}/children`, data: { name: payload.name, theme: payload.theme, ...(payload.ageYears != null ? { ageYears: payload.ageYears } : {}), ...(Array.isArray(payload.loves) && payload.loves.length ? { loves: payload.loves } : {}) } };
+    case "invite-create": return { ok: true, op: "set", path: payload.path, data: payload.data };
+    case "invite-accept": return { ok: true, op: "inviteAccept", relPath: payload.relPath, relData: payload.relData, invitePath: payload.invitePath, stamp: payload.stamp };
+    case "shopping": return { ok: true, op: "set", path: payload.path, data: payload.data };
     case "child-remove": return { ok: true, op: "delete", path: `users/${uid}/children/${payload.id}` };
     case "bin-move": return { ok: true, op: "set", path: payload.path, data: payload.data };
     case "bin-delete": return { ok: true, op: "delete", path: payload.path };
@@ -75,6 +78,12 @@ export async function bootLive() {
             batch.delete(docAt(r.binPath));
             await batch.commit();
           }
+          else if (r.op === "inviteAccept") {
+            const batch = fs.writeBatch(db);
+            batch.set(docAt(r.relPath), r.relData);
+            batch.update(docAt(r.invitePath), r.stamp);
+            await batch.commit();
+          }
           else if (r.op === "reportPair") {
             const batch = fs.writeBatch(db);
             batch.set(fs.doc(colAt("safetyReports")), r.data);
@@ -85,6 +94,12 @@ export async function bootLive() {
         } catch (e) {
           return { ok: false, reason: String(e?.code || e) };
         }
+      };
+      window.CARESITS_INVITE_LOOKUP = async (code) => {
+        try {
+          const snap = await fs.getDoc(docAt(`invites/${code}`));
+          return snap.exists() ? snap.data() : null;
+        } catch { return null; }
       };
       try {
         const prof = await fs.getDoc(docAt(`users/${uid}`));
