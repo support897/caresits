@@ -24,6 +24,7 @@ function show(nav) {
   else if (nav === "calendar") $("#surface-calendar").hidden = false;
   else if (nav === "children") $("#surface-children").hidden = false;
   else if (nav === "daystory") $("#surface-daystory").hidden = false;
+  else if (nav === "bin") { $("#surface-bin").hidden = false; if (typeof window.CARESITS_BIN_OPEN === "function") window.CARESITS_BIN_OPEN(); }
   else if (nav === "roster") $("#surface-roster").hidden = false;
   else if (nav === "timesheet") $("#surface-timesheet").hidden = false;
   else if (nav === "reminders") $("#surface-reminders").hidden = false;
