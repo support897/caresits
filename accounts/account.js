@@ -58,7 +58,7 @@ export function tasteDayKey(date) {
 
 // ---------- Browser shell (dormant until the config lands) ----------
 
-const SDK = "https://www.gstatic.com/firebasejs/10.12.2";
+const SDK = "./sdk";
 let _auth = null;
 let _db = null;
 let _user = null;
