@@ -38,6 +38,19 @@ function cardFor(entry) {
   who.append(el("p", "findPlace", place));
   head.append(who);
   card.append(head);
+  // F14: the carer's extra photos ride under the main photo
+  // when the card carries them, as a small row of thumbs.
+  const gallery = doc.card && Array.isArray(doc.card.gallery) ? doc.card.gallery.filter((u) => typeof u === "string" && u).slice(0, 4) : [];
+  if (gallery.length) {
+    const row = el("div", "galleryThumbs");
+    for (const u of gallery) {
+      const im = el("img", "galleryThumbSm");
+      im.src = u;
+      im.alt = "";
+      row.append(im);
+    }
+    card.append(row);
+  }
   if (result.personal === false) {
     card.append(el("p", "findInvite", tr("find.invite")));
   } else {
