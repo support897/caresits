@@ -12,6 +12,8 @@
 // stale inside a session), and when no finished questionnaire
 // exists the in progress draft supplies the answers.
 
+import { doneKey, draftKey } from "./storage-keys.js";
+
 const cleanWords = (value) => String(value)
   .split("-").join(" ")
   .split("—").join(" ")
@@ -105,7 +107,7 @@ export function downloadExport() {
 
   let questionnaire = null;
   try {
-    const raw = typeof localStorage !== "undefined" ? localStorage.getItem("caresits-app2-questionnaire") : null;
+    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(doneKey()) : null;
     questionnaire = raw ? JSON.parse(raw) : null;
   } catch {
     questionnaire = null;
@@ -116,7 +118,7 @@ export function downloadExport() {
     // holds the user's answers, so they ride in the copy. A
     // finished bundle always wins (it is read first, above).
     try {
-      const rawDraft = typeof localStorage !== "undefined" ? localStorage.getItem("caresits-app2-draft") : null;
+      const rawDraft = typeof localStorage !== "undefined" ? localStorage.getItem(draftKey()) : null;
       const draft = rawDraft ? JSON.parse(rawDraft) : null;
       if (draft && draft.answers) questionnaire = { answers: draft.answers };
     } catch {
