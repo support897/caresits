@@ -2,7 +2,7 @@ import { t as tr, currentLang, setLang } from "./lang.js";
 import { doneKey, draftKey } from "./storage-keys.js";
 import { downloadExport } from "./export.js";
 import { pushAvailable, getPushState, registerPush, togglePushKind } from "./push.js";
-import { uploadProfilePhoto, uploadToStorage, planResumePath } from "./photo.js";
+import { uploadProfilePhoto, uploadGalleryPhoto, uploadToStorage, planResumePath } from "./photo.js";
 import { draftFromText, buildHandoff } from "./resume.js";
 import { LANGS, NATIONALITIES } from "./questions.js";
 import { packById, packByName, checkFor } from "./countries.js";
@@ -135,6 +135,74 @@ export function renderProfile(root, me) {
   pcard.append(pick, pfile);
   root.append(pcard);
   if (me.side === "carer") {
+    // F14: up to four more photos. The saved list rides the
+    // card (card.gallery, slot order) and every change writes
+    // the whole list through the gallery seam. A pick with no
+    // storage path answers with a device preview instead,
+    // exactly like the main photo (F12).
+    const gcard = el("div", "cardIn galleryCard");
+    gcard.append(el("h3", null, tr("gallery.title")), el("p", null, tr("gallery.body")));
+    let gallery = (Array.isArray(me.gallery) ? me.gallery : []).filter((u) => typeof u === "string" && u).slice(0, 4);
+    const previews = [];
+    const strip = el("div", "galleryStrip");
+    const gfile = el("input");
+    gfile.type = "file";
+    gfile.accept = "image/*";
+    gfile.hidden = true;
+    gfile.className = "galleryFile";
+    const renderStrip = () => {
+      strip.replaceChildren();
+      gallery.forEach((url, i) => {
+        const slot = el("div", "gallerySlot");
+        const im = el("img", "galleryThumb");
+        im.src = url;
+        im.alt = "";
+        const rm = el("button", "quietBtn galleryRemove", tr("gallery.remove"));
+        rm.type = "button";
+        rm.addEventListener("click", () => {
+          gallery = gallery.filter((_, j) => j !== i);
+          write("gallery", { gallery });
+          if (window.CARESITS_ME) window.CARESITS_ME.gallery = gallery;
+          renderStrip();
+        });
+        slot.append(im, rm);
+        strip.append(slot);
+      });
+      for (const dataUrl of previews) {
+        const slot = el("div", "gallerySlot");
+        const im = el("img", "galleryThumb");
+        im.src = dataUrl;
+        im.alt = "";
+        slot.append(im);
+        strip.append(slot);
+      }
+      for (let s = gallery.length + previews.length; s < 4; s += 1) {
+        const add = el("button", "mainBtn galleryAdd", tr("gallery.add"));
+        add.type = "button";
+        add.addEventListener("click", () => gfile.click());
+        strip.append(add);
+      }
+      if (previews.length) strip.append(el("p", "gateMsg", tr("photo.deviceOnly")));
+    };
+    gfile.addEventListener("change", async () => {
+      const f = gfile.files && gfile.files[0];
+      if (!f) return;
+      const uid = window.CARESITS_ME && window.CARESITS_ME.uid;
+      const res = await uploadGalleryPhoto(uid, f, gallery.length + 1);
+      if (res.ok && res.url) {
+        gallery = [...gallery, res.url].slice(0, 4);
+        write("gallery", { gallery });
+        if (window.CARESITS_ME) window.CARESITS_ME.gallery = gallery;
+      } else if (res.dataUrl) {
+        previews.push(res.dataUrl);
+      }
+      renderStrip();
+    });
+    renderStrip();
+    gcard.append(strip, gfile);
+    root.append(gcard);
+  }
+  if (me.side === "carer") {
     const rcard = el("div", "cardIn");
     rcard.append(el("h3", null, tr("resume.title")), el("p", null, tr("resume.body")));
     const rfile = el("input");
@@ -173,9 +241,17 @@ export function renderProfile(root, me) {
       if (!f) return;
       const buf = await f.arrayBuffer();
       const head = new TextDecoder().decode(new Uint8Array(buf.slice(0, 5)));
-      const uid = window.CARESITS_ME && window.CARESITS_ME.uid;
-      if (uid) { const path = planResumePath(uid, f.name); if (path) uploadToStorage(path, new Blob([buf])); }
-      if (head.startsWith("%PDF")) { out.replaceChildren(el("p", "gateMsg", tr("resume.unread"))); return; }
+      if (head.startsWith("%PDF")) {
+        // S-2: storage holds PDFs alone (the storage rules
+        // fence admits nothing else). A PDF is kept on the
+        // profile; its words are never drafted from.
+        const uid = window.CARESITS_ME && window.CARESITS_ME.uid;
+        if (uid) { const path = planResumePath(uid, f.name); if (path) uploadToStorage(path, new Blob([buf], { type: "application/pdf" })); }
+        out.replaceChildren(el("p", "gateMsg", tr("resume.unread")));
+        return;
+      }
+      // A text pick drafts from its own words and is never
+      // uploaded (S-2).
       runDraft(new TextDecoder().decode(buf));
     });
     readBtn.addEventListener("click", () => runDraft(paste.value));
