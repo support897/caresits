@@ -7,6 +7,7 @@ import { FAMILY_PAGES, CARER_PAGES, DAYS, PARTS, BANDS, AGES } from "./questions
 import { t as tr, applyI18n } from "./lang.js";
 import { slugify } from "../next-phase/engine/engine.mjs";
 import { COUNTRY_NAMES, packByName } from "./countries.js";
+import { draftKey, doneKey } from "./storage-keys.js";
 // VALUE CODING at the bundle boundary: any string that IS one of
 // the questionnaire's answer words is stored as its stable slug,
 // so matching compares codes in every language. Prose (the write
@@ -31,8 +32,14 @@ import { EXPANSION } from "./questions2.js";
 
 const $ = (s) => document.querySelector(s);
 const state = { side: null, page: 0, answers: {}, strengths: {}, resumeFeed: [], countryStep: null };
-const DRAFT_KEY = "caresits-app2-draft";
-const DONE_KEY = "caresits-app2-questionnaire";
+// F16: the draft lives under the key the shared helper resolves
+// for whoever is signed in on this device (see storage-keys.js).
+// The journey session works in ONE slot: the slot is resolved at
+// boot, corrected by the watcher below if the uid lands a beat
+// later, and frozen the moment the user interacts, so a draft
+// is never split across two accounts' slots.
+let activeDraftKey = draftKey();
+let interacted = false;
 
 // The §12 order: Country, then Role, then the form. The country
 // step stands before the side pages whenever no country is stored
@@ -54,12 +61,19 @@ const pages = () => {
   return list;
 };
 
+function writeDraft() {
+  try { localStorage.setItem(activeDraftKey, JSON.stringify({ side: state.side, page: state.page, answers: state.answers, strengths: state.strengths, resumeFeed: state.resumeFeed, countryStep: state.countryStep })); } catch { /* storage off */ }
+}
 function persistDraft() {
-  try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ side: state.side, page: state.page, answers: state.answers, strengths: state.strengths, resumeFeed: state.resumeFeed, countryStep: state.countryStep })); } catch { /* storage off */ }
+  interacted = true;
+  writeDraft();
+}
+function resetJourneyState() {
+  state.side = null; state.page = 0; state.answers = {}; state.strengths = {}; state.resumeFeed = []; state.countryStep = null;
 }
 function loadDraft() {
   try {
-    const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
+    const d = JSON.parse(localStorage.getItem(activeDraftKey) || "null");
     if (d?.side) { state.side = d.side; state.page = d.page || 0; state.answers = d.answers || {}; state.strengths = d.strengths || {}; state.resumeFeed = d.resumeFeed || []; state.countryStep = d.countryStep === undefined ? null : d.countryStep; return true; }
   } catch { /* fresh start */ }
   return false;
@@ -291,7 +305,11 @@ export function buildBundle() {
 
 function finish() {
   const bundle = buildBundle();
-  try { localStorage.setItem(DONE_KEY, JSON.stringify(bundle)); localStorage.removeItem(DRAFT_KEY); } catch { /* storage off */ }
+  // The finished bundle lands under the finisher's own resolved
+  // key, and only this journey's own draft slot is retired
+  // (completion, never sign out, clears it: the bundle is the
+  // draft, kept whole, under the account's key).
+  try { localStorage.setItem(doneKey(), JSON.stringify(bundle)); localStorage.removeItem(activeDraftKey); } catch { /* storage off */ }
   if (typeof window.CARESITS_SAVE === "function") window.CARESITS_SAVE(bundle);
   $("#journey").hidden = true;
   $("#done").hidden = false;
@@ -310,14 +328,34 @@ function consumeResumeHandoff() {
     state.side = "carer";
     for (const [k, v] of Object.entries(h.answers || {})) if (state.answers[k] === undefined) state.answers[k] = v;
     state.resumeFeed = [...new Set([...(state.resumeFeed || []), ...(h.marks || [])])];
-    persistDraft();
+    writeDraft();
   } catch { /* no handoff */ }
 }
 
 export function bootJourney() {
   applyI18n();
   wire();
+  activeDraftKey = draftKey();
   loadDraft();
   consumeResumeHandoff();
   if (state.side) { $("#welcome").hidden = true; $("#journey").hidden = false; render(); }
+  // The uid seam can land a beat after this frame boots (the
+  // shell's live bridge publishes it when its session resolves).
+  // Until the user interacts, a changed key reloads the journey
+  // from the newly resolved slot and only that slot: the
+  // previous account's draft is never carried across, and a
+  // plain draft is never adopted into an account's slot.
+  let ticks = 0;
+  const timer = setInterval(() => {
+    ticks += 1;
+    if (interacted || ticks > 40) { clearInterval(timer); return; }
+    const k = draftKey();
+    if (k === activeDraftKey) return;
+    activeDraftKey = k;
+    resetJourneyState();
+    loadDraft();
+    consumeResumeHandoff();
+    if (state.side) { $("#welcome").hidden = true; $("#journey").hidden = false; render(); }
+    else { $("#welcome").hidden = false; $("#journey").hidden = true; }
+  }, 250);
 }
