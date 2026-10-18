@@ -22,8 +22,18 @@ const el = (tag, cls, text) => {
 const write = (kind, payload) => { if (typeof window.CARESITS_WRITE === "function") window.CARESITS_WRITE(kind, payload); };
 const todayKey = () => new Date().toISOString().slice(0, 10);
 
+// The export seam. This module's renders are the commit points
+// for children and the Day Story: every add, save and remove
+// re renders with the new list, so the mirror below always
+// holds what is on screen right now. window.CARESITS_FAMILY is
+// assigned once at boot (the live layer) and never moves again,
+// so the exporter reads through CARESITS_FAMILY_NOW and a same
+// session add is never left out of the user's own copy.
+const familyNow = { children: [], entries: [], side: "family" };
+
 export function renderChildren(root, rawChildren) {
   const children = (rawChildren || []).map((kid) => normaliseChild(kid));
+  familyNow.children = children;
   root.replaceChildren();
   root.append(el("h2", "findTitle", tr("shell.children")));
   if (!children.length) {
@@ -108,7 +118,9 @@ function confirmRemove(kid, card) {
   yes.addEventListener("click", () => {
     const uid = window.CARESITS_ME && window.CARESITS_ME.uid;
     if (uid) { const plan = planBinMove({ uid, kind: "child", record: kid, nowIso: new Date().toISOString() }); if (plan.ok) write("bin-move", { path: plan.path, data: plan.data }); }
-    write("child-remove", { id: kid.id }); card.remove(); wrap.remove();
+    write("child-remove", { id: kid.id });
+    familyNow.children = familyNow.children.filter((k) => k.id !== kid.id);
+    card.remove(); wrap.remove();
   });
   const no = el("button", "closeBtn", tr("family.keep"));
   no.type = "button";
@@ -119,6 +131,8 @@ function confirmRemove(kid, card) {
 }
 
 export function renderDayStory(root, entries, side) {
+  familyNow.entries = entries;
+  if (side) familyNow.side = side;
   root.replaceChildren();
   root.append(el("h2", "findTitle", tr("shell.daystory")));
   root.append(el("p", "findPool", tr("family.storyLead")));
@@ -204,6 +218,9 @@ function bootFamily() {
   const cRoot = document.getElementById("childrenRoot");
   const dRoot = document.getElementById("daystoryRoot");
   const d = window.CARESITS_FAMILY || { children: [], entries: [], side: "family" };
+  familyNow.children = d.children || [];
+  familyNow.entries = d.entries || [];
+  familyNow.side = d.side || "family";
   if (cRoot) renderChildren(cRoot, d.children || []);
   if (dRoot) renderDayStory(dRoot, d.entries || [], d.side || "family");
   const tl = document.getElementById("todayLine");
@@ -217,4 +234,8 @@ function bootFamily() {
 if (typeof document !== "undefined") {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bootFamily);
   else bootFamily();
+}
+
+if (typeof window !== "undefined") {
+  window.CARESITS_FAMILY_NOW = () => ({ children: familyNow.children, entries: familyNow.entries, side: familyNow.side });
 }
