@@ -29,8 +29,8 @@ export function routeWrite(kind, payload, uid) {
     case "dayStory": return { ok: true, op: "add", path: `users/${uid}/dayStory`, data: { day: payload.day, tile: payload.tile, note: payload.note, at: payload.at } };
     case "photo-request": return { ok: true, op: "add", path: `users/${uid}/dayStory`, data: { day: payload.day, tile: "Photo moment", note: "A photo of the kids was asked for", at: payload.at } };
     case "timesheet": return { ok: true, op: "add", path: `users/${uid}/timesheets`, data: { day: payload.day, hours: payload.hours } };
-    case "reminder": return { ok: true, op: "add", path: `users/${uid}/meta/reminders`, data: { text: payload.text, when: payload.when } };
-    case "emergency": return { ok: true, op: "add", path: `users/${uid}/meta/emergency`, data: { name: payload.name, phone: payload.phone } };
+    case "reminder": return { ok: true, op: "merge", path: `users/${uid}/meta/reminders`, data: { text: payload.text, when: payload.when } };
+    case "emergency": return { ok: true, op: "merge", path: `users/${uid}/meta/emergency`, data: { name: payload.name, phone: payload.phone } };
     case "appearance": return { ok: true, op: "merge", path: `users/${uid}/meta/app`, data: { background: payload.choice } };
     case "name": return { ok: true, op: "merge", path: `users/${uid}`, data: { displayName: payload.displayName } };
     case "message": return { ok: true, op: "add", path: `users/${uid}/messages`, data: { pairId: payload.pairId, text: payload.text, at: payload.at, mine: true } };
@@ -100,6 +100,114 @@ export function publishTrust(profile, card, questionnaire) {
   return me;
 }
 
+// F20 (Security ruling c9ef7b17, app side): exactly two sealed
+// fences read a typed timestamp where the planners speak ISO
+// strings — the invites fence reads createdAt as a timestamp,
+// the shopping fence reads updatedAt as one. The conversion
+// lives here, at the one seam where the SDK is in scope, and
+// it touches those two kinds only: every other kind's data
+// passes through unchanged, by reference.
+export function writeDataFor(kind, data, toTimestamp) {
+  if (!data || typeof data !== "object") return data;
+  if (kind === "invite-create" && typeof data.createdAt === "string") return { ...data, createdAt: toTimestamp(data.createdAt) };
+  if (kind === "shopping" && typeof data.updatedAt === "string") return { ...data, updatedAt: toTimestamp(data.updatedAt) };
+  return data;
+}
+
+// The write executor, lifted out of the boot so it can be desk
+// proven against a stubbed SDK (live-tests). It routes through
+// routeWrite, converts the two timestamp fields (F20), and
+// runs the op the router named.
+export function makeWriter(fs, db, uid) {
+  const docAt = (path) => fs.doc(db, ...path.split("/"));
+  const colAt = (path) => fs.collection(db, ...path.split("/"));
+  return async (kind, payload) => {
+    const r = routeWrite(kind, payload, uid);
+    if (!r.ok) return r;
+    const data = writeDataFor(kind, r.data, (iso) => fs.Timestamp.fromDate(new Date(iso)));
+    try {
+      if (r.op === "set") await fs.setDoc(docAt(r.path), data);
+      else if (r.op === "update") await fs.updateDoc(docAt(r.path), data);
+      else if (r.op === "merge") await fs.setDoc(docAt(r.path), data, { merge: true });
+      else if (r.op === "add") await fs.addDoc(colAt(r.path), data);
+      else if (r.op === "delete") await fs.deleteDoc(docAt(r.path));
+      else if (r.op === "binRestore") {
+        const batch = fs.writeBatch(db);
+        if (r.originId) batch.set(docAt(r.originPath), data);
+        else batch.set(fs.doc(colAt(r.originPath)), data);
+        batch.delete(docAt(r.binPath));
+        await batch.commit();
+      }
+      else if (r.op === "inviteAccept") {
+        const batch = fs.writeBatch(db);
+        batch.set(docAt(r.relPath), r.relData);
+        batch.update(docAt(r.invitePath), r.stamp);
+        await batch.commit();
+      }
+      else if (r.op === "reportPair") {
+        const batch = fs.writeBatch(db);
+        batch.set(fs.doc(colAt("safetyReports")), data);
+        // F21 (Security ruling 46d6b466): the counter lands as a
+        // set with merge, never an update. An update cannot
+        // create the doc, so on a counter that does not stand
+        // yet the first filing would always fail; a merge set
+        // is judged by the create arm on first filing and the
+        // update arm afterwards.
+        batch.set(docAt("_owner/aggregates/safety/main"), { filed: fs.increment(1), open: fs.increment(1) }, { merge: true });
+        await batch.commit();
+      }
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, reason: String(e?.code || e) };
+    }
+  };
+}
+
+// F19: Matches and the urgent board render from the Phase C
+// seam. These are the only names the seam ever needs: the
+// other member of each of the viewer's pairs, plus — for a
+// carer reading the board — the family who posted each job.
+export function phaseCNameTargets(uid, side, rels, jobs) {
+  const out = new Set();
+  for (const rel of rels || []) for (const m of rel.members || []) if (m && m !== uid) out.add(m);
+  if (side === "carer") for (const job of jobs || []) if (job.familyUid && job.familyUid !== uid) out.add(job.familyUid);
+  return [...out];
+}
+
+// The seam's shape, pinned in one place: the viewer, their
+// pairs, the board's jobs, and the names the cards speak.
+export function phaseCSeam({ uid, side, rels, jobs, names }) {
+  return { viewer: { uid, side: side || "" }, rels: rels || [], jobs: jobs || [], names: names || {} };
+}
+
+// The live Phase C fetch: the viewer's pairs (the members
+// array-contains query is the read fence's provable shape),
+// the open board plus the viewer's own jobs merged by id, and
+// the names from the public cards. Lifted out of the boot so
+// live-tests can prove the assembly against a stubbed SDK.
+export async function fetchPhaseC(fs, db, uid, side) {
+  const colAt = (path) => fs.collection(db, ...path.split("/"));
+  const docAt = (path) => fs.doc(db, ...path.split("/"));
+  const grabQuery = async (coll, constraint) => {
+    const snap = await fs.getDocs(fs.query(colAt(coll), constraint));
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  };
+  const rels = await grabQuery("relationships", fs.where("members", "array-contains", uid));
+  const openJobs = await grabQuery("jobs", fs.where("state", "==", "open"));
+  const ownJobs = await grabQuery("jobs", fs.where("familyUid", "==", uid));
+  const byId = new Map();
+  for (const job of [...openJobs, ...ownJobs]) byId.set(job.id, job);
+  const jobs = [...byId.values()];
+  const names = {};
+  for (const other of phaseCNameTargets(uid, side, rels, jobs)) {
+    try {
+      const snap = await fs.getDoc(docAt(`profiles/${other}`));
+      if (snap.exists()) names[other] = snap.data().displayName || "";
+    } catch { /* a card that will not read leaves the plain member word */ }
+  }
+  return phaseCSeam({ uid, side, rels, jobs, names });
+}
+
 const SDK = "../accounts/sdk";
 
 export async function bootLive() {
@@ -125,39 +233,7 @@ export async function bootLive() {
       if (typeof window !== "undefined") window.CARESITS_UID = uid;
       const docAt = (path) => fs.doc(db, ...path.split("/"));
       const colAt = (path) => fs.collection(db, ...path.split("/"));
-      window.CARESITS_WRITE = async (kind, payload) => {
-        const r = routeWrite(kind, payload, uid);
-        if (!r.ok) return r;
-        try {
-          if (r.op === "set") await fs.setDoc(docAt(r.path), r.data);
-          else if (r.op === "update") await fs.updateDoc(docAt(r.path), r.data);
-          else if (r.op === "merge") await fs.setDoc(docAt(r.path), r.data, { merge: true });
-          else if (r.op === "add") await fs.addDoc(colAt(r.path), r.data);
-          else if (r.op === "delete") await fs.deleteDoc(docAt(r.path));
-          else if (r.op === "binRestore") {
-            const batch = fs.writeBatch(db);
-            if (r.originId) batch.set(docAt(r.originPath), r.data);
-            else batch.set(fs.doc(colAt(r.originPath)), r.data);
-            batch.delete(docAt(r.binPath));
-            await batch.commit();
-          }
-          else if (r.op === "inviteAccept") {
-            const batch = fs.writeBatch(db);
-            batch.set(docAt(r.relPath), r.relData);
-            batch.update(docAt(r.invitePath), r.stamp);
-            await batch.commit();
-          }
-          else if (r.op === "reportPair") {
-            const batch = fs.writeBatch(db);
-            batch.set(fs.doc(colAt("safetyReports")), r.data);
-            batch.update(docAt("_owner/aggregates/safety/main"), { filed: fs.increment(1), open: fs.increment(1) });
-            await batch.commit();
-          }
-          return { ok: true };
-        } catch (e) {
-          return { ok: false, reason: String(e?.code || e) };
-        }
-      };
+      window.CARESITS_WRITE = makeWriter(fs, db, uid);
       window.CARESITS_INVITE_LOOKUP = async (code) => {
         try {
           const snap = await fs.getDoc(docAt(`invites/${code}`));
@@ -199,6 +275,18 @@ export async function bootLive() {
           calendar: null,
         };
       } catch { /* export and the bin stand in their empty states */ }
+      try {
+        // F19: Matches and the board read the member's real
+        // pairs and jobs. The seam is published here, from the
+        // live fetch, and the Phase C surfaces re-render in
+        // place when matches.js is loaded (it exposes
+        // CARESITS_PHASE_C_RENDER). No pairs or jobs yet means
+        // the seam carries empty lists and the designed empty
+        // states stand.
+        const seam = await fetchPhaseC(fs, db, uid, window.CARESITS_ME?.side || profile.side || "");
+        window.CARESITS_PHASE_C = seam;
+        if (typeof window.CARESITS_PHASE_C_RENDER === "function") window.CARESITS_PHASE_C_RENDER();
+      } catch { /* matches and the board stand in their empty states */ }
       resolve({ on: true, signedIn: true, uid });
     });
   });
