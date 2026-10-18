@@ -198,6 +198,32 @@ export function renderDayStory(root, entries, side) {
   }
 }
 
+// The bin restore seam. A restore in bin.js writes through
+// the live layer and never passes through this module, so
+// without this the mirror (and the screens) would not see the
+// record again until the next boot. bin.js calls noteRestored
+// after a restore lands; the record re enters through the
+// same render paths as every other commit, so the mirror
+// keeps holding what is on screen right now.
+export function noteRestored(kind, record) {
+  if (!record || typeof record !== "object") return;
+  if (kind === "child") {
+    const kid = normaliseChild(record);
+    if (familyNow.children.some((k) => k.id === kid.id)) return;
+    familyNow.children = [...familyNow.children, kid];
+    const root = typeof document !== "undefined" ? document.getElementById("childrenRoot") : null;
+    if (root) renderChildren(root, familyNow.children);
+  } else if (kind === "dayStory") {
+    const same = record.id != null
+      ? (e) => e.id === record.id
+      : (e) => e.day === record.day && e.tile === record.tile && e.at === record.at && e.note === record.note;
+    if (familyNow.entries.some(same)) return;
+    familyNow.entries = [record, ...familyNow.entries];
+    const root = typeof document !== "undefined" ? document.getElementById("daystoryRoot") : null;
+    if (root) renderDayStory(root, familyNow.entries, familyNow.side);
+  }
+}
+
 import { t as tr } from "./lang.js";
 import { planBinMove } from "./bin.js";
 import { INTERESTS, normaliseChild } from "./activities.js";
@@ -238,4 +264,5 @@ if (typeof document !== "undefined") {
 
 if (typeof window !== "undefined") {
   window.CARESITS_FAMILY_NOW = () => ({ children: familyNow.children, entries: familyNow.entries, side: familyNow.side });
+  window.CARESITS_FAMILY_RESTORE = noteRestored;
 }
