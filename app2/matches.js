@@ -90,8 +90,16 @@ export function renderBoard(root, viewer, jobs) {
     form.append(when, suburb, note, post, msg);
     root.append(form);
   }
+  if (!jobs.length) {
+    const box = el("div", "cardIn");
+    const img = el("img", "bunnyBig");
+    img.src = "bunny/bunny-rest-calm.png";
+    img.alt = tr("find.bunnyRest");
+    box.append(img, el("h3", null, tr("board.emptyTitle")), el("p", null, tr("board.none")));
+    root.append(box);
+    return;
+  }
   const list = el("div", "findList");
-  if (!jobs.length) list.append(el("p", null, tr("board.none")));
   for (const job of jobs) {
     const card = el("article", "findCard");
     card.append(el("h3", "findName", job.postcode ? tr("find.postcode", undefined, { n: job.postcode }) : tr("board.nearby")));
