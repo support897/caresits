@@ -367,7 +367,7 @@ export const UI_YUE = {
  "acct.downloadBody": "您的副本在應用裏製作。打開應用，進入設置，點擊下載我的數據。",
  "form.needChild": "請先填寫你小朋友嘅名字。",
  "form.needContact": "請先填寫姓名同電話號碼。",
- "form.needShift": "請先填寫日子同時間。",
+ "form.needShift": "請先填寫工時。",
  "form.needReminder": "請先寫低提醒內容。",
  "export.title": "下載我的數據",
  "export.body": "一個檔案，包含您的資料、您的答案、您的孩子、您的每日故事、您的訊息和您的日曆。由您保存。",
