@@ -126,14 +126,53 @@ export function isoWeekKey(date) {
 
 // ---------- The three doors ----------
 
+// Native shell: inside the packaged app the social doors run
+// through the Capacitor Firebase Authentication plugin (the
+// native Google and Apple sheets), and the plugin's credential
+// is handed to this same JS SDK session with
+// signInWithCredential, so the profile machinery above never
+// learns which road was taken. cap sync registers the plugin
+// on the native side; the web layer reaches it through the
+// bridge at window.Capacitor.Plugins.FirebaseAuthentication.
+// The plugin's own JS entry does registerPlugin under that
+// same name, but importing it would need a bundler and this
+// app has none, so the guarded bridge access is the road.
+// On the web there is no native bridge and the popup stands.
+function nativeAuthPlugin() {
+  if (typeof window === "undefined") return null;
+  const cap = window.Capacitor;
+  if (!cap || typeof cap.isNativePlatform !== "function" || !cap.isNativePlatform()) return null;
+  const plugin = cap.Plugins && cap.Plugins.FirebaseAuthentication;
+  if (!plugin || typeof plugin.signInWithGoogle !== "function" || typeof plugin.signInWithApple !== "function") return null;
+  return plugin;
+}
+
 export async function signInGoogle() {
   const m = await import(`${SDK}/firebase-auth.js`);
+  const plugin = nativeAuthPlugin();
+  if (plugin) {
+    const result = await plugin.signInWithGoogle();
+    const credential = result && result.credential;
+    if (!credential || !credential.idToken) throw new Error("native sign in returned no credential");
+    return m.signInWithCredential(_auth, m.GoogleAuthProvider.credential(credential.idToken));
+  }
   return m.signInWithPopup(_auth, new m.GoogleAuthProvider());
 }
 
 export async function signInApple() {
   const m = await import(`${SDK}/firebase-auth.js`);
   const provider = new m.OAuthProvider("apple.com");
+  const plugin = nativeAuthPlugin();
+  if (plugin) {
+    const result = await plugin.signInWithApple();
+    const credential = result && result.credential;
+    if (!credential || !credential.idToken) throw new Error("native sign in returned no credential");
+    // The plugin's nonce is the raw nonce Apple signed into
+    // the id token: it rides verbatim as rawNonce below,
+    // never hashed a second time (the plugin presented the
+    // hashed nonce to Apple when it opened the sheet).
+    return m.signInWithCredential(_auth, provider.credential({ idToken: credential.idToken, rawNonce: credential.nonce }));
+  }
   return m.signInWithPopup(_auth, provider);
 }
 
