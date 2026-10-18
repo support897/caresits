@@ -147,13 +147,16 @@ export function makeWriter(fs, db, uid) {
       else if (r.op === "reportPair") {
         const batch = fs.writeBatch(db);
         batch.set(fs.doc(colAt("safetyReports")), data);
-        // F21 (Security ruling 46d6b466): the counter lands as a
+        // F22 (Security ruling 46d6b466): the counter lands as a
         // set with merge, never an update. An update cannot
         // create the doc, so on a counter that does not stand
         // yet the first filing would always fail; a merge set
         // is judged by the create arm on first filing and the
-        // update arm afterwards.
-        batch.set(docAt("_owner/aggregates/safety/main"), { filed: fs.increment(1), open: fs.increment(1) }, { merge: true });
+        // update arm afterwards. Split-docs (ruling 2c267c79):
+        // one counter field per document, one transform per
+        // write, so each increment is judged at full strength.
+        batch.set(docAt("_owner/aggregates/safetyFiled/main"), { filed: fs.increment(1) }, { merge: true });
+        batch.set(docAt("_owner/aggregates/safetyOpen/main"), { open: fs.increment(1) }, { merge: true });
         await batch.commit();
       }
       return { ok: true };
