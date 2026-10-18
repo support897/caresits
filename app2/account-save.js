@@ -13,8 +13,18 @@
 // Signed out, nothing here fires: the journey's own local copy
 // stands, and the save runs at the next signed in finish.
 
+// F14: the gallery lives outside the questionnaire (it is
+// managed on My Profile), so a questionnaire save must carry
+// the stored list forward untouched or the batch set below
+// would wipe it. With no stored gallery the card is unchanged.
+function cardWithGallery(card, gallery) {
+  const kept = (Array.isArray(gallery) ? gallery : []).filter((u) => typeof u === "string" && u).slice(0, 4);
+  if (!kept.length) return card;
+  return { ...card, gallery: kept };
+}
+
 export function planSave(bundle, opts) {
-  const { uid, displayName = "", alreadyActivated = false, nowIso, photoUrl = "" } = opts;
+  const { uid, displayName = "", alreadyActivated = false, nowIso, photoUrl = "", gallery = [] } = opts;
   const cardIn = bundle.card || {};
   // Normalise both bundle shapes (the family card carries its
   // musts and prefs directly; the carer's rides in "looking")
@@ -49,7 +59,7 @@ export function planSave(bundle, opts) {
         displayName: bundle.side === "carer" ? (cardIn.displayName || displayName) : displayName,
         postcode: cardIn.postcode || "",
         photoUrl: photoUrl || "",
-        card,
+        card: cardWithGallery(card, gallery),
         looking: looking || { musts: {}, prefs: {} },
         updatedAt: nowIso,
       },
@@ -83,11 +93,13 @@ export async function saveBundle(bundle, firebaseConfig) {
   const alreadyActivated = profSnap.exists() && "activatedAt" in profSnap.data();
   const cardSnap = await fsMod.getDoc(fsMod.doc(db, "profiles", user.uid)).catch(() => null);
   const keptPhoto = cardSnap && cardSnap.exists() ? (cardSnap.data().photoUrl || "") : "";
+  const keptGallery = cardSnap && cardSnap.exists() ? ((cardSnap.data().card || {}).gallery || []) : [];
   const plan = planSave(bundle, {
     uid: user.uid,
     displayName: profSnap.exists() ? (profSnap.data().displayName || "") : "",
     alreadyActivated,
     photoUrl: keptPhoto,
+    gallery: keptGallery,
     nowIso: new Date().toISOString(),
   });
   const batch = fsMod.writeBatch(db);
@@ -122,6 +134,9 @@ function publishSavedProfile(bundle, plan, uid) {
     photoUrl: plan.card.data.photoUrl || "",
     country: bundle.country || "",
   };
+  // F14: the gallery the save just carried forward rides too,
+  // so the seam and the stored card agree after a save.
+  const savedGallery = (plan.card.data.card || {}).gallery;
   const hosts = [];
   try { if (typeof window !== "undefined") hosts.push(window); } catch { /* no window */ }
   try {
@@ -134,9 +149,10 @@ function publishSavedProfile(bundle, plan, uid) {
       const prevMe = prev.me || {};
       const me = { ...prevMe };
       for (const [k, v] of Object.entries(fresh)) if (v) me[k] = v;
+      if (Array.isArray(savedGallery)) me.gallery = savedGallery;
       h.CARESITS_TRUST = { docs: prev.docs || [], reviews: prev.reviews || [], me };
       if (h.CARESITS_ME) {
-        h.CARESITS_ME = { ...h.CARESITS_ME, side: me.side || h.CARESITS_ME.side || "", name: me.name || h.CARESITS_ME.name || "" };
+        h.CARESITS_ME = { ...h.CARESITS_ME, side: me.side || h.CARESITS_ME.side || "", name: me.name || h.CARESITS_ME.name || "", ...(Array.isArray(savedGallery) ? { gallery: savedGallery } : {}) };
       }
       if (typeof h.CARESITS_TRUST_RENDER === "function") h.CARESITS_TRUST_RENDER();
     } catch { /* a seam refresh never breaks a save */ }
