@@ -43,8 +43,9 @@ $("#joinBtn").addEventListener("click", async () => {
   try {
     const a = await layer();
     await a.signInEmail(email, pw, "");
-  } catch {
-    msg(tr("door.mismatch"));
+  } catch (e) {
+    const noNet = e && (e.code === "auth/network-request-failed" || e.code === "auth/timeout");
+    msg(tr(noNet ? "door.noNet" : "door.mismatch"));
   }
 });
 $("#googleBtn").addEventListener("click", async () => { try { const a = await layer(); await a.signInGoogle(); } catch { msg(tr("door.doorFail")); } });
