@@ -123,7 +123,7 @@ if (!FIREBASE_ON) {
       document.getElementById("planText").textContent = tr("acct.planText");
     }
   });
-  const wrap = (fn) => async () => { setMsg(""); try { await fn(); } catch (e) { setMsg(tr("acct.fail")); } };
+  const wrap = (fn) => async () => { setMsg(""); try { await fn(); } catch (e) { const noNet = e && (e.code === "auth/network-request-failed" || e.code === "auth/timeout"); setMsg(tr(noNet ? "acct.noNet" : "acct.fail")); } };
   document.getElementById("doorGoogle").onclick = wrap(signInGoogle);
   document.getElementById("doorApple").onclick = wrap(signInApple);
   document.getElementById("doorEmail").onclick = wrap(() => signInEmail(document.getElementById("email").value.trim(), document.getElementById("password").value, document.getElementById("name").value.trim()));
