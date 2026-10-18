@@ -9,6 +9,14 @@ export function planPhotoPath(uid) {
   return `profile-photos/${uid}/photo.jpg`;
 }
 
+// F14: the gallery's slots live beside the main photo, one
+// file per slot, so a slot can be replaced on its own.
+export function planGalleryPath(uid, slot) {
+  if (!uid) return null;
+  if (!Number.isInteger(slot) || slot < 1 || slot > 4) return null;
+  return `profile-photos/${uid}/extra-${slot}.jpg`;
+}
+
 export function planResumePath(uid, fileName) {
   if (!uid || !fileName) return null;
   const safe = String(fileName).replace(/[^A-Za-z0-9._]/g, "_");
@@ -99,9 +107,7 @@ function readAsDataUrl(blob) {
   });
 }
 
-export async function uploadProfilePhoto(uid, file) {
-  if (!file) return { ok: false, reason: "missing-file" };
-  const path = planPhotoPath(uid);
+async function uploadPhotoTo(path, file) {
   let downscaled = null;
   try {
     downscaled = await downscaleImage(file, 1024);
@@ -121,4 +127,16 @@ export async function uploadProfilePhoto(uid, file) {
   if (result.ok) return { ok: true, url: result.url };
   const dataUrl = await readAsDataUrl(downscaled);
   return { ok: false, reason: result.reason || "upload-failed", dataUrl };
+}
+
+export async function uploadProfilePhoto(uid, file) {
+  if (!file) return { ok: false, reason: "missing-file" };
+  return uploadPhotoTo(planPhotoPath(uid), file);
+}
+
+// F14: one gallery slot, the same seam and the same soft
+// failures as the main photo (F12's demo preview included).
+export async function uploadGalleryPhoto(uid, file, slot) {
+  if (!file) return { ok: false, reason: "missing-file" };
+  return uploadPhotoTo(planGalleryPath(uid, slot), file);
 }
