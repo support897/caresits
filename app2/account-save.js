@@ -102,7 +102,45 @@ export async function saveBundle(bundle, firebaseConfig) {
       { [plan.activation.counterField]: fsMod.increment(1) }, { merge: true });
   }
   await batch.commit();
+  publishSavedProfile(bundle, plan, user.uid);
   return { saved: "account", activated: Boolean(plan.activation) };
+}
+
+// F15, the save side of the seam: a finished questionnaire
+// changes who My Profile shows (a carer who just finished must
+// see her resume card without a reload). The save runs inside
+// the questionnaire frame; the app shell is its parent window.
+// Both windows get the uid seam (F16) and a refreshed trust
+// seam carrying the facts the save just wrote, and the shell
+// re-renders its trust surfaces through the render seam
+// trust.js exposes. Empty facts never overwrite standing ones.
+function publishSavedProfile(bundle, plan, uid) {
+  const fresh = {
+    name: plan.card.data.displayName || "",
+    side: bundle.side || plan.card.data.side || "",
+    postcode: plan.card.data.postcode || "",
+    photoUrl: plan.card.data.photoUrl || "",
+    country: bundle.country || "",
+  };
+  const hosts = [];
+  try { if (typeof window !== "undefined") hosts.push(window); } catch { /* no window */ }
+  try {
+    if (typeof window !== "undefined" && window.parent && window.parent !== window) hosts.push(window.parent);
+  } catch { /* top level or cross origin */ }
+  for (const h of hosts) {
+    try {
+      h.CARESITS_UID = uid;
+      const prev = h.CARESITS_TRUST || {};
+      const prevMe = prev.me || {};
+      const me = { ...prevMe };
+      for (const [k, v] of Object.entries(fresh)) if (v) me[k] = v;
+      h.CARESITS_TRUST = { docs: prev.docs || [], reviews: prev.reviews || [], me };
+      if (h.CARESITS_ME) {
+        h.CARESITS_ME = { ...h.CARESITS_ME, side: me.side || h.CARESITS_ME.side || "", name: me.name || h.CARESITS_ME.name || "" };
+      }
+      if (typeof h.CARESITS_TRUST_RENDER === "function") h.CARESITS_TRUST_RENDER();
+    } catch { /* a seam refresh never breaks a save */ }
+  }
 }
 
 if (typeof window !== "undefined") {
