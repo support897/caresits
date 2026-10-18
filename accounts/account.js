@@ -105,8 +105,13 @@ async function ensureProfile(fsMod, u) {
     const batch = writeBatch(_db);
     batch.set(ref, profile);
     batch.set(
-      doc(_db, "_owner", "aggregates", "people", "main"),
-      { total: increment(1), weekly: { [isoWeekKey(new Date())]: increment(1) } },
+      doc(_db, "_owner", "aggregates", "peopleTotal", "main"),
+      { total: increment(1) },
+      { merge: true }
+    );
+    batch.set(
+      doc(_db, "_owner", "aggregates", "peopleWeekly", isoWeekKey(new Date())),
+      { count: increment(1) },
       { merge: true }
     );
     await batch.commit();
