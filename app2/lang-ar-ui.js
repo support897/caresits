@@ -448,6 +448,7 @@ export const UI_AR = {
  "homes.copyLink": "نسخ الرابط",
  "homes.shareLink": "مشاركة",
  "homes.copied": "تم النسخ. أرسله إلى مربيتك أو عائلتك.",
+ "homes.copyFail": "لم يتم النسخ. رابطك مكتوب على البطاقة، جاهز للنسخ يدويًا.",
  "homes.makeLink": "إنشاء رابطي",
  "homes.linkConnected": "{name} متصل.",
  "homes.linkWaiting": "لم يستخدم أحد رابطك بعد.",
