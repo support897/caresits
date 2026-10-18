@@ -446,6 +446,7 @@ export const UI_HI = {
  "homes.copyLink": "लिंक कॉपी करें",
  "homes.shareLink": "साझा करें",
  "homes.copied": "कॉपी हो गया। इसे अपनी नैनी या परिवार को भेजें।",
+ "homes.copyFail": "कॉपी नहीं हुआ। आपका लिंक कार्ड पर लिखा हुआ है, हाथ से कॉपी करने के लिए तैयार है।",
  "homes.makeLink": "मेरा लिंक बनाएँ",
  "homes.linkConnected": "{name} जुड़ा हुआ है।",
  "homes.linkWaiting": "अभी तक किसी ने आपके लिंक का उपयोग नहीं किया है।",
