@@ -45,6 +45,55 @@ export function routeWrite(kind, payload, uid) {
   }
 }
 
+// The trust seam (CARESITS_TRUST) is what trust.js renders My
+// Profile, Checks and Reviews from. It is built here, from the
+// member's own documents, because the boot is the one place
+// that reads them all: the user doc (the name and side of
+// record), the public card (the name the questionnaire saved,
+// postcode, photo) and the questionnaire doc (country). Name
+// precedence follows the save layer's own rule: a carer's card
+// carries the name they gave the questionnaire, a family's
+// name of record is the user doc's.
+export function trustSeamFrom(profile, card, questionnaire) {
+  const p = profile || {};
+  const c = card || {};
+  const q = questionnaire || {};
+  const side = c.side || p.side || q.side || "";
+  const name = side === "carer" ? (c.displayName || p.displayName || "") : (p.displayName || c.displayName || "");
+  return {
+    name,
+    side,
+    postcode: c.postcode || "",
+    photoUrl: c.photoUrl || "",
+    country: q.country || "",
+  };
+}
+
+// Publish the trust seam from the three documents. Checks docs
+// and reviews a demo or a test already placed on the seam are
+// preserved: this refresh owns "me" only. CARESITS_ME gains the
+// same facts its readers already look for (country, postcode,
+// photo), and the trust surfaces re-render in place when
+// trust.js is loaded (it exposes CARESITS_TRUST_RENDER).
+export function publishTrust(profile, card, questionnaire) {
+  const me = trustSeamFrom(profile, card, questionnaire);
+  if (typeof window === "undefined") return me;
+  const prev = window.CARESITS_TRUST || {};
+  window.CARESITS_TRUST = { docs: prev.docs || [], reviews: prev.reviews || [], me };
+  if (window.CARESITS_ME) {
+    window.CARESITS_ME = {
+      ...window.CARESITS_ME,
+      side: me.side || window.CARESITS_ME.side || "",
+      name: me.name || window.CARESITS_ME.name || "",
+      country: me.country || window.CARESITS_ME.country || "",
+      postcode: me.postcode || window.CARESITS_ME.postcode || "",
+      photoUrl: me.photoUrl || window.CARESITS_ME.photoUrl || "",
+    };
+  }
+  if (typeof window.CARESITS_TRUST_RENDER === "function") window.CARESITS_TRUST_RENDER();
+  return me;
+}
+
 const SDK = "../accounts/sdk";
 
 export async function bootLive() {
@@ -58,8 +107,16 @@ export async function bootLive() {
   const db = fs.getFirestore(app);
   return new Promise((resolve) => {
     authMod.onAuthStateChanged(auth, async (u) => {
-      if (!u || u.isAnonymous) { resolve({ on: true, signedIn: false }); return; }
+      if (!u || u.isAnonymous) {
+        // The uid seam is a pointer, not data: clearing it on
+        // sign out deletes nothing, it only stops the device
+        // keys resolving to the previous account (F16).
+        if (typeof window !== "undefined") window.CARESITS_UID = null;
+        resolve({ on: true, signedIn: false });
+        return;
+      }
       const uid = u.uid;
+      if (typeof window !== "undefined") window.CARESITS_UID = uid;
       const docAt = (path) => fs.doc(db, ...path.split("/"));
       const colAt = (path) => fs.collection(db, ...path.split("/"));
       window.CARESITS_WRITE = async (kind, payload) => {
@@ -101,10 +158,13 @@ export async function bootLive() {
           return snap.exists() ? snap.data() : null;
         } catch { return null; }
       };
+      let profile = {};
+      let qData = {};
       try {
         const prof = await fs.getDoc(docAt(`users/${uid}`));
-        const profile = prof.exists() ? prof.data() : {};
+        profile = prof.exists() ? prof.data() : {};
         const q = await fs.getDoc(docAt(`users/${uid}/meta/questionnaire`));
+        qData = q.exists() ? q.data() : {};
         window.CARESITS_ME = { uid, side: profile.side || "", name: profile.displayName || "" };
         window.CARESITS_PROFILE_COMPLETE = !!(profile.displayName && q.exists());
       } catch { /* the surfaces stand in their empty states */ }
@@ -119,7 +179,12 @@ export async function bootLive() {
         const story = await grab(`users/${uid}/dayStory`);
         const msgs = await grab(`users/${uid}/messages`);
         const cardSnap = await fs.getDoc(docAt(`profiles/${uid}`));
+        const cardData = cardSnap.exists() ? cardSnap.data() : {};
         window.CARESITS_FAMILY = { children: kids, entries: story, side: window.CARESITS_ME?.side || "family" };
+        // F15: My Profile renders from the trust seam, and the
+        // seam is published here, from the member's real
+        // documents, the moment the boot has read them.
+        publishTrust(profile, cardData, qData);
         window.CARESITS_EXPORT_DATA = {
           profile: window.CARESITS_ME || null,
           card: cardSnap.exists() ? cardSnap.data() : null,
