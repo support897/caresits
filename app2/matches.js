@@ -143,5 +143,10 @@ function bootPhaseC() {
   };
 }
 
+// The live bridge fills CARESITS_PHASE_C when the member's own
+// world lands (F19) and calls this seam to render it in place,
+// the way the trust surfaces refresh on their render seam.
+window.CARESITS_PHASE_C_RENDER = bootPhaseC;
+
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bootPhaseC);
 else bootPhaseC();
