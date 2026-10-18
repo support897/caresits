@@ -1,4 +1,5 @@
 import { t as tr, currentLang, setLang } from "./lang.js";
+import { doneKey, draftKey } from "./storage-keys.js";
 import { downloadExport } from "./export.js";
 import { pushAvailable, getPushState, registerPush, togglePushKind } from "./push.js";
 import { uploadProfilePhoto, uploadToStorage, planResumePath } from "./photo.js";
@@ -38,9 +39,9 @@ function viewerCountryName() {
   if ((window.CARESITS_ME || {}).country) return window.CARESITS_ME.country;
   if (me.country) return me.country;
   try {
-    const q = JSON.parse(localStorage.getItem("caresits-app2-questionnaire") || "null");
+    const q = JSON.parse(localStorage.getItem(doneKey()) || "null");
     if (q && (q.country || (q.answers && q.answers.country))) return q.country || q.answers.country;
-    const d = JSON.parse(localStorage.getItem("caresits-app2-draft") || "null");
+    const d = JSON.parse(localStorage.getItem(draftKey()) || "null");
     if (d && d.answers && d.answers.country) return d.answers.country;
   } catch { /* no local copy */ }
   return "Australia";
@@ -333,6 +334,13 @@ function bootTrust() {
   const saved = (() => { try { return JSON.parse(localStorage.getItem(BG_KEY)) || { choice: "brand" }; } catch { return { choice: "brand" }; } })();
   applyBackground(saved.choice, saved.choice === "upload" ? localStorage.getItem(BG_KEY + "-img") : null);
 }
+
+// The live bridge re-publishes the trust seam when the signed
+// in member's documents land (F15); this seam lets it refresh
+// every trust surface in place, the way the bin refreshes on
+// open. Demo and test seams keep working exactly as before:
+// they set CARESITS_TRUST and this renders from it.
+window.CARESITS_TRUST_RENDER = bootTrust;
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bootTrust);
 else bootTrust();
