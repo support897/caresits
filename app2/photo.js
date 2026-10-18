@@ -100,15 +100,22 @@ function readAsDataUrl(blob) {
 }
 
 export async function uploadProfilePhoto(uid, file) {
-  const path = planPhotoPath(uid);
-  if (!path) return { ok: false, reason: "missing-uid" };
   if (!file) return { ok: false, reason: "missing-file" };
+  const path = planPhotoPath(uid);
   let downscaled = null;
   try {
     downscaled = await downscaleImage(file, 1024);
   } catch (e) {
     const dataUrl = await readAsDataUrl(file);
     return { ok: false, reason: String((e && (e.code || e.message)) || e), dataUrl };
+  }
+  if (!path) {
+    // No account on this device (the demo): the pick still
+    // answers with the picture itself, previewed here with the
+    // honest device only line. Nothing is uploaded, and the
+    // tap is never a silent no-op.
+    const dataUrl = await readAsDataUrl(downscaled);
+    return { ok: false, reason: "missing-uid", dataUrl };
   }
   const result = await uploadToStorage(path, downscaled);
   if (result.ok) return { ok: true, url: result.url };
