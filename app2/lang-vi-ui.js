@@ -367,7 +367,7 @@ export const UI_VI = {
  "acct.downloadBody": "Bản sao của bạn được tạo trong ứng dụng. Mở ứng dụng, vào Cài đặt, và chạm Tải dữ liệu của tôi.",
  "form.needChild": "Hãy thêm tên của con bạn trước.",
  "form.needContact": "Hãy thêm tên và số điện thoại trước.",
- "form.needShift": "Hãy thêm ngày và giờ trước.",
+ "form.needShift": "Hãy thêm số giờ trước.",
  "form.needReminder": "Hãy viết lời nhắc trước.",
  "export.title": "Tải dữ liệu của tôi",
  "export.body": "Một tệp với hồ sơ của bạn, câu trả lời của bạn, các bé của bạn, Câu chuyện mỗi ngày, tin nhắn và lịch của bạn. Của bạn để giữ.",
