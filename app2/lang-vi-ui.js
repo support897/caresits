@@ -446,6 +446,7 @@ export const UI_VI = {
  "homes.copyLink": "Sao chép liên kết",
  "homes.shareLink": "Chia sẻ",
  "homes.copied": "Đã sao chép. Gửi cho người giữ trẻ hoặc gia đình của bạn.",
+ "homes.copyFail": "Chưa sao chép được. Liên kết của bạn đã được ghi trên thẻ, sẵn sàng để sao chép bằng tay.",
  "homes.makeLink": "Tạo liên kết của tôi",
  "homes.linkConnected": "{name} đã kết nối.",
  "homes.linkWaiting": "Chưa ai dùng liên kết của bạn.",
