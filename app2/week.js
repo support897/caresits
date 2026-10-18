@@ -62,13 +62,14 @@ export function renderTimesheet(root, entries) {
   hours.placeholder = tr("week.hoursPh");
   const add = el("button", "mainBtn", tr("family.add"));
   add.type = "button";
+  const formMsg = el("p", "formMsg");
   add.addEventListener("click", () => {
     const h = Number(hours.value);
-    if (!h) return;
+    if (!h) { formMsg.textContent = tr("form.needShift"); return; }
     write("timesheet", { day: day.value, hours: h });
     renderTimesheet(root, [...entries, { day: day.value, hours: h }]);
   });
-  form.append(day, hours, add);
+  form.append(day, hours, add, formMsg);
   root.append(form);
 }
 
@@ -90,12 +91,13 @@ export function renderReminders(root, reminders) {
   when.placeholder = tr("week.whenPh");
   const add = el("button", "mainBtn", tr("family.add"));
   add.type = "button";
+  const formMsg = el("p", "formMsg");
   add.addEventListener("click", () => {
-    if (!text.value.trim()) return;
+    if (!text.value.trim()) { formMsg.textContent = tr("form.needReminder"); return; }
     write("reminder", { text: text.value.trim(), when: when.value });
     renderReminders(root, [...reminders, { text: text.value.trim(), when: when.value }]);
   });
-  form.append(text, when, add);
+  form.append(text, when, add, formMsg);
   root.append(form);
 }
 
@@ -118,12 +120,13 @@ export function renderEmergency(root, contacts) {
   phone.placeholder = tr("week.phonePh");
   const add = el("button", "mainBtn", tr("family.add"));
   add.type = "button";
+  const formMsg = el("p", "formMsg");
   add.addEventListener("click", () => {
-    if (!name.value.trim()) return;
+    if (!name.value.trim() || !phone.value.trim()) { formMsg.textContent = tr("form.needContact"); return; }
     write("emergency", { name: name.value.trim(), phone: phone.value });
     renderEmergency(root, [...contacts, { name: name.value.trim(), phone: phone.value }]);
   });
-  form.append(name, phone, add);
+  form.append(name, phone, add, formMsg);
   root.append(form);
 }
 
