@@ -446,6 +446,7 @@ export const UI_YUE = {
  "homes.copyLink": "複製連結",
  "homes.shareLink": "分享",
  "homes.copied": "已經複製好。傳俾你嘅保姆或者屋企人啦。",
+ "homes.copyFail": "複製唔到。你嘅連結已經寫咗喺張卡上面，可以自己手動複製。",
  "homes.makeLink": "整我嘅連結",
  "homes.linkConnected": "{name}已經連接咗。",
  "homes.linkWaiting": "未有人用你嘅連結住。",
