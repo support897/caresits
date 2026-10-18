@@ -11,6 +11,7 @@
 // shopping, calendar-actions); this file only renders and
 // wires the writes the live layer already routes.
 import { t as tr } from "./lang.js";
+import { doneKey, draftKey } from "./storage-keys.js";
 import { planDay, planWeek, mondayOfISO, INTERESTS } from "./activities.js";
 import { repairChild, ageText, todayLineText } from "./family.js";
 import { assembleBrowse } from "./browse.js";
@@ -134,8 +135,8 @@ function findingHome(root) {
   root.append(postureSwitch("finding"));
 
   // Find card: the postcode on file, then the two doors.
-  const draft = readJson("caresits-app2-draft");
-  const done = readJson("caresits-app2-questionnaire");
+  const draft = readJson(draftKey());
+  const done = readJson(doneKey());
   const postcode = (draft && draft.answers && draft.answers.postcode) || (done && done.answers && done.answers.postcode)
     || (window.CARESITS_TRUST || {}).me?.postcode || "";
   const find = el("section", "cardIn homeCard");
