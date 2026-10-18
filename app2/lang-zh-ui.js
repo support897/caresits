@@ -446,6 +446,7 @@ export const UI_ZH = {
  "homes.copyLink": "复制链接",
  "homes.shareLink": "分享",
  "homes.copied": "已复制。把它发送给您的保姆或家人。",
+ "homes.copyFail": "没有复制成功。您的链接已写在卡片上，可以手动复制。",
  "homes.makeLink": "创建我的链接",
  "homes.linkConnected": "{name}已连接。",
  "homes.linkWaiting": "还没有人使用您的链接。",
