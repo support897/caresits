@@ -67,6 +67,11 @@ h1, h2 { font-family: "Newsreader", Georgia, serif; font-weight: 600; line-heigh
 .findCard.nearly { opacity: .82; }
 .findHead { display: flex; gap: 14px; align-items: center; }
 .findPhoto { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; }
+.galleryThumbs { display: flex; gap: 6px; margin-top: 10px; }
+.galleryThumbSm { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; }
+.galleryStrip { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
+.gallerySlot { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+.galleryThumb { width: 72px; height: 72px; border-radius: 14px; object-fit: cover; }
 .findInitial { width: 56px; height: 56px; border-radius: 50%; background: var(--blush); display: grid; place-items: center; font-family: "Newsreader", Georgia, serif; font-size: 26px; font-weight: 700; flex: none; }
 .findName { margin: 0; font-size: 20px; overflow-wrap: anywhere; }
 .findPlace { margin: 2px 0 0; }
