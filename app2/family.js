@@ -82,16 +82,17 @@ export function renderChildren(root, rawChildren) {
   const add = el("button", "mainBtn", tr("family.add"));
   add.type = "button";
   add.id = "kAdd";
+  const formMsg = el("p", "formMsg");
   add.addEventListener("click", () => {
     const n = name.value.trim();
-    if (!n) return;
+    if (!n) { formMsg.textContent = tr("form.needChild"); return; }
     const ageYears = ageSel.value === "" ? null : Number(ageSel.value);
     const loves = INTERESTS.map((l) => l.id).filter((id) => pickedLoves.has(id));
     write("child-add", { name: n, theme: themeSel.value, ageYears, loves });
     const kid = { id: "local-" + Date.now(), name: n, theme: themeSel.value, ageYears, loves };
     renderChildren(root, [...children, kid]);
   });
-  form.append(name, themeSel, ageSel, loveLabel, loveRow, add);
+  form.append(name, themeSel, ageSel, loveLabel, loveRow, add, formMsg);
   root.append(form);
 }
 
