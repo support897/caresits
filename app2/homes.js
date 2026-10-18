@@ -324,7 +324,7 @@ function linkCard() {
       const row = el("div", "homeBtnRow");
       const cp = el("button", "mainBtn", tr("homes.copyLink")); cp.type = "button";
       cp.addEventListener("click", async () => {
-        try { await navigator.clipboard.writeText(inviteLinkText(code)); state.linkMsg = tr("homes.copied"); renderHome(); } catch { /* clipboard closed */ }
+        try { await navigator.clipboard.writeText(inviteLinkText(code)); state.linkMsg = tr("homes.copied"); renderHome(); } catch { state.linkMsg = tr("homes.copyFail"); renderHome(); }
       });
       const sh = el("button", "ghostBtn", tr("homes.shareLink")); sh.type = "button";
       sh.addEventListener("click", async () => {
