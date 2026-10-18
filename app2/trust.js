@@ -118,6 +118,9 @@ export function renderProfile(root, me) {
   pick.addEventListener("click", () => pfile.click());
   pfile.addEventListener("change", async () => {
     const f = pfile.files && pfile.files[0];
+    // F21: clear the pick at once, so picking the same file
+    // again still fires change.
+    pfile.value = "";
     if (!f) return;
     const uid = window.CARESITS_ME && window.CARESITS_ME.uid;
     const res = await uploadProfilePhoto(uid, f);
@@ -186,6 +189,7 @@ export function renderProfile(root, me) {
     };
     gfile.addEventListener("change", async () => {
       const f = gfile.files && gfile.files[0];
+      gfile.value = "";
       if (!f) return;
       const uid = window.CARESITS_ME && window.CARESITS_ME.uid;
       const res = await uploadGalleryPhoto(uid, f, gallery.length + 1);
@@ -238,6 +242,7 @@ export function renderProfile(root, me) {
     };
     rfile.addEventListener("change", async () => {
       const f = rfile.files && rfile.files[0];
+      rfile.value = "";
       if (!f) return;
       const buf = await f.arrayBuffer();
       const head = new TextDecoder().decode(new Uint8Array(buf.slice(0, 5)));
@@ -307,6 +312,7 @@ export function renderSettings(root) {
   fileIn.hidden = true;
   fileIn.addEventListener("change", () => {
     const f = fileIn.files?.[0];
+    fileIn.value = "";
     if (!f) return;
     const img = new Image();
     img.onload = () => {
