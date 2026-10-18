@@ -25,6 +25,7 @@ export function routeWrite(kind, payload, uid) {
     case "bin-restore": return { ok: true, op: "binRestore", binPath: payload.binPath, originPath: payload.originPath, originId: payload.originId || null, data: payload.data };
     case "dayStory-remove": return { ok: true, op: "delete", path: `users/${uid}/dayStory/${payload.id}` };
     case "photo": return { ok: true, op: "merge", path: `profiles/${uid}`, data: { photoUrl: payload.photoUrl } };
+    case "gallery": return { ok: true, op: "merge", path: `profiles/${uid}`, data: { card: { gallery: (Array.isArray(payload.gallery) ? payload.gallery : []).filter((u) => typeof u === "string" && u).slice(0, 4) } } };
     case "dayStory": return { ok: true, op: "add", path: `users/${uid}/dayStory`, data: { day: payload.day, tile: payload.tile, note: payload.note, at: payload.at } };
     case "photo-request": return { ok: true, op: "add", path: `users/${uid}/dayStory`, data: { day: payload.day, tile: "Photo moment", note: "A photo of the kids was asked for", at: payload.at } };
     case "timesheet": return { ok: true, op: "add", path: `users/${uid}/timesheets`, data: { day: payload.day, hours: payload.hours } };
@@ -60,11 +61,15 @@ export function trustSeamFrom(profile, card, questionnaire) {
   const q = questionnaire || {};
   const side = c.side || p.side || q.side || "";
   const name = side === "carer" ? (c.displayName || p.displayName || "") : (p.displayName || c.displayName || "");
+  const cardBits = c.card || {};
   return {
     name,
     side,
     postcode: c.postcode || "",
     photoUrl: c.photoUrl || "",
+    // F14: the gallery rides inside the card map, up to four
+    // photo URLs in slot order.
+    gallery: (Array.isArray(cardBits.gallery) ? cardBits.gallery : []).filter((u) => typeof u === "string" && u).slice(0, 4),
     country: q.country || "",
   };
 }
@@ -88,6 +93,7 @@ export function publishTrust(profile, card, questionnaire) {
       country: me.country || window.CARESITS_ME.country || "",
       postcode: me.postcode || window.CARESITS_ME.postcode || "",
       photoUrl: me.photoUrl || window.CARESITS_ME.photoUrl || "",
+      gallery: me.gallery,
     };
   }
   if (typeof window.CARESITS_TRUST_RENDER === "function") window.CARESITS_TRUST_RENDER();
