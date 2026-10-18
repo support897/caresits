@@ -1,4 +1,5 @@
 import { t as tr } from "./lang.js";
+import { doneKey, draftKey } from "./storage-keys.js";
 // Caresitters app2 — the message thread + the free taste wall.
 // The account layer's own logic decides (canSendMessage): a
 // family on the free taste gets one message a day; carers and
@@ -34,9 +35,9 @@ function viewerCountry() {
   const me = (window.CARESITS_TRUST || {}).me || {};
   if (me.country) return me.country;
   try {
-    const q = JSON.parse(localStorage.getItem("caresits-app2-questionnaire") || "null");
+    const q = JSON.parse(localStorage.getItem(doneKey()) || "null");
     if (q && (q.country || (q.answers && q.answers.country))) return q.country || q.answers.country;
-    const d = JSON.parse(localStorage.getItem("caresits-app2-draft") || "null");
+    const d = JSON.parse(localStorage.getItem(draftKey()) || "null");
     if (d && d.answers && d.answers.country) return d.answers.country;
   } catch { /* no local copy */ }
   return "Australia";
