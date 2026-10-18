@@ -28,6 +28,15 @@ const answered = (answers, f) => {
   return true;
 };
 
+// NOTE for future readers: "better" can never come back for a
+// FAMILY, and that is intended, not a bug. The approved 50
+// question cap emptied the family's Full tier, so a family that
+// finishes Quick + Better has answered every match bearing
+// question there is and reads "full" (levels-tests.mjs pins this
+// in those words). Carers still owe their Full tier (C33, C42),
+// so "better" is reachable for them. The "optional" fields are
+// profile colour only and sit outside this ladder on purpose:
+// Full means every MATCH BEARING question answered.
 export function levelOf(side, answers) {
   if (!side || !answers) return "explore";
   const base = side === "family" ? FAMILY_PAGES : CARER_PAGES;
