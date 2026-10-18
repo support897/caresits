@@ -68,7 +68,7 @@ h1, h2 { font-family: "Newsreader", Georgia, serif; font-weight: 600; line-heigh
 .findHead { display: flex; gap: 14px; align-items: center; }
 .findPhoto { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; }
 .findInitial { width: 56px; height: 56px; border-radius: 50%; background: var(--blush); display: grid; place-items: center; font-family: "Newsreader", Georgia, serif; font-size: 26px; font-weight: 700; flex: none; }
-.findName { margin: 0; font-size: 20px; }
+.findName { margin: 0; font-size: 20px; overflow-wrap: anywhere; }
 .findPlace { margin: 2px 0 0; }
 .findFit { margin: 12px 0 6px; }
 .fitChip { background: var(--teal); border-radius: 999px; padding: 4px 12px; font-weight: 700; font-size: 14px; }
@@ -154,8 +154,8 @@ html[data-theme="white"] body { background: #FFFFFF; }
 .guideText { margin: 0; font-weight: 600; }
 .homeSub { margin: 14px 0 6px; font-size: 17px; }
 .kidChipRow, .loveChipRow { display: flex; gap: 8px; flex-wrap: wrap; margin: 6px 0 10px; }
-.kidChip { background: var(--blush); border-radius: 999px; padding: 8px 14px; display: inline-flex; gap: 8px; align-items: baseline; }
-.kidChipName { font-weight: 700; }
+.kidChip { background: var(--blush); border-radius: 999px; padding: 8px 14px; display: inline-flex; gap: 8px; align-items: baseline; max-width: 100%; }
+.kidChipName { font-weight: 700; overflow-wrap: anywhere; }
 .kidChipAge { color: var(--soft); font-size: 14px; }
 .loveChip { background: #fff; border: 1.5px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: 14px; }
 .planRow { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); align-items: flex-start; }
