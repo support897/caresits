@@ -367,7 +367,7 @@ export const UI_ZH = {
  "acct.downloadBody": "您的副本在应用里制作。打开应用，进入设置，点击下载我的数据。",
  "form.needChild": "请先填写孩子的名字。",
  "form.needContact": "请先填写姓名和电话号码。",
- "form.needShift": "请先填写日期和时间。",
+ "form.needShift": "请先填写小时数。",
  "form.needReminder": "请先写下提醒内容。",
  "export.title": "下载我的数据",
  "export.body": "一个文件，包含您的资料、您的答案、您的孩子、您的每日故事、您的消息和您的日历。由您保存。",
