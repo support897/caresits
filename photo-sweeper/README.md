@@ -47,6 +47,14 @@ in scope (the object list names profile-photos only): the
 family's memories of their child keep forever, deletion
 the family's alone, bin first.
 
+THE MISSING-STAMP POLICY (HQ ruling, 19 Oct 2026, on
+Security's seal observation): missing stamp = never
+swept. The sweeper acts only on a trusted stamp aged 90
+or more days, exactly as planSweep builds it. Absence of
+a stamp never reads as sweep now, and the fallback-signal
+idea considered for never-stamped accounts is NOT
+adopted: no stamp, no sweep, no exceptions written here.
+
 ## The refinements (settled by Ilse's tap, 19 Oct 17:47)
 
 Both are built into the core. The warning: planWarn picks
