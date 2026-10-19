@@ -189,7 +189,21 @@ export async function saveBundle(bundle, firebaseConfig) {
   // outcome; the envelope drains regardless.
   try { await withTimeout(user.getIdToken(true), 10000, "token mint"); } catch { /* the save speaks for itself */ }
   const db = fsMod.getFirestore(app);
-  const profSnap = await fsMod.getDoc(fsMod.doc(db, "users", user.uid));
+  let profSnap = await fsMod.getDoc(fsMod.doc(db, "users", user.uid));
+  if (!profSnap.exists()) {
+    // The activation pairing reads this doc's PRE-state:
+    // it must exist before the batch or the counter member
+    // refuses and the batch dies whole (Test naming probe,
+    // b108: commit permission-denied on accounts the browser
+    // door flow left doc-less — the door's bounded ensure
+    // can miss its birth in a young realm). The save births
+    // the doc itself, in the door's own shape, ahead of the
+    // batch — with the token awaited above, the birth lands.
+    try {
+      await fsMod.setDoc(fsMod.doc(db, "users", user.uid), { createdAt: fsMod.serverTimestamp(), side: "", displayName: "" }, { merge: true });
+      profSnap = await fsMod.getDoc(fsMod.doc(db, "users", user.uid));
+    } catch { /* the batch speaks for itself */ }
+  }
   const alreadyActivated = profSnap.exists() && "activatedAt" in profSnap.data();
   const cardSnap = await fsMod.getDoc(fsMod.doc(db, "profiles", user.uid)).catch(() => null);
   const keptPhoto = cardSnap && cardSnap.exists() ? (cardSnap.data().photoUrl || "") : "";
