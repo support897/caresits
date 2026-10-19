@@ -4,6 +4,7 @@ import { downloadExport } from "./export.js";
 import { pushAvailable, getPushState, registerPush, togglePushKind } from "./push.js";
 import { uploadProfilePhoto, uploadGalleryPhoto, uploadToStorage, planResumePath, deleteFromStorage, planPathFromUrl, removeProfilePhoto, removeResumeObject } from "./photo.js";
 import { draftFromText, buildHandoff } from "./resume.js";
+import { extractPdfText } from "./pdf-text.js";
 import { LANGS, NATIONALITIES } from "./questions.js";
 import { packById, packByName, checkFor } from "./countries.js";
 // Caresitters app2 — Phase D trust surfaces: Checks, Reviews,
@@ -303,7 +304,19 @@ export function renderProfile(root, me) {
             }
           }
         }
-        out.replaceChildren(el("p", "gateMsg", tr(held ? "resume.temp" : "resume.unread")));
+        // Extraction (Ilse's model): the PDF's own words are
+        // read here and drafted exactly like pasted words,
+        // grounded spans only. A PDF with no words in it (a
+        // scan) falls to the honest line, its temp object
+        // still held as recorded, discard standing by.
+        let words = "";
+        try { words = await extractPdfText(new Uint8Array(buf)); } catch { words = ""; }
+        if (words && words.trim()) {
+          runDraft(words);
+          if (held) out.prepend(el("p", "gateMsg", tr("resume.temp")));
+        } else {
+          out.replaceChildren(el("p", "gateMsg", tr("resume.unread")));
+        }
         return;
       }
       // A text pick drafts from its own words and is never
