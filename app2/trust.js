@@ -2,7 +2,7 @@ import { t as tr, currentLang, setLang } from "./lang.js";
 import { doneKey, draftKey } from "./storage-keys.js";
 import { downloadExport } from "./export.js";
 import { pushAvailable, getPushState, registerPush, togglePushKind } from "./push.js";
-import { uploadProfilePhoto, uploadGalleryPhoto, uploadToStorage, planResumePath, deleteFromStorage, planPathFromUrl, removeProfilePhoto, removeResumeObject } from "./photo.js";
+import { uploadProfilePhoto, uploadGalleryPhoto, deleteFromStorage, planPathFromUrl, removeProfilePhoto } from "./photo.js";
 import { draftFromText, buildHandoff } from "./resume.js";
 import { extractPdfText } from "./pdf-text.js";
 import { LANGS, NATIONALITIES } from "./questions.js";
@@ -238,10 +238,10 @@ export function renderProfile(root, me) {
   if (me.side === "carer") {
     const rcard = el("div", "cardIn");
     rcard.append(el("h3", null, tr("resume.title")), el("p", null, tr("resume.body")));
-    // The recorded resume file is a TEMPORARY object (Ilse's
-    // resume model, 19 Oct 2026): held only while its facts are
-    // reviewed, removed at the confirm, never shown to families.
-    let tempName = me.resumeFile || "";
+    // The resume file is DEVICE ONLY (Ilse's model, storage
+    // ruling 19 Oct 2026): it is read on the phone, its facts
+    // are drafted, and it never uploads anywhere. There is
+    // no copy of it in the app, on any server, ever.
     const rfile = el("input");
     rfile.type = "file";
     rfile.accept = ".txt,.md,.pdf,text/plain,application/pdf";
@@ -270,7 +270,6 @@ export function renderProfile(root, me) {
       use.addEventListener("click", () => {
         try {
           const h = buildHandoff(draft);
-          if (tempName) h.tempFile = tempName;
           localStorage.setItem("caresits-app2-resume-draft", JSON.stringify(h));
         } catch { /* storage off */ }
         out.append(el("p", "gateMsg", tr("resume.saved")));
@@ -284,36 +283,17 @@ export function renderProfile(root, me) {
       const buf = await f.arrayBuffer();
       const head = new TextDecoder().decode(new Uint8Array(buf.slice(0, 5)));
       if (head.startsWith("%PDF")) {
-        // S-2: storage holds PDFs alone (the storage rules
-        // fence admits nothing else). The object is TEMPORARY
-        // (Ilse's resume model): it waits here while its facts
-        // are reviewed, and it goes at the confirm, at a
-        // replace, at a discard, or with the account. Its read
-        // fence is the owner alone, so no family ever sees it.
-        const uid = window.CARESITS_ME && window.CARESITS_ME.uid;
-        let held = false;
-        if (uid) {
-          const path = planResumePath(uid, f.name);
-          if (path) {
-            const res = await uploadToStorage(path, new Blob([buf], { type: "application/pdf" }));
-            if (res && res.ok) {
-              held = true;
-              if (tempName && tempName !== f.name) removeResumeObject(uid, tempName);
-              tempName = f.name;
-              write("resume-file", { name: f.name });
-            }
-          }
-        }
         // Extraction (Ilse's model): the PDF's own words are
-        // read here and drafted exactly like pasted words,
-        // grounded spans only. A PDF with no words in it (a
-        // scan) falls to the honest line, its temp object
-        // still held as recorded, discard standing by.
+        // read ON THE DEVICE and drafted exactly like pasted
+        // words, grounded spans only. The file itself never
+        // uploads: there is no server copy to hold, discard
+        // or leak, which is stronger than any temp lifecycle.
+        // A PDF with no words in it (a scan) falls to the
+        // honest line.
         let words = "";
         try { words = await extractPdfText(new Uint8Array(buf)); } catch { words = ""; }
         if (words && words.trim()) {
           runDraft(words);
-          if (held) out.prepend(el("p", "gateMsg", tr("resume.temp")));
         } else {
           out.replaceChildren(el("p", "gateMsg", tr("resume.unread")));
         }
@@ -324,21 +304,6 @@ export function renderProfile(root, me) {
       runDraft(new TextDecoder().decode(buf));
     });
     readBtn.addEventListener("click", () => runDraft(paste.value));
-    if (tempName) {
-      const tbox = el("div", "resumeTemp");
-      tbox.append(el("p", null, tr("resume.temp")));
-      const rrm = el("button", "quietBtn", tr("resume.remove"));
-      rrm.type = "button";
-      rrm.addEventListener("click", async () => {
-        const uid = window.CARESITS_ME && window.CARESITS_ME.uid;
-        await removeResumeObject(uid, tempName);
-        write("resume-file", { name: "" });
-        tempName = "";
-        tbox.remove();
-      });
-      tbox.append(rrm);
-      rcard.append(tbox);
-    }
     rcard.append(rpick, rfile, paste, readBtn, out);
     root.append(rcard);
   }
