@@ -360,6 +360,7 @@ function finish() {
   // draft, kept whole, under the account's key).
   try { localStorage.setItem(doneKey(), JSON.stringify(bundle)); localStorage.removeItem(activeDraftKey); } catch { /* storage off */ }
   if (typeof window.CARESITS_SAVE === "function") window.CARESITS_SAVE(bundle);
+  clearTempResume();
   $("#journey").hidden = true;
   $("#done").hidden = false;
   const dl = $("#doneLevel");
@@ -369,6 +370,7 @@ function finish() {
 }
 
 const RESUME_KEY = "caresits-app2-resume-draft";
+let pendingTempFile = "";
 function consumeResumeHandoff() {
   try {
     const raw = localStorage.getItem(RESUME_KEY);
@@ -377,10 +379,28 @@ function consumeResumeHandoff() {
     localStorage.removeItem(RESUME_KEY);
     if (!h || h.side !== "carer" || state.side === "family") return;
     state.side = "carer";
+    if (typeof h.tempFile === "string" && h.tempFile) pendingTempFile = h.tempFile;
     for (const [k, v] of Object.entries(h.answers || {})) if (state.answers[k] === undefined) state.answers[k] = v;
     state.resumeFeed = [...new Set([...(state.resumeFeed || []), ...(h.marks || [])])];
     writeDraft();
   } catch { /* no handoff */ }
+}
+
+// The confirm (Ilse's resume model, 19 Oct 2026): finishing
+// the journey is the carer confirming the extracted facts, so
+// the temporary resume object is deleted here and its record
+// cleared. Hygiene only: it can never block the finish.
+async function clearTempResume() {
+  if (!pendingTempFile) return;
+  const name = pendingTempFile;
+  pendingTempFile = "";
+  try {
+    const uid = typeof window !== "undefined" ? window.CARESITS_UID : null;
+    if (!uid) return;
+    const m = await import("./photo.js");
+    await m.removeResumeObject(uid, name);
+    if (typeof window.CARESITS_WRITE === "function") window.CARESITS_WRITE("resume-file", { name: "" });
+  } catch { /* storage may be closed */ }
 }
 
 export function bootJourney() {
