@@ -3,7 +3,7 @@
 // that record their calls, so ordering and failure handling
 // are proven, not described.
 import assert from "node:assert/strict";
-import { planSweep, runSweep, planWarn, runWarn, INACTIVE_MS, WARN_AT_MS, WARN_BEFORE_MS, PHOTO_OBJECTS, WARN_COPY, ARM_LIVE_MS, DAY_MS } from "./sweeper.mjs";
+import { planSweep, runSweep, planWarn, runWarn, planPurge, runPurge, QUARANTINE_MS, INACTIVE_MS, WARN_AT_MS, WARN_BEFORE_MS, PHOTO_OBJECTS, WARN_COPY, ARM_LIVE_MS, DAY_MS } from "./sweeper.mjs";
 
 let n = 0;
 const t = (name, fn) => { fn(); n += 1; console.log("ok -", name); };
@@ -13,10 +13,10 @@ const NOW = 1800000000000;
 const stale = { uid: "carer-1", side: "carer", photoUrl: "https://x/p.jpg", lastActiveAtMs: NOW - INACTIVE_MS - 1000 };
 const edge = { ...stale, uid: "carer-edge", lastActiveAtMs: NOW - INACTIVE_MS };
 
-t("planner: a stale carer with a photo is planned, with the exact object paths (main + gallery)", () => {
+t("planner: a stale carer with a photo is planned, with the exact quarantine moves (main + gallery)", () => {
   const plan = planSweep([stale], NOW);
   assert.equal(plan.length, 1);
-  assert.deepEqual(plan[0].deletePaths, ["profile-photos/carer-1/photo.jpg", "profile-photos/carer-1/extra-1.jpg", "profile-photos/carer-1/extra-2.jpg", "profile-photos/carer-1/extra-3.jpg", "profile-photos/carer-1/extra-4.jpg"]);
+  assert.deepEqual(plan[0].movePaths, ["photo.jpg", "extra-1.jpg", "extra-2.jpg", "extra-3.jpg", "extra-4.jpg"].map((n) => ({ from: `profile-photos/carer-1/${n}`, to: `quarantine/profile-photos/carer-1/${n}` })));
   assert.equal(plan[0].clearPhotoSlot, true);
 });
 t("planner: exactly 90 days old sweeps; one millisecond under does not", () => {
@@ -48,22 +48,22 @@ t("planner: malformed input gives an empty plan, never a crash", () => {
   assert.deepEqual(planSweep([stale], NaN), []);
 });
 
-await ta("executor: the object is deleted BEFORE the slot clears, in one pass", async () => {
+await ta("executor: the objects MOVE to quarantine BEFORE the slot clears, in one pass", async () => {
   const calls = [];
   const deps = {
     listAccounts: async () => [stale],
-    deleteObject: async (p) => { calls.push(["delete", p]); },
+    moveToQuarantine: async (from, to) => { calls.push(["move", from, to]); },
     clearPhotoSlot: async (uid, at) => { calls.push(["clear", uid, at]); },
   };
   const s = await runSweep(deps, NOW);
-  assert.deepEqual(calls, [["delete", "profile-photos/carer-1/photo.jpg"], ["delete", "profile-photos/carer-1/extra-1.jpg"], ["delete", "profile-photos/carer-1/extra-2.jpg"], ["delete", "profile-photos/carer-1/extra-3.jpg"], ["delete", "profile-photos/carer-1/extra-4.jpg"], ["clear", "carer-1", NOW]]);
+  assert.deepEqual(calls, [["move", "profile-photos/carer-1/photo.jpg", "quarantine/profile-photos/carer-1/photo.jpg"], ["move", "profile-photos/carer-1/extra-1.jpg", "quarantine/profile-photos/carer-1/extra-1.jpg"], ["move", "profile-photos/carer-1/extra-2.jpg", "quarantine/profile-photos/carer-1/extra-2.jpg"], ["move", "profile-photos/carer-1/extra-3.jpg", "quarantine/profile-photos/carer-1/extra-3.jpg"], ["move", "profile-photos/carer-1/extra-4.jpg", "quarantine/profile-photos/carer-1/extra-4.jpg"], ["clear", "carer-1", NOW]]);
   assert.deepEqual(s, { planned: 1, swept: ["carer-1"], failed: [] });
 });
-await ta("executor: a failed delete leaves the slot untouched and reports loudly", async () => {
+await ta("executor: a failed move leaves the slot untouched and reports loudly", async () => {
   const calls = [];
   const deps = {
     listAccounts: async () => [stale],
-    deleteObject: async () => { throw new Error("storage down"); },
+    moveToQuarantine: async () => { throw new Error("storage down"); },
     clearPhotoSlot: async (uid) => { calls.push(uid); },
   };
   const s = await runSweep(deps, NOW);
@@ -76,7 +76,7 @@ await ta("executor: a failed delete leaves the slot untouched and reports loudly
 await ta("executor: one failure does not stop the next account", async () => {
   const deps = {
     listAccounts: async () => [stale, { ...stale, uid: "carer-2" }],
-    deleteObject: async (p) => { if (p.includes("carer-1")) throw new Error("gone wrong"); },
+    moveToQuarantine: async (from) => { if (from.includes("carer-1")) throw new Error("gone wrong"); },
     clearPhotoSlot: async () => {},
   };
   const s = await runSweep(deps, NOW);
@@ -87,12 +87,36 @@ await ta("executor: nothing planned, nothing touched", async () => {
   let touched = false;
   const deps = {
     listAccounts: async () => [{ ...stale, lastActiveAtMs: NOW }],
-    deleteObject: async () => { touched = true; },
+    moveToQuarantine: async () => { touched = true; },
     clearPhotoSlot: async () => { touched = true; },
   };
   const s = await runSweep(deps, NOW);
   assert.deepEqual(s, { planned: 0, swept: [], failed: [] });
   assert.equal(touched, false);
+});
+t("purge planner: quarantine purges at +7 days exactly, never before, never outside the prefix", () => {
+  const q = { key: "quarantine/profile-photos/carer-1/photo.jpg", sinceMs: NOW - QUARANTINE_MS };
+  assert.deepEqual(planPurge([q], NOW), [q.key]);
+  assert.deepEqual(planPurge([{ ...q, sinceMs: NOW - QUARANTINE_MS + 1 }], NOW), []);
+  assert.deepEqual(planPurge([{ ...q, key: "profile-photos/carer-1/photo.jpg" }], NOW), []);
+  assert.deepEqual(planPurge([{ key: "quarantine/x", sinceMs: NaN }], NOW), []);
+  assert.deepEqual(planPurge(null, NOW), []);
+});
+await ta("purge executor: aged entries hard delete; young ones rest; a failure reports and continues", async () => {
+  const gone = [];
+  const deps = {
+    listQuarantine: async () => [
+      { key: "quarantine/a", sinceMs: NOW - QUARANTINE_MS - 1 },
+      { key: "quarantine/b", sinceMs: NOW - 1000 },
+      { key: "quarantine/c", sinceMs: NOW - QUARANTINE_MS - 5 },
+    ],
+    hardDelete: async (k) => { if (k === "quarantine/c") throw new Error("stuck"); gone.push(k); },
+  };
+  const s = await runPurge(deps, NOW);
+  assert.deepEqual(gone, ["quarantine/a"]);
+  assert.deepEqual(s.purged, ["quarantine/a"]);
+  assert.equal(s.failed.length, 1);
+  assert.equal(s.failed[0].key, "quarantine/c");
 });
 
 const warnAge = { ...stale, uid: "carer-w", lastActiveAtMs: NOW - WARN_AT_MS - 1000 };
