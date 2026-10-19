@@ -1,4 +1,5 @@
 import { withTimeout } from "../accounts/account.js";
+import { doneKey } from "./storage-keys.js";
 
 // Caresitters app2 — Phase A slice 2: the journey finish, saved.
 // journey.js calls window.CARESITS_SAVE(bundle) when this file
@@ -119,6 +120,53 @@ export async function frameUser(auth) {
     user = auth.currentUser;
   }
   return user || null;
+}
+
+// QA b108: the journey realm used to initialise its auth
+// lazily at Finish, the worst moment — the cold restore then
+// raced the save's one bounded judgement. The realm now warms
+// at page entry: the app stands up and its session restore
+// starts minutes before any save is asked of it.
+let warmPromise = null;
+export function warmSave() {
+  if (!warmPromise) {
+    warmPromise = (async () => {
+      try {
+        const { firebaseConfig } = await import("./firebase-config.js");
+        const appMod = await import(`${SDK}/firebase-app.js`);
+        const authMod = await import(`${SDK}/firebase-auth.js`);
+        const app = appMod.getApps().find((a) => a.name === "[DEFAULT]") || appMod.initializeApp(firebaseConfig);
+        const auth = authMod.getAuth(app);
+        if (auth && typeof auth.authStateReady === "function") await auth.authStateReady();
+        return auth;
+      } catch { return null; }
+    })();
+  }
+  return warmPromise;
+}
+
+// The finished bundle already persists on the device (the
+// journey writes it to its done key before the save attempt).
+// Undrained, a save that judged local at a cold moment is a
+// grave; drained at every shell boot and every journey entry
+// it is a waypoint: the account save lands at the next warm
+// moment, at any pace, after any teardown (QA b108).
+export async function drainOutbox(save) {
+  let raw = null;
+  try { raw = localStorage.getItem(doneKey()); } catch { return false; }
+  if (!raw) return false;
+  let bundle = null;
+  try { bundle = JSON.parse(raw); } catch { return false; }
+  if (!bundle || typeof bundle !== "object") return false;
+  const saver = save || ((b) => import("./firebase-config.js").then(({ firebaseConfig }) => saveBundle(b, firebaseConfig)));
+  try {
+    const r = await saver(bundle);
+    if (r && r.saved === "account") {
+      try { localStorage.removeItem(doneKey()); } catch { /* storage off */ }
+      return true;
+    }
+  } catch { /* the envelope stands for the next drain */ }
+  return false;
 }
 
 export async function saveBundle(bundle, firebaseConfig) {
