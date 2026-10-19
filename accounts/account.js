@@ -383,6 +383,9 @@ export async function deleteMyAccount() {
   const invSnap = await getDocs(query(collection(_db, "invites"), where("familyUid", "==", _user.uid)));
   invSnap.forEach((d) => batch.delete(d.ref));
   batch.delete(doc(_db, "users", _user.uid, "meta", "app"));
+  // The lifecycle stamp dies with the account (its rules arm
+  // allows the owner delete for exactly this walk).
+  batch.delete(doc(_db, "_activity", _user.uid));
   batch.delete(doc(_db, "users", _user.uid));
   await batch.commit();
   const m = await import(`${SDK}/firebase-auth.js`);
