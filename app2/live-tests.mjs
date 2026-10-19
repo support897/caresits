@@ -31,14 +31,14 @@ t("trust seam (F15): a carer's me comes from her card, questionnaire name first"
     { side: "carer", displayName: "Ana Carer", postcode: "2021", photoUrl: "https://x/p.jpg", card: { gallery: ["https://x/1.jpg", "https://x/2.jpg"] } },
     { country: "Australia" }
   );
-  assert.deepEqual(me, { name: "Ana Carer", side: "carer", postcode: "2021", photoUrl: "https://x/p.jpg", resumeFile: "", gallery: ["https://x/1.jpg", "https://x/2.jpg"], country: "Australia", level: "" });
+  assert.deepEqual(me, { name: "Ana Carer", side: "carer", postcode: "2021", photoUrl: "https://x/p.jpg", gallery: ["https://x/1.jpg", "https://x/2.jpg"], country: "Australia", level: "" });
 });
 t("trust seam (F15): a family's name of record is the user doc's", () => {
   const me = trustSeamFrom({ side: "family", displayName: "Fay" }, { side: "family", displayName: "Fay", postcode: "2000", photoUrl: "" }, {});
   assert.equal(me.name, "Fay"); assert.equal(me.side, "family"); assert.equal(me.postcode, "2000"); assert.equal(me.country, "");
 });
 t("trust seam (F15): empty documents give the empty default, never an invention", () => {
-  assert.deepEqual(trustSeamFrom(null, null, null), { name: "", side: "", postcode: "", photoUrl: "", resumeFile: "", gallery: [], country: "", level: "" });
+  assert.deepEqual(trustSeamFrom(null, null, null), { name: "", side: "", postcode: "", photoUrl: "", gallery: [], country: "", level: "" });
 });
 t("trust publish (F15): docs and reviews already on the seam survive, me is replaced, the render seam fires", () => {
   let rendered = 0;
@@ -323,8 +323,6 @@ await ta("phase C fetch (F19): a member with nothing yet gets the empty seam, so
   assert.deepEqual(seam, { viewer: { uid: "u9", side: "family" }, rels: [], jobs: [], names: {} });
 });
 
-t("router: the resume file record names the temp object on the profile doc", () => { const r = routeWrite("resume-file", { name: "cv.pdf" }, "a"); assert.equal(r.op, "merge"); assert.equal(r.path, "profiles/a"); assert.deepEqual(r.data, { resumeFile: "cv.pdf" }); });
-t("router: clearing the resume record writes an empty name, and a non string name never lands", () => { assert.deepEqual(routeWrite("resume-file", { name: "" }, "a").data, { resumeFile: "" }); assert.deepEqual(routeWrite("resume-file", { name: 42 }, "a").data, { resumeFile: "" }); });
 
 t("router: a fresh photo clears the lifecycle's swept stamp; a manual remove leaves it alone", () => { const r = routeWrite("photo", { photoUrl: "https://x/new.jpg" }, "a"); assert.equal(r.data.photoClearedAt, null); assert.equal(r.data.photoUrl, "https://x/new.jpg"); const c = routeWrite("photo", { photoUrl: "" }, "a"); assert.ok(!("photoClearedAt" in c.data)); });
 t("activity stamp: a carer stamps at the root seat", () => { assert.equal(activityStampPath("u1", "carer"), "_activity/u1"); });
