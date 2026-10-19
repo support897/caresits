@@ -144,3 +144,8 @@ function bootWeek() {
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bootWeek);
 else bootWeek();
+
+// The live boot publishes CARESITS_WEEK after this module has
+// booted (QA b104 ROOT B): the boot calls this hook and the
+// week surfaces re-render from the member's real records.
+if (typeof window !== "undefined") window.CARESITS_WEEK_RENDER = bootWeek;
