@@ -21,7 +21,7 @@ const el = (tag, cls, text) => {
   if (text != null) n.textContent = text;
   return n;
 };
-const write = (kind, payload) => { if (typeof window.CARESITS_WRITE === "function") window.CARESITS_WRITE(kind, payload); };
+const write = (kind, payload) => { if (typeof window.CARESITS_WRITE === "function") return window.CARESITS_WRITE(kind, payload); };
 const emptyBox = (root, title, words) => {
   const box = el("div", "cardIn");
   const img = el("img", "bunnyBig");
@@ -394,7 +394,21 @@ export function renderSettings(root) {
   for (const [code, label] of [["en", "English"], ["es", "Español"], ["zh", "中文"], ["ar", "العربية"], ["vi", "Tiếng Việt"], ["yue", "繁體中文"], ["hi", "हिन्दी"]]) {
     const b = el("button", "chipBtn" + (currentLang() === code ? " on" : ""), label);
     b.type = "button";
-    b.addEventListener("click", () => { write("language", { code }); setLang(code); location.reload(); });
+    b.addEventListener("click", () => {
+      // The account write must dispatch BEFORE the reload:
+      // a fire-and-forget write racing its own page teardown
+      // never leaves the device (QA b108: the pick rendered
+      // in-session while meta/app never changed, where the
+      // background pick from this same surface, which never
+      // reloads, landed). Settle the write first, bounded —
+      // a hung write must not hang the pick either.
+      const w = write("language", { code });
+      setLang(code);
+      let gone = false;
+      const go = () => { if (!gone) { gone = true; location.reload(); } };
+      Promise.resolve(w).then(go, go);
+      setTimeout(go, 1500);
+    });
     langRow.append(b);
   }
   langCard.append(langRow);
