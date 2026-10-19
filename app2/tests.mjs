@@ -897,7 +897,7 @@ const { planSave } = await import("./account-save.js");
   await pp.evaluate(() => window.CARESITS_NAV("daystory"));
   await pp.waitForTimeout(200);
   t("plans gate: a locked family tapping the Day Story meets the plans sheet, surface unswitched", await pp.evaluate(() => !!document.getElementById("plansPop") && document.getElementById("surface-daystory").hidden && document.getElementById("plansPop").textContent.includes("opens with a paid plan")));
-  t("plans sheet: all three plans offered, with the honest not on sale line", await pp.evaluate(() => { const s = document.getElementById("plansPop").textContent; return s.includes("Join Finding") && s.includes("Join Family Plus") && s.includes("Join Search Pass") && s.includes("not on sale yet") && s.includes("Nothing is charged"); }));
+  t("plans sheet: all three plans offered, with the honest app route line (the enabling build's web face)", await pp.evaluate(() => { const s = document.getElementById("plansPop").textContent; return s.includes("Join Finding") && s.includes("Join Family Plus") && s.includes("Join Search Pass") && s.includes("Joining lives in the Caresitters app") && s.includes("Nothing is charged") && !s.includes("Restore a past purchase"); }));
   await pp.evaluate(() => { window.__writes = []; window.CARESITS_WRITE = (kind, payload) => window.__writes.push([kind, payload]); });
   await pp.evaluate(() => { const b = [...document.querySelectorAll("#plansPop button")].find((x) => x.textContent.includes("Search Pass")); b.click(); });
   await pp.waitForTimeout(150);
