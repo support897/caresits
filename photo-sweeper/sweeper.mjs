@@ -15,6 +15,17 @@
 
 export const DAY_MS = 24 * 60 * 60 * 1000;
 export const INACTIVE_MS = 90 * DAY_MS;
+export const WARN_BEFORE_MS = 7 * DAY_MS;
+export const WARN_AT_MS = INACTIVE_MS - WARN_BEFORE_MS;
+
+// The warning email, in her words first: open the app to
+// keep your photo. Drafted for the wave's mail route (no
+// mail transport exists for this app yet; the words are
+// settled, the sending is the wave's).
+export const WARN_COPY = {
+  subject: "Your Caresitters photo needs you",
+  body: "Open the app to keep your photo. If the app stays closed for 7 more days, your profile photo will be removed, and your profile will pause in family search until you add a fresh photo.",
+};
 
 // The objects a sweep removes, per account: the main profile
 // photo only, on HQ's spec. The gallery slots join this list
@@ -44,6 +55,54 @@ export function planSweep(accounts, nowMs) {
     });
   }
   return out;
+}
+
+// planWarn(accounts, nowMs) -> the carers to warn: inside
+// the warning window (stamp 83 or more days old, not yet
+// 90), photo still stored, never swept, and not already
+// warned in THIS inactivity window. A warning counts for
+// the window only when it was sent after the last activity
+// (photoWarnedAtMs later than lastActiveAtMs): a carer who
+// returned and went quiet again is warned again.
+export function planWarn(accounts, nowMs) {
+  if (!Array.isArray(accounts) || typeof nowMs !== "number" || !Number.isFinite(nowMs)) return [];
+  const out = [];
+  for (const a of accounts) {
+    if (!a || typeof a.uid !== "string" || !a.uid) continue;
+    if (a.side !== "carer") continue;
+    if (!a.photoUrl) continue;
+    if (a.photoClearedAtMs) continue;
+    if (typeof a.lastActiveAtMs !== "number" || !Number.isFinite(a.lastActiveAtMs)) continue;
+    const age = nowMs - a.lastActiveAtMs;
+    if (age < WARN_AT_MS || age >= INACTIVE_MS) continue;
+    if (typeof a.photoWarnedAtMs === "number" && a.photoWarnedAtMs > a.lastActiveAtMs) continue;
+    out.push({ uid: a.uid, copy: WARN_COPY });
+  }
+  return out;
+}
+
+// runWarn(deps, nowMs): deps = {
+//   listAccounts(): Promise<account facts>,
+//   sendWarning(uid, copy): Promise<void>,      the wave's mail route
+//   markWarned(uid, atMs): Promise<void>,       stamps photoWarnedAt
+// }
+// Send FIRST, mark second: a warning that never sent is
+// never marked, so it is retried on the next run instead of
+// being believed sent.
+export async function runWarn(deps, nowMs) {
+  const accounts = await deps.listAccounts();
+  const plan = planWarn(accounts, nowMs);
+  const summary = { planned: plan.length, warned: [], failed: [] };
+  for (const step of plan) {
+    try {
+      await deps.sendWarning(step.uid, step.copy);
+      await deps.markWarned(step.uid, nowMs);
+      summary.warned.push(step.uid);
+    } catch (e) {
+      summary.failed.push({ uid: step.uid, reason: String((e && (e.code || e.message)) || e) });
+    }
+  }
+  return summary;
 }
 
 // runSweep(deps, nowMs): deps = {
