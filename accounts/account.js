@@ -144,6 +144,25 @@ export function currentUser() {
   return _user;
 }
 
+// ---------- Bounded waits (fleet census cure, 19 Oct 2026) ----------
+// No promise on the door or boot path may hang forever: a
+// native bridge that never settles, a wedged first read —
+// each gets a bound and an honest failure, never a silent
+// spin. The rejection carries the auth/timeout code so the
+// door's own no-net line can speak for a stall.
+export function withTimeout(promise, ms, label) {
+  let timer;
+  const bound = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      const e = new Error(`${label || "operation"} timed out`);
+      e.code = "auth/timeout";
+      reject(e);
+    }, ms);
+  });
+  return Promise.race([promise, bound]).finally(() => clearTimeout(timer));
+}
+export const DOOR_TIMEOUTS = { native: 20000, ensure: 10000 };
+
 export async function initAccounts(config, onUser) {
   if (!config || !config.apiKey || !config.projectId || !config.appId) {
     return { on: false };
@@ -157,7 +176,12 @@ export async function initAccounts(config, onUser) {
   authMod.onAuthStateChanged(_auth, async (u) => {
     _user = u;
     if (u && !u.isAnonymous) {
-      await ensureProfile(fsMod, u);
+      // The walk-in never waits on Firestore (fleet census
+      // cure): the profile ensure is bounded, and a failed
+      // or timed-out ensure re-fires once behind the door;
+      // the next page's initAccounts tries again by itself.
+      try { await withTimeout(ensureProfile(fsMod, u), DOOR_TIMEOUTS.ensure, "profile ensure"); }
+      catch { ensureProfile(fsMod, u).catch(() => {}); }
     }
     if (onUser) onUser(u);
   });
@@ -233,7 +257,7 @@ export async function signInGoogle() {
   const m = await import(`${SDK}/firebase-auth.js`);
   const plugin = nativeAuthPlugin();
   if (plugin) {
-    const result = await plugin.signInWithGoogle();
+    const result = await withTimeout(plugin.signInWithGoogle(), DOOR_TIMEOUTS.native, "native sign in");
     const credential = result && result.credential;
     if (!credential || !credential.idToken) throw new Error("native sign in returned no credential");
     return m.signInWithCredential(_auth, m.GoogleAuthProvider.credential(credential.idToken));
@@ -246,7 +270,7 @@ export async function signInApple() {
   const provider = new m.OAuthProvider("apple.com");
   const plugin = nativeAuthPlugin();
   if (plugin) {
-    const result = await plugin.signInWithApple();
+    const result = await withTimeout(plugin.signInWithApple(), DOOR_TIMEOUTS.native, "native sign in");
     const credential = result && result.credential;
     if (!credential || !credential.idToken) throw new Error("native sign in returned no credential");
     // The plugin's nonce is the raw nonce Apple signed into
