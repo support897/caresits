@@ -1,0 +1,12 @@
+import assert from "node:assert/strict";
+import { planReport, planBlock } from "./safety-actions.js";
+let n = 0; const t = (name, fn) => { fn(); n += 1; console.log("ok -", name); };
+const now = "2026-10-15T00:00:00.000Z";
+t("report: a filing plans write only, inside the envelope", () => { const p = planReport({ reporterUid: "a", reportedUid: "b", surface: "card", category: "rude_abusive", words: "rude", snapshot: { items: ["card"], text: "t", title: "T" }, nowIso: now }); assert.equal(p.ok, true); assert.equal(p.data.state, "open"); });
+t("report: the filer's acknowledgement carries the no outcome rule", () => { const p = planReport({ reporterUid: "a", reportedUid: "b", surface: "card", category: "other", words: "", snapshot: {}, nowIso: now }); assert.ok(p.acknowledgement.includes("will not hear the outcome")); });
+t("report: a category outside the vocabulary is refused", () => { assert.equal(planReport({ reporterUid: "a", reportedUid: "b", surface: "card", category: "mean", words: "", snapshot: {}, nowIso: now }).ok, false); });
+t("report: oversize words and snapshots are trimmed to the envelope", () => { const p = planReport({ reporterUid: "a", reportedUid: "b", surface: "job", category: "spam_scam", words: "x".repeat(1500), snapshot: { items: Array(20).fill("i"), text: "y".repeat(5000), title: "z".repeat(200) }, nowIso: now }); assert.equal(p.data.reporterWords.length, 1000); assert.equal(p.data.snapshot.items.length, 10); assert.equal(p.data.snapshot.text.length, 4000); assert.equal(p.data.snapshot.title.length, 120); });
+t("report: counts pair on the plan", () => { const p = planReport({ reporterUid: "a", reportedUid: "b", surface: "card", category: "other", words: "", snapshot: {}, nowIso: now }); assert.deepEqual(p.counter.delta, { filed: 1, open: 1 }); });
+t("report: the plan names the live split doc counters (residue ruling)", () => { const p = planReport({ reporterUid: "a", reportedUid: "b", surface: "card", category: "other", words: "", snapshot: {}, nowIso: now }); assert.deepEqual(p.counter.paths, ["_owner/aggregates/safetyFiled/main", "_owner/aggregates/safetyOpen/main"]); });
+t("block: a private own space record, nothing deleted", () => { const p = planBlock({ uid: "a", otherUid: "b", nowIso: now }); assert.equal(p.path, "users/a/blocks/b"); });
+console.log(`\nALL ${n} safety-action checks passed`);
