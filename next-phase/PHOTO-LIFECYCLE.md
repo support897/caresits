@@ -38,13 +38,13 @@ object for carers 90 or more days stale and clears the
 card's photoUrl in the same pass, object first, stamping
 photoClearedAt on the profile doc.
 
-Refinements, with Ilse for her pick (asked 19 Oct, not
-built): a warning email about 7 days before the sweep,
-and the swept profile dropping out of family search until
-a fresh photo lands. The warning needs the wave's mail
-route (no mail route exists for this app today); the
-search drop reads the photoClearedAt stamp the sweeper
-already writes.
+Refinements, settled by Ilse's tap (19 Oct 17:47) and
+built the same evening: the warning email (planner and
+executor in the sweeper core, words settled; its mail
+transport lands with the wave, since no mail route exists
+for this app today), and the search drop (Browse excludes
+a swept carer entirely; the photo write clears the stamp
+when a fresh photo lands).
 
 ## What stands today
 
