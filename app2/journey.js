@@ -10,6 +10,7 @@ import { COUNTRY_NAMES, packByName } from "./countries.js";
 import { draftKey, doneKey } from "./storage-keys.js";
 import { levelOf, levelRank } from "./levels.js";
 import { withTimeout } from "../accounts/account.js";
+import { warmSave, drainOutbox } from "./account-save.js";
 // VALUE CODING at the bundle boundary: any string that IS one of
 // the questionnaire's answer words is stored as its stable slug,
 // so matching compares codes in every language. Prose (the write
@@ -418,6 +419,11 @@ function consumeResumeHandoff() {
 export function bootJourney() {
   applyI18n();
   wire();
+  // Warm this realm's session restore now, at page entry,
+  // not lazily at Finish (QA b108); and land any finished
+  // journey still standing in this account's done envelope.
+  warmSave();
+  drainOutbox();
   activeDraftKey = draftKey();
   loadDraft();
   consumeResumeHandoff();
