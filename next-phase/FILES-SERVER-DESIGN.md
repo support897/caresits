@@ -12,7 +12,7 @@ inside the window on the same key and verb is the
 accepted residual) · Q5/A7 rate limit and issuance
 budget enforced by the gatekeeper · A3 verification at
 CONFIRM TIME · A4 EXIF strip client side · A5 day story
-keys under pairs/<pairId>/ · A9 no store response
+keys under pairs/<pairId>/day-story/ · A9 no store response
 overrides on GET presigns · R1 bucket privacy proven by
 refused anonymous requests · R2 the token lives in box
 custody only · R3 every presign binds bucket, exact
@@ -66,11 +66,17 @@ rules text stays on file, unused).
   one sitting at the design read. Presigning is SigV4
   HMAC over the request: standard library work.
 - Own container, own unprivileged service user, own
-  secrets file on the box (mode 600, root readable
-  only): the scoped R2 API token (created by PB into
-  custody: this bucket only, object read/write, nothing
-  else), never in chat, repo or client code. The client
-  never sees the token; it sees only presigned links.
+  secrets files on the box (mode 600, root readable
+  only). TWO R2 TOKENS (Q7, confirmed as amended): the
+  GATEKEEPER's (this bucket only · object read + write
+  + DELETE · NO LIST) and the SWEEPER's (this bucket
+  only · object read + LIST + delete, riding the census
+  and the version purges). No admin rights, no account
+  permissions on either. Separate files, created by PB
+  into custody, the scope AND the account identity read
+  back at creation (fresh account, her name). The
+  tokens never enter chat, repo or client code; the
+  client sees only presigned links.
 - Binds 127.0.0.1 on a free localhost port (8123 proposed);
   Caddy routes only files.caresits.xyz to it, the house
   pattern every tenant on this box already follows.
@@ -87,7 +93,7 @@ Bucket keys run <uid>/<class>/<name>:
 - class "certificates": the checks documents a carer
   uploads (PDF, 10 MB cap, mirroring the sealed S-2 fence).
 - class "day-story" lives under a DIFFERENT root (A5):
-  pairs/<pairId>/<name>, per pair and day, named by the
+  pairs/<pairId>/day-story/<name>, per pair and day, named by the
   client's day story planner when that wiring is built
   (the photo request/reply flow gains its bytes here).
 - The resume PDF has NO class: it never uploads (device
@@ -159,22 +165,40 @@ Cache Control to no-store (A9) and the content type
 from the class map. A missing key is R2's plain 404.
 The Firebase token never appears inside a link.
 
-VERIFICATION STANDS AT CONFIRM TIME (A3): an uploaded
-object is inert until confirmed. After its PUT, the
-client calls POST /v1/confirm { class, name } with its
-token; the gatekeeper then reads the object back under
-the scoped token: HEAD for the size (over the class
-cap: photos 5 MB, certificates 10 MB), and a ranged GET
-of the first bytes for the magic (JPEG for photos, PDF
-for certificates). On a pass the gatekeeper answers ok
-and only then does the client write the reference (the
-profile field, the card gallery, the day story record).
-On a fail it DELETES the object itself and refuses, so
-no bad object lingers. UNCONFIRMED KEYS STAY
-UNREACHABLE: references are only ever written after a
-confirm pass, and read links are issued against
-referenced keys in the app's own state; an unconfirmed
-object is a key nobody's app will ever name.
+VERIFICATION STANDS AT CONFIRM TIME (A3 + the Q6
+closure set, Security's ruling 19 Oct 2026: policy +
+verification SUFFICES; proxying the bytes through the
+gatekeeper is DECLINED). Confirm is a first class,
+SYNCHRONOUS step in the client flow: PUT, then confirm,
+and only on confirm success does any reference land.
+After its PUT the client calls POST /v1/confirm
+{ class, name } with its token; the gatekeeper reads
+the object back under its token: HEAD for the size
+(over the class cap: photos 5 MB, certificates 10 MB,
+day story 5 MB), and a ranged GET of the first bytes
+for the magic (JPEG for photos and day story, PDF for
+certificates). On a pass the gatekeeper answers ok and
+only then does the client write the reference (the
+profile field, the card gallery, the day story
+record). On a fail the gatekeeper DELETES THE OBJECT
+AT ONCE, ALL VERSIONS, and refuses, so the reference
+never lands and no bad object lingers. UNCONFIRMED
+KEYS STAY UNREACHABLE (Q6 iii): a GET for a profile
+photo or a certificate is issued ONLY when the owner's
+profile slot names that exact key, read from Firestore
+under the CALLER's token; deterministic key names open
+nothing, for strangers and for the owner alike. A
+DAILY ORPHAN CENSUS (Q6 iv) rides the box's daily job
+(the sweeper's run, under the sweeper's list token):
+every bucket key is checked against the confirm ledger
+and the app state's references; an unconfirmed,
+unreferenced key older than 24 hours is purged (all
+versions) and counted in the run's report. THE
+RESIDUAL, NAMED AND ACCEPTED: between PUT and confirm
+an oversize or wrong type object can exist: unreferenced,
+unreachable, unlisted. Existence without reachability
+is the whole of it (Q6 v: the per uid budget stands
+enforced at issuance).
 
 THE EXIF STRIP IS CLIENT SIDE (A4): photos are
 re-encoded by the client's downscale before upload,
@@ -198,8 +222,11 @@ named no-versioning decision in full). The shape:
 - RULED DELETES ARE PERMANENT: a user's confirmed
   permanent delete (including the bin's 30 day purge),
   an account deletion's deletes, and the lifecycle
-  sweeper's deletes remove ALL VERSIONS of the object,
-  proven by a version list read showing zero.
+  sweeper's deletes PURGE ALL VERSIONS AT THE ACT: a
+  purge call in the same act reads the version list
+  back at zero (client side ruled deletes ride a
+  gatekeeper purge call; the sweeper purges inside its
+  own run under its own token).
 - Two synthetic proofs replace the restore drill and
   BLOCK real photos until green: (a) accident recovery:
   a delete-marker object restored from its version and
@@ -232,8 +259,9 @@ design does not hold one until so ruled.
 
 The built planner/warner (photo-sweeper/) deploys as a
 scheduled job on the box (daily). Its executor deps map
-to this home: deleteObject = an R2 DeleteObject call
-under the same scoped token (S3 API from the box), photo
+to this home: deleteObject = a version purging R2
+delete under THE SWEEPER'S OWN token (read + list +
+delete, Q7; S3 API from the box), photo
 facts read from Firestore. The server side Firestore
 access it needs (_activity stamps, profile photo fields,
 warning marks) rides a dedicated credential whose
@@ -304,10 +332,16 @@ whose length differs from the signed length refused
 at R2 · no token 401 · anonymous token 401 · other
 user's upload/delete refused · CONFIRM legs: an
 oversize upload fails confirm and its object is
-deleted by the gatekeeper · a magic mismatch (a PDF
-header in a photo upload, and the reverse) fails
-confirm the same way · an unconfirmed key is never
-referenced by any app state · served bytes carry no
+deleted by the gatekeeper (all versions) · a magic
+mismatch (a PDF header in a photo upload, and the
+reverse) fails confirm the same way · an unconfirmed
+key is never referenced by any app state · a GET for
+an unreferenced key refuses at issuance, owner and
+stranger alike (Q6 iii) · the ORPHAN CENSUS leg: an
+unconfirmed, unreferenced key aged past 24 hours is
+purged by the daily run and counted in its report,
+while a confirmed or referenced key of the same age
+stands untouched · served bytes carry no
 EXIF markers (A4) · profile photo cross-read allowed
 (as designed) · certificate read by a non pair family
 refused · day-story read by a non member refused ·
