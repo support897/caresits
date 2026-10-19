@@ -25,6 +25,25 @@ the real bucket. Deploy order from here: R1 -> the
 shell on the box -> the battery, synthetic users only
 -> client adaptation -> sweeper deploy.
 
+Q7 AMENDMENT (Security, 19 Oct 2026, record 6606fc55;
+the deviation CLOSED at their chair): Cloudflare welds
+list to read in every preset and API group (vendor
+evidence, verified at Security's hand), so list is
+ACCEPTED on the gatekeeper's token with the residual
+named. The compartment survives as custody + code:
+separate revocable tokens, per-service secret files,
+and NO list call anywhere in this service — proven at
+this desk by census (case-insensitive sweep over the
+core, shell and wrapper: the only list-shaped text is
+this note's own custody comment; presign's method fence
+admits PUT, GET and DELETE only, so a list can never be
+signed here by construction; zero ListObjects shapes).
+The sweeper's own token keeps list BY DESIGN (the
+orphan census + quarantine purges ride it) under its
+own compartment. The full signed probe set passes
+before any token is used (PB runs it), and no
+token-admin credential exists or gets created.
+
 ## What stands
 
 gatekeeper.mjs is the pure core, proven synthetic
