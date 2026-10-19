@@ -1,6 +1,23 @@
 # Caresitters files home: design for Security's read
 
-Status: DESIGN, nothing built or deployed. Her FINAL word
+Status: READ PASSED WITH REQUIRED AMENDMENTS (Security,
+19 Oct 2026: reviews/2026-10-19-caresits-files-server-
+read.md) AND THE R2 ADDENDUM IN THE SAME FILE GOVERNS
+wherever the two conflict. This file now reads AS
+AMENDED BY THE ADDENDUM: Q1 matrix confirmed · Q2 day
+story delete is FAMILY SIDE ONLY · Q3 sweeper custody
+approved · Q4/A2 PUT and DELETE presigns are 5 minutes
+(single use is not enforceable on a presign; replay
+inside the window on the same key and verb is the
+accepted residual) · Q5/A7 rate limit and issuance
+budget enforced by the gatekeeper · A3 verification at
+CONFIRM TIME · A4 EXIF strip client side · A5 day story
+keys under pairs/<pairId>/ · A9 no store response
+overrides on GET presigns · R1 bucket privacy proven by
+refused anonymous requests · R2 the token lives in box
+custody only · R3 every presign binds bucket, exact
+key, verb, expiry and the PUT length. Nothing built or
+deployed yet. Her FINAL word
 of 19 Oct 2026 (18:35, by her tap, the catch printed on
 the option: "card on file to switch it on, $0 to use"):
 the file home is CLOUDFLARE R2: one private bucket,
@@ -69,7 +86,8 @@ Bucket keys run <uid>/<class>/<name>:
   extra-4.jpg (the client's existing planners name these).
 - class "certificates": the checks documents a carer
   uploads (PDF, 10 MB cap, mirroring the sealed S-2 fence).
-- class "day-story": per pair and day, named by the
+- class "day-story" lives under a DIFFERENT root (A5):
+  pairs/<pairId>/<name>, per pair and day, named by the
   client's day story planner when that wiring is built
   (the photo request/reply flow gains its bytes here).
 - The resume PDF has NO class: it never uploads (device
@@ -112,48 +130,73 @@ malformed or expired is a plain 401 with no detail.
   pair check as above); nobody else, ever. These are the
   family's memories; the sealed model's caution applies
   doubled.
-- Deletes are owner only in every class (a family never
-  deletes a carer's files; pair members delete Day Story
-  entries only through the app's own bin flow naming the
-  exact object, which rides the pair check plus the
-  caller's own authorship record in the day story doc:
-  Security to rule whether authorship or pair membership
-  is the delete fence for this class).
+- Deletes are owner only in the profile and certificate
+  classes. DAY STORY DELETE IS FAMILY SIDE ONLY (Q2,
+  ruled): the family's side of the pair holds the only
+  day story delete verb (through the app's bin flow,
+  naming the exact object); THE CARER HOLDS NO DAY STORY
+  DELETE VERB AT ALL, neither in the client nor at the
+  gatekeeper, which never signs a day story delete for
+  the carer side of a pair.
 
-## Uploads through the gatekeeper; reads by signed link
+## Presigned links and confirm-time verification (A2, A3, A9, R3)
 
-Security's charter (19 Oct, the design read) sets the
-policy this section obeys: photo writes are owner only,
-under 5 MB, with the real type verified SERVER SIDE,
-never the client's declared type. A presigned PUT cannot
-do any of that (the server never sees the bytes), so
-UPLOADS ROUTE THROUGH THE GATEKEEPER:
+POST /v1/link { op: put | get | del, class, name,
+bytes } with the Bearer token. On an authorised request
+the gatekeeper returns one presigned R2 URL. Every
+presign binds the bucket, the exact key, the verb and
+the expiry (R3); a PUT presign additionally signs the
+exact Content Length the client declares (it knows its
+byte count: it downscaled locally), so a length-tampered
+upload fails its signature at R2 and a tamper leg
+stands in the battery. TTLs: PUT and DELETE presigns
+live 5 MINUTES (A2: single use cannot be enforced on a
+presign, so the window shrinks and replay inside it on
+the same key with the same verb is the accepted
+residual, stated not hidden); GET presigns live 10
+minutes and carry signed response overrides setting
+Cache Control to no-store (A9) and the content type
+from the class map. A missing key is R2's plain 404.
+The Firebase token never appears inside a link.
 
-- POST /v1/upload { class, name } with the Bearer token
-  and the raw bytes as the body. The gatekeeper checks
-  the authorisation matrix, streams the body with the
-  class cap enforced mid stream (photos under 5 MB,
-  certificates 10 MB; overflow aborts and nothing is
-  stored), sniffs the real type from the magic bytes
-  (JPEG for photos; PDF for certificates; anything else
-  refuses), and only then writes the object to R2 itself
-  under the scoped token, with the content type set from
-  the SNIFFED type. A replace targets the same key (the
-  photo and gallery names are fixed), so the old object
-  is replaced in the same operation by construction;
-  for certificates the client names each object and the
-  upload flow deletes the predecessor key in the same
-  user operation once the new object lands.
-- GET and DELETE stay presigned: POST /v1/link
-  { op: get | del, class, name } returns one presigned
-  R2 URL (SigV4; the signature binds the method, the
-  exact key and the expiry), TTL 10 minutes. GET serves
-  the stored content type; a missing key is R2's plain
-  404. A leaked link is a 10 minute window onto one
-  object with one verb, the exposure the design accepts
-  and states. The Firebase token never appears inside a
-  link, and an upload leaves no reusable door behind it
-  (the upload call is one shot, token bound, and closes).
+VERIFICATION STANDS AT CONFIRM TIME (A3): an uploaded
+object is inert until confirmed. After its PUT, the
+client calls POST /v1/confirm { class, name } with its
+token; the gatekeeper then reads the object back under
+the scoped token: HEAD for the size (over the class
+cap: photos 5 MB, certificates 10 MB), and a ranged GET
+of the first bytes for the magic (JPEG for photos, PDF
+for certificates). On a pass the gatekeeper answers ok
+and only then does the client write the reference (the
+profile field, the card gallery, the day story record).
+On a fail it DELETES the object itself and refuses, so
+no bad object lingers. UNCONFIRMED KEYS STAY
+UNREACHABLE: references are only ever written after a
+confirm pass, and read links are issued against
+referenced keys in the app's own state; an unconfirmed
+object is a key nobody's app will ever name.
+
+THE EXIF STRIP IS CLIENT SIDE (A4): photos are
+re-encoded by the client's downscale before upload,
+which drops EXIF in the re-encode; the battery's
+served-bytes leg (read the served object, find no EXIF
+markers) stands unchanged as the proof.
+
+## The versioning decision (A1, named by this desk)
+
+Durability is the provider's (Cloudflare R2). The
+versioning decision, named as the addendum requires:
+NO object versioning. In its place, the app's own
+30 day Recently Deleted shape carries the restore
+window: a user delete that the app bins (profile
+photos, Day Story) MOVES the object under
+trash/<owner-uid>/<original key> with its original
+key, and restore moves it back; the daily job purges
+trash aged 30 days or more by hard delete. Lifecycle
+sweeps and account deletion hard delete at once (a
+swept photo is meant to be gone; a deleted account
+leaves nothing). This is the desk's named decision
+under A1, standing in the build for the read's eye.
 
 ## Token verification and the revocation posture
 
@@ -240,50 +283,57 @@ warning, Day Story never in scope.
 
 ## Proof battery (replaces the Blaze battery, same discipline)
 
-Forged link (tampered signature) refused · expired link
-refused · op mismatch refused · no token 401 ·
-anonymous token 401 · other user's upload/delete
-refused · a lying content type refused at the sniff
-(a PDF header in a photo upload, and the reverse) ·
-size cap enforced mid-stream · profile photo cross-read
-allowed (as designed) · certificate read by a non pair
-family refused · day-story read by a non member
-refused · listing attempt refused on every route ·
-DELETE PROVEN THREE WAYS (Security's charter): a fresh
-GET link refuses 404 · a GET link issued BEFORE the
-delete also refuses · the server side inventory (the
-scoped token's list, a proof plane tool only, never an
+R1 FIRST, ON THE CREATED BUCKET, BEFORE ANY REAL KEY:
+an unauthenticated GET on a known key refuses · an
+unsigned LIST refuses · the public dev URL is off
+(read back from the bucket's settings). Then the legs:
+forged link (tampered signature) refused · expired
+link refused · op mismatch refused · R3 TAMPER: a PUT
+whose length differs from the signed length refused
+at R2 · no token 401 · anonymous token 401 · other
+user's upload/delete refused · CONFIRM legs: an
+oversize upload fails confirm and its object is
+deleted by the gatekeeper · a magic mismatch (a PDF
+header in a photo upload, and the reverse) fails
+confirm the same way · an unconfirmed key is never
+referenced by any app state · served bytes carry no
+EXIF markers (A4) · profile photo cross-read allowed
+(as designed) · certificate read by a non pair family
+refused · day-story read by a non member refused ·
+a day story DELETE link refuses for the carer side
+(Q2) · listing refused on every route · DELETE PROVEN
+THREE WAYS (Security's charter): a fresh GET link
+refuses 404 · a GET link issued BEFORE the delete also
+refuses · the server side inventory (the scoped
+token's list, a proof plane tool only, never an
 endpoint) shows the key gone · replace leaves exactly
-one object. BUCKET PRIVACY is a synthetic proof item:
-an unauthenticated request to a known key refuses.
-BACKUP + RESTORE: object durability is the provider's
-(Cloudflare R2); the restore drill on synthetic objects
-before any real photo is this battery itself run end to
-end on the real bucket with synthetic users. Then the
-lifecycle legs on this home: upload, sweep pass deletes
-the objects and clears the slots, warning sent and
-marked.
+one object · trash move and restore round trip, and
+the 30 day purge shape, on synthetic objects. BACKUP
++ RESTORE: durability is the provider's (R2, A1); the
+restore drill is this battery run end to end on the
+real bucket with synthetic users before any real
+photo. Then the lifecycle legs on this home: upload,
+sweep pass deletes the objects and clears the slots,
+warning sent and marked.
 
 ## Open questions for Security's read
 
-1. The authorisation matrix above: confirmed or amended.
-2. Day Story delete fence: authorship vs pair membership.
-3. The sweeper credential custody (service account scope
-   as proposed) and the Purelymail SMTP credential route.
-4. Link TTLs (10 / 15 minutes) and the GET replay window
-   they imply: accepted or tightened.
-5. Whether the gatekeeper should also rate limit /v1/link
-   per uid (proposal: yes, a simple in memory counter,
-   generous ceiling, stated in the build).
-6. ANSWERED BY THE CHARTER's own policy headline
-   (server-side type verification): uploads route
-   through the gatekeeper, as the design now reads.
-   Held here for the read's confirmation, not as an
-   open choice.
-7. The R2 token's scope as proposed (this bucket only,
-   object read/write): confirmed at PB's creation, with
-   the bucket privacy (no public access, no dev URL) as
-   a synthetic-proof battery item.
+1. The authorisation matrix: CONFIRMED as amended (Q1).
+2. Day Story delete fence: RULED, family side only (Q2).
+3. The sweeper credential custody: APPROVED as proposed
+   (Q3; the no-field-scope residual stands named in
+   Security's read); the Purelymail SMTP credential
+   rides the same box secrets file.
+4. Link TTLs: PUT/DELETE 5 minutes, GET 10 (Q4 as
+   restated by A2).
+5. Rate limit + issuance budget: YES (Q5/A7); the
+   ceiling is stated in the build.
+6. Verification placement: CONFIRM TIME (A3) governs;
+   the through-gatekeeper streaming shape is superseded
+   by the addendum and stands retired in this file.
+7. The R2 token's scope (this bucket only, object
+   read/write): confirmed at PB's creation, with R1's
+   bucket privacy proofs running before any real key.
 
 Nothing deploys until this read lands, and nothing is
 created in Cloudflare until her enable confirm lands
