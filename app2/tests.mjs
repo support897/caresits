@@ -845,6 +845,8 @@ const { planSave } = await import("./account-save.js");
   t("b107 FAIL 2: the save stamps the side onto the user doc", src("./account-save.js").includes("const profileSide = bundle.side"));
   t("b107 FAIL 2: completeness is recomputed at publish from the seam's facts", src("./live.js").includes("window.CARESITS_PROFILE_COMPLETE = Boolean("));
   t("b107 Leg 7 residual: bin leaves the live list on restore and forever", src("./bin.js").includes("export function binLeave") && (src("./bin.js").match(/binLeave\(w\.CARESITS_BIN, item\.id\)/g) || []).length === 2);
+  t("b107 Legs 9+10 same-session: a landed save raises the completeness flag on both hosts", src("./account-save.js").includes("h.CARESITS_PROFILE_COMPLETE = true"));
+  t("b107 language ride: the pick writes the account doc, the boot seeds it back", src("./live.js").includes('case "language":') && src("./live.js").includes('localStorage.setItem("caresits-lang", appDoc.language)') && src("./trust.js").includes('write("language", { code })'));
 }
 
 // ---- Leg 11: the level picker (welcome choice + computed boundary) ----
