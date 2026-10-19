@@ -179,6 +179,15 @@ export async function saveBundle(bundle, firebaseConfig) {
   const auth = authMod.getAuth(app);
   const user = await frameUser(auth);
   if (!user || user.isAnonymous) return { saved: "local", reason: "signed-out" };
+  // The restored session's user can stand before its token
+  // is effective for Firestore (QA b108 naming probe: past
+  // frameUser, an unguarded step refused permission-denied
+  // in the young realm while the same call committed minutes
+  // later). Await a live token before the first Firestore
+  // step, so the save's requests carry credentials the
+  // server accepts. A failed mint judges on the save's own
+  // outcome; the envelope drains regardless.
+  try { await withTimeout(user.getIdToken(true), 10000, "token mint"); } catch { /* the save speaks for itself */ }
   const db = fsMod.getFirestore(app);
   const profSnap = await fsMod.getDoc(fsMod.doc(db, "users", user.uid));
   const alreadyActivated = profSnap.exists() && "activatedAt" in profSnap.data();
