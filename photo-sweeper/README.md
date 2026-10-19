@@ -30,13 +30,19 @@ the write refuses harmlessly.
 Planner + executor (here): planSweep chooses the stale
 carers (90 or more days, photo still stored, never swept
 before, trusted stamp present — no stamp, no sweep).
-runSweep deletes each object first and clears its slot
-second, in the same pass; a failed delete leaves the slot
-untouched and reports loudly. Every effect rides injected
-dependencies, so sweeper-tests.mjs proves the whole
-behaviour on fakes. The deployed wrapper wires those
-dependencies to the admin plane (Firestore reads over
-_activity + profiles, Storage deletes) at wave time.
+THE DELETE IS TWO PHASE (Security's final shape ruling,
+19 Oct 2026): runSweep MOVES each object to the
+quarantine prefix first and clears its slot second, in
+the same pass (the user's deletion is whole at 90); a
+failed move leaves the slot untouched and reports
+loudly. planPurge/runPurge then hard purge quarantine
+entries aged 7 more days (rescue inside the week is
+operator only; no app path back). Every effect rides
+injected dependencies, so sweeper-tests.mjs proves the
+whole behaviour on fakes. The deployed wrapper wires
+those dependencies to the admin plane (Firestore reads
+over _activity + profiles, R2 moves + purges under the
+sweeper's own token) at wave time.
 
 ## Scope fences
 
