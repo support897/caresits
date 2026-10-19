@@ -7,7 +7,7 @@
 // carries ?twin=1; every other visit uses the production
 // config beside this file.
 import { levelOf } from "./levels.js";
-import { resolvePlan, entitlementFromRecord, plusExtrasOpen } from "../accounts/account.js";
+import { resolvePlan, entitlementFromRecord, plusExtrasOpen, withTimeout } from "../accounts/account.js";
 
 // The photo lifecycle stamp path (HQ spec, 19 Oct 2026):
 // carers only, at the root, beside _comp and _entitlements.
@@ -300,9 +300,13 @@ export async function bootLive() {
       let profile = {};
       let qData = {};
       try {
-        const prof = await fs.getDoc(docAt(`users/${uid}`));
+        // First-data reads are bounded (fleet census cure):
+        // a wedged read takes the same missing-data path as
+        // an error, so the seams publish with what stands
+        // instead of never publishing at all.
+        const prof = await withTimeout(fs.getDoc(docAt(`users/${uid}`)), 15000, "profile read");
         profile = prof.exists() ? prof.data() : {};
-        const q = await fs.getDoc(docAt(`users/${uid}/meta/questionnaire`));
+        const q = await withTimeout(fs.getDoc(docAt(`users/${uid}/meta/questionnaire`)), 15000, "questionnaire read");
         qData = q.exists() ? q.data() : {};
         window.CARESITS_ME = { uid, side: profile.side || "", name: profile.displayName || "" };
         window.CARESITS_PROFILE_COMPLETE = !!(profile.displayName && q.exists());
@@ -318,7 +322,7 @@ export async function bootLive() {
         const createdAtMs = Number.isNaN(createdRaw) ? null : createdRaw;
         let payment = null;
         if (side !== "carer") {
-          const ent = await fs.getDoc(docAt(`_entitlements/${uid}`));
+          const ent = await withTimeout(fs.getDoc(docAt(`_entitlements/${uid}`)), 15000, "entitlement read");
           payment = entitlementFromRecord(ent.exists() ? ent.data() : null, Date.now());
         }
         const plan = resolvePlan({ side, comp: null, payment, now: Date.now() });
@@ -339,7 +343,7 @@ export async function bootLive() {
           for (const wait of [0, 2500, 5000]) {
             if (wait) await new Promise((r) => setTimeout(r, wait));
             try {
-              const ent2 = await fs.getDoc(docAt(`_entitlements/${uid}`));
+              const ent2 = await withTimeout(fs.getDoc(docAt(`_entitlements/${uid}`)), 15000, "entitlement refresh");
               const payment2 = entitlementFromRecord(ent2.exists() ? ent2.data() : null, Date.now());
               const plan2 = resolvePlan({ side, comp: null, payment: payment2, now: Date.now() });
               const before = window.CARESITS_PLAN && window.CARESITS_PLAN.tier;
