@@ -37,6 +37,24 @@ globalThis.window = {
 
 const P = await import("./purchase.js");
 
+await t("census: a getOfferings that never answers is refused at the bound", async () => {
+  const good = plugin.getOfferings;
+  plugin.getOfferings = () => new Promise(() => {});
+  P.PURCHASE_TIMEOUTS.offerings = 60;
+  const res = await P.buyPlan("finding");
+  assert.equal(res.ok, false); assert.equal(res.reason, "offerings");
+  plugin.getOfferings = good; P.PURCHASE_TIMEOUTS.offerings = 20000;
+});
+await t("census: a configure that never answers reads as unavailable, never a pin on buying", async () => {
+  const good = plugin.configure;
+  plugin.configure = () => new Promise(() => {});
+  P.PURCHASE_TIMEOUTS.configure = 60;
+  globalThis.window.CARESITS_ME = { uid: "uid-hang", side: "family" };
+  const res = await P.buyPlan("finding");
+  assert.equal(res.ok, false); assert.equal(res.reason, "unavailable");
+  plugin.configure = good; P.PURCHASE_TIMEOUTS.configure = 15000;
+  globalThis.window.CARESITS_ME = { uid: "uid-42", side: "family" };
+});
 await t("the seam is available in the packaged shape (key filled, plugin present)", () => {
   assert.equal(P.purchaseAvailable(), true);
 });
