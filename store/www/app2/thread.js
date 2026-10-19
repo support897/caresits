@@ -30,7 +30,7 @@ const latchedEdges = new Set();
 // way the Checks surface resolves it (trust.js): the signed in
 // profile when present, else this device's saved questionnaire
 // or draft, else Australia.
-function viewerCountry() {
+export function viewerCountry() {
   if ((window.CARESITS_ME || {}).country) return window.CARESITS_ME.country;
   const me = (window.CARESITS_TRUST || {}).me || {};
   if (me.country) return me.country;
@@ -49,7 +49,7 @@ function viewerCountry() {
 // beside it. In Australia the sentence reads word for word as
 // passed. Buying itself stays inert: the Join buttons below
 // record plan interest, exactly as before.
-function popupPriceLine(key, plan) {
+export function popupPriceLine(key, plan) {
   const country = viewerCountry();
   const p = priceFor(plan, country);
   const phrase = p && p.worth ? tr("price.worth", undefined, { worth: p.worth }) : null;
