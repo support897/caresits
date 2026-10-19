@@ -84,6 +84,10 @@ export function showUpgradePopup(edge) {
 }
 
 export function renderThread(root, { pairId, otherName, messages, plan, tasteUsedToday }) {
+  // A live thread with no plan of its own takes the plan the live
+  // bridge resolved from the entitlement record at boot. Demo seam
+  // data always carries its own plan and never reaches this line.
+  if (!plan && typeof window !== "undefined" && window.CARESITS_PLAN) plan = window.CARESITS_PLAN;
   root.replaceChildren();
   root.append(el("h2", "findTitle", otherName || tr("thread.title")));
   const list = el("div", "findList threadList");
