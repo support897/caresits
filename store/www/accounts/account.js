@@ -200,7 +200,7 @@ export async function initAccounts(config, onUser) {
 // writes with merge). If the batch fails, the profile create
 // retries alone, so a counter can never break a sign in.
 async function ensureProfile(fsMod, u) {
-  const { doc, getDoc, setDoc, writeBatch, increment } = fsMod;
+  const { doc, getDoc, setDoc, runTransaction, increment } = fsMod;
   const ref = doc(_db, "users", u.uid);
   const snap = await getDoc(ref);
   if (snap.exists()) return;
@@ -208,21 +208,34 @@ async function ensureProfile(fsMod, u) {
   // from birth, so the app can greet the user by their own name.
   const profile = { createdAt: new Date().toISOString(), side: "", displayName: u.displayName || _pendingName || "" };
   try {
-    const batch = writeBatch(_db);
-    batch.set(ref, profile);
-    batch.set(
-      doc(_db, "_owner", "aggregates", "peopleTotal", "main"),
-      { total: increment(1) },
-      { merge: true }
-    );
-    batch.set(
-      doc(_db, "_owner", "aggregates", "peopleWeekly", isoWeekKey(new Date())),
-      { count: increment(1) },
-      { merge: true }
-    );
-    await batch.commit();
+    // The birth and its counters commit in a TRANSACTION
+    // (QA b110 member 1): this writer can land AFTER the
+    // journey's save has stamped the doc, and a plain late
+    // set replaced the whole doc (side and activatedAt
+    // wiped) and counted the signup twice. Inside a
+    // transaction the read and the write are one judgement:
+    // a doc born meanwhile stands the birth down, counters
+    // included.
+    await runTransaction(_db, async (tx) => {
+      const cur = await tx.get(ref);
+      if (cur.exists()) return;
+      tx.set(ref, profile);
+      tx.set(
+        doc(_db, "_owner", "aggregates", "peopleTotal", "main"),
+        { total: increment(1) },
+        { merge: true }
+      );
+      tx.set(
+        doc(_db, "_owner", "aggregates", "peopleWeekly", isoWeekKey(new Date())),
+        { count: increment(1) },
+        { merge: true }
+      );
+    });
   } catch (e) {
-    await setDoc(ref, profile);
+    // The profile create retries alone, so a counter can
+    // never break a sign in; it merges, so even this late
+    // write preserves stamps the save already landed.
+    await setDoc(ref, profile, { merge: true });
   }
 }
 
