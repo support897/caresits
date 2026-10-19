@@ -23,6 +23,7 @@ export const UI_VI = {
  "door.fail": "Không thành công. Kiểm tra email và mật khẩu, rồi thử lại.",
  "door.mismatch": "Email hoặc mật khẩu không khớp. Thử lại, hoặc dùng Quên mật khẩu bên dưới.",
  "door.noNet": "Kết nối không thành công. Hãy kiểm tra internet và thử lại.",
+    "door.madeAccount": "Email này mới ở đây, nên chúng tôi đã tạo tài khoản cho bạn. Chào mừng bạn vào.",
  "door.doorFail": "Cách vào đó không mở được. Thử cách bằng email bên dưới.",
  "door.forgotNeed": "Nhập email của bạn ở trên trước, rồi chạm Quên mật khẩu.",
  "door.resetSent": "Liên kết đặt lại đang trên đường đến email của bạn.",
