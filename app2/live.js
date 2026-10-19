@@ -328,6 +328,31 @@ export async function bootLive() {
           plan,
           plusExtras: plusExtrasOpen({ plan, side, createdAtMs, now: Date.now() }),
         };
+        // The purchase flow's refresh seam (enabling build):
+        // after a buy or a restore, the webhook writes the
+        // record within moments; this re-reads it and
+        // republishes the same seams, so the gates open in
+        // the same session without a restart. Retried a few
+        // times because the webhook can lag the store's own
+        // answer by seconds.
+        window.CARESITS_REFRESH_PLAN = async () => {
+          for (const wait of [0, 2500, 5000]) {
+            if (wait) await new Promise((r) => setTimeout(r, wait));
+            try {
+              const ent2 = await fs.getDoc(docAt(`_entitlements/${uid}`));
+              const payment2 = entitlementFromRecord(ent2.exists() ? ent2.data() : null, Date.now());
+              const plan2 = resolvePlan({ side, comp: null, payment: payment2, now: Date.now() });
+              const before = window.CARESITS_PLAN && window.CARESITS_PLAN.tier;
+              window.CARESITS_PLAN = plan2;
+              window.CARESITS_ME = {
+                ...(window.CARESITS_ME || { uid }),
+                plan: plan2,
+                plusExtras: plusExtrasOpen({ plan: plan2, side, createdAtMs, now: Date.now() }),
+              };
+              if (plan2.tier !== before || plan2.pass) break;
+            } catch { /* a later attempt or the next boot reads it */ }
+          }
+        };
       } catch { /* no record reachable: the free taste stands */ }
       // The photo lifecycle stamp (HQ spec, 19 Oct 2026): a
       // carer opening the signed-in app refreshes lastActiveAt.
