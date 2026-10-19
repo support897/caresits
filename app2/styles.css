@@ -23,6 +23,11 @@ h1 { font-size: 34px; } h2 { font-size: 26px; }
 .bunnySmall { width: 84px; height: auto; }
 .welcome { text-align: center; }
 .sideBtns { display: grid; gap: 10px; margin: 18px 0 12px; }
+.levelBtns { display: grid; gap: 10px; margin: 10px 0 6px; text-align: left; }
+.levelBtn { background: var(--card); color: var(--ink); border: 2px solid var(--line); border-radius: 18px; padding: 12px 16px; font: inherit; cursor: pointer; display: grid; gap: 2px; text-align: left; }
+.levelBtn strong { font-weight: 700; }
+.levelBtn span { font-size: 0.92em; opacity: 0.85; }
+.levelBtn.on { border-color: var(--ink); }
 .sideBtn, .mainBtn { background: var(--ink); color: #fff; border: none; border-radius: 999px; padding: 14px 22px; font: inherit; font-weight: 700; cursor: pointer; }
 .sideBtn.alt { background: var(--blush); color: var(--ink); }
 .ghostBtn { background: none; border: 1px solid var(--line); border-radius: 999px; padding: 12px 20px; font: inherit; color: var(--ink); cursor: pointer; }
