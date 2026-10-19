@@ -115,6 +115,7 @@ export const UI_ZH = {
  "journey.wFine": "您的答案只属于您。在匹配开启之前，什么都不会分享出去，而且您可以随时修改任何答案。",
  "journey.dTitle": "全部完成，太好了",
  "journey.dLead": "您的答案已保存。接下来，我们会列出符合您每一项硬性要求的照护者或家庭。",
+ "journey.dLeadLocal": "您的答案已保存在这台设备上。登录后，它们会加入您的账户。",
  "journey.dFine": "在您的资料完成并由您确认之前，您的任何信息都不会展示给任何人。",
  "find.member": "一位会员",
  "find.postcode": "邮编 {n}",
