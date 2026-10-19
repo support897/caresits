@@ -133,6 +133,10 @@ export function renderBin(root, items) {
       const plan = planRestore({ uid, item });
       if (!plan.ok) return;
       write("bin-restore", { ...plan, data: item.data });
+      // The restore never passes through family.js, so its
+      // mirror would miss the record until the next boot. The
+      // family module's own seam folds it back in at once.
+      if (typeof w.CARESITS_FAMILY_RESTORE === "function") w.CARESITS_FAMILY_RESTORE(item.kind, item.data);
       card.remove();
     });
     const forever = el("button", "quietBtn", tr("bin.forever"));
