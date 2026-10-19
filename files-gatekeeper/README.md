@@ -1,8 +1,29 @@
 # Caresitters files gatekeeper
 
-Status: CORE BUILT, NOT DEPLOYED. The design of record is
-next-phase/FILES-SERVER-DESIGN.md as amended by Security's
-R2 addendum (19 Oct 2026), which governs.
+Status: CORE + SHELL + WRAPPER BUILT, NOT DEPLOYED
+(19 Oct 2026; R2 is ACTIVE in her account and PB's
+bucket + tokens are the next input). The design of
+record is next-phase/FILES-SERVER-DESIGN.md as amended
+by Security's R2 addendum (19 Oct 2026), which governs.
+
+server.mjs is the HTTP shell over the core (POST
+/v1/link + the synchronous POST /v1/confirm; every
+judged fact read from Firestore under the CALLER's
+token): 12/12 over fake deps — the full matrix, Q2 +
+Q6 iii + confirm-delete + the issuance window.
+wrapper.mjs wires it to the real world (securetoken
+JWKS verification, caller-token reads, the gatekeeper's
+own presigned bucket reads, the append-only confirm
+ledger, the core's issuance budget) and is smoked
+against the twin with a REAL Firebase ID token:
+verifies, tamper refused, caller-token reads answer,
+ledger persists. The shell legs caught two real
+defects pre-bucket (the presign override keys, now
+camelCase per the core's contract, and the claims uid
+mapping); the battery's R3 + A9 legs re-prove both on
+the real bucket. Deploy order from here: R1 -> the
+shell on the box -> the battery, synthetic users only
+-> client adaptation -> sweeper deploy.
 
 ## What stands
 
