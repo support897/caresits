@@ -282,8 +282,18 @@ function deepSets() {
       const v = state.answers[q.id];
       if (v === undefined || v === "" || (Array.isArray(v) && !v.length)) continue;
       const s = q.profileOnly ? null : q.strengthPick ? (v === "Must have" ? "must" : v === "I prefer" ? "pref" : "either") : (state.strengths[q.id] === "Must have" ? "must" : state.strengths[q.id] === "I prefer" ? "pref" : state.strengths[q.id] ? "either" : null);
-      deep[q.pair] = { v, s, feed: (state.resumeFeed || []).includes(q.id) ? "resume" : (q.feed || null) };
-      if (s === "must") deepMusts[q.pair] = v;
+      // The feed field names the matching bucket the answer
+      // feeds — always the question's own. A resume-fed answer
+      // keeps its bucket: stamping the provenance ("resume")
+      // here produced a value the answers fence does not admit,
+      // and the refused document killed the whole save batch
+      // (proven on the twin, QA b107 FAIL 1's family).
+      deep[q.pair] = { v, s, feed: q.feed || null };
+      // The musts bucket carries the SAME shaped entry as prefs
+      // (QA b107 FAIL 1): a raw value here made the save planner
+      // read ".v" off a string or a list, produce an undefined
+      // field, and the whole batch died in the client.
+      if (s === "must") deepMusts[q.pair] = deep[q.pair];
     }
   }
   return { deep, deepMusts };
