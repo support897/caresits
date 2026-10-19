@@ -19,6 +19,9 @@ let joinHold = false;
 // A stalled module load must speak, never spin (fleet
 // census cure): the door's layer load races a bound, and
 // the expiry carries the timeout code the lines map on.
+// DRIFT WATCH (Efficiency's condition): this is the local
+// twin of accounts/account.js's withTimeout — the bounds
+// or the shape change in BOTH copies in the same change.
 function bounded(promise, ms) {
   let timer;
   const bound = new Promise((_, reject) => {
