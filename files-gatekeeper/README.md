@@ -7,10 +7,11 @@ R2 addendum (19 Oct 2026), which governs.
 ## What stands
 
 gatekeeper.mjs is the pure core, proven synthetic
-(gatekeeper-tests.mjs, 17 legs): key planning (server
-composed keys; profile photos, certificates, day story
-under pairs/<pairId>/, trash for the bin window; NO
-resume shape anywhere), the authorisation matrix (Q1 +
+(gatekeeper-tests.mjs): key planning (server composed
+keys; profile photos, certificates, day story under
+pairs/<pairId>/; bucket versioning carries the bin
+window, so there are no trash keys; NO resume shape
+anywhere), the authorisation matrix (Q1 +
 Q2: day story delete is family side only, the carer
 holds no such verb), Firebase ID token verification on
 the public certs route (signature, iss, aud, exp;
