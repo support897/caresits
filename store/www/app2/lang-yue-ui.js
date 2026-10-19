@@ -115,6 +115,7 @@ export const UI_YUE = {
  "journey.wFine": "您的答案只屬於您。在匹配開啟之前，甚麼都不會分享出去，而且您可以隨時修改任何答案。",
  "journey.dTitle": "全部完成，太好了",
  "journey.dLead": "您的答案已保存。接下來，我們會列出符合您每一項硬性要求的照護者或家庭。",
+ "journey.dLeadLocal": "你嘅答案已經儲喺呢部裝置。登入之後，佢哋會加入你嘅帳戶。",
  "journey.dFine": "在您的資料完成並由您確認之前，您的任何資訊都不會展示給任何人。",
  "find.member": "一位會員",
  "find.postcode": "郵政編號 {n}",
