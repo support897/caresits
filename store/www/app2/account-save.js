@@ -172,7 +172,7 @@ export async function saveBundle(bundle, firebaseConfig) {
 // seam carrying the facts the save just wrote, and the shell
 // re-renders its trust surfaces through the render seam
 // trust.js exposes. Empty facts never overwrite standing ones.
-function publishSavedProfile(bundle, plan, uid) {
+export function publishSavedProfile(bundle, plan, uid) {
   const fresh = {
     name: plan.card.data.displayName || "",
     side: bundle.side || plan.card.data.side || "",
@@ -200,6 +200,12 @@ function publishSavedProfile(bundle, plan, uid) {
       if (h.CARESITS_ME) {
         h.CARESITS_ME = { ...h.CARESITS_ME, side: me.side || h.CARESITS_ME.side || "", name: me.name || h.CARESITS_ME.name || "", ...(Array.isArray(savedGallery) ? { gallery: savedGallery } : {}) };
       }
+      // The gates read the completeness flag the boot set
+      // before this save existed (QA b107 Legs 9+10, the
+      // same-session half): a finisher posting in the session
+      // they finished in was refused on the stale flag. The
+      // save that just landed IS the finished profile.
+      if (bundle.answers && Object.keys(bundle.answers).length) h.CARESITS_PROFILE_COMPLETE = true;
       if (typeof h.CARESITS_TRUST_RENDER === "function") h.CARESITS_TRUST_RENDER();
     } catch { /* a seam refresh never breaks a save */ }
   }
