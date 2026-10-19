@@ -2,7 +2,7 @@
 import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import http from "node:http";
-import { resolvePlan, canSendMessage, isPassOpen, tasteDayKey, PLANS, entitlementFromRecord, plusExtrasOpen, PLUS_MONTH_MS } from "./account.js";
+import { resolvePlan, canSendMessage, isPassOpen, tasteDayKey, PLANS, entitlementFromRecord, plusExtrasOpen, PLUS_MONTH_MS, withTimeout, DOOR_TIMEOUTS, signInGoogle, signInApple } from "./account.js";
 
 let pass = 0;
 const t = (name, fn) => { fn(); pass++; console.log("ok -", name); };
@@ -255,6 +255,41 @@ t("Leg 19: the app door announces a creation out loud before the walk in", () =>
 t("Leg 19: the account page announces a creation too", () => {
   const src = readFileSync(new URL("./account.html", import.meta.url), "utf8");
   assert.ok(src.includes('tr("door.madeAccount")'), "the account page speaks the creation line");
+});
+
+// ---- Fleet census cure: bounded waits (19 Oct 2026) ----
+// No promise on the door or boot path may hang forever.
+const fastVal = await withTimeout(Promise.resolve(7), 1000, "fast op");
+t("census: withTimeout passes a fast answer through untouched", () => assert.equal(fastVal, 7));
+let hangErr = null;
+try { await withTimeout(new Promise(() => {}), 60, "hung op"); } catch (e) { hangErr = e; }
+t("census: a promise that never settles is refused at the bound, coded as a timeout", () => {
+  assert.ok(hangErr && /timed out/.test(hangErr.message));
+  assert.equal(hangErr.code, "auth/timeout");
+});
+DOOR_TIMEOUTS.native = 60;
+globalThis.window = { Capacitor: { isNativePlatform: () => true, Plugins: { FirebaseAuthentication: {
+  signInWithGoogle: () => new Promise(() => {}),
+  signInWithApple: () => new Promise(() => {}),
+} } } };
+let gErr = null; try { await signInGoogle(); } catch (e) { gErr = e; }
+let aErr = null; try { await signInApple(); } catch (e) { aErr = e; }
+delete globalThis.window;
+DOOR_TIMEOUTS.native = 20000;
+t("census: a native Google bridge that never answers is refused at the bound, not a silent hang", () => assert.ok(gErr && /native sign in timed out/.test(gErr.message)));
+t("census: a native Apple bridge that never answers is refused at the bound, not a silent hang", () => assert.ok(aErr && /native sign in timed out/.test(aErr.message)));
+t("census: the walk-in ensure is bounded, and a timed-out ensure re-fires behind the door", () => {
+  const src = readFileSync(new URL("./account.js", import.meta.url), "utf8");
+  assert.ok(src.includes("withTimeout(ensureProfile(fsMod, u), DOOR_TIMEOUTS.ensure"), "the ensure races its bound");
+  assert.ok(src.includes("catch { ensureProfile(fsMod, u).catch(() => {}); }"), "the re-fire stands behind the bound");
+});
+t("census: boot's first-data reads are bounded at all four sites", () => {
+  const src = readFileSync(new URL("../app2/live.js", import.meta.url), "utf8");
+  assert.equal((src.match(/withTimeout\(fs\.getDoc/g) || []).length, 4);
+});
+t("census: the door's layer load races a bound at all three buttons", () => {
+  const src = readFileSync(new URL("../app2/door.js", import.meta.url), "utf8");
+  assert.equal((src.match(/await layerFast\(\)/g) || []).length, 3);
 });
 
 console.log(`\nALL ${pass} accounts checks passed`);
