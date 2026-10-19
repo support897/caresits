@@ -11,12 +11,17 @@ import { t as tr, applyI18n } from "./lang.js";
 applyI18n();
 const msg = (t) => { $("#doorMsg").textContent = t || ""; };
 let accounts = null;
+// The email join holds the walk in until it knows whether the
+// sign in created the account: a creation is announced out loud
+// at the door first (HQ ruling on Leg 19), never silent.
+let joinHold = false;
 
 async function layer() {
   if (accounts) return accounts;
   accounts = await import("../accounts/account.js");
   await accounts.initAccounts(firebaseConfig, (u) => {
     if (u && !u.isAnonymous) {
+      if (joinHold) return;
       sessionStorage.setItem("caresits-tour", "1");
       location.href = "index.html";
     }
@@ -40,10 +45,19 @@ $("#joinBtn").addEventListener("click", async () => {
   const email = $("#emailIn").value.trim();
   const pw = $("#pwIn").value;
   if (!pw) { msg(tr("door.needPw")); return; }
+  joinHold = true;
   try {
     const a = await layer();
-    await a.signInEmail(email, pw, "");
+    const cred = await a.signInEmail(email, pw, "");
+    if (cred && cred.createdAccount) {
+      msg(tr("door.madeAccount"));
+      await new Promise((r) => setTimeout(r, 2200));
+    }
+    joinHold = false;
+    sessionStorage.setItem("caresits-tour", "1");
+    location.href = "index.html";
   } catch (e) {
+    joinHold = false;
     const noNet = e && (e.code === "auth/network-request-failed" || e.code === "auth/timeout");
     msg(tr(noNet ? "door.noNet" : "door.mismatch"));
   }
