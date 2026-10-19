@@ -100,6 +100,10 @@ export function renderProfile(root, me) {
   const card = el("div", "findCard");
   card.append(el("h3", "findName", me.name || tr("trust.nameWaits")));
   card.append(el("p", "findPlace", (me.side === "carer" ? tr("trust.sideCarer") : tr("trust.sideFamily")) + (me.postcode ? " · " + tr("find.postcode", undefined, { n: me.postcode }) : "")));
+  if (me.level) {
+    card.append(el("p", "findPlace", tr("level.profileLabel")));
+    card.append(el("p", null, tr("level." + me.level)));
+  }
   card.append(el("p", null, tr("trust.profileBody")));
   const go = el("button", "mainBtn", tr("trust.seeQ"));
   go.type = "button";
