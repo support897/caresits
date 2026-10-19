@@ -1,9 +1,25 @@
 # Caresitters payments receiver
 
-Status: CORE BUILT (19 Oct 2026), NOT DEPLOYED. The
-enabling build's server half: RevenueCat webhooks land
-here and become the app's own entitlement records
-(payments chapter section 3 and D3).
+Status: DEPLOYED (19 Oct 2026) on the Apex VPS as the
+caresitters-payments container behind Caddy at
+hooks.caresits.xyz/rc (the DNS record is the one step
+outside this file). The enabling build's server half:
+RevenueCat webhooks land here and become the app's own
+entitlement records (payments chapter section 3 and
+D3). The credential is the charter's custom role
+(Security, reviews/2026-10-19-caresits-receiver-
+credential-charter.md): a dedicated service account,
+entities get/create/update, no delete, no list; its
+JSON and the webhook value rest in separate mode-600
+files in the stack's secrets directory on the box. The
+wrapper was proven end to end on the twin project
+before deploy (write, exact read back, dedupe, fences,
+cleanup), and the production legs at deploy were the
+no-write set: bad auth 401 and logged, TEST ping 200
+with nothing written, the ledger get-by-id answering
+under the role. Finance configures the RevenueCat
+webhook from the custody note in hidden_custody/
+(local only, never pushed).
 
 receiver.mjs is the pure core: it translates a
 RevenueCat webhook body into the section 3 record for
