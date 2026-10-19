@@ -3,7 +3,7 @@
 // that record their calls, so ordering and failure handling
 // are proven, not described.
 import assert from "node:assert/strict";
-import { planSweep, runSweep, planWarn, runWarn, INACTIVE_MS, WARN_AT_MS, PHOTO_OBJECTS, WARN_COPY } from "./sweeper.mjs";
+import { planSweep, runSweep, planWarn, runWarn, INACTIVE_MS, WARN_AT_MS, WARN_BEFORE_MS, PHOTO_OBJECTS, WARN_COPY, ARM_LIVE_MS, DAY_MS } from "./sweeper.mjs";
 
 let n = 0;
 const t = (name, fn) => { fn(); n += 1; console.log("ok -", name); };
@@ -142,6 +142,34 @@ await ta("warn executor: a failed send is never marked and reports loudly", asyn
   assert.equal(marked, false);
   assert.equal(s.failed.length, 1);
   assert.deepEqual(s.warned, []);
+});
+
+const noStamp = { uid: "carer-ns", side: "carer", photoUrl: "https://x/p.jpg", lastActiveAtMs: null };
+t("never-stamped: before arm+90 days the class is not eligible at all", () => {
+  const warnedLongAgo = { ...noStamp, photoWarnedAtMs: ARM_LIVE_MS + 10 * DAY_MS };
+  assert.equal(planSweep([warnedLongAgo], ARM_LIVE_MS + 89 * DAY_MS).length, 0);
+});
+t("never-stamped: arm+90 and a warning 7+ days old, unrescued, sweeps", () => {
+  const a = { ...noStamp, photoWarnedAtMs: ARM_LIVE_MS + 83 * DAY_MS };
+  const plan = planSweep([a], ARM_LIVE_MS + 90 * DAY_MS);
+  assert.equal(plan.length, 1);
+  assert.equal(plan[0].uid, "carer-ns");
+});
+t("never-stamped: a warning younger than 7 days does not sweep yet", () => {
+  const a = { ...noStamp, photoWarnedAtMs: ARM_LIVE_MS + 87 * DAY_MS };
+  assert.equal(planSweep([a], ARM_LIVE_MS + 90 * DAY_MS).length, 0);
+});
+t("never-stamped: never warned, never swept (the warning is a condition, not a courtesy)", () => {
+  assert.equal(planSweep([noStamp], ARM_LIVE_MS + 120 * DAY_MS).length, 0);
+});
+t("never-stamped: a rescue (an open stamps them) moves them to the stamped class with a fresh clock", () => {
+  const a = { ...noStamp, photoWarnedAtMs: ARM_LIVE_MS + 83 * DAY_MS, lastActiveAtMs: ARM_LIVE_MS + 89 * DAY_MS };
+  assert.equal(planSweep([a], ARM_LIVE_MS + 90 * DAY_MS).length, 0);
+});
+t("never-stamped warn: the class warns once the arm is 83 days old, and only once", () => {
+  assert.equal(planWarn([noStamp], ARM_LIVE_MS + 82 * DAY_MS).length, 0);
+  assert.equal(planWarn([noStamp], ARM_LIVE_MS + WARN_AT_MS).length, 1);
+  assert.equal(planWarn([{ ...noStamp, photoWarnedAtMs: ARM_LIVE_MS + 83 * DAY_MS }], ARM_LIVE_MS + 84 * DAY_MS).length, 0);
 });
 
 console.log(`\nALL ${n} sweeper checks passed`);
