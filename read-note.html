@@ -1,0 +1,14 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>note reader</title></head>
+<body>
+<h1>Choose the granted note file</h1>
+<input type="file" id="f">
+<pre id="out" style="white-space:pre-wrap"></pre>
+<script>
+document.getElementById('f').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  document.getElementById('out').textContent = await file.text();
+});
+</script>
+</body></html>
