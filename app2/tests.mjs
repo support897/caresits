@@ -854,6 +854,60 @@ const { planSave } = await import("./account-save.js");
   t("b110 wave: the door birth is transactional, the save birth stamps createdAt only, the drain guard reads existence and fires twice, Find's pool publishes from the warm boot", src("../accounts/account.js").includes("runTransaction") && src("../accounts/account.js").includes("cur.exists()") && src("./account-save.js").includes("{ createdAt: fsMod.serverTimestamp() }") && src("./live.js").includes("if (!qExists)") && src("./live.js").includes("setTimeout(drain, 4000)") && src("./live.js").includes("fetchFindData") && src("./find.js").includes("export async function fetchFindData") && src("./find.js").includes("window.CARESITS_FIND_RENDER"));
 }
 
+// ---- b111 FIND cure: the stitch must exist in find.js's own graph ----
+// On builds 110 and 111 find.js called stitchAnswers without
+// importing it: every fetch died at its first stitch and Find
+// waited forever, while the seam-fed legs stayed green. This leg
+// runs the shipped fetchFindData against fake Firestore deps in
+// the page realm, so the real import graph is what is judged.
+{
+  const src = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
+  t("b111 FIND: find.js imports stitchAnswers from browse.js", /import \{[^}]*stitchAnswers[^}]*\} from "\.\/browse\.js"/.test(src("./find.js")));
+  const p = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await p.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
+  await p.goto("http://localhost:8933/index.html", { waitUntil: "networkidle" });
+  const res = await p.evaluate(async () => {
+    try {
+      const { fetchFindData } = await import("./find.js");
+      const profiles = {
+        me: { side: "family", displayName: "Me" },
+        c1: { side: "carer", displayName: "Ana" },
+      };
+      const answers = {
+        me: [{ code: "F8", data: { bucket: "musts", v: ["Peanuts"], feed: "trust" } }],
+        c1: [{ code: "C9", data: { bucket: "prefs", v: "yes", s: "pref", feed: "trust" } }],
+      };
+      const fsMod = {
+        doc: (db, ...parts) => parts.join("/"),
+        collection: (db, ...parts) => parts.join("/"),
+        query: (c) => c,
+        limit: () => 0,
+        getDoc: async (ref) => {
+          const id = ref.split("/")[1];
+          return { exists: () => !!profiles[id], data: () => profiles[id] };
+        },
+        getDocs: async (ref) => {
+          if (ref === "profiles") return { docs: Object.entries(profiles).map(([id, data]) => ({ id, data: () => data })) };
+          const id = ref.split("/")[1];
+          const list = (answers[id] || []).map((a) => ({ id: a.code, data: () => a.data }));
+          return { forEach: (cb) => list.forEach(cb), docs: list };
+        },
+      };
+      const out = await fetchFindData(fsMod, {}, "me");
+      return {
+        ok: true,
+        viewerDeep: out.viewer?.looking?.musts?.deep?.F8?.v || null,
+        candCount: out.candidates?.length ?? -1,
+        candDeep: out.candidates?.[0]?.looking?.prefs?.deep?.C9?.v || null,
+      };
+    } catch (e) {
+      return { ok: false, err: String((e && e.message) || e) };
+    }
+  });
+  t("b111 FIND: fetchFindData stitches viewer and candidate answers in the shipped graph", res.ok && JSON.stringify(res.viewerDeep) === JSON.stringify(["Peanuts"]) && res.candCount === 1 && res.candDeep === "yes");
+  await p.close();
+}
+
 // ---- Leg 11: the level picker (welcome choice + computed boundary) ----
 {
   const src = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
