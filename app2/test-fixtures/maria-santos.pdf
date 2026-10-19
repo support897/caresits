@@ -12,7 +12,7 @@ endobj
 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
 endobj
 5 0 obj
-<< /Length 345 >>
+<< /Length 398 >>
 stream
 BT
 /F1 16 Tf
@@ -24,6 +24,8 @@ BT
 (Mobile 0412 555 018) Tj
 0 -26 Td
 (Email maria.santos@example.com) Tj
+0 -26 Td
+(Home 12 Crown Street, Surry Hills 2031) Tj
 0 -26 Td
 (Languages Spanish and English) Tj
 0 -26 Td
@@ -46,5 +48,5 @@ xref
 trailer
 << /Size 6 /Root 1 0 R >>
 startxref
-734
+787
 %%EOF
