@@ -131,6 +131,10 @@ html[data-theme="white"] body { background: #FFFFFF; }
 .msgRow.mine { margin-left: auto; background: var(--teal); }
 .msgText { margin: 0; }
 .popBtn { display: block; width: 100%; margin-top: 10px; }
+.plansLegal { margin-top: 14px; }
+.plansLegal p { margin: 4px 0; font-size: 12.5px; line-height: 1.45; color: var(--inkSoft, #5a6b66); text-align: center; }
+.plansLinks { display: flex; justify-content: center; gap: 22px; margin-top: 8px; }
+.plansLinks a { font-size: 13px; font-weight: 600; color: var(--teal); text-decoration: underline; }
 
 .todayLine { font-weight: 700; margin-top: 16px; }
 
