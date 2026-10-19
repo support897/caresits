@@ -6,7 +6,13 @@
 // says plainly that the section is not in this copy.
 // downloadExport is the browser side. It reads the window
 // seams and the saved questionnaire bundle, builds the copy
-// with gatherExport, and saves it as a file.
+// with gatherExport, and saves it as a file. The family state
+// comes through the live getter family.js keeps (the static
+// CARESITS_FAMILY hook is assigned once at boot and goes
+// stale inside a session), and when no finished questionnaire
+// exists the in progress draft supplies the answers.
+
+import { doneKey, draftKey } from "./storage-keys.js";
 
 const cleanWords = (value) => String(value)
   .split("-").join(" ")
@@ -101,14 +107,32 @@ export function downloadExport() {
 
   let questionnaire = null;
   try {
-    const raw = typeof localStorage !== "undefined" ? localStorage.getItem("caresits-app2-questionnaire") : null;
+    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(doneKey()) : null;
     questionnaire = raw ? JSON.parse(raw) : null;
   } catch {
     questionnaire = null;
   }
   if (!questionnaire) questionnaire = w.CARESITS_EXPORT_DATA?.questionnaire ?? undefined;
+  if (!questionnaire) {
+    // No finished questionnaire: the in progress draft still
+    // holds the user's answers, so they ride in the copy. A
+    // finished bundle always wins (it is read first, above).
+    try {
+      const rawDraft = typeof localStorage !== "undefined" ? localStorage.getItem(draftKey()) : null;
+      const draft = rawDraft ? JSON.parse(rawDraft) : null;
+      if (draft && draft.answers) questionnaire = { answers: draft.answers };
+    } catch {
+      // A broken draft never blocks the rest of the copy.
+    }
+  }
 
-  const family = w.CARESITS_FAMILY ?? null;
+  // The live getter first: CARESITS_FAMILY is assigned once at
+  // boot and goes stale the moment the user adds a child or a
+  // Day Story note in this session. family.js keeps the getter
+  // current at every commit, so the copy holds what is on
+  // screen now. The static hook stays as the fallback.
+  const liveFamily = typeof w.CARESITS_FAMILY_NOW === "function" ? w.CARESITS_FAMILY_NOW() : null;
+  const family = liveFamily ?? w.CARESITS_FAMILY ?? null;
   const children = family?.children ?? undefined;
   const dayStory = family?.entries ?? undefined;
   const messages = w.CARESITS_EXPORT_DATA?.messages ?? (
