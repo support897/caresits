@@ -4,7 +4,7 @@
 // PB's creation, in the same leg shapes.
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
-import { planUserKey, planPairKey, authorise, verifyIdToken, presign, confirmCheck, makeBudget, TTL } from "./gatekeeper.mjs";
+import { planUserKey, planPairKey, planTrashKey, authorise, verifyIdToken, presign, presignPutRequest, confirmCheck, makeBudget, TTL } from "./gatekeeper.mjs";
 
 let n = 0;
 const t = (name, fn) => { fn(); n += 1; console.log("ok -", name); };
@@ -26,6 +26,10 @@ t("certificate keys: pdf only, name sanitised", () => {
 t("day story keys live under pairs/<pairId>/day-story/ (A5 as folded in)", () => {
   assert.equal(planPairKey({ pairId: "pair-12345678", name: "day one.jpg" }), "pairs/pair-12345678/day-story/day_one.jpg");
   assert.equal(planPairKey({ pairId: "pair-12345678", name: "doc.pdf" }), null);
+});
+t("trash keys wrap an original, never nest (the bin window rides them)", () => {
+  assert.equal(planTrashKey({ uid: U, key: `${U}/profile-photos/photo.jpg` }), `trash/${U}/${U}/profile-photos/photo.jpg`);
+  assert.equal(planTrashKey({ uid: U, key: "trash/x" }), null);
 });
 t("there is no resume shape anywhere in the planners", () => {
   assert.equal(planUserKey({ uid: U, cls: "resumes", name: "cv.pdf" }), null);
@@ -117,6 +121,19 @@ t("presign: GET carries the no-store override (A9); DELETE signs no length", () 
   const d = presign({ ...SIGN, method: "DELETE", key: "k.jpg", expiresSec: TTL.del });
   assert.ok(d.includes("X-Amz-SignedHeaders=host"));
   assert.ok(d.includes("X-Amz-Expires=300"));
+});
+
+t("PUT is header signed: length + type ride the signature, no query presign (Security's strengthening)", () => {
+  const r = presignPutRequest({ ...SIGN, key: `${U}/profile-photos/photo.jpg`, contentLength: 12345, contentType: "image/jpeg" });
+  assert.ok(r && r.url === `https://acct123.r2.cloudflarestorage.com/caresitters-files/${U}/profile-photos/photo.jpg`);
+  assert.ok(!r.url.includes("?"), "the URL carries no query string");
+  assert.ok(r.headers.Authorization.includes("SignedHeaders=content-length;content-type;host"));
+  assert.equal(r.headers["Content-Length"], "12345");
+  assert.equal(r.headers["Content-Type"], "image/jpeg");
+  const tampered = presignPutRequest({ ...SIGN, key: `${U}/profile-photos/photo.jpg`, contentLength: 12346, contentType: "image/jpeg" });
+  assert.notEqual(tampered.headers.Authorization, r.headers.Authorization);
+  const wrongType = presignPutRequest({ ...SIGN, key: `${U}/profile-photos/photo.jpg`, contentLength: 12345, contentType: "application/pdf" });
+  assert.notEqual(wrongType.headers.Authorization, r.headers.Authorization);
 });
 
 // confirm-time checks
