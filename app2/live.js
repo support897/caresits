@@ -6,6 +6,8 @@
 // without a network. The twin is used only when the address
 // carries ?twin=1; every other visit uses the production
 // config beside this file.
+import { levelOf } from "./levels.js";
+
 export function routeWrite(kind, payload, uid) {
   if (!uid) return { ok: false, reason: "signed-out" };
   switch (kind) {
@@ -62,9 +64,14 @@ export function trustSeamFrom(profile, card, questionnaire) {
   const side = c.side || p.side || q.side || "";
   const name = side === "carer" ? (c.displayName || p.displayName || "") : (p.displayName || c.displayName || "");
   const cardBits = c.card || {};
+  // The member's depth level, computed from their own saved
+  // answers by the one computation of record (levels.js). My
+  // Profile presents it; nothing else reads it from the seam.
+  const level = (q.answers && Object.keys(q.answers).length && side) ? levelOf(side, q.answers) : (c.level || "");
   return {
     name,
     side,
+    level,
     postcode: c.postcode || "",
     photoUrl: c.photoUrl || "",
     // F14: the gallery rides inside the card map, up to four
@@ -80,7 +87,13 @@ export function trustSeamFrom(profile, card, questionnaire) {
 // same facts its readers already look for (country, postcode,
 // photo), and the trust surfaces re-render in place when
 // trust.js is loaded (it exposes CARESITS_TRUST_RENDER).
+// The documents the seam was last published from, retained so a
+// name given later in the session (the tour) can re-publish the
+// seam without a second read.
+let lastTrustInputs = null;
+
 export function publishTrust(profile, card, questionnaire) {
+  lastTrustInputs = { profile, card, questionnaire };
   const me = trustSeamFrom(profile, card, questionnaire);
   if (typeof window === "undefined") return me;
   const prev = window.CARESITS_TRUST || {};
@@ -98,6 +111,17 @@ export function publishTrust(profile, card, questionnaire) {
   }
   if (typeof window.CARESITS_TRUST_RENDER === "function") window.CARESITS_TRUST_RENDER();
   return me;
+}
+
+// The tour's name write lands on the user doc only. Re-publish
+// the seam from the retained documents with that one field
+// replaced, so My Profile shows the name in the same session it
+// was given (Leg 2): a mirror of the server truth, never a
+// second copy of it.
+export function refreshTrustName(name) {
+  if (!lastTrustInputs || typeof window === "undefined") return;
+  const profile = { ...(lastTrustInputs.profile || {}), displayName: name };
+  publishTrust(profile, lastTrustInputs.card, lastTrustInputs.questionnaire);
 }
 
 // F20 (Security ruling c9ef7b17, app side): exactly two sealed
@@ -216,10 +240,18 @@ const SDK = "../accounts/sdk";
 export async function bootLive() {
   const twin = new URLSearchParams(location.search).get("twin") === "1";
   const cfgMod = await import(twin ? "./test-config.js" : "./firebase-config.js");
+  // The two config modules name their export differently
+  // (firebaseConfig in production, testFirebaseConfig on the
+  // twin); resolve either, never undefined.
+  const cfg = cfgMod.firebaseConfig || cfgMod.testFirebaseConfig;
   const appMod = await import(SDK + "/firebase-app.js");
   const authMod = await import(SDK + "/firebase-auth.js");
   const fs = await import(SDK + "/firebase-firestore.js");
-  const app = appMod.getApps().length ? appMod.getApps()[0] : appMod.initializeApp(cfgMod.firebaseConfig, "app2-live");
+  // ONE shared app instance: the DEFAULT app, the same one the door and
+  // the accounts module sign in on. Auth sessions persist per app name,
+  // so a named app here would never see the signed-in user (the build
+  // 103 R1 fault). Every shell module resolves the default app only.
+  const app = appMod.getApps().find((a) => a.name === "[DEFAULT]") || appMod.initializeApp(cfg);
   const auth = authMod.getAuth(app);
   const db = fs.getFirestore(app);
   return new Promise((resolve) => {
@@ -237,6 +269,7 @@ export async function bootLive() {
       const docAt = (path) => fs.doc(db, ...path.split("/"));
       const colAt = (path) => fs.collection(db, ...path.split("/"));
       window.CARESITS_WRITE = makeWriter(fs, db, uid);
+      window.CARESITS_NAME_SAVED = (v) => refreshTrustName(v);
       window.CARESITS_INVITE_LOOKUP = async (code) => {
         try {
           const snap = await fs.getDoc(docAt(`invites/${code}`));
