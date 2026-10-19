@@ -15,6 +15,13 @@
     <h1 data-i18n="journey.wTitle">Let us find your perfect match</h1>
     <p class="lead" data-i18n="journey.wLead">A few questions, one page at a time. About 10 minutes for everything, and you can stop at Quick Connect in about half that and finish later.</p>
     <p data-i18n="journey.wOpt">Optional questions say so. The more you answer, the better we match you.</p>
+    <p class="lead" data-i18n="level.pickTitle">How far do you want to go today?</p>
+    <div class="levelBtns">
+      <button type="button" class="levelBtn" data-level="explore"><strong data-i18n="level.nExplore">Explore</strong><span data-i18n="level.explore">Exploring: answer the first questions to connect</span></button>
+      <button type="button" class="levelBtn on" data-level="quick"><strong data-i18n="level.nQuick">Quick Connect</strong><span data-i18n="level.quick">Quick Connect: you can message and post; matches are rough while answers are light</span></button>
+      <button type="button" class="levelBtn" data-level="better"><strong data-i18n="level.nBetter">Better Match</strong><span data-i18n="level.better">Better Match: your matches carry reasons; finish the deep questions for the closest fits</span></button>
+      <button type="button" class="levelBtn" data-level="full"><strong data-i18n="level.nFull">Full Match</strong><span data-i18n="level.full">Full Match: every match question answered; your pairs can reach Perfect Pair</span></button>
+    </div>
     <div class="sideBtns">
       <button type="button" class="sideBtn" data-side="family" data-i18n="journey.wFamily">I am looking for care</button>
       <button type="button" class="sideBtn alt" data-side="carer" data-i18n="journey.wCarer">I give care</button>
@@ -39,10 +46,21 @@
     </div>
   </section>
 
+  <section id="stopPanel" class="card welcome" hidden>
+    <img class="bunnyBig" src="bunny/bunny-hello.png" alt="The Caresitters bunny waving hello">
+    <h1 id="stopTitle">You are at Quick Connect</h1>
+    <p class="lead" data-i18n="level.stopBody">You can stop here, and finish later any time. Or keep going now for closer matches.</p>
+    <div class="sideBtns">
+      <button type="button" class="sideBtn" id="stopBtn" data-i18n="level.stopHere">Stop here for now</button>
+      <button type="button" class="sideBtn alt" id="keepBtn" data-i18n="level.keepGoing">Keep going</button>
+    </div>
+  </section>
+
   <section id="done" class="card welcome" hidden>
     <img id="doneBunny" class="bunnyBig" src="bunny/bunny-celebrate.png" alt="The Caresitters bunny celebrating">
     <h1 data-i18n="journey.dTitle">All done, beautifully</h1>
     <p class="lead" data-i18n="journey.dLead">Your answers are saved. From here we line up the carers or families who fit every must you set.</p>
+    <p id="doneLevel" class="lead"></p>
     <p data-i18n="journey.dFine">Nothing about you is shown to anyone until your profile is finished and you say so.</p>
   </section>
 </main>
