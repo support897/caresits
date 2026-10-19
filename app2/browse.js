@@ -37,7 +37,12 @@ export function pinLayout(viewerCard, entries) {
 
 export function assembleBrowse(viewerDoc, candidateDocs) {
   const viewerIsFamily = viewerDoc.side === "family";
-  const pool = candidateDocs.filter((d) => d.side !== viewerDoc.side);
+  // A swept carer (the photo lifecycle, Ilse's ruling of
+  // 19 Oct 2026) is out of family search until they return
+  // and add a fresh photo, which clears the stamp at the
+  // photo write. The exclusion is this one filter: entries
+  // and the nearly list both draw from the pool.
+  const pool = candidateDocs.filter((d) => d.side !== viewerDoc.side && !(d.side === "carer" && d.photoClearedAt));
   const viewerCard = viewerDoc.card || {};
   const entries = [];
   const nearly = [];
