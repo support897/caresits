@@ -9,6 +9,7 @@ import { slugify } from "../next-phase/engine/engine.mjs";
 import { COUNTRY_NAMES, packByName } from "./countries.js";
 import { draftKey, doneKey } from "./storage-keys.js";
 import { levelOf, levelRank } from "./levels.js";
+import { withTimeout } from "../accounts/account.js";
 // VALUE CODING at the bundle boundary: any string that IS one of
 // the questionnaire's answer words is stored as its stable slug,
 // so matching compares codes in every language. Prose (the write
@@ -352,20 +353,41 @@ export function buildBundle() {
   return { side: "carer", answers: a, strengths: s, country: a.country || "", card: codeWalk({ ...card, looking }) };
 }
 
-function finish() {
+let finishing = false;
+async function finish() {
+  // One finish at a time: a second tap while the save is
+  // settling must not stack a second save or hide the page
+  // out from under the first.
+  if (finishing) return;
+  finishing = true;
   const bundle = buildBundle();
   // The finished bundle lands under the finisher's own resolved
   // key, and only this journey's own draft slot is retired
   // (completion, never sign out, clears it: the bundle is the
   // draft, kept whole, under the account's key).
   try { localStorage.setItem(doneKey(), JSON.stringify(bundle)); localStorage.removeItem(activeDraftKey); } catch { /* storage off */ }
-  if (typeof window.CARESITS_SAVE === "function") window.CARESITS_SAVE(bundle);
   $("#journey").hidden = true;
   $("#done").hidden = false;
   const dl = $("#doneLevel");
   if (dl) dl.textContent = tr("level." + levelOf(state.side, state.answers));
   $("#doneBunny").src = "bunny/bunny-celebrate.png";
   window.scrollTo(0, 0);
+  // The Done screen's saved line is earned, not assumed
+  // (QA b104 ROOT A): the save settles behind the celebration
+  // (bounded), and when it landed on this device only, the
+  // lead line corrects itself to say exactly that.
+  if (typeof window.CARESITS_SAVE === "function") {
+    let landed = "account";
+    try {
+      const r = await withTimeout(window.CARESITS_SAVE(bundle), 15000, "questionnaire save");
+      if (!r || r.saved !== "account") landed = "local";
+    } catch { landed = "local"; }
+    if (landed !== "account") {
+      const lead = document.querySelector('[data-i18n="journey.dLead"]');
+      if (lead) lead.textContent = tr("journey.dLeadLocal");
+    }
+  }
+  finishing = false;
 }
 
 const RESUME_KEY = "caresits-app2-resume-draft";
