@@ -2,7 +2,7 @@
 import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import http from "node:http";
-import { resolvePlan, canSendMessage, isPassOpen, tasteDayKey, PLANS } from "./account.js";
+import { resolvePlan, canSendMessage, isPassOpen, tasteDayKey, PLANS, entitlementFromRecord, plusExtrasOpen, PLUS_MONTH_MS } from "./account.js";
 
 let pass = 0;
 const t = (name, fn) => { fn(); pass++; console.log("ok -", name); };
@@ -34,10 +34,72 @@ t("Search Pass opens the Finding door inside its window only", () => {
   const outWin = resolvePlan({ side: "family", comp: null, payment: { pass: { endsAt: NOW - 1000 } }, now: NOW });
   assert.equal(outWin.doorOpen, false);
 });
-t("Finding has no trial state anywhere in the resolver", () => {
-  const src = readFileSync(new URL("./account.js", import.meta.url), "utf8");
-  const codeOnly = src.split("\n").filter((l) => !l.trim().startsWith("//")).join("\n");
-  assert.ok(!/trial/i.test(codeOnly), "no trial logic in code");
+t("Finding has no trial: a trialing Finding record opens nothing", () => {
+  // This leg replaces the old blanket source ban on the word trial.
+  // The payments chapter record (§3) legitimately carries a trialing
+  // status, so the invariant is now behavioural and precise: no
+  // trialing state ever opens Finding, whose free month does not
+  // exist (her word, 15 Oct 2026).
+  const pay = entitlementFromRecord({ entitlement: "finding", status: "trialing", trial_ends_at: NOW + 1000 }, NOW);
+  assert.equal(pay, null);
+  const p = resolvePlan({ side: "family", comp: null, payment: pay, now: NOW });
+  assert.equal(p.doorOpen, false);
+});
+t("entitlement record: active Finding inside its period opens the door", () => {
+  const pay = entitlementFromRecord({ entitlement: "finding", status: "active", period_ends_at: NOW + 1000 }, NOW);
+  const p = resolvePlan({ side: "family", comp: null, payment: pay, now: NOW });
+  assert.equal(p.tier, PLANS.FINDING); assert.equal(p.doorOpen, true);
+});
+t("entitlement record: an active plan past its period end is shut", () => {
+  assert.equal(entitlementFromRecord({ entitlement: "finding", status: "active", period_ends_at: NOW - 1 }, NOW), null);
+  assert.equal(entitlementFromRecord({ entitlement: "family_plus", status: "active", period_ends_at: NOW - 1 }, NOW), null);
+});
+t("entitlement record: cancelled stays open until the period ends, then shuts", () => {
+  const open = entitlementFromRecord({ entitlement: "family_plus", status: "cancelled", period_ends_at: NOW + 1000 }, NOW);
+  assert.ok(open && open.plan === PLANS.FAMILY_PLUS);
+  assert.equal(entitlementFromRecord({ entitlement: "family_plus", status: "cancelled", period_ends_at: NOW - 1 }, NOW), null);
+});
+t("entitlement record: past_due, expired, unknown and missing records open nothing", () => {
+  assert.equal(entitlementFromRecord({ entitlement: "finding", status: "past_due", period_ends_at: NOW + 1000 }, NOW), null);
+  assert.equal(entitlementFromRecord({ entitlement: "finding", status: "expired", period_ends_at: NOW + 1000 }, NOW), null);
+  assert.equal(entitlementFromRecord({ entitlement: "everything", status: "active" }, NOW), null);
+  assert.equal(entitlementFromRecord(null, NOW), null);
+  assert.equal(entitlementFromRecord(undefined, NOW), null);
+});
+t("entitlement record: a trialing Family Plus record opens (§3 unlock rule)", () => {
+  const pay = entitlementFromRecord({ entitlement: "family_plus", status: "trialing", trial_ends_at: NOW + 1000 }, NOW);
+  const p = resolvePlan({ side: "family", comp: null, payment: pay, now: NOW });
+  assert.equal(p.tier, PLANS.FAMILY_PLUS); assert.equal(p.doorOpen, true);
+});
+t("entitlement record: the Search Pass window lives in expires_at (§4)", () => {
+  const inWin = entitlementFromRecord({ entitlement: "search_pass", status: "active", expires_at: NOW + 1000 }, NOW);
+  const p = resolvePlan({ side: "family", comp: null, payment: inWin, now: NOW });
+  assert.equal(p.doorOpen, true); assert.equal(p.source, "search pass");
+  assert.equal(entitlementFromRecord({ entitlement: "search_pass", status: "active", expires_at: NOW - 1 }, NOW), null);
+  assert.equal(entitlementFromRecord({ entitlement: "search_pass", status: "cancelled", expires_at: NOW + 1000 }, NOW), null);
+});
+t("entitlement record: ISO strings and Firestore timestamps read the same", () => {
+  const iso = entitlementFromRecord({ entitlement: "finding", status: "active", period_ends_at: new Date(NOW + 1000).toISOString() }, NOW);
+  assert.ok(iso && iso.currentPeriodEnd === NOW + 1000);
+  const ts = entitlementFromRecord({ entitlement: "finding", status: "active", period_ends_at: { seconds: Math.floor((NOW + 1000) / 1000), nanoseconds: 0 } }, NOW);
+  assert.ok(ts && ts.currentPeriodEnd === NOW + 1000);
+});
+t("in-app month: opens the Plus extras for a young family account only", () => {
+  const free = resolvePlan({ side: "family", comp: null, payment: null, now: NOW });
+  assert.equal(plusExtrasOpen({ plan: free, side: "family", createdAtMs: NOW - 10 * 24 * 3600 * 1000, now: NOW }), true);
+  assert.equal(plusExtrasOpen({ plan: free, side: "family", createdAtMs: NOW - PLUS_MONTH_MS - 1, now: NOW }), false);
+  assert.equal(plusExtrasOpen({ plan: free, side: "family", createdAtMs: null, now: NOW }), false);
+});
+t("in-app month: a paid Family Plus record opens the extras at any age", () => {
+  const plus = resolvePlan({ side: "family", comp: null, payment: { plan: PLANS.FAMILY_PLUS, status: "active" }, now: NOW });
+  assert.equal(plusExtrasOpen({ plan: plus, side: "family", createdAtMs: NOW - 400 * 24 * 3600 * 1000, now: NOW }), true);
+  const finding = resolvePlan({ side: "family", comp: null, payment: { plan: PLANS.FINDING, status: "active" }, now: NOW });
+  assert.equal(plusExtrasOpen({ plan: finding, side: "family", createdAtMs: NOW - 400 * 24 * 3600 * 1000, now: NOW }), false);
+});
+t("in-app month never opens the Finding door: the taste still caps messaging", () => {
+  const free = resolvePlan({ side: "family", comp: null, payment: null, now: NOW });
+  assert.equal(plusExtrasOpen({ plan: free, side: "family", createdAtMs: NOW - 1000, now: NOW }), true);
+  assert.equal(canSendMessage({ plan: free, tasteUsedToday: 1 }), false);
 });
 t("free taste: one message per day for families", () => {
   const free = resolvePlan({ side: "family", comp: null, payment: null, now: NOW });
