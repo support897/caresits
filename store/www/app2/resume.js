@@ -30,7 +30,23 @@ export function draftFromText(text, { languages = [], nationalities = [] } = {})
     spans.displayName = firstLine;
   }
 
-  const postcodeMatch = /\b\d{4}\b/.exec(source);
+  // Span claiming (HQ ruling, 19 Oct 2026): a digit run
+  // already claimed by a longer phone span can never double
+  // as a postcode. Phone shaped runs claim their ranges
+  // first (eight or more digits, spaces allowed inside);
+  // the postcode pass then takes the first four digit run
+  // no claim covers, so a genuine postcode standing
+  // elsewhere still extracts, and a phone number's head
+  // never pre fills a wrong postcode for the carer to fix.
+  const claimed = [];
+  for (const m of source.matchAll(/\+?\d[\d ]{7,}\d/g)) {
+    if (m[0].replace(/\D/g, "").length >= 8) claimed.push([m.index, m.index + m[0].length]);
+  }
+  const claimedAt = (i) => claimed.some(([a, b]) => i >= a && i < b);
+  let postcodeMatch = null;
+  for (const m of source.matchAll(/\b\d{4}\b/g)) {
+    if (!claimedAt(m.index)) { postcodeMatch = m; break; }
+  }
   if (postcodeMatch) {
     answers.postcode = postcodeMatch[0];
     spans.postcode = postcodeMatch[0];
