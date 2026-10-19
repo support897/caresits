@@ -14,7 +14,29 @@ const TITLES = {};
 function openMenu() { layout.classList.add("open"); }
 function closeMenu() { layout.classList.remove("open"); }
 
+// The Family Plus gate (payments chapter §2 + FEATURE-SPLIT): the
+// Day Story, the roster and the timesheet are Family Plus features
+// for families. The gate sits here, at the one nav choke point
+// every entry rides, and it is narrow by construction: demo and
+// signed out previews carry no member seam and never gate; carers
+// never gate (no tiers for carers, ever); a family whose resolved
+// plan or in-app month opens the extras never gates. A locked tap
+// does not switch surfaces: it speaks through the plans sheet.
+const PLUS_NAV = new Set(["daystory", "roster", "timesheet"]);
+function plusLocked(nav) {
+  if (!PLUS_NAV.has(nav)) return false;
+  const me = window.CARESITS_ME;
+  if (!me || !me.uid) return false;
+  if (me.side === "carer") return false;
+  return me.plusExtras !== true;
+}
+
 function show(nav) {
+  if (plusLocked(nav)) {
+    if (typeof window.CARESITS_OPEN_PLANS === "function") window.CARESITS_OPEN_PLANS("plus");
+    closeMenu();
+    return;
+  }
   document.querySelectorAll(".surface").forEach((s) => (s.hidden = true));
   document.querySelectorAll(".navBtn").forEach((b) => b.classList.toggle("on", b.dataset.nav === nav));
   if (nav === "home") $("#surface-home").hidden = false;
