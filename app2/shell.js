@@ -55,7 +55,7 @@ function show(nav) {
   else if (nav === "profile") $("#surface-profile").hidden = false;
   else if (nav === "privacy") $("#surface-privacy").hidden = false;
   else if (nav === "settings") $("#surface-settings").hidden = false;
-  else if (nav === "thread") $("#surface-thread").hidden = false;
+  else if (nav === "thread") { $("#surface-thread").hidden = false; if (typeof window.CARESITS_THREAD_OPEN === "function") window.CARESITS_THREAD_OPEN(); }
   else if (nav === "emergency") $("#surface-emergency").hidden = false;
   else if (nav === "questionnaire") $("#surface-questionnaire").hidden = false;
   else if (SOON.has(nav)) { $("#soonTitle").textContent = TITLES[nav] + " · coming with the build"; $("#surface-soon").hidden = false; }
