@@ -21,6 +21,7 @@ const browser = await chromium.launch({
   args: ["--no-sandbox", "--disable-dev-shm-usage"],
 });
 const page = await browser.newPage();
+await page.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
 const errs = [];
 page.on("pageerror", (e) => errs.push(String(e)));
 await page.goto("http://localhost:8933/", { waitUntil: "networkidle" });
@@ -85,6 +86,17 @@ t("answer shapes: the only typed answers left are the name and postcode facts an
 }));
 
 // ---- Shell: her nav shape (15 Oct 2026) ----
+// The signed out gate (Leg 19 FAIL 1 ruling): a bare signed out
+// entry bounces to the door; the suite's shell walk enters the
+// way an explorer does, through the demo marker.
+{
+  const bare = await browser.newPage();
+  await bare.goto("http://localhost:8933/index.html", { waitUntil: "networkidle" });
+  await bare.waitForFunction(() => location.pathname.endsWith("door.html"), null, { timeout: 15000 }).catch(() => {});
+  t("gate (Leg 19 FAIL 1): a bare signed out shell entry lands on the door", await bare.evaluate(() => location.pathname.endsWith("door.html")));
+  await bare.close();
+}
+await page.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch { /* storage off */ } });
 await page.setViewportSize({ width: 390, height: 844 });
 await page.goto("http://localhost:8933/index.html", { waitUntil: "networkidle" });
 t("shell: menu hidden on load, content full width", await page.evaluate(() => !document.getElementById("layout").classList.contains("open") && document.getElementById("menu").offsetWidth <= 2 && document.getElementById("content").offsetWidth >= window.innerWidth - 2));
@@ -116,6 +128,7 @@ t("shell: no page errors", errs.length === 0);
   const mei = { side: "carer", displayName: "Mei", postcode: "2021", card: { ...anaCard, availability: { Tue: ["afternoon"] } }, looking: { musts: {}, prefs: {} } };
   const candidates = [carer("Ana"), carer("Bea"), carer("Cleo"), carer("Dana"), carer("Elif"), carer("Faye"), carer("Gia"), mei];
   const fp = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await fp.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
   const ferrs = [];
   fp.on("pageerror", (e) => ferrs.push(String(e)));
   await fp.addInitScript((data) => { window.CARESITS_FIND_DATA = data; }, { viewer: famDoc, candidates });
@@ -144,6 +157,7 @@ t("shell: no page errors", errs.length === 0);
   }));
   await fp.close();
   const ep = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await ep.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
   await ep.goto("http://localhost:8933/index.html", { waitUntil: "networkidle" });
   await ep.evaluate(() => document.querySelector('[data-nav="find"]')?.click());
   await ep.waitForTimeout(300);
@@ -151,6 +165,7 @@ t("shell: no page errors", errs.length === 0);
   t("map: an exploring viewer sees pins but no personal percent", await ep.evaluate(() => document.querySelectorAll("#findRoot .mapPin").length >= 0 && document.querySelectorAll("#findRoot .mapPct").length === 0));
   await ep.close();
   const qp = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await qp.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
   await qp.goto("http://localhost:8933/index.html", { waitUntil: "networkidle" });
   const honest = await qp.evaluate(async () => {
     const { renderFind } = await import("./find.js");
@@ -176,6 +191,7 @@ t("shell: no page errors", errs.length === 0);
 // ---- Phase C: matches + urgent board ----
 {
   const cp = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await cp.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
   const cerrs = [];
   cp.on("pageerror", (e) => cerrs.push(String(e)));
   await cp.addInitScript(() => {
@@ -221,6 +237,7 @@ t("shell: no page errors", errs.length === 0);
 // ---- F19: the live Phase C seam lands after first render ----
 {
   const lp = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await lp.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
   const lerrs = [];
   lp.on("pageerror", (e) => lerrs.push(String(e)));
   await lp.goto("http://localhost:8933/index.html", { waitUntil: "networkidle" });
@@ -250,6 +267,7 @@ t("shell: no page errors", errs.length === 0);
 // ---- Amendment 4: report + block on the surfaces ----
 {
   const sp = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await sp.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
   const serrs = [];
   sp.on("pageerror", (e) => serrs.push(String(e)));
   await sp.addInitScript(() => {
@@ -289,6 +307,7 @@ t("shell: no page errors", errs.length === 0);
 // ---- QA F-LOW: a block sever recounts the Find pool line ----
 {
   const bp = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await bp.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
   await bp.addInitScript(() => {
     window.__writes = [];
     window.CARESITS_WRITE = (kind, payload) => window.__writes.push({ kind, payload });
@@ -319,6 +338,7 @@ t("shell: no page errors", errs.length === 0);
 // ---- Amendment 5: the pair calendar ----
 {
   const kp = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await kp.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
   const kerrs = [];
   kp.on("pageerror", (e) => kerrs.push(String(e)));
   await kp.addInitScript(() => {
@@ -359,6 +379,7 @@ t("shell: no page errors", errs.length === 0);
 // ---- Door v4 + the bunny tour ----
 {
   const dp = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await dp.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
   const derrs = [];
   dp.on("pageerror", (e) => derrs.push(String(e)));
   await dp.goto("http://localhost:8933/door.html", { waitUntil: "networkidle" });
@@ -372,6 +393,7 @@ t("shell: no page errors", errs.length === 0);
   await dp.close();
 
   const tp = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await tp.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
   const terrs = [];
   tp.on("pageerror", (e) => terrs.push(String(e)));
   await tp.addInitScript(() => sessionStorage.setItem("caresits-tour", "1"));
@@ -387,6 +409,7 @@ t("shell: no page errors", errs.length === 0);
   await tp.close();
 
   const rp = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await rp.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
   await rp.addInitScript(() => { if (!localStorage.getItem("caresits-tour-state")) localStorage.setItem("caresits-tour-state", JSON.stringify({ closedUnanswered: true })); });
   await rp.goto("http://localhost:8933/index.html", { waitUntil: "networkidle" });
   await rp.waitForTimeout(300);
@@ -403,6 +426,7 @@ t("shell: no page errors", errs.length === 0);
 // ---- Phase D: Children + Day Story ----
 {
   const fp2 = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await fp2.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
   const ferrs = [];
   fp2.on("pageerror", (e) => ferrs.push(String(e)));
   await fp2.addInitScript(() => {
@@ -443,6 +467,7 @@ t("shell: no page errors", errs.length === 0);
 // ---- Phase D: week + trust + thread with the taste wall ----
 {
   const wp = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await wp.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
   const werrs = [];
   wp.on("pageerror", (e) => werrs.push(String(e)));
   await wp.addInitScript(() => {
@@ -475,6 +500,7 @@ t("shell: no page errors", errs.length === 0);
   await wp.close();
 
   const up = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await up.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
   const uerrs = [];
   up.on("pageerror", (e) => uerrs.push(String(e)));
   await up.addInitScript(() => {
@@ -553,6 +579,7 @@ const { planSave } = await import("./account-save.js");
 // ---- Round 3: F15 the trust seam carries the real member ----
 {
   const mp = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await mp.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
   const merrs = [];
   mp.on("pageerror", (e) => merrs.push(String(e)));
   await mp.goto("http://localhost:8933/index.html", { waitUntil: "networkidle" });
@@ -579,6 +606,7 @@ const { planSave } = await import("./account-save.js");
 // ---- Round 4: F14 the gallery, and the S-2 resume picker ----
 {
   const gp = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await gp.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
   const gerrs = [];
   gp.on("pageerror", (e) => gerrs.push(String(e)));
   await gp.goto("http://localhost:8933/index.html", { waitUntil: "networkidle" });
@@ -639,6 +667,7 @@ const { planSave } = await import("./account-save.js");
   await gp.close();
   // The demo: no account, so a gallery pick previews on the device and writes nothing.
   const dp = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await dp.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
   const derrs = [];
   dp.on("pageerror", (e) => derrs.push(String(e)));
   await dp.goto("http://localhost:8933/index.html", { waitUntil: "networkidle" });
@@ -676,6 +705,7 @@ const { planSave } = await import("./account-save.js");
 // ---- file can be picked again and still fires change    ----
 {
   const fp = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await fp.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
   const ferrs = [];
   fp.on("pageerror", (e) => ferrs.push(String(e)));
   await fp.goto("http://localhost:8933/index.html", { waitUntil: "networkidle" });
@@ -716,6 +746,7 @@ const { planSave } = await import("./account-save.js");
   const seedA = { side: "family", page: 1, answers: { country: "Australia" }, strengths: {}, resumeFeed: [], countryStep: false };
   const mkJourney = async (uid, seed) => {
     const p = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    await p.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
     const errs = [];
     p.on("pageerror", (e) => errs.push(String(e)));
     await p.addInitScript(({ uid, seed }) => {
@@ -764,6 +795,18 @@ const { planSave } = await import("./account-save.js");
   t("R1: account.js (the door's module) signs in on the default app", src("../accounts/account.js").includes("initializeApp(config)"));
 }
 
+// ---- HQ rulings on the remainder round (19 Oct): the gate,
+// the thread mechanism, the demo greeting, the counter shape ----
+{
+  const src = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
+  t("Ruling (Leg 19 FAIL 1): the shell gates a signed out entry back to the door", src("./live.js").includes("gateSignedOut") && src("./live.js").includes('location.href = "door.html"'));
+  t("Ruling (Leg 19 FAIL 1): a deliberate Explore entry carries the exempting marker", src("./live.js").includes('sessionStorage.getItem("caresits-demo")') && src("./door.js").includes('sessionStorage.setItem("caresits-demo", "1")') && src("./journey.js").includes('sessionStorage.setItem("caresits-demo", "1")'));
+  t("Ruling (Leg 14): the shell publishes its show mechanism as a seam", src("./shell.js").includes("window.CARESITS_NAV = show"));
+  t("Ruling (Leg 14): homes opens the thread by the shell seam, never by a class", src("./homes.js").includes('CARESITS_NAV("thread")') && !src("./homes.js").includes('classList.toggle("active"'));
+  t("Ruling (Leg 3 Note 2): the stored device name serves the signed in world only", src("./homes.js").includes("if (m && m.uid)"));
+  t("Ruling (residue): the safety plan names the split doc counters", src("./safety-actions.js").includes("_owner/aggregates/safetyFiled/main") && src("./safety-actions.js").includes("_owner/aggregates/safetyOpen/main") && !src("./safety-actions.js").includes("safety/main"));
+}
+
 // ---- Leg 2: the tour name lands in-session ----
 {
   const src = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
@@ -779,6 +822,7 @@ const { planSave } = await import("./account-save.js");
   t("Leg 11: the welcome offers all four levels as choices", ["explore", "quick", "better", "full"].every((v) => html.includes(`data-level="${v}"`)));
   t("Leg 11: the journey computes the boundary from levels.js", src("./journey.js").includes("levelOf(state.side, state.answers)"));
   const p = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await p.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
   const errs = [];
   p.on("pageerror", (e) => errs.push(String(e)));
   await p.goto("http://localhost:8933/", { waitUntil: "networkidle" });
@@ -810,6 +854,7 @@ const { planSave } = await import("./account-save.js");
   const seed = { side: "family", page: 0, answers, strengths: {}, resumeFeed: [], countryStep: false, target: "quick", beyond: false };
   const mkSeeded = async () => {
     const p = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    await p.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
     const errs = [];
     p.on("pageerror", (e) => errs.push(String(e)));
     await p.addInitScript(({ seed }) => { window.CARESITS_UID = "uidA"; if (seed) localStorage.setItem("caresits-app2-draft-uidA", JSON.stringify(seed)); }, { seed });
