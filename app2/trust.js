@@ -394,7 +394,7 @@ export function renderSettings(root) {
   for (const [code, label] of [["en", "English"], ["es", "Español"], ["zh", "中文"], ["ar", "العربية"], ["vi", "Tiếng Việt"], ["yue", "繁體中文"], ["hi", "हिन्दी"]]) {
     const b = el("button", "chipBtn" + (currentLang() === code ? " on" : ""), label);
     b.type = "button";
-    b.addEventListener("click", () => { setLang(code); location.reload(); });
+    b.addEventListener("click", () => { write("language", { code }); setLang(code); location.reload(); });
     langRow.append(b);
   }
   langCard.append(langRow);
