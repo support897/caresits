@@ -150,6 +150,11 @@ export function currentUser() {
 // each gets a bound and an honest failure, never a silent
 // spin. The rejection carries the auth/timeout code so the
 // door's own no-net line can speak for a stall.
+// DRIFT WATCH (Efficiency's condition on the cure wave's
+// PASS): app2/door.js carries a local twin of this helper
+// (the door loads accounts dynamically by design). Any
+// change to the bounds or the helper's shape lands in
+// BOTH copies in the same change, never one alone.
 export function withTimeout(promise, ms, label) {
   let timer;
   const bound = new Promise((_, reject) => {
