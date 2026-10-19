@@ -6,7 +6,7 @@
 // action layer, not here. Data arrives from the live account
 // layer when it can; otherwise the designed empty states
 // stand. Test and live hooks may set CARESITS_FIND_DATA.
-import { assembleBrowse, pinLayout, kmBetween } from "./browse.js";
+import { assembleBrowse, pinLayout, kmBetween, stitchAnswers } from "./browse.js";
 import { t as tr } from "./lang.js";
 import { frameUser } from "./account-save.js";
 const labelText = (s) => tr({ "Perfect Pair": "find.label.perfect", "Strong Fit": "find.label.strong", "Good Fit": "find.label.good" }[s] || "find.label.good");
