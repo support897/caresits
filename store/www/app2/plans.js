@@ -67,16 +67,23 @@ export function openPlans(reason) {
   card.append(el("p", null, popupPriceLine("plans.pass", "pass")));
   card.append(planBtn(tr("plans.joinPass"), "search-pass", wrap, card, status));
   // The renewal disclosure + the legal links stand ON
-  // the paywall (Store Review's G7 item, the fleet's 8.1
-  // shape fitted to this app): the two subscriptions
-  // renew on their own at the shown prices until
-  // cancelled, cancelling lives in Apple ID
-  // subscriptions, and paid time stays open to its end.
-  // The Search Pass already speaks its own truth above
-  // (it never renews itself). The links follow the
-  // privacy surface's own pattern.
+  // the paywall (Store Review's G7 item, HQ's fix wave
+  // on the fleet's proven pattern): the whole renewal
+  // truth for both subscriptions in plain words at
+  // small print volume, built from standing parts only.
+  // The prices inside it render through the SAME helper
+  // as the plan lines above (popupPriceLine), so the
+  // disclosure and the buttons can never drift apart;
+  // the Search Pass line inside the block is the sheet's
+  // own pass line, reused. The block renders in every
+  // state of the sheet, entitled included.
   const legal = el("div", "plansLegal");
-  legal.append(el("p", null, tr("plans.renew1")), el("p", null, tr("plans.renew2")));
+  legal.append(
+    el("p", null, popupPriceLine("plans.renewFinding", "finding")),
+    el("p", null, popupPriceLine("plans.renewPlus", "plus")),
+    el("p", null, tr("plans.renew2")),
+    el("p", null, popupPriceLine("plans.pass", "pass")),
+  );
   card.append(legal);
   const links = el("div", "plansLinks");
   const priv = el("a", null, tr("plans.privacy"));
