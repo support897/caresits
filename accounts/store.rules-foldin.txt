@@ -1,0 +1,36 @@
+// Caresitters storage rules fold
+// Photos are member visible by design because cards show them to signed in members
+// Resumes are the owner alone and no other member can read or write them
+// A photo write is capped under five megabytes and must be an image
+// Security read conditions (18 Oct 2026, reviews/2026-10-18-caresits-storage-foldin-read.md):
+// S-1 photo reads exclude anonymous sessions (member visible means account holders)
+// S-2 resume writes carry the upload fences (ten megabytes, application/pdf)
+// Deletion amendment (19 Oct 2026, HQ deletion ruling): a delete carries no
+// request.resource, so the write arms' size and type conditions can never be
+// the grant a delete relies on. Each match therefore carries an explicit
+// owner-only delete arm. PREPARED at the desk; it takes Security's
+// verification read (S-3) before this fold publishes, like S-1 and S-2 did.
+// This fold publishes with the storage wave and joins the live storage rules at that time
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /profile-photos/{uid}/photo.jpg {
+      allow read: if request.auth != null && request.auth.token.firebase.sign_in_provider != 'anonymous';
+      allow write: if request.auth != null && request.auth.uid == uid && request.resource.size < 5 * 1024 * 1024 && request.resource.contentType.matches('image/.*');
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+    // The gallery slots (F14): the card fence caps the list at four;
+    // a storage match cannot range-check {n}, so writes stay owner-scoped
+    // under the same fences (Security rider ruling, 18 Oct 2026).
+    match /profile-photos/{uid}/extra-{n}.jpg {
+      allow read: if request.auth != null && request.auth.token.firebase.sign_in_provider != 'anonymous';
+      allow write: if request.auth != null && request.auth.uid == uid && request.resource.size < 5 * 1024 * 1024 && request.resource.contentType.matches('image/.*');
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+    match /resumes/{uid}/{fileName} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null && request.auth.uid == uid && request.resource.size < 10 * 1024 * 1024 && request.resource.contentType == 'application/pdf';
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}
