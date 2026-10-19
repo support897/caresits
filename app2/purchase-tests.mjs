@@ -37,10 +37,8 @@ globalThis.window = {
 
 const P = await import("./purchase.js");
 
-await t("the seam is unavailable without a key today (rc-config empty), and honest about it", () => {
-  // RC_PUBLIC_KEY is "" until Finance's read-back lands; the
-  // availability leg pins the flip: with a key this returns true.
-  assert.equal(P.purchaseAvailable(), false);
+await t("the seam is available in the packaged shape (key filled, plugin present)", () => {
+  assert.equal(P.purchaseAvailable(), true);
 });
 await t("packages pick by Finance's identifiers, verbatim", () => {
   assert.equal(P.pickPackage(offerings, "finding").identifier, "finding_monthly");
@@ -50,13 +48,30 @@ await t("packages pick by Finance's identifiers, verbatim", () => {
   assert.equal(P.pickPackage(null, "finding"), null);
 });
 await t("a buy configures with the Firebase uid as the app user id, buys, and refreshes the record", async () => {
-  // drive the internals the sheet drives, with the key gate
-  // stubbed open at the plugin layer the seam checks
-  const res = await P.buyPlan("finding").catch((e) => ({ ok: false, reason: String(e) }));
-  // purchaseAvailable() is false without the key, so buyPlan
-  // must refuse cleanly (unavailable), never reaching the store
+  const res = await P.buyPlan("finding");
+  assert.equal(res.ok, true);
+  assert.equal(res.active, true);
+  assert.deepEqual(calls.filter((c) => c[0] === "configure"), [["configure", "uid-42"]]);
+  assert.deepEqual(calls.filter((c) => c[0] === "buy"), [["buy", "finding_monthly"]]);
+  assert.equal(refreshCalls, 1);
+});
+await t("a user cancellation reads as cancelled, not failed (the sheet just re-enables)", async () => {
+  purchaseError = Object.assign(new Error("User cancelled"), { code: "1" });
+  const res = await P.buyPlan("family-plus");
   assert.equal(res.ok, false);
-  assert.equal(res.reason, "unavailable");
+  assert.equal(res.reason, "cancelled");
+  purchaseError = new Error("store exploded");
+  const res2 = await P.buyPlan("family-plus");
+  assert.equal(res2.ok, false);
+  assert.equal(res2.reason, "failed");
+  purchaseError = null;
+});
+await t("a restore reports the active entitlements and refreshes the record", async () => {
+  const before = refreshCalls;
+  const res = await P.restorePurchases();
+  assert.equal(res.ok, true);
+  assert.deepEqual(res.active, ["finding"]);
+  assert.equal(refreshCalls, before + 1);
 });
 await t("entitlementActive reads RevenueCat's own active map", () => {
   const info = { entitlements: { active: { family_plus: {} } } };
