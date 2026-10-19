@@ -32,12 +32,16 @@ evidence, verified at Security's hand), so list is
 ACCEPTED on the gatekeeper's token with the residual
 named. The compartment survives as custody + code:
 separate revocable tokens, per-service secret files,
-and NO list call anywhere in this service — proven at
-this desk by census (case-insensitive sweep over the
-core, shell and wrapper: the only list-shaped text is
-this note's own custody comment; presign's method fence
-admits PUT, GET and DELETE only, so a list can never be
-signed here by construction; zero ListObjects shapes).
+and NO list call anywhere in this service — proven by
+the battery's standing SOURCE CENSUS leg
+(census-nolist.mjs, run at every battery run: a
+case-insensitive sweep over the core, shell and
+wrapper finds zero list constructions, and presign's
+method fence admits PUT, GET and DELETE only, so a
+list can never be signed here by construction). The
+design of record carries the amendment in full (Q7
+text + the vendor citation + the residual + this
+service's verb inventory named).
 The sweeper's own token keeps list BY DESIGN (the
 orphan census + quarantine purges ride it) under its
 own compartment. The full signed probe set passes
