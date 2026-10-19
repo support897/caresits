@@ -13,10 +13,10 @@ const NOW = 1800000000000;
 const stale = { uid: "carer-1", side: "carer", photoUrl: "https://x/p.jpg", lastActiveAtMs: NOW - INACTIVE_MS - 1000 };
 const edge = { ...stale, uid: "carer-edge", lastActiveAtMs: NOW - INACTIVE_MS };
 
-t("planner: a stale carer with a photo is planned, with the exact object path", () => {
+t("planner: a stale carer with a photo is planned, with the exact object paths (main + gallery)", () => {
   const plan = planSweep([stale], NOW);
   assert.equal(plan.length, 1);
-  assert.deepEqual(plan[0].deletePaths, ["profile-photos/carer-1/photo.jpg"]);
+  assert.deepEqual(plan[0].deletePaths, ["profile-photos/carer-1/photo.jpg", "profile-photos/carer-1/extra-1.jpg", "profile-photos/carer-1/extra-2.jpg", "profile-photos/carer-1/extra-3.jpg", "profile-photos/carer-1/extra-4.jpg"]);
   assert.equal(plan[0].clearPhotoSlot, true);
 });
 t("planner: exactly 90 days old sweeps; one millisecond under does not", () => {
@@ -39,8 +39,8 @@ t("planner: no trusted stamp, no sweep (never guessed)", () => {
   assert.equal(planSweep([{ ...stale, lastActiveAtMs: null }], NOW).length, 0);
   assert.equal(planSweep([{ ...stale, lastActiveAtMs: "long ago" }], NOW).length, 0);
 });
-t("planner: the object list names profile photos only (Day Story never in scope)", () => {
-  assert.deepEqual(PHOTO_OBJECTS, ["photo.jpg"]);
+t("planner: the object list is the profile images only (Day Story never in scope)", () => {
+  assert.deepEqual(PHOTO_OBJECTS, ["photo.jpg", "extra-1.jpg", "extra-2.jpg", "extra-3.jpg", "extra-4.jpg"]);
 });
 t("planner: malformed input gives an empty plan, never a crash", () => {
   assert.deepEqual(planSweep(null, NOW), []);
@@ -56,7 +56,7 @@ await ta("executor: the object is deleted BEFORE the slot clears, in one pass", 
     clearPhotoSlot: async (uid, at) => { calls.push(["clear", uid, at]); },
   };
   const s = await runSweep(deps, NOW);
-  assert.deepEqual(calls, [["delete", "profile-photos/carer-1/photo.jpg"], ["clear", "carer-1", NOW]]);
+  assert.deepEqual(calls, [["delete", "profile-photos/carer-1/photo.jpg"], ["delete", "profile-photos/carer-1/extra-1.jpg"], ["delete", "profile-photos/carer-1/extra-2.jpg"], ["delete", "profile-photos/carer-1/extra-3.jpg"], ["delete", "profile-photos/carer-1/extra-4.jpg"], ["clear", "carer-1", NOW]]);
   assert.deepEqual(s, { planned: 1, swept: ["carer-1"], failed: [] });
 });
 await ta("executor: a failed delete leaves the slot untouched and reports loudly", async () => {
