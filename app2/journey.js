@@ -422,8 +422,13 @@ export function bootJourney() {
   // Warm this realm's session restore now, at page entry,
   // not lazily at Finish (QA b108); and land any finished
   // journey still standing in this account's done envelope.
+  // The drain fires now and again seconds later (QA b110
+  // member 3): the entry instant's keying and session are
+  // the youngest of the visit, and a drained key makes the
+  // second attempt a no-op.
   warmSave();
   drainOutbox();
+  setTimeout(() => drainOutbox(), 3000);
   activeDraftKey = draftKey();
   loadDraft();
   consumeResumeHandoff();
