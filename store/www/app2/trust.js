@@ -2,7 +2,7 @@ import { t as tr, currentLang, setLang } from "./lang.js";
 import { doneKey, draftKey } from "./storage-keys.js";
 import { downloadExport } from "./export.js";
 import { pushAvailable, getPushState, registerPush, togglePushKind } from "./push.js";
-import { uploadProfilePhoto, uploadGalleryPhoto, uploadToStorage, planResumePath } from "./photo.js";
+import { uploadProfilePhoto, uploadGalleryPhoto, uploadToStorage, planResumePath, deleteFromStorage, planPathFromUrl, removeProfilePhoto, removeResumeObject } from "./photo.js";
 import { draftFromText, buildHandoff } from "./resume.js";
 import { LANGS, NATIONALITIES } from "./questions.js";
 import { packById, packByName, checkFor } from "./countries.js";
@@ -112,7 +112,8 @@ export function renderProfile(root, me) {
   root.append(card);
   const pcard = el("div", "cardIn");
   pcard.append(el("h3", null, tr("photo.title")), el("p", null, tr("photo.body")));
-  if (me.photoUrl) { const im = el("img", "profilePhoto"); im.src = me.photoUrl; im.alt = ""; pcard.append(im); }
+  let photoImg = null;
+  if (me.photoUrl) { photoImg = el("img", "profilePhoto"); photoImg.src = me.photoUrl; photoImg.alt = ""; pcard.append(photoImg); }
   const pfile = el("input");
   pfile.type = "file";
   pfile.accept = "image/*";
@@ -139,6 +140,24 @@ export function renderProfile(root, me) {
       pcard.append(im, el("p", "gateMsg", tr("photo.deviceOnly")));
     }
   });
+  if (me.photoUrl) {
+    // The remove path (HQ deletion ruling, 19 Oct 2026): the
+    // object itself goes, not just the picture on the card, so
+    // nothing personal is left sitting in the bucket.
+    const prm = el("button", "quietBtn", tr("photo.remove"));
+    prm.type = "button";
+    prm.addEventListener("click", async () => {
+      const uid = window.CARESITS_ME && window.CARESITS_ME.uid;
+      await removeProfilePhoto(uid);
+      write("photo", { photoUrl: "" });
+      if (window.CARESITS_ME) window.CARESITS_ME.photoUrl = "";
+      if (photoImg) photoImg.remove();
+      pick.textContent = tr("photo.add");
+      prm.remove();
+      pcard.append(el("p", "gateMsg", tr("photo.removed")));
+    });
+    pcard.append(prm);
+  }
   pcard.append(pick, pfile);
   root.append(pcard);
   if (me.side === "carer") {
@@ -167,9 +186,14 @@ export function renderProfile(root, me) {
         const rm = el("button", "quietBtn galleryRemove", tr("gallery.remove"));
         rm.type = "button";
         rm.addEventListener("click", () => {
+          const gone = gallery[i];
           gallery = gallery.filter((_, j) => j !== i);
           write("gallery", { gallery });
           if (window.CARESITS_ME) window.CARESITS_ME.gallery = gallery;
+          // The object goes too (HQ deletion ruling): dropping
+          // the list entry alone would orphan the file.
+          const p = planPathFromUrl(gone);
+          if (p) deleteFromStorage(p);
           renderStrip();
         });
         slot.append(im, rm);
@@ -213,6 +237,10 @@ export function renderProfile(root, me) {
   if (me.side === "carer") {
     const rcard = el("div", "cardIn");
     rcard.append(el("h3", null, tr("resume.title")), el("p", null, tr("resume.body")));
+    // The recorded resume file is a TEMPORARY object (Ilse's
+    // resume model, 19 Oct 2026): held only while its facts are
+    // reviewed, removed at the confirm, never shown to families.
+    let tempName = me.resumeFile || "";
     const rfile = el("input");
     rfile.type = "file";
     rfile.accept = ".txt,.md,.pdf,text/plain,application/pdf";
@@ -239,7 +267,11 @@ export function renderProfile(root, me) {
       const use = el("button", "mainBtn", tr("resume.useBtn"));
       use.type = "button";
       use.addEventListener("click", () => {
-        try { localStorage.setItem("caresits-app2-resume-draft", JSON.stringify(buildHandoff(draft))); } catch { /* storage off */ }
+        try {
+          const h = buildHandoff(draft);
+          if (tempName) h.tempFile = tempName;
+          localStorage.setItem("caresits-app2-resume-draft", JSON.stringify(h));
+        } catch { /* storage off */ }
         out.append(el("p", "gateMsg", tr("resume.saved")));
       });
       out.append(use);
@@ -252,11 +284,26 @@ export function renderProfile(root, me) {
       const head = new TextDecoder().decode(new Uint8Array(buf.slice(0, 5)));
       if (head.startsWith("%PDF")) {
         // S-2: storage holds PDFs alone (the storage rules
-        // fence admits nothing else). A PDF is kept on the
-        // profile; its words are never drafted from.
+        // fence admits nothing else). The object is TEMPORARY
+        // (Ilse's resume model): it waits here while its facts
+        // are reviewed, and it goes at the confirm, at a
+        // replace, at a discard, or with the account. Its read
+        // fence is the owner alone, so no family ever sees it.
         const uid = window.CARESITS_ME && window.CARESITS_ME.uid;
-        if (uid) { const path = planResumePath(uid, f.name); if (path) uploadToStorage(path, new Blob([buf], { type: "application/pdf" })); }
-        out.replaceChildren(el("p", "gateMsg", tr("resume.unread")));
+        let held = false;
+        if (uid) {
+          const path = planResumePath(uid, f.name);
+          if (path) {
+            const res = await uploadToStorage(path, new Blob([buf], { type: "application/pdf" }));
+            if (res && res.ok) {
+              held = true;
+              if (tempName && tempName !== f.name) removeResumeObject(uid, tempName);
+              tempName = f.name;
+              write("resume-file", { name: f.name });
+            }
+          }
+        }
+        out.replaceChildren(el("p", "gateMsg", tr(held ? "resume.temp" : "resume.unread")));
         return;
       }
       // A text pick drafts from its own words and is never
@@ -264,6 +311,21 @@ export function renderProfile(root, me) {
       runDraft(new TextDecoder().decode(buf));
     });
     readBtn.addEventListener("click", () => runDraft(paste.value));
+    if (tempName) {
+      const tbox = el("div", "resumeTemp");
+      tbox.append(el("p", null, tr("resume.temp")));
+      const rrm = el("button", "quietBtn", tr("resume.remove"));
+      rrm.type = "button";
+      rrm.addEventListener("click", async () => {
+        const uid = window.CARESITS_ME && window.CARESITS_ME.uid;
+        await removeResumeObject(uid, tempName);
+        write("resume-file", { name: "" });
+        tempName = "";
+        tbox.remove();
+      });
+      tbox.append(rrm);
+      rcard.append(tbox);
+    }
     rcard.append(rpick, rfile, paste, readBtn, out);
     root.append(rcard);
   }
