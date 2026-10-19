@@ -851,6 +851,7 @@ const { planSave } = await import("./account-save.js");
   t("b108 save drain: the realm warms at entry, the shell and journey drain the envelope", src("./account-save.js").includes("export function warmSave") && src("./account-save.js").includes("export async function drainOutbox") && src("./journey.js").includes("warmSave();") && src("./journey.js").includes("drainOutbox();") && src("./live.js").includes("m.drainOutbox()"));
   t("b108 token step: the save awaits a live token before its first Firestore step", src("./account-save.js").includes("user.getIdToken(true)"));
   t("b108 doc birth: the save births the member doc itself when it stands absent, ahead of the batch", src("./account-save.js").includes("if (!profSnap.exists())") && src("./account-save.js").includes("The save births"));
+  t("b110 wave: the door birth is transactional, the save birth stamps createdAt only, the drain guard reads existence and fires twice, Find's pool publishes from the warm boot", src("../accounts/account.js").includes("runTransaction") && src("../accounts/account.js").includes("cur.exists()") && src("./account-save.js").includes("{ createdAt: fsMod.serverTimestamp() }") && src("./live.js").includes("if (!qExists)") && src("./live.js").includes("setTimeout(drain, 4000)") && src("./live.js").includes("fetchFindData") && src("./find.js").includes("export async function fetchFindData") && src("./find.js").includes("window.CARESITS_FIND_RENDER"));
 }
 
 // ---- Leg 11: the level picker (welcome choice + computed boundary) ----
