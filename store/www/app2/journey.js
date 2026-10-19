@@ -7,6 +7,8 @@ import { FAMILY_PAGES, CARER_PAGES, DAYS, PARTS, BANDS, AGES } from "./questions
 import { t as tr, applyI18n } from "./lang.js";
 import { slugify } from "../next-phase/engine/engine.mjs";
 import { COUNTRY_NAMES, packByName } from "./countries.js";
+import { draftKey, doneKey } from "./storage-keys.js";
+import { levelOf, levelRank } from "./levels.js";
 // VALUE CODING at the bundle boundary: any string that IS one of
 // the questionnaire's answer words is stored as its stable slug,
 // so matching compares codes in every language. Prose (the write
@@ -30,9 +32,15 @@ const YEAR_PICKS = ["", "0", "1", "2", "3", "4", "5", "7", "10", "15", "20"];
 import { EXPANSION } from "./questions2.js";
 
 const $ = (s) => document.querySelector(s);
-const state = { side: null, page: 0, answers: {}, strengths: {}, resumeFeed: [], countryStep: null };
-const DRAFT_KEY = "caresits-app2-draft";
-const DONE_KEY = "caresits-app2-questionnaire";
+const state = { side: null, page: 0, answers: {}, strengths: {}, resumeFeed: [], countryStep: null, target: "quick", beyond: false };
+// F16: the draft lives under the key the shared helper resolves
+// for whoever is signed in on this device (see storage-keys.js).
+// The journey session works in ONE slot: the slot is resolved at
+// boot, corrected by the watcher below if the uid lands a beat
+// later, and frozen the moment the user interacts, so a draft
+// is never split across two accounts' slots.
+let activeDraftKey = draftKey();
+let interacted = false;
 
 // The §12 order: Country, then Role, then the form. The country
 // step stands before the side pages whenever no country is stored
@@ -54,12 +62,21 @@ const pages = () => {
   return list;
 };
 
+function writeDraft() {
+  try { localStorage.setItem(activeDraftKey, JSON.stringify({ side: state.side, page: state.page, answers: state.answers, strengths: state.strengths, resumeFeed: state.resumeFeed, countryStep: state.countryStep, target: state.target, beyond: state.beyond })); } catch { /* storage off */ }
+}
 function persistDraft() {
-  try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ side: state.side, page: state.page, answers: state.answers, strengths: state.strengths, resumeFeed: state.resumeFeed, countryStep: state.countryStep })); } catch { /* storage off */ }
+  interacted = true;
+  writeDraft();
+}
+function resetJourneyState() {
+  state.side = null; state.page = 0; state.answers = {}; state.strengths = {}; state.resumeFeed = []; state.countryStep = null; state.target = "quick"; state.beyond = false;
 }
 function loadDraft() {
   try {
-    const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
+    const d = JSON.parse(localStorage.getItem(activeDraftKey) || "null");
+    if (d?.target) state.target = d.target;
+    if (d?.beyond) state.beyond = true;
     if (d?.side) { state.side = d.side; state.page = d.page || 0; state.answers = d.answers || {}; state.strengths = d.strengths || {}; state.resumeFeed = d.resumeFeed || []; state.countryStep = d.countryStep === undefined ? null : d.countryStep; return true; }
   } catch { /* fresh start */ }
   return false;
@@ -201,14 +218,60 @@ function wire() {
       return;
     }
     $("#notice").textContent = "";
-    if (state.page < pages().length - 1) { state.page += 1; persistDraft(); render(); window.scrollTo(0, 0); }
-    else finish();
+    const advance = () => {
+      if (state.page < pages().length - 1) { state.page += 1; persistDraft(); render(); window.scrollTo(0, 0); }
+      else finish();
+    };
+    // The level boundary: the welcome picker set how far the
+    // member wants to go today. The level is COMPUTED from the
+    // answers (levels.js), never counted in pages: the first
+    // Next that reaches the picked level offers the stop, once.
+    if (!state.beyond && state.target !== "full" && state.target !== "explore") {
+      const lvl = levelOf(state.side, state.answers);
+      if (levelRank(lvl) >= levelRank(state.target)) { showStop(lvl, advance); return; }
+    }
+    advance();
   });
   $("#backBtn").addEventListener("click", () => { if (state.page > 0) { state.page -= 1; persistDraft(); render(); } });
   document.querySelectorAll("[data-side]").forEach((b) => b.addEventListener("click", () => {
     state.side = b.dataset.side; state.page = 0; persistDraft();
     $("#welcome").hidden = true; $("#journey").hidden = false; render();
   }));
+  // The welcome level picker: Explore leaves to browse the app;
+  // the other three set how far today's walk aims to go. The
+  // pick is a target only — the level itself is always computed
+  // from the answers, never claimed by the pick.
+  document.querySelectorAll("[data-level]").forEach((b) => b.addEventListener("click", () => {
+    const v = b.dataset.level;
+    if (v === "explore") {
+      // Explore is a deliberate signed out entry: it carries the
+      // session marker the shell's signed out gate exempts.
+      try { sessionStorage.setItem("caresits-demo", "1"); } catch { /* storage off */ }
+      location.href = "index.html";
+      return;
+    }
+    state.target = v;
+    document.querySelectorAll("[data-level]").forEach((x) => x.classList.toggle("on", x === b));
+    persistDraft();
+  }));
+  $("#stopBtn")?.addEventListener("click", () => { $("#stopPanel").hidden = true; finish(); });
+  $("#keepBtn")?.addEventListener("click", () => {
+    state.beyond = true; persistDraft();
+    $("#stopPanel").hidden = true; $("#journey").hidden = false;
+    if (pendingAdvance) { const go = pendingAdvance; pendingAdvance = null; go(); }
+  });
+}
+
+let pendingAdvance = null;
+function showStop(lvl, advance) {
+  pendingAdvance = advance;
+  $("#stopTitle").textContent = tr("level.at", undefined, { a: tr("level.n" + lvl[0].toUpperCase() + lvl.slice(1)) });
+  $("#journey").hidden = true;
+  $("#stopPanel").hidden = false;
+  window.scrollTo(0, 0);
+}
+function syncLevelPick() {
+  document.querySelectorAll("[data-level]").forEach((x) => x.classList.toggle("on", x.dataset.level === state.target));
 }
 
 function deepSets() {
@@ -291,10 +354,16 @@ export function buildBundle() {
 
 function finish() {
   const bundle = buildBundle();
-  try { localStorage.setItem(DONE_KEY, JSON.stringify(bundle)); localStorage.removeItem(DRAFT_KEY); } catch { /* storage off */ }
+  // The finished bundle lands under the finisher's own resolved
+  // key, and only this journey's own draft slot is retired
+  // (completion, never sign out, clears it: the bundle is the
+  // draft, kept whole, under the account's key).
+  try { localStorage.setItem(doneKey(), JSON.stringify(bundle)); localStorage.removeItem(activeDraftKey); } catch { /* storage off */ }
   if (typeof window.CARESITS_SAVE === "function") window.CARESITS_SAVE(bundle);
   $("#journey").hidden = true;
   $("#done").hidden = false;
+  const dl = $("#doneLevel");
+  if (dl) dl.textContent = tr("level." + levelOf(state.side, state.answers));
   $("#doneBunny").src = "bunny/bunny-celebrate.png";
   window.scrollTo(0, 0);
 }
@@ -310,14 +379,36 @@ function consumeResumeHandoff() {
     state.side = "carer";
     for (const [k, v] of Object.entries(h.answers || {})) if (state.answers[k] === undefined) state.answers[k] = v;
     state.resumeFeed = [...new Set([...(state.resumeFeed || []), ...(h.marks || [])])];
-    persistDraft();
+    writeDraft();
   } catch { /* no handoff */ }
 }
 
 export function bootJourney() {
   applyI18n();
   wire();
+  activeDraftKey = draftKey();
   loadDraft();
   consumeResumeHandoff();
+  syncLevelPick();
   if (state.side) { $("#welcome").hidden = true; $("#journey").hidden = false; render(); }
+  // The uid seam can land a beat after this frame boots (the
+  // shell's live bridge publishes it when its session resolves).
+  // Until the user interacts, a changed key reloads the journey
+  // from the newly resolved slot and only that slot: the
+  // previous account's draft is never carried across, and a
+  // plain draft is never adopted into an account's slot.
+  let ticks = 0;
+  const timer = setInterval(() => {
+    ticks += 1;
+    if (interacted || ticks > 40) { clearInterval(timer); return; }
+    const k = draftKey();
+    if (k === activeDraftKey) return;
+    activeDraftKey = k;
+    resetJourneyState();
+    loadDraft();
+    consumeResumeHandoff();
+    syncLevelPick();
+    if (state.side) { $("#welcome").hidden = true; $("#journey").hidden = false; render(); }
+    else { $("#welcome").hidden = false; $("#journey").hidden = true; }
+  }, 250);
 }
