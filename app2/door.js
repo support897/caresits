@@ -16,6 +16,22 @@ let accounts = null;
 // at the door first (HQ ruling on Leg 19), never silent.
 let joinHold = false;
 
+// A stalled module load must speak, never spin (fleet
+// census cure): the door's layer load races a bound, and
+// the expiry carries the timeout code the lines map on.
+function bounded(promise, ms) {
+  let timer;
+  const bound = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      const e = new Error("door layer timed out");
+      e.code = "auth/timeout";
+      reject(e);
+    }, ms);
+  });
+  return Promise.race([promise, bound]).finally(() => clearTimeout(timer));
+}
+const layerFast = () => bounded(layer(), 15000);
+
 async function layer() {
   if (accounts) return accounts;
   accounts = await import("../accounts/account.js");
@@ -47,7 +63,7 @@ $("#joinBtn").addEventListener("click", async () => {
   if (!pw) { msg(tr("door.needPw")); return; }
   joinHold = true;
   try {
-    const a = await layer();
+    const a = await layerFast();
     const cred = await a.signInEmail(email, pw, "");
     if (cred && cred.createdAccount) {
       msg(tr("door.madeAccount"));
@@ -62,8 +78,8 @@ $("#joinBtn").addEventListener("click", async () => {
     msg(tr(noNet ? "door.noNet" : "door.mismatch"));
   }
 });
-$("#googleBtn").addEventListener("click", async () => { try { const a = await layer(); await a.signInGoogle(); } catch { msg(tr("door.doorFail")); } });
-$("#appleBtn").addEventListener("click", async () => { try { const a = await layer(); await a.signInApple(); } catch { msg(tr("door.doorFail")); } });
+$("#googleBtn").addEventListener("click", async () => { try { const a = await layerFast(); await a.signInGoogle(); } catch { msg(tr("door.doorFail")); } });
+$("#appleBtn").addEventListener("click", async () => { try { const a = await layerFast(); await a.signInApple(); } catch { msg(tr("door.doorFail")); } });
 $("#forgotBtn").addEventListener("click", async () => {
   const email = $("#emailIn").value.trim();
   if (!email) { msg(tr("door.forgotNeed")); return; }
