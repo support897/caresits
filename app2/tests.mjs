@@ -653,15 +653,23 @@ const { planSave } = await import("./account-save.js");
   });
   await gp.waitForTimeout(150);
   t("gallery (F14): with four saved there is no Add left, a fifth is refused by the shape", await gp.evaluate(() => document.querySelectorAll("#profileRoot .galleryThumb").length === 4 && document.querySelectorAll("#profileRoot .galleryAdd").length === 0));
-  // S-2: a text resume drafts and never uploads; a PDF uploads once and is never drafted from.
+  // S-2 (device-only resume model, Ilse 19 Oct 2026): a resume
+  // pick NEVER uploads, in any format; the words are read on
+  // this device and drafted from. A stub PDF yields no words,
+  // so the honest unread line stands. (This leg asserted the
+  // retired temp-upload until the device-only batch; the
+  // Chromium outage hid the stale copy, found on the shell
+  // route re-run, 19 Oct 2026.)
   await gp.evaluate(() => { window.__uploads = []; });
   await pickFile("#profileRoot .cardIn:last-of-type input[type=file]", "cv.txt", "text/plain", "Jane Carer, nanny in Sydney");
   await gp.waitForTimeout(400);
   t("resume (S-2): a text pick uploads nothing", await gp.evaluate(() => window.__uploads.length === 0));
   t("resume (S-2): a text pick is drafted from, never called unread", await gp.evaluate(() => !document.getElementById("profileRoot").textContent.includes("We could not read that file")));
   await pickFile("#profileRoot .cardIn:last-of-type input[type=file]", "cv.pdf", "application/pdf", "%PDF-1.4 stub");
-  await gp.waitForTimeout(400);
-  t("resume (S-2): a PDF pick uploads exactly once, to the resume path", await gp.evaluate(() => window.__uploads.length === 1 && window.__uploads[0].startsWith("resumes/u1/")));
+  // Extraction lazy-loads the PDF reader on the device; poll
+  // for its honest answer instead of racing a fixed wait.
+  await gp.waitForFunction(() => document.getElementById("profileRoot").textContent.includes("We could not read that file"), null, { timeout: 15000 }).catch(() => {});
+  t("resume (S-2): a PDF pick uploads nothing, ever (device only)", await gp.evaluate(() => window.__uploads.length === 0));
   t("resume (S-2): a PDF pick keeps the honest unread line", await gp.evaluate(() => document.getElementById("profileRoot").textContent.includes("We could not read that file")));
   t("gallery (F14): no page errors", gerrs.length === 0);
   await gp.close();
