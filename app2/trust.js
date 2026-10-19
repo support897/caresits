@@ -400,14 +400,20 @@ export function renderSettings(root) {
       // never leaves the device (QA b108: the pick rendered
       // in-session while meta/app never changed, where the
       // background pick from this same surface, which never
-      // reloads, landed). Settle the write first, bounded —
-      // a hung write must not hang the pick either.
+      // reloads, landed). The reload waits for the write's
+      // ACTUAL settle; the timer below is a hang guard ONLY,
+      // and it must stand far above the write's healthy
+      // settle range — QA measured ~2.7 s for this write on
+      // the packaged path (b111), so the earlier 1.5 s guard
+      // sat inside that range and the reload strangled the
+      // dispatch it was meant to protect. Never tighten it
+      // back into the range.
       const w = write("language", { code });
       setLang(code);
       let gone = false;
       const go = () => { if (!gone) { gone = true; location.reload(); } };
       Promise.resolve(w).then(go, go);
-      setTimeout(go, 1500);
+      setTimeout(go, 10000);
     });
     langRow.append(b);
   }
