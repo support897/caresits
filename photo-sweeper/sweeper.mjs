@@ -81,7 +81,15 @@ export function planSweep(accounts, nowMs) {
     }
     out.push({
       uid: a.uid,
-      deletePaths: PHOTO_OBJECTS.map((name) => `profile-photos/${a.uid}/${name}`),
+      // TWO PHASE DELETE (Security's final shape ruling,
+      // 19 Oct 2026): at 90 days the objects MOVE to the
+      // quarantine prefix and the slot clears in the same
+      // pass (the user's deletion is whole at 90); the
+      // daily purge hard deletes quarantine at +7 days.
+      movePaths: PHOTO_OBJECTS.map((name) => ({
+        from: `profile-photos/${a.uid}/${name}`,
+        to: `quarantine/profile-photos/${a.uid}/${name}`,
+      })),
       clearPhotoSlot: true,
     });
   }
@@ -149,26 +157,59 @@ export async function runWarn(deps, nowMs) {
 
 // runSweep(deps, nowMs): deps = {
 //   listAccounts(): Promise<account facts>,           admin plane read
-//   deleteObject(path): Promise<void>,                storage admin delete
+//   moveToQuarantine(from, to): Promise<void>,        copy + delete under the sweeper token
 //   clearPhotoSlot(uid, clearedAtMs): Promise<void>,  clears photoUrl + the card gallery + stamps photoClearedAt
 // }
-// Order per account is the safety property: the objects go
-// FIRST, the slots clear SECOND, in the same pass, so no
-// surface ever renders a broken image and no cleared slot
-// ever orphans a live object. A failed delete leaves the
-// slots untouched, lands loudly in the summary, and the pass
-// continues with the next account.
+// Order per account is the safety property: the objects
+// MOVE FIRST, the slots clear SECOND, in the same pass, so
+// no surface ever renders a broken image and no cleared
+// slot ever orphans a live object. A failed move leaves the
+// slots untouched, lands loudly in the summary, and the
+// pass continues with the next account.
 export async function runSweep(deps, nowMs) {
   const accounts = await deps.listAccounts();
   const plan = planSweep(accounts, nowMs);
   const summary = { planned: plan.length, swept: [], failed: [] };
   for (const step of plan) {
     try {
-      for (const p of step.deletePaths) await deps.deleteObject(p);
+      for (const m of step.movePaths) await deps.moveToQuarantine(m.from, m.to);
       await deps.clearPhotoSlot(step.uid, nowMs);
       summary.swept.push(step.uid);
     } catch (e) {
       summary.failed.push({ uid: step.uid, reason: String((e && (e.code || e.message)) || e) });
+    }
+  }
+  return summary;
+}
+
+// THE QUARANTINE PURGE (phase two of the sweep): entries
+// rest in quarantine for QUARANTINE_MS (7 days, the
+// machinery accident grace; rescue inside the week is
+// OPERATOR ONLY, there is no app path back), then the
+// daily run hard purges them. planPurge(entries, nowMs):
+// entries { key, sinceMs } (sinceMs = when the object
+// landed in quarantine, from the bucket listing's own
+// timestamps) -> the keys to hard purge.
+export const QUARANTINE_MS = 7 * DAY_MS;
+export function planPurge(entries, nowMs) {
+  if (!Array.isArray(entries) || typeof nowMs !== "number" || !Number.isFinite(nowMs)) return [];
+  return entries
+    .filter((e) => e && typeof e.key === "string" && e.key.startsWith("quarantine/")
+      && typeof e.sinceMs === "number" && Number.isFinite(e.sinceMs)
+      && nowMs - e.sinceMs >= QUARANTINE_MS)
+    .map((e) => e.key);
+}
+
+export async function runPurge(deps, nowMs) {
+  const entries = await deps.listQuarantine();
+  const keys = planPurge(entries, nowMs);
+  const summary = { planned: keys.length, purged: [], failed: [] };
+  for (const key of keys) {
+    try {
+      await deps.hardDelete(key);
+      summary.purged.push(key);
+    } catch (e) {
+      summary.failed.push({ key, reason: String((e && (e.code || e.message)) || e) });
     }
   }
   return summary;
