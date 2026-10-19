@@ -21,6 +21,10 @@ const myName = () => localStorage.getItem(LS_NAME) || "";
 function setName(v) {
   localStorage.setItem(LS_NAME, v);
   if (typeof window.CARESITS_WRITE === "function") window.CARESITS_WRITE("name", { displayName: v });
+  // The name lands in this session too: the live layer refreshes
+  // the profile seam, and Home re-renders with the name in it.
+  if (typeof window.CARESITS_NAME_SAVED === "function") window.CARESITS_NAME_SAVED(v);
+  if (typeof window.CARESITS_RENDER_HOME === "function") window.CARESITS_RENDER_HOME();
 }
 
 const STEPS = [
