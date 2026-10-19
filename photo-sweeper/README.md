@@ -47,11 +47,22 @@ in scope (the object list names profile-photos only): the
 family's memories of their child keep forever, deletion
 the family's alone, bin first.
 
-## Not built (Ilse's pick, asked 19 Oct)
+## The refinements (settled by Ilse's tap, 19 Oct 17:47)
 
-A warning email about 7 days before a sweep, and the
-swept profile dropping out of family search until the
-carer returns with a fresh photo. Both wire into this
-core on her word: the warning is a planner pass at 83
-days plus the wave's mail route; the search drop reads
-the photoClearedAt stamp this sweeper already writes.
+Both are built into the core. The warning: planWarn picks
+the carers inside the window (stamp 83 or more days old,
+not yet 90, not already warned in this inactivity window),
+and runWarn sends first and marks second, so a warning
+that never sent is retried, never believed. Its words are
+hers (WARN_COPY: open the app to keep your photo). The
+one piece that lands with the wave is the mail TRANSPORT
+itself: no mail route exists for this app yet, so
+sendWarning stays an injected dependency until the wave
+wires it.
+
+The search drop: the sweep stamps photoClearedAt on the
+profile doc as it clears the slot; Browse excludes a
+stamped carer from family search entirely (entries and
+the nearly list alike), and the photo write clears the
+stamp the moment a fresh photo lands, so a returning
+carer is back in search in the same action.
