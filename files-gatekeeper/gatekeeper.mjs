@@ -27,11 +27,14 @@ import crypto from "node:crypto";
 // a key. Shapes:
 //   profile photos  <uid>/profile-photos/photo.jpg | extra-<1..4>.jpg
 //   certificates    <uid>/certificates/<sanitised name>.pdf
-//   day story       pairs/<pairId>/<sanitised name>.jpg   (A5)
-// Versioning is ON at the bucket (Security's governing
-// call, 19 Oct 2026): user deletes leave delete markers
-// the bin window restores from; ruled deletes remove ALL
-// versions. There are no trash keys.
+//   day story       pairs/<pairId>/day-story/<name>.jpg  (A5)
+//   trash (bin)     trash/<uid>/<original key>
+//   quarantine      quarantine/<original key> (the sweep's
+//                   7 day grace; planned by the sweeper)
+// R2 keeps NO versions (Cloudflare's S3 table: bucket
+// versioning NOT IMPLEMENTED; Security's correction,
+// 19 Oct 2026). Recovery rides the trash + quarantine
+// shapes in the design's final shape section.
 
 export const CLASSES = {
   "profile-photos": { maxBytes: 5 * 1024 * 1024, magic: "jpeg", ext: ".jpg" },
@@ -67,6 +70,12 @@ export function planPairKey({ pairId, name } = {}) {
   const safe = safeName(name);
   if (!safe || !safe.toLowerCase().endsWith(".jpg")) return null;
   return `pairs/${pairId}/day-story/${safe}`;
+}
+
+export function planTrashKey({ uid, key } = {}) {
+  if (!UID_RE.test(uid || "") || typeof key !== "string" || !key) return null;
+  if (key.startsWith("trash/") || key.includes("..")) return null;
+  return `trash/${uid}/${key}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -215,6 +224,49 @@ export function presign({ method, accountId, bucket, key, expiresSec, accessKeyI
   const kSigning = hmac(kService, "aws4_request");
   const signature = crypto.createHmac("sha256", kSigning).update(stringToSign).digest("hex");
   return `https://${host}/${bucket}/${encodedKey}?${qs}&X-Amz-Signature=${signature}`;
+}
+
+// PUT IS ISSUED HEADER SIGNED (Security's strengthening,
+// 19 Oct 2026): no query presign for PUT. The gatekeeper
+// returns the object URL plus the signed headers; the
+// client sends them verbatim and R2 itself refuses a
+// length or type mismatch at upload. presignPutRequest()
+// -> { url, headers } | null. The signature binds the
+// bucket, the exact key, the verb, Content Length and
+// Content Type; freshness rides x-amz-date, and confirm
+// refuses a completion whose issuance aged past the
+// window (the ledger check in server.mjs).
+export function presignPutRequest({ accountId, bucket, key, contentLength, contentType, accessKeyId, secretAccessKey, nowMs } = {}) {
+  if (!accountId || !bucket || !key || !accessKeyId || !secretAccessKey) return null;
+  if (typeof contentLength !== "number" || contentLength < 0 || !contentType) return null;
+  const now = new Date(typeof nowMs === "number" ? nowMs : Date.now());
+  const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "").slice(0, 15) + "Z";
+  const dateStamp = amzDate.slice(0, 8);
+  const region = "auto";
+  const service = "s3";
+  const host = `${accountId}.r2.cloudflarestorage.com`;
+  const scope = `${dateStamp}/${region}/${service}/aws4_request`;
+  const encodedKey = key.split("/").map(encodeURIComponent).join("/");
+  const signedHeaders = ["content-length", "content-type", "host"];
+  const headerValues = { "content-length": String(contentLength), "content-type": contentType, host };
+  const canonicalHeaders = signedHeaders.map((h) => `${h}:${headerValues[h]}\n`).join("");
+  const canonicalRequest = ["PUT", `/${bucket}/${encodedKey}`, "", canonicalHeaders, signedHeaders.join(";"), "UNSIGNED-PAYLOAD"].join("\n");
+  const stringToSign = ["AWS4-HMAC-SHA256", amzDate, scope, sha256hex(canonicalRequest)].join("\n");
+  const kDate = hmac(`AWS4${secretAccessKey}`, dateStamp);
+  const kRegion = hmac(kDate, region);
+  const kService = hmac(kRegion, service);
+  const kSigning = hmac(kService, "aws4_request");
+  const signature = crypto.createHmac("sha256", kSigning).update(stringToSign).digest("hex");
+  return {
+    url: `https://${host}/${bucket}/${encodedKey}`,
+    headers: {
+      Authorization: `AWS4-HMAC-SHA256 Credential=${accessKeyId}/${scope}, SignedHeaders=${signedHeaders.join(";")}, Signature=${signature}`,
+      "x-amz-date": amzDate,
+      "x-amz-content-sha256": "UNSIGNED-PAYLOAD",
+      "Content-Length": String(contentLength),
+      "Content-Type": contentType,
+    },
+  };
 }
 
 // TTLs as ruled (Q4 as restated by A2).
