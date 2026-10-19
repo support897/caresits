@@ -58,7 +58,7 @@ export function tasteDayKey(date) {
 
 // ---------- Browser shell (dormant until the config lands) ----------
 
-const SDK = "https://www.gstatic.com/firebasejs/10.12.2";
+const SDK = "./sdk";
 let _auth = null;
 let _db = null;
 let _user = null;
@@ -105,8 +105,13 @@ async function ensureProfile(fsMod, u) {
     const batch = writeBatch(_db);
     batch.set(ref, profile);
     batch.set(
-      doc(_db, "_owner", "aggregates", "people", "main"),
-      { total: increment(1), weekly: { [isoWeekKey(new Date())]: increment(1) } },
+      doc(_db, "_owner", "aggregates", "peopleTotal", "main"),
+      { total: increment(1) },
+      { merge: true }
+    );
+    batch.set(
+      doc(_db, "_owner", "aggregates", "peopleWeekly", isoWeekKey(new Date())),
+      { count: increment(1) },
       { merge: true }
     );
     await batch.commit();
@@ -126,14 +131,53 @@ export function isoWeekKey(date) {
 
 // ---------- The three doors ----------
 
+// Native shell: inside the packaged app the social doors run
+// through the Capacitor Firebase Authentication plugin (the
+// native Google and Apple sheets), and the plugin's credential
+// is handed to this same JS SDK session with
+// signInWithCredential, so the profile machinery above never
+// learns which road was taken. cap sync registers the plugin
+// on the native side; the web layer reaches it through the
+// bridge at window.Capacitor.Plugins.FirebaseAuthentication.
+// The plugin's own JS entry does registerPlugin under that
+// same name, but importing it would need a bundler and this
+// app has none, so the guarded bridge access is the road.
+// On the web there is no native bridge and the popup stands.
+function nativeAuthPlugin() {
+  if (typeof window === "undefined") return null;
+  const cap = window.Capacitor;
+  if (!cap || typeof cap.isNativePlatform !== "function" || !cap.isNativePlatform()) return null;
+  const plugin = cap.Plugins && cap.Plugins.FirebaseAuthentication;
+  if (!plugin || typeof plugin.signInWithGoogle !== "function" || typeof plugin.signInWithApple !== "function") return null;
+  return plugin;
+}
+
 export async function signInGoogle() {
   const m = await import(`${SDK}/firebase-auth.js`);
+  const plugin = nativeAuthPlugin();
+  if (plugin) {
+    const result = await plugin.signInWithGoogle();
+    const credential = result && result.credential;
+    if (!credential || !credential.idToken) throw new Error("native sign in returned no credential");
+    return m.signInWithCredential(_auth, m.GoogleAuthProvider.credential(credential.idToken));
+  }
   return m.signInWithPopup(_auth, new m.GoogleAuthProvider());
 }
 
 export async function signInApple() {
   const m = await import(`${SDK}/firebase-auth.js`);
   const provider = new m.OAuthProvider("apple.com");
+  const plugin = nativeAuthPlugin();
+  if (plugin) {
+    const result = await plugin.signInWithApple();
+    const credential = result && result.credential;
+    if (!credential || !credential.idToken) throw new Error("native sign in returned no credential");
+    // The plugin's nonce is the raw nonce Apple signed into
+    // the id token: it rides verbatim as rawNonce below,
+    // never hashed a second time (the plugin presented the
+    // hashed nonce to Apple when it opened the sheet).
+    return m.signInWithCredential(_auth, provider.credential({ idToken: credential.idToken, rawNonce: credential.nonce }));
+  }
   return m.signInWithPopup(_auth, provider);
 }
 
@@ -150,6 +194,10 @@ export async function signInEmail(email, password, name) {
         _pendingName = name || "";
         const cred = await m.createUserWithEmailAndPassword(_auth, email, password);
         if (name) { try { await m.updateProfile(cred.user, { displayName: name }); } catch { /* name rides the profile doc */ } }
+        // A creation at sign in is never silent (HQ ruling on the
+        // remainder round's Leg 19): the credential carries the
+        // mark, so every door announces the creation out loud.
+        cred.createdAccount = true;
         return cred;
       } catch {
         throw e;
@@ -218,6 +266,13 @@ export async function deleteMyAccount() {
   // hygiene under the Never Delete distinction.
   const devSnap = await getDocs(collection(_db, "profiles", _user.uid, "devices"));
   devSnap.forEach((d) => batch.delete(d.ref));
+  // Connect link invites live at the top level, keyed by the
+  // family who made them (Security's zero orphans fence): the
+  // walk enumerates the caller's own invites by familyUid and
+  // removes them, so no live code outlives its maker's account.
+  const { query, where } = fsMod;
+  const invSnap = await getDocs(query(collection(_db, "invites"), where("familyUid", "==", _user.uid)));
+  invSnap.forEach((d) => batch.delete(d.ref));
   batch.delete(doc(_db, "users", _user.uid, "meta", "app"));
   batch.delete(doc(_db, "users", _user.uid));
   await batch.commit();
