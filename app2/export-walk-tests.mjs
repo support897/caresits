@@ -27,7 +27,7 @@ await page.addInitScript(() => {
   // The shell's signed out gate (Leg 19 FAIL 1 ruling): this
   // walk enters as an explorer; its signed in seams ride below.
   try { sessionStorage.setItem("caresits-demo", "1"); } catch { /* storage off */ }
-  window.CARESITS_ME = { uid: "f1", side: "family", name: "Sam" };
+  window.CARESITS_ME = { uid: "f1", side: "family", name: "Sam", plusExtras: true };
   window.CARESITS_TRUST = { docs: [], reviews: [], me: { name: "Sam", side: "family", postcode: "2021" } };
   window.CARESITS_FAMILY = {
     children: [{ id: "k1", name: "Mila", theme: "fairies" }],
@@ -107,7 +107,7 @@ const newPage = async (seed) => {
 // (b) boot shaped state plus a later add: both must be present.
 {
   const bp = await newPage(() => {
-    window.CARESITS_ME = { uid: "f1", side: "family", name: "Sam" };
+    window.CARESITS_ME = { uid: "f1", side: "family", name: "Sam", plusExtras: true };
     window.CARESITS_TRUST = { docs: [], reviews: [], me: { name: "Sam", side: "family", postcode: "2021" } };
     window.CARESITS_FAMILY = {
       children: [{ id: "k1", name: "Mila", theme: "fairies" }],
@@ -135,7 +135,7 @@ const newPage = async (seed) => {
 // are the user's answers and belong in their file.
 {
   const cp = await newPage(() => {
-    window.CARESITS_ME = { uid: "f1", side: "family", name: "Sam" };
+    window.CARESITS_ME = { uid: "f1", side: "family", name: "Sam", plusExtras: true };
     window.CARESITS_TRUST = { docs: [], reviews: [], me: { name: "Sam", side: "family", postcode: "2021" } };
     localStorage.setItem("caresits-app2-draft", JSON.stringify({ side: "family", page: 19, answers: { postcode: "2021", childrenBands: ["1-3"] }, strengths: {} }));
   });
@@ -147,7 +147,7 @@ const newPage = async (seed) => {
 // (d) precedence: a finished bundle beats the draft.
 {
   const pp = await newPage(() => {
-    window.CARESITS_ME = { uid: "f1", side: "family", name: "Sam" };
+    window.CARESITS_ME = { uid: "f1", side: "family", name: "Sam", plusExtras: true };
     window.CARESITS_TRUST = { docs: [], reviews: [], me: { name: "Sam", side: "family", postcode: "2021" } };
     localStorage.setItem("caresits-app2-questionnaire", JSON.stringify({ side: "family", answers: { postcode: "2021" }, strengths: {}, card: {} }));
     localStorage.setItem("caresits-app2-draft", JSON.stringify({ side: "family", page: 19, answers: { postcode: "9999" }, strengths: {} }));
@@ -168,7 +168,7 @@ const newPage = async (seed) => {
 // 16 -> 19 legs.
 {
   const rp = await newPage(() => {
-    window.CARESITS_ME = { uid: "f1", side: "family", name: "Sam" };
+    window.CARESITS_ME = { uid: "f1", side: "family", name: "Sam", plusExtras: true };
     window.CARESITS_TRUST = { docs: [], reviews: [], me: { name: "Sam", side: "family", postcode: "2021" } };
     window.CARESITS_FAMILY = {
       children: [{ id: "k9", name: "Rosa", theme: "ocean" }],
