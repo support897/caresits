@@ -8,6 +8,7 @@
 // stand. Test and live hooks may set CARESITS_FIND_DATA.
 import { assembleBrowse, pinLayout, kmBetween } from "./browse.js";
 import { t as tr } from "./lang.js";
+import { frameUser } from "./account-save.js";
 const labelText = (s) => tr({ "Perfect Pair": "find.label.perfect", "Strong Fit": "find.label.strong", "Good Fit": "find.label.good" }[s] || "find.label.good");
 const qualText = (s) => (s === "Quick profile, rough match" ? tr("find.qualifier") : s);
 const reasonText = (result, r, i) => { const code = result.reasonCodes?.[i]; return code ? tr("reason." + code) : r; };
@@ -219,7 +220,10 @@ async function bootFind() {
     // The DEFAULT app only, shared with the door: a named app carries
     // its own auth session and would never see the signed-in user (R1).
     const app = appMod.getApps().find((a) => a.name === "[DEFAULT]") || appMod.initializeApp(cfgMod.firebaseConfig);
-    const user = authMod.getAuth(app).currentUser;
+    // The same frame rule as the journey save (QA b104 ROOT A):
+    // judge the user after the session restore settles, never
+    // on a synchronous read in a still-restoring frame.
+    const user = await frameUser(authMod.getAuth(app));
     if (!user || user.isAnonymous) { renderFind(root, null, []); return; }
     const db = fsMod.getFirestore(app);
     const mine = await fsMod.getDoc(fsMod.doc(db, "profiles", user.uid));
