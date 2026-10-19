@@ -18,6 +18,7 @@ const text = await extractPdfText(bytes);
 
 await ta("the fixture's own words come out, line for line", async () => {
   for (const line of ["Maria Santos", "Nanny and babysitter", "0412 555 018", "maria.santos@example.com",
+    "Home 12 Crown Street, Surry Hills 2031",
     "Languages Spanish and English", "Experience 6 years with babies and toddlers",
     "First Aid certificate current", "Working With Children Check"]) {
     assert.ok(text.includes(line), `missing: ${line}`);
@@ -25,6 +26,7 @@ await ta("the fixture's own words come out, line for line", async () => {
 });
 await ta("the extractor invents nothing: every output line is a fixture line", async () => {
   const fixture = ["Maria Santos", "Nanny and babysitter", "Mobile 0412 555 018", "Email maria.santos@example.com",
+    "Home 12 Crown Street, Surry Hills 2031",
     "Languages Spanish and English", "Experience 6 years with babies and toddlers",
     "First Aid certificate current", "Working With Children Check"];
   for (const line of text.split("\n")) assert.ok(fixture.includes(line.trim()), `unexpected line: ${line}`);
@@ -46,6 +48,12 @@ await ta("the draft from the PDF words grounds only in them", async () => {
     }
   }
 });
+await ta("the postcode is the genuine one: the phone's head never lands as postcode", async () => {
+  const d = draftFromText(text, { languages: ["English", "Spanish"], nationalities: [] });
+  assert.equal(d.answers.postcode, "2031");
+  assert.equal(d.spans.postcode, "2031");
+});
+
 await ta("nothing about driving appears: the fixture never claims it", async () => {
   const d = draftFromText(text, { languages: ["English", "Spanish"], nationalities: [] });
   const all = JSON.stringify(d).toLowerCase();
