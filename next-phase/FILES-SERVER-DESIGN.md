@@ -182,21 +182,32 @@ which drops EXIF in the re-encode; the battery's
 served-bytes leg (read the served object, find no EXIF
 markers) stands unchanged as the proof.
 
-## The versioning decision (A1, named by this desk)
+## Versioning (A1, RULED by Security's governing call)
 
-Durability is the provider's (Cloudflare R2). The
-versioning decision, named as the addendum requires:
-NO object versioning. In its place, the app's own
-30 day Recently Deleted shape carries the restore
-window: a user delete that the app bins (profile
-photos, Day Story) MOVES the object under
-trash/<owner-uid>/<original key> with its original
-key, and restore moves it back; the daily job purges
-trash aged 30 days or more by hard delete. Lifecycle
-sweeps and account deletion hard delete at once (a
-swept photo is meant to be gone; a deleted account
-leaves nothing). This is the desk's named decision
-under A1, standing in the build for the read's eye.
+Durability is the provider's (Cloudflare R2).
+VERSIONING IS ON for the bucket (Security's governing
+call, 19 Oct 2026, superseding this desk's earlier
+named no-versioning decision in full). The shape:
+
+- A user delete that the app bins (profile photos,
+  Day Story) is a plain delete: it leaves a DELETE
+  MARKER, and the app's 30 day Recently Deleted window
+  restores by removing the marker (the version reads
+  back byte equal). Versioning guards ACCIDENTS between
+  ruled events; it never softens a ruled delete.
+- RULED DELETES ARE PERMANENT: a user's confirmed
+  permanent delete (including the bin's 30 day purge),
+  an account deletion's deletes, and the lifecycle
+  sweeper's deletes remove ALL VERSIONS of the object,
+  proven by a version list read showing zero.
+- Two synthetic proofs replace the restore drill and
+  BLOCK real photos until green: (a) accident recovery:
+  a delete-marker object restored from its version and
+  read back byte equal · (b) ruled-delete permanence:
+  after a ruled delete the version list reads zero.
+- The trash/ prefix shape this desk first named is
+  retired; no trash keys exist in the design or the
+  gatekeeper core.
 
 ## Token verification and the revocation posture
 
@@ -307,8 +318,10 @@ refuses 404 · a GET link issued BEFORE the delete also
 refuses · the server side inventory (the scoped
 token's list, a proof plane tool only, never an
 endpoint) shows the key gone · replace leaves exactly
-one object · trash move and restore round trip, and
-the 30 day purge shape, on synthetic objects. BACKUP
+one object · THE TWO VERSIONING PROOFS (blocking):
+a delete-marker object restored from its version and
+read back byte equal · a ruled delete leaving a
+version list of zero. BACKUP
 + RESTORE: durability is the provider's (R2, A1); the
 restore drill is this battery run end to end on the
 real bucket with synthetic users before any real
