@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { binIdFor, planBinMove, planRestore, planBinDelete, purgeList, daysLeft, binJoin } from "./bin.js";
+import { binIdFor, planBinMove, planRestore, planBinDelete, purgeList, daysLeft, binJoin, binLeave } from "./bin.js";
 let n = 0; const t = (name, fn) => { fn(); n += 1; console.log("ok -", name); };
 const now = "2026-10-15T00:00:00.000Z";
 t("binIdFor: same record twice gives the same id", () => { const rec = { name: "Mia", theme: "space" }; assert.equal(binIdFor("child", rec), binIdFor("child", { name: "Mia", theme: "space" })); assert.ok(binIdFor("child", rec).startsWith("child-")); });
@@ -25,6 +25,7 @@ t("daysLeft: fresh is 30", () => { assert.equal(daysLeft({ deletedAt: now }, now
 t("daysLeft: 10 days old is 20", () => { assert.equal(daysLeft({ deletedAt: "2026-10-05T00:00:00.000Z" }, now), 20); });
 t("daysLeft: 40 days old is 0", () => { assert.equal(daysLeft({ deletedAt: "2026-09-05T00:00:00.000Z" }, now), 0); });
 t("binJoin (b104 Leg 7): a same-session record joins the live list", () => { assert.deepEqual(binJoin([], { id: "child-1", kind: "child" }).map((x) => x.id), ["child-1"]); });
+t("binLeave (b107 Leg 7 residual): a restored or forever-deleted item leaves the live list", () => { const list = [{ id: "a" }, { id: "b" }]; assert.deepEqual(binLeave(list, "a").map((x) => x.id), ["b"]); assert.deepEqual(binLeave(list, "missing").map((x) => x.id), ["a", "b"]); assert.deepEqual(binLeave(null, "a"), []); });
 t("binJoin (b104 Leg 7): the same record never joins twice, and a non-list is a floor of none", () => { const once = binJoin([], { id: "child-1" }); assert.equal(binJoin(once, { id: "child-1" }).length, 1); assert.deepEqual(binJoin(null, { id: "x" }).map((x) => x.id), ["x"]); assert.deepEqual(binJoin([], null), []); });
 
 console.log(`\nALL ${n} bin checks passed`);
