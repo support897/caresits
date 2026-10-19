@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { routeWrite, trustSeamFrom, publishTrust, refreshTrustName, writeDataFor, makeWriter, phaseCNameTargets, phaseCSeam, fetchPhaseC, activityStampPath, weekSeamFrom, threadSeamFrom } from "./live.js";
-import { frameUser, FRAME_WAIT, planSave } from "./account-save.js";
+import { frameUser, FRAME_WAIT, planSave, publishSavedProfile } from "./account-save.js";
 let n = 0; const t = (name, fn) => { fn(); n += 1; console.log("ok -", name); };
 const ta = async (name, fn) => { await fn(); n += 1; console.log("ok -", name); };
 t("router: signed out refuses everything", () => { assert.equal(routeWrite("job", { data: {} }, "").ok, false); });
@@ -402,6 +402,20 @@ t("plan save (b107 FAIL 2): the save stamps the side onto the user doc; a carer'
   assert.deepEqual(fam.profileSide, { path: "users/u1", data: { side: "family" } });
   const car = planSave({ side: "carer", answers: {}, card: { displayName: "Ana" } }, { uid: "u2", nowIso: "2026-10-20T00:00:00.000Z" });
   assert.deepEqual(car.profileSide, { path: "users/u2", data: { side: "carer", displayName: "Ana" } });
+});
+t("language ride (b107 note): the pick writes the account's app doc beside the background", () => {
+  const w = routeWrite("language", { code: "es" }, "u1");
+  assert.equal(w.ok, true); assert.equal(w.op, "merge");
+  assert.equal(w.path, "users/u1/meta/app"); assert.deepEqual(w.data, { language: "es" });
+});
+t("profile completeness (b107 Legs 9+10, same-session half): a landed save raises the flag in its own session", () => {
+  globalThis.window = { CARESITS_ME: { uid: "u1", side: "", name: "" }, CARESITS_TRUST: { docs: [], reviews: [], me: {} } };
+  const bundle = { side: "family", answers: { country: "Australia" }, card: {} };
+  const plan = planSave(bundle, { uid: "u1", nowIso: "2026-10-20T00:00:00.000Z" });
+  publishSavedProfile(bundle, plan, "u1");
+  assert.equal(globalThis.window.CARESITS_PROFILE_COMPLETE, true);
+  assert.equal(globalThis.window.CARESITS_ME.side, "family");
+  delete globalThis.window;
 });
 t("profile completeness (b107 Legs 9+10): judged from the seam's saved facts at publish", () => {
   globalThis.window = {};
