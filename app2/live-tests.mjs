@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
-import { routeWrite, trustSeamFrom, publishTrust, refreshTrustName, writeDataFor, makeWriter, phaseCNameTargets, phaseCSeam, fetchPhaseC, activityStampPath } from "./live.js";
+import { routeWrite, trustSeamFrom, publishTrust, refreshTrustName, writeDataFor, makeWriter, phaseCNameTargets, phaseCSeam, fetchPhaseC, activityStampPath, weekSeamFrom, threadSeamFrom } from "./live.js";
+import { frameUser, FRAME_WAIT } from "./account-save.js";
 let n = 0; const t = (name, fn) => { fn(); n += 1; console.log("ok -", name); };
 const ta = async (name, fn) => { await fn(); n += 1; console.log("ok -", name); };
 t("router: signed out refuses everything", () => { assert.equal(routeWrite("job", { data: {} }, "").ok, false); });
 t("router: contact sets the relationship at the planner path", () => { const r = routeWrite("contact", { path: "relationships/a_b", data: { state: "pending" } }, "a"); assert.equal(r.op, "set"); assert.equal(r.path, "relationships/a_b"); });
 t("router: a report pairs its counts", () => { const r = routeWrite("report", { data: { state: "open" }, counter: { delta: { filed: 1, open: 1 } } }, "a"); assert.equal(r.op, "reportPair"); });
 t("router: a block lands in the filer's own space", () => { const r = routeWrite("block", { path: "users/a/blocks/b", data: {} }, "a"); assert.equal(r.path, "users/a/blocks/b"); });
-t("router: children and story ride the owner's own folders", () => { assert.equal(routeWrite("child-add", { name: "Leo", theme: "space" }, "a").path, "users/a/children"); assert.equal(routeWrite("dayStory", { day: "2026-10-15", tile: "Meal", note: "", at: "x" }, "a").path, "users/a/dayStory"); });
+t("router: children and story ride the owner's own folders, under their own ids (b104 id unity)", () => { const kid = routeWrite("child-add", { id: "local-7", name: "Leo", theme: "space" }, "a"); assert.equal(kid.op, "set"); assert.equal(kid.path, "users/a/children/local-7"); const e = routeWrite("dayStory", { id: "local-9", day: "2026-10-15", tile: "Meal", note: "", at: "x" }, "a"); assert.equal(e.op, "set"); assert.equal(e.path, "users/a/dayStory/local-9"); assert.ok(!("id" in e.data)); });
 t("router: a message is the sender's own copy", () => { assert.equal(routeWrite("message", { pairId: "p", text: "hi", at: "x" }, "a").path, "users/a/messages"); });
 t("router: calendar kinds map to their delta homes", () => { assert.equal(routeWrite("request-decide", { pairId: "p", reqId: "R1", patch: {} }, "a").path, "schedule/p/requests/R1"); assert.equal(routeWrite("block-land", { path: "schedule/p/blocks", data: {} }, "a").op, "add"); });
 t("router: unknown kinds are refused", () => { assert.equal(routeWrite("teleport", {}, "a").ok, false); });
@@ -17,7 +18,8 @@ t("router: the two homes kinds land on their ruled shapes", () => {
   assert.equal(acc.op, "inviteAccept"); assert.equal(acc.relPath, "relationships/a_b"); assert.deepEqual(acc.stamp, { usedBy: "b" });
   const shop = routeWrite("shopping", { path: "relationships/a_b/lists/shoppingList", data: { items: [], updatedAt: "x", updatedBy: "a" } }, "a");
   assert.equal(shop.op, "set"); assert.equal(shop.path, "relationships/a_b/lists/shoppingList");
-  const kid = routeWrite("child-add", { name: "Mia", theme: "space", ageYears: 4, loves: ["water"] }, "a");
+  const kid = routeWrite("child-add", { id: "local-3", name: "Mia", theme: "space", ageYears: 4, loves: ["water"] }, "a");
+  assert.equal(kid.path, "users/a/children/local-3");
   assert.deepEqual(kid.data, { name: "Mia", theme: "space", ageYears: 4, loves: ["water"] });
 });
 t("router: a gallery save merges the list into the card map at the profile, capped and cleaned", () => {
@@ -325,6 +327,62 @@ await ta("phase C fetch (F19): a member with nothing yet gets the empty seam, so
 
 
 t("router: a fresh photo clears the lifecycle's swept stamp; a manual remove leaves it alone", () => { const r = routeWrite("photo", { photoUrl: "https://x/new.jpg" }, "a"); assert.equal(r.data.photoClearedAt, null); assert.equal(r.data.photoUrl, "https://x/new.jpg"); const c = routeWrite("photo", { photoUrl: "" }, "a"); assert.ok(!("photoClearedAt" in c.data)); });
+t("week seam (b104 ROOT B): the meta documents become the lists the week surfaces render", () => {
+  const w = weekSeamFrom({ timesheets: [{ day: "Mon", hours: 3 }], reminderDoc: { text: "Ring Ana", when: "Tue" }, emergencyDoc: { name: "Gran", phone: "0400" } });
+  assert.deepEqual(w.entries, [{ day: "Mon", hours: 3 }]);
+  assert.deepEqual(w.reminders, [{ text: "Ring Ana", when: "Tue" }]);
+  assert.deepEqual(w.emergency, [{ name: "Gran", phone: "0400" }]);
+});
+t("week seam (b104 ROOT B): missing documents give empty lists, never inventions", () => {
+  assert.deepEqual(weekSeamFrom({ timesheets: [], reminderDoc: null, emergencyDoc: null }), { sessions: [], entries: [], reminders: [], emergency: [] });
+  assert.deepEqual(weekSeamFrom({ timesheets: [], reminderDoc: {}, emergencyDoc: {} }).reminders, []);
+});
+t("thread seam (b104 Leg 14): no pair publishes the designed empty thread", () => {
+  assert.deepEqual(threadSeamFrom({ rels: [], names: {}, msgs: [], uid: "me" }), { pairId: "", otherName: "", messages: [], plan: null, tasteUsedToday: 0 });
+});
+t("thread seam (b104 Leg 14): the first live pair, its own messages, its name, today's taste", () => {
+  const todayIso = new Date().toISOString();
+  const s = threadSeamFrom({
+    rels: [
+      { id: "p0", state: "pending", members: ["me", "x"] },
+      { id: "p1", state: "contact", members: ["me", "ana"] },
+    ],
+    names: { ana: "Ana Carer" },
+    msgs: [
+      { pairId: "p1", text: "hello", mine: true, at: todayIso },
+      { pairId: "p1", text: "old one", mine: true, at: "2020-01-01T00:00:00.000Z" },
+      { pairId: "p9", text: "another pair", mine: true, at: todayIso },
+    ],
+    uid: "me",
+  });
+  assert.equal(s.pairId, "p1");
+  assert.equal(s.otherName, "Ana Carer");
+  assert.equal(s.messages.length, 2);
+  assert.equal(s.tasteUsedToday, 1);
+});
+t("trust race (b104 Leg 2): a name saved before the first publication survives the boot's own stale read", () => {
+  globalThis.window = { CARESITS_TRUST: { docs: [], reviews: [], me: {} }, CARESITS_TRUST_RENDER: () => {} };
+  refreshTrustName("Raced Name");
+  const me = publishTrust({ side: "family" }, { side: "family" }, {});
+  assert.equal(me.name, "Raced Name");
+  assert.equal(globalThis.window.CARESITS_TRUST.me.name, "Raced Name");
+});
+await ta("frame user (b104 ROOT A): a restoring session is awaited, then judged by what stands", async () => {
+  const auth = { currentUser: null, authStateReady: async () => { auth.currentUser = { uid: "u1", isAnonymous: false }; } };
+  const u = await frameUser(auth);
+  assert.equal(u.uid, "u1");
+});
+await ta("frame user (b104 ROOT A): a truly signed-out frame still judges signed-out", async () => {
+  const auth = { currentUser: null, authStateReady: async () => {} };
+  assert.equal(await frameUser(auth), null);
+});
+await ta("frame user (b104 ROOT A): a wedged restore is bounded, never a hang", async () => {
+  const keep = FRAME_WAIT.ms; FRAME_WAIT.ms = 60;
+  try {
+    const auth = { currentUser: null, authStateReady: () => new Promise(() => {}) };
+    assert.equal(await frameUser(auth), null);
+  } finally { FRAME_WAIT.ms = keep; }
+});
 t("activity stamp: a carer stamps at the root seat", () => { assert.equal(activityStampPath("u1", "carer"), "_activity/u1"); });
 t("activity stamp: families never stamp, and no uid no stamp", () => { assert.equal(activityStampPath("u1", "family"), null); assert.equal(activityStampPath("", "carer"), null); assert.equal(activityStampPath(null, "carer"), null); });
 
