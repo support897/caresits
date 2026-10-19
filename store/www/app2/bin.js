@@ -66,6 +66,16 @@ export function planRestore(input) {
   return { ok: true, binId: item.id, binPath, originPath, originId };
 }
 
+// The bin's live list joins a same-session record (QA b104
+// Leg 7): the boot snapshot is the floor, never the ceiling.
+// Pure: the same record never joins twice.
+export function binJoin(current, item) {
+  const list = Array.isArray(current) ? [...current] : [];
+  if (!item || !item.id) return list;
+  if (list.some((x) => x && x.id === item.id)) return list;
+  return [...list, item];
+}
+
 export function planBinDelete(input) {
   const { uid, binId } = input || {};
   if (!uid || !binId) return { ok: false, reason: "missing" };
@@ -172,6 +182,11 @@ export function bootBin() {
 
 if (typeof document !== "undefined") {
   winOf().CARESITS_BIN_OPEN = bootBin;
+  winOf().CARESITS_BIN_ADD = (item) => {
+    const w = winOf();
+    w.CARESITS_BIN = binJoin(w.CARESITS_BIN, item);
+    if (document.getElementById("binRoot")) bootBin();
+  };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bootBin);
   else bootBin();
 }
