@@ -4,7 +4,7 @@
 // PB's creation, in the same leg shapes.
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
-import { planUserKey, planPairKey, planTrashKey, authorise, verifyIdToken, presign, confirmCheck, makeBudget, TTL } from "./gatekeeper.mjs";
+import { planUserKey, planPairKey, authorise, verifyIdToken, presign, confirmCheck, makeBudget, TTL } from "./gatekeeper.mjs";
 
 let n = 0;
 const t = (name, fn) => { fn(); n += 1; console.log("ok -", name); };
@@ -26,10 +26,6 @@ t("certificate keys: pdf only, name sanitised", () => {
 t("day story keys live under pairs/ (A5)", () => {
   assert.equal(planPairKey({ pairId: "pair-12345678", name: "day one.jpg" }), "pairs/pair-12345678/day_one.jpg");
   assert.equal(planPairKey({ pairId: "pair-12345678", name: "doc.pdf" }), null);
-});
-t("trash keys wrap an original, never nest", () => {
-  assert.equal(planTrashKey({ uid: U, key: `${U}/profile-photos/photo.jpg` }), `trash/${U}/${U}/profile-photos/photo.jpg`);
-  assert.equal(planTrashKey({ uid: U, key: "trash/x" }), null);
 });
 t("there is no resume shape anywhere in the planners", () => {
   assert.equal(planUserKey({ uid: U, cls: "resumes", name: "cv.pdf" }), null);
