@@ -850,6 +850,7 @@ const { planSave } = await import("./account-save.js");
   t("b108 language dispatch: the write settles before the reload, bounded", src("./trust.js").includes("return window.CARESITS_WRITE(kind, payload)") && src("./trust.js").includes("Promise.resolve(w).then(go, go)") && src("./trust.js").includes("setTimeout(go, 1500)"));
   t("b108 save drain: the realm warms at entry, the shell and journey drain the envelope", src("./account-save.js").includes("export function warmSave") && src("./account-save.js").includes("export async function drainOutbox") && src("./journey.js").includes("warmSave();") && src("./journey.js").includes("drainOutbox();") && src("./live.js").includes("m.drainOutbox()"));
   t("b108 token step: the save awaits a live token before its first Firestore step", src("./account-save.js").includes("user.getIdToken(true)"));
+  t("b108 doc birth: the save births the member doc itself when it stands absent, ahead of the batch", src("./account-save.js").includes("if (!profSnap.exists())") && src("./account-save.js").includes("The save births"));
 }
 
 // ---- Leg 11: the level picker (welcome choice + computed boundary) ----
