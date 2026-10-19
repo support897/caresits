@@ -66,6 +66,29 @@ export function openPlans(reason) {
   card.append(planBtn(tr("popup.joinPlus"), "family-plus", wrap, card, status));
   card.append(el("p", null, popupPriceLine("plans.pass", "pass")));
   card.append(planBtn(tr("plans.joinPass"), "search-pass", wrap, card, status));
+  // The renewal disclosure + the legal links stand ON
+  // the paywall (Store Review's G7 item, the fleet's 8.1
+  // shape fitted to this app): the two subscriptions
+  // renew on their own at the shown prices until
+  // cancelled, cancelling lives in Apple ID
+  // subscriptions, and paid time stays open to its end.
+  // The Search Pass already speaks its own truth above
+  // (it never renews itself). The links follow the
+  // privacy surface's own pattern.
+  const legal = el("div", "plansLegal");
+  legal.append(el("p", null, tr("plans.renew1")), el("p", null, tr("plans.renew2")));
+  card.append(legal);
+  const links = el("div", "plansLinks");
+  const priv = el("a", null, tr("plans.privacy"));
+  priv.href = "https://support897.github.io/caresits/privacy.html";
+  priv.target = "_blank";
+  priv.rel = "noopener";
+  const terms = el("a", null, tr("plans.terms"));
+  terms.href = "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/";
+  terms.target = "_blank";
+  terms.rel = "noopener";
+  links.append(priv, terms);
+  card.append(links);
   card.append(status);
   if (purchaseAvailable()) {
     const restore = el("button", "mainBtn popBtn", tr("plans.restore"));
