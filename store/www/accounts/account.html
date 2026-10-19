@@ -113,20 +113,30 @@ if (!FIREBASE_ON) {
   document.getElementById("dormantNote").hidden = false;
   for (const id of ["doorGoogle", "doorApple", "doorEmail", "deleteBtn"]) document.getElementById(id).disabled = true;
 } else {
+  let madeAccount = false;
   await initAccounts(firebaseConfig, (u) => {
     document.getElementById("planCard").hidden = !u;
     document.getElementById("doorsCard").hidden = !!u;
     if (u) {
-      document.getElementById("helloLine").textContent = u.displayName ? tr("acct.hello", undefined, { name: u.displayName }) : tr("acct.plan");
+      document.getElementById("helloLine").textContent = madeAccount ? tr("door.madeAccount") : (u.displayName ? tr("acct.hello", undefined, { name: u.displayName }) : tr("acct.plan"));
+      madeAccount = false;
       const plan = resolvePlan({ side: "family", comp: null, payment: null, now: Date.now() });
       document.getElementById("planTier").textContent = plan.tier === PLANS.FREE ? tr("acct.freeTaste") : plan.tier;
       document.getElementById("planText").textContent = tr("acct.planText");
     }
   });
-  const wrap = (fn) => async () => { setMsg(""); try { await fn(); } catch (e) { setMsg(tr("acct.fail")); } };
+  const wrap = (fn) => async () => { setMsg(""); try { await fn(); } catch (e) { const noNet = e && (e.code === "auth/network-request-failed" || e.code === "auth/timeout"); setMsg(tr(noNet ? "acct.noNet" : "acct.fail")); } };
   document.getElementById("doorGoogle").onclick = wrap(signInGoogle);
   document.getElementById("doorApple").onclick = wrap(signInApple);
-  document.getElementById("doorEmail").onclick = wrap(() => signInEmail(document.getElementById("email").value.trim(), document.getElementById("password").value, document.getElementById("name").value.trim()));
+  document.getElementById("doorEmail").onclick = wrap(async () => {
+    const cred = await signInEmail(document.getElementById("email").value.trim(), document.getElementById("password").value, document.getElementById("name").value.trim());
+    if (cred && cred.createdAccount) {
+      // A creation at sign in is announced out loud (HQ ruling on
+      // Leg 19), on whichever seat is showing when it lands.
+      madeAccount = true;
+      if (!document.getElementById("planCard").hidden) document.getElementById("helloLine").textContent = tr("door.madeAccount");
+    }
+  });
   document.getElementById("signOut").onclick = wrap(signOutUser);
   document.getElementById("deleteBtn").onclick = wrap(async () => { await deleteMyAccount(); setMsg(tr("acct.deleted")); });
 }
