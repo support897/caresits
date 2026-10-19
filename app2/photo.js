@@ -70,22 +70,26 @@ export async function downscaleImage(file, max = 1024) {
   }
 }
 
+async function storageSdk() {
+  const cfgMod = await import("./firebase-config.js");
+  const appMod = await import(`${SDK}/firebase-app.js`);
+  const storageMod = await import(`${SDK}/firebase-storage.js`);
+  // The DEFAULT app only, shared with the door: a named app carries
+  // its own auth session and would never see the signed-in user (R1).
+  const existing = typeof appMod.getApps === "function"
+    ? appMod.getApps().find((a) => a.name === "[DEFAULT]")
+    : null;
+  const app = existing || appMod.initializeApp(cfgMod.firebaseConfig);
+  return { storageMod, storage: storageMod.getStorage(app) };
+}
+
 export async function uploadToStorage(path, blob) {
   try {
     if (typeof window !== "undefined" && typeof window.CARESITS_UPLOAD === "function") {
       const url = await window.CARESITS_UPLOAD(path, blob);
       return { ok: true, url };
     }
-    const cfgMod = await import("./firebase-config.js");
-    const appMod = await import(`${SDK}/firebase-app.js`);
-    const storageMod = await import(`${SDK}/firebase-storage.js`);
-    // The DEFAULT app only, shared with the door: a named app carries
-    // its own auth session and would never see the signed-in user (R1).
-    const existing = typeof appMod.getApps === "function"
-      ? appMod.getApps().find((a) => a.name === "[DEFAULT]")
-      : null;
-    const app = existing || appMod.initializeApp(cfgMod.firebaseConfig);
-    const storage = storageMod.getStorage(app);
+    const { storageMod, storage } = await storageSdk();
     const ref = storageMod.ref(storage, path);
     await storageMod.uploadBytes(ref, blob);
     const url = await storageMod.getDownloadURL(ref);
@@ -93,6 +97,50 @@ export async function uploadToStorage(path, blob) {
   } catch (e) {
     return { ok: false, reason: String((e && (e.code || e.message)) || e) };
   }
+}
+
+// Deletion (HQ ruling, 19 Oct 2026): removing a photo or a
+// resume in the app must remove the object itself. A list entry
+// dropped while its file stays in the bucket is an orphan, and
+// orphan personal files are a fail. Only the two roots this app
+// writes can ever be derived from a URL.
+export function planPathFromUrl(url) {
+  if (typeof url !== "string" || !url) return null;
+  const m = url.match(/\/o\/([^?#]+)/);
+  if (!m) return null;
+  try {
+    const p = decodeURIComponent(m[1]);
+    return p.startsWith("profile-photos/") || p.startsWith("resumes/") ? p : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function deleteFromStorage(path) {
+  try {
+    if (!path) return { ok: false, reason: "missing-path" };
+    if (typeof window !== "undefined" && typeof window.CARESITS_DELETE_FILE === "function") {
+      await window.CARESITS_DELETE_FILE(path);
+      return { ok: true };
+    }
+    const { storageMod, storage } = await storageSdk();
+    await storageMod.deleteObject(storageMod.ref(storage, path));
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, reason: String((e && (e.code || e.message)) || e) };
+  }
+}
+
+export async function removeProfilePhoto(uid) {
+  return deleteFromStorage(planPhotoPath(uid));
+}
+
+export async function removeGalleryPhoto(uid, slot) {
+  return deleteFromStorage(planGalleryPath(uid, slot));
+}
+
+export async function removeResumeObject(uid, fileName) {
+  return deleteFromStorage(planResumePath(uid, fileName));
 }
 
 function readAsDataUrl(blob) {
