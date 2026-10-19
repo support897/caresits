@@ -17,13 +17,6 @@ export function planGalleryPath(uid, slot) {
   return `profile-photos/${uid}/extra-${slot}.jpg`;
 }
 
-export function planResumePath(uid, fileName) {
-  if (!uid || !fileName) return null;
-  const safe = String(fileName).replace(/[^A-Za-z0-9._]/g, "_");
-  if (!safe) return null;
-  return `resumes/${uid}/${safe}`;
-}
-
 export async function downscaleImage(file, max = 1024) {
   if (typeof document === "undefined") {
     throw new Error("browser-only");
@@ -137,10 +130,6 @@ export async function removeProfilePhoto(uid) {
 
 export async function removeGalleryPhoto(uid, slot) {
   return deleteFromStorage(planGalleryPath(uid, slot));
-}
-
-export async function removeResumeObject(uid, fileName) {
-  return deleteFromStorage(planResumePath(uid, fileName));
 }
 
 function readAsDataUrl(blob) {
