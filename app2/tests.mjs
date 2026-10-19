@@ -823,6 +823,19 @@ const { planSave } = await import("./account-save.js");
   t("Leg 2: homes exposes its re-render", src("./homes.js").includes("window.CARESITS_RENDER_HOME = renderHome"));
 }
 
+// ---- b104 re-proof wave: ROOT A, ROOT B, Legs 2, 7, 14 ----
+{
+  const src = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
+  t("b104 ROOT A: the journey save judges the user only after the restore settles", src("./account-save.js").includes("authStateReady") && src("./account-save.js").includes("await frameUser(auth)"));
+  t("b104 ROOT A: Find judges by the same frame rule", src("./find.js").includes("await frameUser("));
+  t("b104 ROOT A: the Done screen earns its saved line", src("./journey.js").includes("window.CARESITS_SAVE(bundle)") && src("./journey.js").includes('r.saved !== "account"') && src("./journey.js").includes("journey.dLeadLocal") && src("./journey.js").includes("withTimeout"));
+  t("b104 ROOT B: the boot publishes the week seam and the saved background, then re-renders", src("./live.js").includes("window.CARESITS_WEEK = weekSeamFrom") && src("./live.js").includes('localStorage.setItem("caresits-app2-bg"') && src("./live.js").includes("CARESITS_WEEK_RENDER"));
+  t("b104 ROOT B: the family surfaces re-render when the boot lands", src("./live.js").includes("CARESITS_FAMILY_RENDER") && src("./family.js").includes("window.CARESITS_FAMILY_RENDER = bootFamily"));
+  t("b104 Leg 14: the boot publishes the thread seam and the surface re-renders on open", src("./live.js").includes("window.CARESITS_THREAD = threadSeamFrom") && src("./thread.js").includes("window.CARESITS_THREAD_OPEN = bootThread") && src("./shell.js").includes("CARESITS_THREAD_OPEN"));
+  t("b104 Leg 7: a removal joins the bin's live list in the same moment", src("./family.js").includes("CARESITS_BIN_ADD") && src("./bin.js").includes("winOf().CARESITS_BIN_ADD"));
+  t("b104 Leg 2 race: a pending tour name is held and applied at publication", src("./live.js").includes("pendingTrustName") && src("./live.js").includes("displayName: pendingTrustName"));
+}
+
 // ---- Leg 11: the level picker (welcome choice + computed boundary) ----
 {
   const src = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
