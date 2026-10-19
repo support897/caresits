@@ -194,6 +194,10 @@ export async function signInEmail(email, password, name) {
         _pendingName = name || "";
         const cred = await m.createUserWithEmailAndPassword(_auth, email, password);
         if (name) { try { await m.updateProfile(cred.user, { displayName: name }); } catch { /* name rides the profile doc */ } }
+        // A creation at sign in is never silent (HQ ruling on the
+        // remainder round's Leg 19): the credential carries the
+        // mark, so every door announces the creation out loud.
+        cred.createdAccount = true;
         return cred;
       } catch {
         throw e;
