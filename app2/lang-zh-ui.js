@@ -23,6 +23,7 @@ export const UI_ZH = {
  "door.fail": "没有成功。检查一下邮箱和密码，再试一次。",
  "door.mismatch": "邮箱或密码不对。再试一次，或者使用下方的忘记密码。",
  "door.noNet": "连接没有成功。请检查您的网络，再试一次。",
+    "door.madeAccount": "这个邮箱是新来的，所以我们为你创建了账户。欢迎加入。",
  "door.doorFail": "这种方式没有打开。请试试下面的邮箱方式。",
  "door.forgotNeed": "先在上面输入您的邮箱，然后点击忘记密码。",
  "door.resetSent": "重置链接已经发送到您的邮箱。",
