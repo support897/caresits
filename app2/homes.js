@@ -39,12 +39,15 @@ function navTo(name) {
   if (b) b.click();
 }
 function gotoThread() {
-  // The thread surface has no menu button of its own; it is
-  // reached the way the shell reaches it from a pair row.
-  document.querySelectorAll(".surface").forEach((s) => s.classList.toggle("active", s.id === "surface-thread"));
-  document.querySelectorAll("[data-nav]").forEach((b) => b.classList.toggle("on", false));
-  document.getElementById("sideMenu")?.classList.remove("open");
-  document.getElementById("scrim")?.classList.remove("show");
+  // The thread surface has no menu button of its own; it opens
+  // by the shell's own mechanism (show, through its seam: the
+  // hidden property on the surfaces), never by a class the
+  // shell does not use (HQ ruling on Leg 14).
+  if (typeof window.CARESITS_NAV === "function") window.CARESITS_NAV("thread");
+  else {
+    document.querySelectorAll(".surface").forEach((s) => (s.hidden = s.id !== "surface-thread"));
+    document.querySelectorAll("[data-nav]").forEach((b) => b.classList.toggle("on", false));
+  }
   if (typeof window.CARESITS_RENDER_THREAD === "function") window.CARESITS_RENDER_THREAD();
 }
 function write(kind, payload) {
@@ -55,7 +58,12 @@ function me() { return window.CARESITS_ME || null; }
 function myName() {
   const m = me();
   if (m && m.name) return m.name;
-  try { return localStorage.getItem("caresits-name") || ""; } catch { return ""; }
+  // The stored device name belongs to the signed in world only
+  // (HQ ruling on Leg 3 Note 2): on a shared device, a demo
+  // never greets with the last person's name. The name renders
+  // in the tour itself and inside the signed in account world.
+  if (m && m.uid) { try { return localStorage.getItem("caresits-name") || ""; } catch { return ""; } }
+  return "";
 }
 function pairs() {
   const cal = window.CARESITS_CALENDAR || {};
