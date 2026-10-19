@@ -261,6 +261,7 @@ export async function bootLive() {
         // sign out deletes nothing, it only stops the device
         // keys resolving to the previous account (F16).
         if (typeof window !== "undefined") window.CARESITS_UID = null;
+        gateSignedOut();
         resolve({ on: true, signedIn: false });
         return;
       }
@@ -326,6 +327,21 @@ export async function bootLive() {
       resolve({ on: true, signedIn: true, uid });
     });
   });
+}
+
+// The signed out gate (HQ ruling on the remainder round's
+// Leg 19): a signed out entry into the shell routes back to
+// the door; the full shell never stands open signed out. A
+// deliberate Explore entry (the door's demo button, the
+// journey's Explore pick) carries the session demo marker
+// and is exempt: browsing was never gated. Only the shell
+// page carries the layout element, so only it can bounce.
+function gateSignedOut() {
+  try {
+    if (typeof document === "undefined" || !document.getElementById("layout")) return;
+    if (sessionStorage.getItem("caresits-demo") === "1") return;
+  } catch { return; }
+  location.href = "door.html";
 }
 
 if (typeof document !== "undefined" && !window.CARESITS_LIVE_OFF) {
