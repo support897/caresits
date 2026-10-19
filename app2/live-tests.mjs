@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { routeWrite, trustSeamFrom, publishTrust, refreshTrustName, writeDataFor, makeWriter, phaseCNameTargets, phaseCSeam, fetchPhaseC, activityStampPath, weekSeamFrom, threadSeamFrom } from "./live.js";
-import { frameUser, FRAME_WAIT, planSave, publishSavedProfile } from "./account-save.js";
+import { frameUser, FRAME_WAIT, planSave, publishSavedProfile, drainOutbox } from "./account-save.js";
 let n = 0; const t = (name, fn) => { fn(); n += 1; console.log("ok -", name); };
 const ta = async (name, fn) => { await fn(); n += 1; console.log("ok -", name); };
 t("router: signed out refuses everything", () => { assert.equal(routeWrite("job", { data: {} }, "").ok, false); });
@@ -402,6 +402,18 @@ t("plan save (b107 FAIL 2): the save stamps the side onto the user doc; a carer'
   assert.deepEqual(fam.profileSide, { path: "users/u1", data: { side: "family" } });
   const car = planSave({ side: "carer", answers: {}, card: { displayName: "Ana" } }, { uid: "u2", nowIso: "2026-10-20T00:00:00.000Z" });
   assert.deepEqual(car.profileSide, { path: "users/u2", data: { side: "carer", displayName: "Ana" } });
+});
+await ta("outbox drain (b108): a landed save clears the envelope; a local judgement keeps it standing", async () => {
+  const store = new Map();
+  globalThis.localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k) };
+  globalThis.window = { CARESITS_UID: "u1" };
+  store.set("caresits-app2-questionnaire-u1", JSON.stringify({ side: "family", answers: { country: "Australia" } }));
+  assert.equal(await drainOutbox(async () => ({ saved: "local", reason: "signed-out" })), false);
+  assert.equal(store.has("caresits-app2-questionnaire-u1"), true);
+  assert.equal(await drainOutbox(async () => ({ saved: "account", activated: false })), true);
+  assert.equal(store.has("caresits-app2-questionnaire-u1"), false);
+  assert.equal(await drainOutbox(async () => ({ saved: "account" })), false);
+  delete globalThis.window; delete globalThis.localStorage;
 });
 t("language ride (b107 note): the pick writes the account's app doc beside the background", () => {
   const w = routeWrite("language", { code: "es" }, "u1");
