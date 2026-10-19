@@ -9,11 +9,13 @@ async function t(name, fn) { n++; try { await fn(); } catch (e) { bad++; console
 
 const writes = [];
 const ledger = new Set();
+const logs = [];
 const deps = {
   expectedAuth: () => "Bearer test-auth-value",
   seenEvent: async (id) => ledger.has(id),
   writeRecord: async (uid, record) => { writes.push([uid, record]); },
   markEvent: async (id) => { ledger.add(id); },
+  log: (line) => logs.push(line),
 };
 const server = await serve(deps, 0);
 const base = `http://127.0.0.1:${server.address().port}`;
@@ -48,10 +50,12 @@ await t("a redelivery of the same event writes nothing twice (idempotency)", asy
   assert.equal(j.duplicate, true);
   assert.equal(writes.length, 1);
 });
-await t("a wrong authorization is a 401 and writes nothing", async () => {
+await t("a wrong authorization is a 401, writes nothing, and is logged (charter)", async () => {
   const r = await post("/rc", { ...evt, event: { ...evt.event, id: "evt-shell-2" } }, "Bearer nope");
   assert.equal(r.status, 401);
   assert.equal(writes.length, 1);
+  assert.equal(logs.length, 1);
+  assert.ok(logs[0].startsWith("401 unauthenticated attempt"));
 });
 await t("a TEST ping is acknowledged and writes nothing", async () => {
   const r = await post("/rc", { event: { id: "evt-t", type: "TEST", app_user_id: "uid-9" } }, "Bearer test-auth-value");
