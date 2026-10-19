@@ -67,16 +67,48 @@ rules text stays on file, unused).
   HMAC over the request: standard library work.
 - Own container, own unprivileged service user, own
   secrets files on the box (mode 600, root readable
-  only). TWO R2 TOKENS (Q7, confirmed as amended): the
-  GATEKEEPER's (this bucket only · object read + write
-  + DELETE · NO LIST) and the SWEEPER's (this bucket
-  only · object read + LIST + delete, riding the census
-  and the quarantine purges). No admin rights, no account
-  permissions on either. Separate files, created by PB
+  only). TWO R2 TOKENS (Q7, as amended 19 Oct 2026,
+  Security's record 6606fc55): Cloudflare's permission
+  model WELDS list to read — the vendor's own words:
+  the preset "Object Read & Write" grants "read, write,
+  and list objects" and "Object Read only" grants "read
+  and list objects"; the API permission groups "Bucket
+  Item Write" grants "read, write, and list" and "Bucket
+  Item Read" grants "read and list"
+  (developers.cloudflare.com/r2/api/tokens, updated
+  2026-10-01). A no-list token therefore does not exist
+  on this platform, and the GATEKEEPER's token carries
+  object read + write + delete + LIST, scoped to this
+  bucket (caresitters-files) only. THE RESIDUAL STANDS
+  NAMED: a custody failure on the gatekeeper's secret
+  file is a bucket wide READ event — possession of the
+  file can enumerate and read every key, and keys carry
+  uids and pair ids (never names; the objects themselves
+  are the exposure). The compartment survives as
+  CUSTODY + CODE: separate independently revocable
+  tokens in separate mode 600 files, each service
+  receiving ONLY its own file, and NO list call anywhere
+  in the gatekeeper's shipped code (a source census leg
+  in the battery proves it at every run; the presign
+  method fence admits PUT, GET and DELETE only). The
+  SWEEPER's token carries object read + LIST + delete
+  as its working need (the census and the quarantine
+  purges), this bucket only. No admin rights, no account
+  permissions on either, and no token-admin credential
+  exists or gets created. Separate files, created by PB
   into custody, the scope AND the account identity read
   back at creation (fresh account, her name). The
   tokens never enter chat, repo or client code; the
-  client sees only presigned links.
+  client sees only presigned links. THE GATEKEEPER'S
+  VERB INVENTORY, whole: inbound, POST /v1/link and
+  POST /v1/confirm and nothing else (every other path
+  answers 404); outbound S3, presigned PUT (header
+  signed, issued to the client), presigned GET (with the
+  no-store overrides), presigned DELETE, and its own
+  short ranged GET reads at confirm time — no list, no
+  copy, no multipart anywhere; outbound Firestore, GET
+  profiles/{uid} and GET relationships/{pairId}, under
+  the CALLER's token only.
 - Binds 127.0.0.1 on a free localhost port (8123 proposed);
   Caddy routes only files.caresits.xyz to it, the house
   pattern every tenant on this box already follows.
@@ -373,7 +405,12 @@ EXIF markers (A4) · profile photo cross-read allowed
 (as designed) · certificate read by a non pair family
 refused · day-story read by a non member refused ·
 a day story DELETE link refuses for the carer side
-(Q2) · listing refused on every route · DELETE PROVEN
+(Q2) · listing refused on every route · the SOURCE
+CENSUS leg (Q7 as amended): a case-insensitive sweep of
+the shipped gatekeeper core + shell + wrapper proves
+zero list constructions (no ListObjects shape, no
+list-type query, no list verb), and the battery stops
+if the sweep finds one · DELETE PROVEN
 THREE WAYS (Security's charter): a fresh GET link
 refuses 404 · a GET link issued BEFORE the delete also
 refuses · the server side inventory (the scoped
@@ -409,14 +446,22 @@ marked.
 6. Verification placement: CONFIRM TIME (A3) governs;
    the through-gatekeeper streaming shape is superseded
    by the addendum and stands retired in this file.
-7. The R2 token scope OF RECORD (Q7 as amended):
-   TWO tokens, this bucket only: the gatekeeper's
-   (object read + write + DELETE, NO list) and the
-   sweeper's (object read + LIST + delete, deleting
-   under its own token), each in its OWN mode 600
-   secrets file (A8). Confirmed at PB's creation, with
-   R1's bucket privacy proofs running before any real
-   key.
+7. The R2 token scope OF RECORD (Q7 as amended
+   19 Oct 2026, Security's record 6606fc55): TWO tokens,
+   this bucket (caresitters-files) only: the gatekeeper's
+   (object read + write + delete + LIST — list welded to
+   read by the platform, per the vendor citation in the
+   service shape above; the residual named there: a
+   custody failure on its file is a bucket wide read
+   event) and the sweeper's (object read + LIST + delete,
+   deleting under its own token), each in its OWN mode
+   600 secrets file (A8), each service receiving only
+   its own file. The gatekeeper's shipped code carries
+   NO list call, proven by the battery's source census
+   leg. Confirmed at PB's creation, with R1's bucket
+   privacy proofs running before any real key, and the
+   full signed probe set passing before any token is
+   used.
 
 Nothing deploys until this read lands, and nothing is
 created in Cloudflare until her enable confirm lands
