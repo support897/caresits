@@ -55,6 +55,30 @@ a stamp never reads as sweep now, and the fallback-signal
 idea considered for never-stamped accounts is NOT
 adopted: no stamp, no sweep, no exceptions written here.
 
+THE NEVER-STAMPED CLASS (HQ ruling, 19 Oct 2026, the
+deployment gate's second half): a photo holder who has
+never stamped becomes sweep eligible only when BOTH
+(1) 90 or more days have passed since the v5 stamp arm
+went live on production (19 Oct 2026, ruleset 4e3ef602;
+ARM_LIVE_MS in sweeper.mjs), AND (2) the standard
+warning email has gone out 7 or more days before,
+unrescued. The shape is proof, not a guess: the stamp
+fires on any signed-in open, so stamp-less at arm+90
+days means no opens in the whole window, and an open
+after the warning stamps the account and rescues the
+photo (it joins the stamped class with a fresh clock).
+Before arm+90 days the class is not eligible at all.
+Auth lastSignInTime is DECLINED as a sweep trigger in
+the same ruling: it understates activity (a daily
+active carer on a persistent session can carry an old
+sign-in time), and no understating signal deletes a
+photo under Ilse's rule. It may only ever return as a
+design change proposed with its own word.
+
+Both rulings stand in this gate file, as HQ required;
+the sweeper stays undeployed until the wave carries it,
+with both halves live in the planner.
+
 ## The refinements (settled by Ilse's tap, 19 Oct 17:47)
 
 Both are built into the core. The warning: planWarn picks
