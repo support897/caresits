@@ -18,6 +18,12 @@ export const INACTIVE_MS = 90 * DAY_MS;
 export const WARN_BEFORE_MS = 7 * DAY_MS;
 export const WARN_AT_MS = INACTIVE_MS - WARN_BEFORE_MS;
 
+// When the v5 stamp arm went live on production (the
+// release re-point, 19 Oct 2026 08:15:45 UTC, ruleset
+// 4e3ef602). The never-stamped class's clock runs from
+// here and nowhere else (HQ ruling, 19 Oct 2026).
+export const ARM_LIVE_MS = 1792397745000;
+
 // The warning email, in her words first: open the app to
 // keep your photo. Drafted for the wave's mail route (no
 // mail transport exists for this app yet; the words are
@@ -35,14 +41,28 @@ export const WARN_COPY = {
 // ever made is Day Story, which never appears here.
 export const PHOTO_OBJECTS = ["photo.jpg", "extra-1.jpg", "extra-2.jpg", "extra-3.jpg", "extra-4.jpg"];
 
-// planSweep(accounts, nowMs) -> steps. An account is swept
-// only when ALL of these hold: it is a carer (the photo lives
-// in family search), it still holds a stored photo, it has
-// not already been swept, it carries a trusted stamp, and
-// the stamp is 90 or more days old. The missing-stamp
-// policy is RULED (HQ, 19 Oct 2026): missing stamp = never
-// swept. An account the stamp has never reached is never
-// guessed at, on any fallback signal, ever.
+// planSweep(accounts, nowMs) -> steps. Two eligibility
+// classes, both RULED (HQ, 19 Oct 2026):
+//
+// THE STAMPED CLASS: a carer (the photo lives in family
+// search), photo still stored, never swept, carrying a
+// trusted stamp 90 or more days old. Missing stamp alone
+// never sweeps (the missing-stamp policy: missing stamp =
+// never swept).
+//
+// THE NEVER-STAMPED CLASS: no stamp at all, eligible only
+// when BOTH 90 or more days have passed since the stamp
+// arm went live on production (ARM_LIVE_MS), AND the
+// standard warning went out 7 or more days ago unrescued.
+// The logic is proof, not a guess: the stamp fires on any
+// signed-in open, so stamp-less at arm+90 days means no
+// opens in the whole window; and a rescue (an open after
+// the warning) stamps the account, which moves it into
+// the stamped class with a fresh clock and out of this
+// one. Before arm+90 days the class is not eligible at
+// all. Auth lastSignInTime is DECLINED as a trigger in
+// the same ruling: it understates activity, and no
+// understating signal deletes a photo.
 export function planSweep(accounts, nowMs) {
   if (!Array.isArray(accounts) || typeof nowMs !== "number" || !Number.isFinite(nowMs)) return [];
   const out = [];
@@ -51,8 +71,14 @@ export function planSweep(accounts, nowMs) {
     if (a.side !== "carer") continue;
     if (!a.photoUrl) continue;
     if (a.photoClearedAtMs) continue;
-    if (typeof a.lastActiveAtMs !== "number" || !Number.isFinite(a.lastActiveAtMs)) continue;
-    if (nowMs - a.lastActiveAtMs < INACTIVE_MS) continue;
+    const stamped = typeof a.lastActiveAtMs === "number" && Number.isFinite(a.lastActiveAtMs);
+    if (stamped) {
+      if (nowMs - a.lastActiveAtMs < INACTIVE_MS) continue;
+    } else {
+      if (nowMs - ARM_LIVE_MS < INACTIVE_MS) continue;
+      if (typeof a.photoWarnedAtMs !== "number" || !Number.isFinite(a.photoWarnedAtMs)) continue;
+      if (nowMs - a.photoWarnedAtMs < WARN_BEFORE_MS) continue;
+    }
     out.push({
       uid: a.uid,
       deletePaths: PHOTO_OBJECTS.map((name) => `profile-photos/${a.uid}/${name}`),
@@ -62,13 +88,19 @@ export function planSweep(accounts, nowMs) {
   return out;
 }
 
-// planWarn(accounts, nowMs) -> the carers to warn: inside
+// planWarn(accounts, nowMs) -> the carers to warn, in two
+// classes matching planSweep's. THE STAMPED CLASS: inside
 // the warning window (stamp 83 or more days old, not yet
 // 90), photo still stored, never swept, and not already
-// warned in THIS inactivity window. A warning counts for
+// warned in THIS inactivity window: a warning counts for
 // the window only when it was sent after the last activity
-// (photoWarnedAtMs later than lastActiveAtMs): a carer who
-// returned and went quiet again is warned again.
+// (photoWarnedAtMs later than lastActiveAtMs), so a carer
+// who returned and went quiet again is warned again.
+// THE NEVER-STAMPED CLASS (HQ ruling, 19 Oct 2026): warn
+// once the arm itself is 83 or more days old (so the 7
+// days run inside the same 90), if the account has never
+// been warned; their sweep additionally waits for the
+// full 7 days after this warning, unrescued.
 export function planWarn(accounts, nowMs) {
   if (!Array.isArray(accounts) || typeof nowMs !== "number" || !Number.isFinite(nowMs)) return [];
   const out = [];
@@ -77,10 +109,15 @@ export function planWarn(accounts, nowMs) {
     if (a.side !== "carer") continue;
     if (!a.photoUrl) continue;
     if (a.photoClearedAtMs) continue;
-    if (typeof a.lastActiveAtMs !== "number" || !Number.isFinite(a.lastActiveAtMs)) continue;
-    const age = nowMs - a.lastActiveAtMs;
-    if (age < WARN_AT_MS || age >= INACTIVE_MS) continue;
-    if (typeof a.photoWarnedAtMs === "number" && a.photoWarnedAtMs > a.lastActiveAtMs) continue;
+    const stamped = typeof a.lastActiveAtMs === "number" && Number.isFinite(a.lastActiveAtMs);
+    if (stamped) {
+      const age = nowMs - a.lastActiveAtMs;
+      if (age < WARN_AT_MS || age >= INACTIVE_MS) continue;
+      if (typeof a.photoWarnedAtMs === "number" && a.photoWarnedAtMs > a.lastActiveAtMs) continue;
+    } else {
+      if (nowMs - ARM_LIVE_MS < WARN_AT_MS) continue;
+      if (typeof a.photoWarnedAtMs === "number") continue;
+    }
     out.push({ uid: a.uid, copy: WARN_COPY });
   }
   return out;
