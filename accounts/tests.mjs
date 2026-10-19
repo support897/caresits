@@ -132,7 +132,7 @@ t("signup writer never reads the aggregates doc (programme shape)", () => {
   assert.ok(writer.includes('doc(_db, "_owner", "aggregates", "peopleWeekly", isoWeekKey(new Date()))'), "signup split: the week rides its own document, named by the week key");
   assert.ok(writer.includes("{ count: increment(1) }"), "signup split: the weekly write carries the count increment alone");
   assert.ok(!writer.includes('"people", "main"'), "signup split: the combined people counter write is gone");
-  assert.ok(writer.includes("await setDoc(ref, profile)"), "profile retries alone on batch failure");
+  assert.ok(writer.includes("await setDoc(ref, profile, { merge: true })"), "profile retries alone on failure, merging so a late write keeps the save's stamps");
 });
 
 t("native branch: the Google door runs the plugin on native and hands over its idToken", () => {
