@@ -34,7 +34,7 @@ export function planReport({ reporterUid, reportedUid, surface, category, words,
       reporterWords: String(words || "").slice(0, 1000),
       snapshot: snap, state: "open", createdAt: nowIso,
     },
-    counter: { path: "_owner/aggregates/safety/main", delta: { filed: 1, open: 1 } },
+    counter: { paths: ["_owner/aggregates/safetyFiled/main", "_owner/aggregates/safetyOpen/main"], delta: { filed: 1, open: 1 } },
     acknowledgement: "Your report is with the operator. You will not hear the outcome, and that is on purpose: a report is a question for the operator, never a lever on another person.",
   };
 }
