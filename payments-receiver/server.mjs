@@ -10,9 +10,10 @@
 //
 // deps = {
 //   expectedAuth(): string                    custody value
-//   seenEvent(id): Promise<boolean>           ledger read
+//   seenEvent(id): Promise<boolean>           ledger read (get by id, never a list)
 //   writeRecord(uid, record): Promise<void>   _entitlements/{uid}
-//   markEvent(id, uid): Promise<void>         _entitlementEvents/{id}
+//   markEvent(id, uid): Promise<void>         _entitlementEvents/{id} (create-only; the ledger is append-only)
+//   log(line): void                           optional; unauthenticated attempts + internal errors are logged (charter)
 // }
 // RevenueCat retries any non-200 delivery, so every
 // authenticated, parseable delivery answers 200 —
@@ -32,7 +33,10 @@ export function makeHandler(deps) {
     };
     try {
       if (req.method !== "POST" || !String(req.url || "").startsWith("/rc")) return send(404, { error: "not found" });
-      if (!authoriseWebhook(req.headers.authorization, deps.expectedAuth())) return send(401, { error: "unauthorized" });
+      if (!authoriseWebhook(req.headers.authorization, deps.expectedAuth())) {
+        if (typeof deps.log === "function") deps.log(`401 unauthenticated attempt ${req.method} ${req.url} from ${req.socket && req.socket.remoteAddress}`);
+        return send(401, { error: "unauthorized" });
+      }
       let size = 0;
       const chunks = [];
       for await (const chunk of req) {
@@ -49,13 +53,14 @@ export function makeHandler(deps) {
       await deps.writeRecord(plan.uid, plan.record);
       await deps.markEvent(plan.record.source_event_id, plan.uid);
       return send(200, { received: true, wrote: true });
-    } catch {
+    } catch (e) {
+      if (typeof deps.log === "function") deps.log(`500 internal ${String((e && e.message) || e)}`);
       return send(500, { error: "internal" });
     }
   };
 }
 
-export function serve(deps, port) {
+export function serve(deps, port, host = "127.0.0.1") {
   const server = http.createServer(makeHandler(deps));
-  return new Promise((resolve) => server.listen(port, "127.0.0.1", () => resolve(server)));
+  return new Promise((resolve) => server.listen(port, host, () => resolve(server)));
 }
