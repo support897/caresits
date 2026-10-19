@@ -836,6 +836,17 @@ const { planSave } = await import("./account-save.js");
   t("b104 Leg 2 race: a pending tour name is held and applied at publication", src("./live.js").includes("pendingTrustName") && src("./live.js").includes("displayName: pendingTrustName"));
 }
 
+// ---- b107 re-proof wave: FAIL 1 (deep musts shape + feed), FAIL 2 (the gate's completeness), Leg 7 residual ----
+{
+  const src = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
+  t("b107 FAIL 1: the musts deep carries the shaped entry, never the raw value", src("./journey.js").includes("deepMusts[q.pair] = deep[q.pair];"));
+  t("b107 FAIL 1: the feed is the question's own bucket, no provenance stamp", src("./journey.js").includes("feed: q.feed || null") && !src("./journey.js").includes('"resume" : (q.feed'));
+  t("b107 FAIL 1: the save normalises a raw deep entry instead of reading a missing .v", src("./account-save.js").includes('"v" in val ? val : { v: val }'));
+  t("b107 FAIL 2: the save stamps the side onto the user doc", src("./account-save.js").includes("const profileSide = bundle.side"));
+  t("b107 FAIL 2: completeness is recomputed at publish from the seam's facts", src("./live.js").includes("window.CARESITS_PROFILE_COMPLETE = Boolean("));
+  t("b107 Leg 7 residual: bin leaves the live list on restore and forever", src("./bin.js").includes("export function binLeave") && (src("./bin.js").match(/binLeave\(w\.CARESITS_BIN, item\.id\)/g) || []).length === 2);
+}
+
 // ---- Leg 11: the level picker (welcome choice + computed boundary) ----
 {
   const src = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
