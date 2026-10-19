@@ -39,8 +39,10 @@ export const PHOTO_OBJECTS = ["photo.jpg", "extra-1.jpg", "extra-2.jpg", "extra-
 // only when ALL of these hold: it is a carer (the photo lives
 // in family search), it still holds a stored photo, it has
 // not already been swept, it carries a trusted stamp, and
-// the stamp is 90 or more days old. No stamp, no sweep: an
-// account the stamp has never reached is never guessed at.
+// the stamp is 90 or more days old. The missing-stamp
+// policy is RULED (HQ, 19 Oct 2026): missing stamp = never
+// swept. An account the stamp has never reached is never
+// guessed at, on any fallback signal, ever.
 export function planSweep(accounts, nowMs) {
   if (!Array.isArray(accounts) || typeof nowMs !== "number" || !Number.isFinite(nowMs)) return [];
   const out = [];
