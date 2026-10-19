@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { routeWrite, trustSeamFrom, publishTrust, refreshTrustName, writeDataFor, makeWriter, phaseCNameTargets, phaseCSeam, fetchPhaseC } from "./live.js";
+import { routeWrite, trustSeamFrom, publishTrust, refreshTrustName, writeDataFor, makeWriter, phaseCNameTargets, phaseCSeam, fetchPhaseC, activityStampPath } from "./live.js";
 let n = 0; const t = (name, fn) => { fn(); n += 1; console.log("ok -", name); };
 const ta = async (name, fn) => { await fn(); n += 1; console.log("ok -", name); };
 t("router: signed out refuses everything", () => { assert.equal(routeWrite("job", { data: {} }, "").ok, false); });
@@ -325,5 +325,8 @@ await ta("phase C fetch (F19): a member with nothing yet gets the empty seam, so
 
 t("router: the resume file record names the temp object on the profile doc", () => { const r = routeWrite("resume-file", { name: "cv.pdf" }, "a"); assert.equal(r.op, "merge"); assert.equal(r.path, "profiles/a"); assert.deepEqual(r.data, { resumeFile: "cv.pdf" }); });
 t("router: clearing the resume record writes an empty name, and a non string name never lands", () => { assert.deepEqual(routeWrite("resume-file", { name: "" }, "a").data, { resumeFile: "" }); assert.deepEqual(routeWrite("resume-file", { name: 42 }, "a").data, { resumeFile: "" }); });
+
+t("activity stamp: a carer stamps at the root seat", () => { assert.equal(activityStampPath("u1", "carer"), "_activity/u1"); });
+t("activity stamp: families never stamp, and no uid no stamp", () => { assert.equal(activityStampPath("u1", "family"), null); assert.equal(activityStampPath("", "carer"), null); assert.equal(activityStampPath(null, "carer"), null); });
 
 console.log(`\nALL ${n} live-router checks passed`);
