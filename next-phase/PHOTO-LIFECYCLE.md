@@ -33,8 +33,10 @@ would sweep live carers.)
 
 The sweeper core is built at photo-sweeper/ (planner plus
 executor, tests green, NOT DEPLOYED): nightly once the
-storage wave lands on Blaze, it deletes the main photo
-object for carers 90 or more days stale and clears the
+storage wave lands on Blaze, it deletes the profile
+images (the main photo and the four gallery objects, her
+words "the images", HQ ruling 19 Oct 2026) for carers 90
+or more days stale and clears the
 card's photoUrl in the same pass, object first, stamping
 photoClearedAt on the profile doc.
 
