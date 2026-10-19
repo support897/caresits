@@ -41,15 +41,36 @@ export function planSave(bundle, opts) {
     const deep = looking[bucket]?.deep;
     if (deep) {
       for (const [code, val] of Object.entries(deep)) {
-        const data = { bucket, v: val.v };
-        if (val.s) data.s = val.s;
-        if (val.feed) data.feed = val.feed;
+        // A deep entry is the shaped { v, s, feed } object; a
+        // raw value (a string, a list, a map) is wrapped, never
+        // read for a ".v" it does not carry — an undefined field
+        // here throws at the batch and takes every other
+        // document of the save with it (QA b107 FAIL 1). An
+        // entry whose value cannot be recovered is skipped:
+        // one bad answer never loses the whole journey.
+        const shaped = val && typeof val === "object" && !Array.isArray(val) && "v" in val ? val : { v: val };
+        if (shaped.v === undefined) continue;
+        const data = { bucket, v: shaped.v };
+        if (shaped.s) data.s = shaped.s;
+        else if (bucket === "musts") data.s = "must";
+        if (shaped.feed) data.feed = shaped.feed;
         answers.push({ path: `profiles/${uid}/answers/${code}`, data });
       }
       delete looking[bucket].deep;
     }
   }
+  // The user doc carries the member's side of record from the
+  // save that proves it (QA b107 FAIL 2): the gates and the
+  // plan resolution read the side there, and a save that wrote
+  // it only to the card left every gate reading a blank. A
+  // carer's questionnaire name is their name of record and
+  // rides too; a family's name belongs to the tour and the
+  // user doc already, so it is never overwritten here.
+  const profileSide = bundle.side
+    ? { path: `users/${uid}`, data: bundle.side === "carer" && cardIn.displayName ? { side: bundle.side, displayName: cardIn.displayName } : { side: bundle.side } }
+    : null;
   const plan = {
+    profileSide,
     questionnaire: {
       path: `users/${uid}/meta/questionnaire`,
       data: { side: bundle.side, answers: bundle.answers || {}, strengths: bundle.strengths || {}, savedAt: nowIso, country: bundle.country || (bundle.answers && bundle.answers.country) || "" },
@@ -125,6 +146,9 @@ export async function saveBundle(bundle, firebaseConfig) {
     nowIso: new Date().toISOString(),
   });
   const batch = fsMod.writeBatch(db);
+  if (plan.profileSide) {
+    batch.set(fsMod.doc(db, ...plan.profileSide.path.split("/")), plan.profileSide.data, { merge: true });
+  }
   batch.set(fsMod.doc(db, ...plan.questionnaire.path.split("/")), plan.questionnaire.data);
   batch.set(fsMod.doc(db, ...plan.card.path.split("/")), plan.card.data);
   for (const a of plan.answers || []) {
