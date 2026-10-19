@@ -59,6 +59,7 @@ export function routeWrite(kind, payload, uid) {
     case "reminder": return { ok: true, op: "merge", path: `users/${uid}/meta/reminders`, data: { text: payload.text, when: payload.when } };
     case "emergency": return { ok: true, op: "merge", path: `users/${uid}/meta/emergency`, data: { name: payload.name, phone: payload.phone } };
     case "appearance": return { ok: true, op: "merge", path: `users/${uid}/meta/app`, data: { background: payload.choice } };
+    case "language": return { ok: true, op: "merge", path: `users/${uid}/meta/app`, data: { language: payload.code } };
     case "name": return { ok: true, op: "merge", path: `users/${uid}`, data: { displayName: payload.displayName } };
     case "message": return { ok: true, op: "add", path: `users/${uid}/messages`, data: { pairId: payload.pairId, text: payload.text, at: payload.at, mine: true } };
     case "request": return { ok: true, op: "add", path: payload.path, data: payload.data };
@@ -463,6 +464,22 @@ export async function bootLive() {
           if (typeof window.CARESITS_WEEK_RENDER === "function") window.CARESITS_WEEK_RENDER();
           if (appDoc && appDoc.background) {
             try { localStorage.setItem("caresits-app2-bg", JSON.stringify({ choice: appDoc.background })); } catch { /* storage off */ }
+          }
+          // The member's language rides the account beside
+          // their background (the save-forever law covers the
+          // pick as it covers the background): seed the device
+          // key from the account, and if that changes the
+          // pick, reload once into the member's own language.
+          // The seed is its own guard: after the reload the
+          // key already equals the account's, so it never
+          // loops.
+          if (appDoc && appDoc.language) {
+            try {
+              if (localStorage.getItem("caresits-lang") !== appDoc.language) {
+                localStorage.setItem("caresits-lang", appDoc.language);
+                location.reload();
+              }
+            } catch { /* storage off */ }
           }
         } catch { /* the week surfaces stand in their empty states */ }
         // F15: My Profile renders from the trust seam, and the
