@@ -3,7 +3,7 @@
 // that record their calls, so ordering and failure handling
 // are proven, not described.
 import assert from "node:assert/strict";
-import { planSweep, runSweep, INACTIVE_MS, PHOTO_OBJECTS } from "./sweeper.mjs";
+import { planSweep, runSweep, planWarn, runWarn, INACTIVE_MS, WARN_AT_MS, PHOTO_OBJECTS, WARN_COPY } from "./sweeper.mjs";
 
 let n = 0;
 const t = (name, fn) => { fn(); n += 1; console.log("ok -", name); };
@@ -93,6 +93,55 @@ await ta("executor: nothing planned, nothing touched", async () => {
   const s = await runSweep(deps, NOW);
   assert.deepEqual(s, { planned: 0, swept: [], failed: [] });
   assert.equal(touched, false);
+});
+
+const warnAge = { ...stale, uid: "carer-w", lastActiveAtMs: NOW - WARN_AT_MS - 1000 };
+t("warn: a carer inside the warning window is planned, with her copy", () => {
+  const plan = planWarn([warnAge], NOW);
+  assert.equal(plan.length, 1);
+  assert.equal(plan[0].uid, "carer-w");
+  assert.equal(plan[0].copy, WARN_COPY);
+});
+t("warn: exactly 83 days warns; one millisecond under does not; at 90 the sweep owns it", () => {
+  assert.equal(planWarn([{ ...warnAge, lastActiveAtMs: NOW - WARN_AT_MS }], NOW).length, 1);
+  assert.equal(planWarn([{ ...warnAge, lastActiveAtMs: NOW - WARN_AT_MS + 1 }], NOW).length, 0);
+  assert.equal(planWarn([{ ...warnAge, lastActiveAtMs: NOW - INACTIVE_MS }], NOW).length, 0);
+});
+t("warn: already warned in this window is not warned again", () => {
+  const a = { ...warnAge, photoWarnedAtMs: warnAge.lastActiveAtMs + 5000 };
+  assert.equal(planWarn([a], NOW).length, 0);
+});
+t("warn: a warning from before the last activity does not count (a returned carer is warned again)", () => {
+  const a = { ...warnAge, photoWarnedAtMs: warnAge.lastActiveAtMs - 5000 };
+  assert.equal(planWarn([a], NOW).length, 1);
+});
+t("warn: families, swept carers and photoless carers are never warned", () => {
+  assert.equal(planWarn([{ ...warnAge, side: "family" }], NOW).length, 0);
+  assert.equal(planWarn([{ ...warnAge, photoClearedAtMs: NOW - 1 }], NOW).length, 0);
+  assert.equal(planWarn([{ ...warnAge, photoUrl: "" }], NOW).length, 0);
+});
+await ta("warn executor: sends first, marks second", async () => {
+  const calls = [];
+  const deps = {
+    listAccounts: async () => [warnAge],
+    sendWarning: async (uid, copy) => { calls.push(["send", uid, copy.subject]); },
+    markWarned: async (uid, at) => { calls.push(["mark", uid, at]); },
+  };
+  const s = await runWarn(deps, NOW);
+  assert.deepEqual(calls, [["send", "carer-w", WARN_COPY.subject], ["mark", "carer-w", NOW]]);
+  assert.deepEqual(s, { planned: 1, warned: ["carer-w"], failed: [] });
+});
+await ta("warn executor: a failed send is never marked and reports loudly", async () => {
+  let marked = false;
+  const deps = {
+    listAccounts: async () => [warnAge],
+    sendWarning: async () => { throw new Error("mail down"); },
+    markWarned: async () => { marked = true; },
+  };
+  const s = await runWarn(deps, NOW);
+  assert.equal(marked, false);
+  assert.equal(s.failed.length, 1);
+  assert.deepEqual(s.warned, []);
 });
 
 console.log(`\nALL ${n} sweeper checks passed`);
