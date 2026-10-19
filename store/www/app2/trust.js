@@ -359,6 +359,21 @@ export function renderSettings(root) {
   }
   langCard.append(langRow);
   root.append(langCard);
+  // Plans entry (payments chapter): families only. A carer account
+  // never sees a purchase surface (carers have no tiers, ever), so
+  // the card stands unless the viewer is known to be a carer. The
+  // button opens the plans sheet through its seam.
+  const sideNow = ((window.CARESITS_TRUST || {}).me || {}).side || (window.CARESITS_ME || {}).side || "";
+  if (sideNow !== "carer") {
+    const plansCard = el("div", "findCard");
+    plansCard.append(el("h3", "findName", tr("plans.title")));
+    const plansBtn = el("button", "mainBtn", tr("plans.title"));
+    plansBtn.type = "button";
+    plansBtn.id = "plansBtn";
+    plansBtn.addEventListener("click", () => { if (typeof window.CARESITS_OPEN_PLANS === "function") window.CARESITS_OPEN_PLANS(); });
+    plansCard.append(plansBtn);
+    root.append(plansCard);
+  }
   // Push switches stand only when the native seam is live on
   // this device (Security fence: no controls that cannot
   // work). The switches write this device's own doc, which
