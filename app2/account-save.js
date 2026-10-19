@@ -200,7 +200,11 @@ export async function saveBundle(bundle, firebaseConfig) {
     // the doc itself, in the door's own shape, ahead of the
     // batch — with the token awaited above, the birth lands.
     try {
-      await fsMod.setDoc(fsMod.doc(db, "users", user.uid), { createdAt: fsMod.serverTimestamp(), side: "", displayName: "" }, { merge: true });
+      // A birth stamps only what a birth owns (QA b110
+      // member 1): createdAt, merged — never side or name,
+      // which a late writer has no business resetting. The
+      // batch behind this one stamps the side itself.
+      await fsMod.setDoc(fsMod.doc(db, "users", user.uid), { createdAt: fsMod.serverTimestamp() }, { merge: true });
       profSnap = await fsMod.getDoc(fsMod.doc(db, "users", user.uid));
     } catch { /* the batch speaks for itself */ }
   }
