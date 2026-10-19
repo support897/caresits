@@ -216,7 +216,9 @@ async function bootFind() {
     const appMod = await import("../accounts/sdk/firebase-app.js");
     const authMod = await import("../accounts/sdk/firebase-auth.js");
     const fsMod = await import("../accounts/sdk/firebase-firestore.js");
-    const app = appMod.getApps().length ? appMod.getApps()[0] : appMod.initializeApp(cfgMod.firebaseConfig, "app2-find");
+    // The DEFAULT app only, shared with the door: a named app carries
+    // its own auth session and would never see the signed-in user (R1).
+    const app = appMod.getApps().find((a) => a.name === "[DEFAULT]") || appMod.initializeApp(cfgMod.firebaseConfig);
     const user = authMod.getAuth(app).currentUser;
     if (!user || user.isAnonymous) { renderFind(root, null, []); return; }
     const db = fsMod.getFirestore(app);
