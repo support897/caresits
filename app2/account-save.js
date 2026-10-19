@@ -81,10 +81,12 @@ export function planSave(bundle, opts) {
 const SDK = "../accounts/sdk";
 
 export async function saveBundle(bundle, firebaseConfig) {
-  const { initializeApp } = await import(`${SDK}/firebase-app.js`);
+  const appMod = await import(`${SDK}/firebase-app.js`);
   const authMod = await import(`${SDK}/firebase-auth.js`);
   const fsMod = await import(`${SDK}/firebase-firestore.js`);
-  const app = initializeApp(firebaseConfig, "app2-save");
+  // The DEFAULT app only, shared with the door: a named app carries its
+  // own auth session and would never see the signed-in user (R1).
+  const app = appMod.getApps().find((a) => a.name === "[DEFAULT]") || appMod.initializeApp(firebaseConfig);
   const auth = authMod.getAuth(app);
   const user = auth.currentUser;
   if (!user || user.isAnonymous) return { saved: "local", reason: "signed-out" };
