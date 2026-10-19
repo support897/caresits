@@ -5,7 +5,13 @@ of 19 Oct 2026 (18:35, by her tap, the catch printed on
 the option: "card on file to switch it on, $0 to use"):
 the file home is CLOUDFLARE R2: one private bucket,
 Asia-Pacific placement, no public access, no public dev
-URL. The path there: Blaze picked 17:52, killed by her
+URL. ACCOUNT SEPARATION (caught live 19 Oct 18:39): the
+bucket lives in a FRESH Cloudflare account in Ilse's own
+name, never in Fiesta's account: Fiesta is a separate
+business and is for sale, so Caresitters' user photos and
+billing can never sit inside it. The parked enable
+screen sat in Fiesta's signed-in session and was NOT
+clicked. The path there: Blaze picked 17:52, killed by her
 word 18:27 (a prepayment demand at Confirm; Blaze is
 closed, never re-presented) · her own server commissioned
 18:27 and capacity-proven (the Apex VPS: 59 GB disk,
