@@ -40,6 +40,11 @@ function show(nav) {
   closeMenu();
 }
 
+// The shell's show mechanism, published as a seam: surfaces
+// open by the hidden property through here, never by a class
+// (HQ ruling on Leg 14). Homes' thread jump rides it.
+window.CARESITS_NAV = show;
+
 $("#menuBtn").addEventListener("click", openMenu);
 $("#closeBtn").addEventListener("click", closeMenu);
 $("#sliver").addEventListener("click", closeMenu);
