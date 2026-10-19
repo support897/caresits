@@ -120,36 +120,59 @@ malformed or expired is a plain 401 with no detail.
   Security to rule whether authorship or pair membership
   is the delete fence for this class).
 
-## Signed links
+## Uploads through the gatekeeper; reads by signed link
 
-POST /v1/link { op: put | get | del, class, name } with
-the Bearer token. On an authorised request the service
-returns one presigned R2 URL (SigV4; the signature binds
-the method, the exact key and the expiry). TTL 10
-minutes (uploads 15). The phone then speaks to R2
-directly:
+Security's charter (19 Oct, the design read) sets the
+policy this section obeys: photo writes are owner only,
+under 5 MB, with the real type verified SERVER SIDE,
+never the client's declared type. A presigned PUT cannot
+do any of that (the server never sees the bytes), so
+UPLOADS ROUTE THROUGH THE GATEKEEPER:
 
-- PUT: the client uploads the object. The size caps are
-  enforced two ways: the client downscales before upload
-  (built), and the sweeper-side census (and the proof
-  battery) verifies object sizes by class; a presigned
-  PUT cannot carry a content-length condition under
-  SigV4 query signing, so the cap's hard enforcement is
-  the upload policy plus verification, stated plainly
-  rather than dressed as a signature property. Security
-  to rule whether that suffices or whether uploads route
-  through the gatekeeper after all for the cap's sake.
-- GET: R2 serves the object with its stored content
-  type (set at upload from the class map, never from
-  the client's claim). Missing key: R2's plain 404.
-- DELETE: presigned DELETE; success reads back as a
-  fresh presigned GET answering 404 (read-back, as
-  everywhere).
+- POST /v1/upload { class, name } with the Bearer token
+  and the raw bytes as the body. The gatekeeper checks
+  the authorisation matrix, streams the body with the
+  class cap enforced mid stream (photos under 5 MB,
+  certificates 10 MB; overflow aborts and nothing is
+  stored), sniffs the real type from the magic bytes
+  (JPEG for photos; PDF for certificates; anything else
+  refuses), and only then writes the object to R2 itself
+  under the scoped token, with the content type set from
+  the SNIFFED type. A replace targets the same key (the
+  photo and gallery names are fixed), so the old object
+  is replaced in the same operation by construction;
+  for certificates the client names each object and the
+  upload flow deletes the predecessor key in the same
+  user operation once the new object lands.
+- GET and DELETE stay presigned: POST /v1/link
+  { op: get | del, class, name } returns one presigned
+  R2 URL (SigV4; the signature binds the method, the
+  exact key and the expiry), TTL 10 minutes. GET serves
+  the stored content type; a missing key is R2's plain
+  404. A leaked link is a 10 minute window onto one
+  object with one verb, the exposure the design accepts
+  and states. The Firebase token never appears inside a
+  link, and an upload leaves no reusable door behind it
+  (the upload call is one shot, token bound, and closes).
 
-Links are single key, single op, short lived. A leaked
-link is a 10 minute window onto one object with one
-verb, which is the exposure the design accepts and
-states.
+## Token verification and the revocation posture
+
+Verification is the public certs route (above): no
+Firebase service account or Admin key is held for it,
+so there is nothing extra to keep custody of. THE
+REVOCATION POSTURE, named for the ruling: Firebase ID
+tokens live at most one hour and this route cannot see
+revocations inside that hour. The design accepts that
+bound IN WRITING, on this reasoning: the ID token alone
+grants nothing but the right to ask; the actual
+capabilities are the signed links (10 minutes, single
+object, single verb) and the one shot upload call, so a
+revoked user's outstanding reach dies within 15 minutes
+worst case, and their next ask fails at expiry. If
+Security rules otherwise, the upgrade path is a
+checkRevoked call on the delete and certificate verbs
+via a service account, at the cost of a held key; the
+design does not hold one until so ruled.
 
 ## The sweeper and the warner on the box
 
@@ -217,17 +240,29 @@ warning, Day Story never in scope.
 
 ## Proof battery (replaces the Blaze battery, same discipline)
 
-Forged link (tampered MAC) refused · expired link
-refused · op mismatch (PUT to a get link) refused · no
-token 401 · anonymous token 401 · other user's put/del
-refused · profile photo cross-read allowed (as designed)
-· certificate read by a non pair family refused ·
-day-story read by a non member refused · listing
-attempt 404s on every prefix · size cap enforced
-mid-stream · delete by owner then GET 404 read-back ·
-replace leaves exactly one file. Then the lifecycle
-legs on this home: upload, sweep pass deletes the
-objects and clears the slots, warning sent and marked.
+Forged link (tampered signature) refused · expired link
+refused · op mismatch refused · no token 401 ·
+anonymous token 401 · other user's upload/delete
+refused · a lying content type refused at the sniff
+(a PDF header in a photo upload, and the reverse) ·
+size cap enforced mid-stream · profile photo cross-read
+allowed (as designed) · certificate read by a non pair
+family refused · day-story read by a non member
+refused · listing attempt refused on every route ·
+DELETE PROVEN THREE WAYS (Security's charter): a fresh
+GET link refuses 404 · a GET link issued BEFORE the
+delete also refuses · the server side inventory (the
+scoped token's list, a proof plane tool only, never an
+endpoint) shows the key gone · replace leaves exactly
+one object. BUCKET PRIVACY is a synthetic proof item:
+an unauthenticated request to a known key refuses.
+BACKUP + RESTORE: object durability is the provider's
+(Cloudflare R2); the restore drill on synthetic objects
+before any real photo is this battery itself run end to
+end on the real bucket with synthetic users. Then the
+lifecycle legs on this home: upload, sweep pass deletes
+the objects and clears the slots, warning sent and
+marked.
 
 ## Open questions for Security's read
 
@@ -240,10 +275,11 @@ objects and clears the slots, warning sent and marked.
 5. Whether the gatekeeper should also rate limit /v1/link
    per uid (proposal: yes, a simple in memory counter,
    generous ceiling, stated in the build).
-6. The PUT size cap's enforcement (see Signed links):
-   upload policy plus census verification, or route the
-   bytes through the gatekeeper for a hard mid-stream
-   cap. Security's call; the design does not hide the gap.
+6. ANSWERED BY THE CHARTER's own policy headline
+   (server-side type verification): uploads route
+   through the gatekeeper, as the design now reads.
+   Held here for the read's confirmation, not as an
+   open choice.
 7. The R2 token's scope as proposed (this bucket only,
    object read/write): confirmed at PB's creation, with
    the bucket privacy (no public access, no dev URL) as
