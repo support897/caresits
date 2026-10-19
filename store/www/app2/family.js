@@ -20,6 +20,15 @@ const el = (tag, cls, text) => {
   return n;
 };
 const write = (kind, payload) => { if (typeof window.CARESITS_WRITE === "function") window.CARESITS_WRITE(kind, payload); };
+// A removal joins the bin's live list in the same moment it
+// is planned (QA b104 Leg 7): the bin surface renders from
+// that list on open, and a record binned this session must
+// not wait for the next boot to appear in it.
+const joinBin = (plan) => {
+  if (typeof window.CARESITS_BIN_ADD === "function") {
+    window.CARESITS_BIN_ADD({ id: plan.binId, kind: plan.data.kind, data: plan.data.data, deletedAt: plan.data.deletedAt });
+  }
+};
 const todayKey = () => new Date().toISOString().slice(0, 10);
 
 // The export seam. This module's renders are the commit points
@@ -98,8 +107,11 @@ export function renderChildren(root, rawChildren) {
     if (!n) { formMsg.textContent = tr("form.needChild"); return; }
     const ageYears = ageSel.value === "" ? null : Number(ageSel.value);
     const loves = INTERESTS.map((l) => l.id).filter((id) => pickedLoves.has(id));
-    write("child-add", { name: n, theme: themeSel.value, ageYears, loves });
+    // The kid is minted first and the write carries its id:
+    // the server record stands under this same id (id unity,
+    // QA b104 Leg 7), so remove, bin and restore all find it.
     const kid = { id: "local-" + Date.now(), name: n, theme: themeSel.value, ageYears, loves };
+    write("child-add", { id: kid.id, name: n, theme: themeSel.value, ageYears, loves });
     renderChildren(root, [...children, kid]);
   });
   form.append(name, themeSel, ageSel, loveLabel, loveRow, add, formMsg);
@@ -117,7 +129,7 @@ function confirmRemove(kid, card) {
   yes.type = "button";
   yes.addEventListener("click", () => {
     const uid = window.CARESITS_ME && window.CARESITS_ME.uid;
-    if (uid) { const plan = planBinMove({ uid, kind: "child", record: kid, nowIso: new Date().toISOString() }); if (plan.ok) write("bin-move", { path: plan.path, data: plan.data }); }
+    if (uid) { const plan = planBinMove({ uid, kind: "child", record: kid, nowIso: new Date().toISOString() }); if (plan.ok) { write("bin-move", { path: plan.path, data: plan.data }); joinBin(plan); } }
     write("child-remove", { id: kid.id });
     familyNow.children = familyNow.children.filter((k) => k.id !== kid.id);
     card.remove(); wrap.remove();
@@ -155,7 +167,9 @@ export function renderDayStory(root, entries, side) {
   save.type = "button";
   save.id = "tileSave";
   save.addEventListener("click", () => {
-    const entry = { day: todayKey(), tile: picked, note: note.value, at: new Date().toISOString() };
+    // The entry carries its local id from birth (id unity):
+    // the write, the bin and the remove all speak it.
+    const entry = { id: "local-" + Date.now(), day: todayKey(), tile: picked, note: note.value, at: new Date().toISOString() };
     write("dayStory", entry);
     renderDayStory(root, [entry, ...entries], side);
   });
@@ -182,7 +196,7 @@ export function renderDayStory(root, entries, side) {
       rm.type = "button";
       rm.addEventListener("click", () => {
         const uid = window.CARESITS_ME && window.CARESITS_ME.uid;
-        if (uid) { const plan = planBinMove({ uid, kind: "dayStory", record: e, nowIso: new Date().toISOString() }); if (plan.ok) write("bin-move", { path: plan.path, data: plan.data }); }
+        if (uid) { const plan = planBinMove({ uid, kind: "dayStory", record: e, nowIso: new Date().toISOString() }); if (plan.ok) { write("bin-move", { path: plan.path, data: plan.data }); joinBin(plan); } }
         if (e.id) write("dayStory-remove", { id: e.id });
         renderDayStory(root, entries.filter((x) => x !== e), side);
       });
@@ -265,4 +279,8 @@ if (typeof document !== "undefined") {
 if (typeof window !== "undefined") {
   window.CARESITS_FAMILY_NOW = () => ({ children: familyNow.children, entries: familyNow.entries, side: familyNow.side });
   window.CARESITS_FAMILY_RESTORE = noteRestored;
+  // The live boot publishes CARESITS_FAMILY after this module
+  // has booted (QA b104 ROOT B): the boot calls this hook and
+  // the surfaces re-render from the member's real records.
+  window.CARESITS_FAMILY_RENDER = bootFamily;
 }
