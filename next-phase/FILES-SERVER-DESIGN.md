@@ -188,7 +188,7 @@ certificates). On a pass the gatekeeper answers ok and
 only then does the client write the reference (the
 profile field, the card gallery, the day story
 record). On a fail the gatekeeper DELETES THE OBJECT
-AT ONCE, ALL VERSIONS, and refuses, so the reference
+AT ONCE and refuses, so the reference
 never lands and no bad object lingers. UNCONFIRMED
 KEYS STAY UNREACHABLE (Q6 iii): a GET for a profile
 photo or a certificate is issued ONLY when the owner's
