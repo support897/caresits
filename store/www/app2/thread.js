@@ -69,12 +69,17 @@ export function showUpgradePopup(edge) {
   card.append(el("p", null, tr("popup.body")));
   card.append(el("p", null, popupPriceLine("popup.finding", "finding")));
   card.append(el("p", null, popupPriceLine("popup.plus", "plus")));
+  // The enabling build: the popup is the doorway, the plans
+  // sheet is the one purchase surface (its buttons buy where
+  // the store road is live, and record the same interest on
+  // the web). The interest write still fires here, so the
+  // record of who wanted what is never lost on either road.
   const finding = el("button", "mainBtn popBtn", tr("popup.joinFinding"));
   finding.type = "button";
-  finding.addEventListener("click", () => { write("plans", { plan: "finding" }); wrap.remove(); });
+  finding.addEventListener("click", () => { write("plans", { plan: "finding" }); wrap.remove(); if (typeof window.CARESITS_OPEN_PLANS === "function") window.CARESITS_OPEN_PLANS(); });
   const plus = el("button", "mainBtn popBtn", tr("popup.joinPlus"));
   plus.type = "button";
-  plus.addEventListener("click", () => { write("plans", { plan: "family-plus" }); wrap.remove(); });
+  plus.addEventListener("click", () => { write("plans", { plan: "family-plus" }); wrap.remove(); if (typeof window.CARESITS_OPEN_PLANS === "function") window.CARESITS_OPEN_PLANS(); });
   const notNow = el("button", "mainBtn popBtn", tr("popup.notNow"));
   notNow.type = "button";
   notNow.addEventListener("click", () => { if (edge) latchedEdges.add(edge); wrap.remove(); });
