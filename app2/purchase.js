@@ -1,4 +1,14 @@
 import { RC_PUBLIC_KEY } from "./rc-config.js";
+import { withTimeout } from "../accounts/account.js";
+
+// Plugin calls are bounded (fleet census cure): a native
+// stall must land on the sheet's honest failure line,
+// never pin it on "buying" forever. purchasePackage is
+// deliberately NOT capped: it is anchored to the visible
+// store sheet, which the user can cancel — the sheet is
+// its bound. (The values live in a mutable object so the
+// battery can shrink them; production never writes it.)
+export const PURCHASE_TIMEOUTS = { configure: 15000, offerings: 20000, restore: 30000 };
 // Caresitters app2 — the purchase seam (payments chapter,
 // the enabling build). Buttons live in plans.js; this
 // module is the only road to the store: RevenueCat's
@@ -45,7 +55,7 @@ export async function configurePurchases(uid) {
   if (!plugin || !RC_PUBLIC_KEY || !uid) return false;
   if (configuredFor === uid) return true;
   try {
-    await plugin.configure({ apiKey: RC_PUBLIC_KEY, appUserID: uid });
+    await withTimeout(plugin.configure({ apiKey: RC_PUBLIC_KEY, appUserID: uid }), PURCHASE_TIMEOUTS.configure, "purchases configure");
     configuredFor = uid;
     return true;
   } catch { return false; }
@@ -78,7 +88,7 @@ export async function buyPlan(plan) {
   if (!plugin || !PACKAGES[plan]) return { ok: false, reason: "unavailable" };
   if (!(await configurePurchases(myUid()))) return { ok: false, reason: "unavailable" };
   let offerings;
-  try { offerings = await plugin.getOfferings(); } catch { return { ok: false, reason: "offerings" }; }
+  try { offerings = await withTimeout(plugin.getOfferings(), PURCHASE_TIMEOUTS.offerings, "offerings"); } catch { return { ok: false, reason: "offerings" }; }
   const pkg = pickPackage(offerings, plan);
   if (!pkg) return { ok: false, reason: "package" };
   try {
@@ -97,7 +107,7 @@ export async function restorePurchases() {
   if (!plugin) return { ok: false, reason: "unavailable" };
   if (!(await configurePurchases(myUid()))) return { ok: false, reason: "unavailable" };
   try {
-    const res = await plugin.restorePurchases();
+    const res = await withTimeout(plugin.restorePurchases(), PURCHASE_TIMEOUTS.restore, "restore");
     const info = res && res.customerInfo;
     if (typeof window !== "undefined" && typeof window.CARESITS_REFRESH_PLAN === "function") window.CARESITS_REFRESH_PLAN();
     const active = info && info.entitlements && info.entitlements.active ? Object.keys(info.entitlements.active) : [];
