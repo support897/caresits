@@ -66,7 +66,7 @@ export function planPairKey({ pairId, name } = {}) {
   if (!PAIR_RE.test(pairId || "")) return null;
   const safe = safeName(name);
   if (!safe || !safe.toLowerCase().endsWith(".jpg")) return null;
-  return `pairs/${pairId}/${safe}`;
+  return `pairs/${pairId}/day-story/${safe}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -85,21 +85,32 @@ export function planPairKey({ pairId, name } = {}) {
 //                   // read from Firestore under the CALLER's token,
 //                   // so Firestore's rules judged the read
 //   side,           // the caller's profile side: "family" | "carer" | ""
+//   referenced,     // for GET on profile photos/certificates:
+//                   // the owner's profile slot names this key,
+//                   // read under the CALLER's token (Q6 iii):
+//                   // deterministic key names open nothing.
 // }
 
-export function authorise({ uid, op, cls, key, keyUid, pair, side } = {}) {
+export function authorise({ uid, op, cls, key, keyUid, pair, side, referenced } = {}) {
   if (!uid || !key || !CLASSES[cls]) return { ok: false, reason: "shape" };
   if (!["put", "get", "del", "confirm"].includes(op)) return { ok: false, reason: "op" };
   if (cls === "profile-photos" || cls === "certificates") {
+    // Q6 (iii): a GET is issued only for a key the owner's
+    // profile slot actually names. An unconfirmed or
+    // orphaned object is unreachable by anyone, owner
+    // included.
+    if (op === "get" && referenced !== true) return { ok: false, reason: "unreferenced" };
     if (keyUid !== uid) {
-      // Cross-user: the only door is a certificate READ by
-      // the family side of a contact/hired pair, judged by
-      // the pair facts the caller supplies (themselves read
-      // under the caller's token).
-      if (cls === "certificates" && op === "get" && pair && pair.familyUid === uid && pair.carerUid === keyUid
+      // Cross-user: the only doors are reads: a profile
+      // photo read by any signed-in member (Find renders
+      // them), and a certificate READ by the family side
+      // of a contact/hired pair, judged by the pair facts
+      // (themselves read under the caller's token).
+      if (op !== "get") return { ok: false, reason: "not-owner" };
+      if (cls === "profile-photos") return { ok: true };
+      if (pair && pair.familyUid === uid && pair.carerUid === keyUid
         && (pair.state === "contact" || pair.state === "hired")) return { ok: true };
-      if (cls === "profile-photos" && op === "get") return { ok: true }; // Find renders profile photos to signed-in members
-      return { ok: false, reason: "not-owner" };
+      return { ok: false, reason: "not-pair" };
     }
     return { ok: true };
   }
