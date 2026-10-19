@@ -28,9 +28,12 @@ export const WARN_COPY = {
 };
 
 // The objects a sweep removes, per account: the main profile
-// photo only, on HQ's spec. The gallery slots join this list
-// only if Ilse rules so; the fence is named, not an oversight.
-export const PHOTO_OBJECTS = ["photo.jpg"];
+// photo AND the four gallery photos. Her words were "the
+// images" for the carer's profile (HQ ruling, 19 Oct 2026):
+// the gallery is the same class, the carer's own profile
+// images with the same intent. The only carve-out she has
+// ever made is Day Story, which never appears here.
+export const PHOTO_OBJECTS = ["photo.jpg", "extra-1.jpg", "extra-2.jpg", "extra-3.jpg", "extra-4.jpg"];
 
 // planSweep(accounts, nowMs) -> steps. An account is swept
 // only when ALL of these hold: it is a carer (the photo lives
@@ -108,13 +111,13 @@ export async function runWarn(deps, nowMs) {
 // runSweep(deps, nowMs): deps = {
 //   listAccounts(): Promise<account facts>,           admin plane read
 //   deleteObject(path): Promise<void>,                storage admin delete
-//   clearPhotoSlot(uid, clearedAtMs): Promise<void>,  clears photoUrl + stamps photoClearedAt
+//   clearPhotoSlot(uid, clearedAtMs): Promise<void>,  clears photoUrl + the card gallery + stamps photoClearedAt
 // }
-// Order per account is the safety property: the object goes
-// FIRST, the slot clears SECOND, in the same pass, so no
+// Order per account is the safety property: the objects go
+// FIRST, the slots clear SECOND, in the same pass, so no
 // surface ever renders a broken image and no cleared slot
 // ever orphans a live object. A failed delete leaves the
-// slot untouched, lands loudly in the summary, and the pass
+// slots untouched, lands loudly in the summary, and the pass
 // continues with the next account.
 export async function runSweep(deps, nowMs) {
   const accounts = await deps.listAccounts();
