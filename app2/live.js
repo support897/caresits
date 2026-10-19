@@ -9,6 +9,15 @@
 import { levelOf } from "./levels.js";
 import { resolvePlan, entitlementFromRecord, plusExtrasOpen } from "../accounts/account.js";
 
+// The photo lifecycle stamp path (HQ spec, 19 Oct 2026):
+// carers only, at the root, beside _comp and _entitlements.
+// The stamp is guarded by the rules arm in the v5 fold: the
+// one key must equal the server's own clock, so it can never
+// be forged or backdated by any client.
+export function activityStampPath(uid, side) {
+  return uid && side === "carer" ? `_activity/${uid}` : null;
+}
+
 export function routeWrite(kind, payload, uid) {
   if (!uid) return { ok: false, reason: "signed-out" };
   switch (kind) {
@@ -318,6 +327,16 @@ export async function bootLive() {
           plusExtras: plusExtrasOpen({ plan, side, createdAtMs, now: Date.now() }),
         };
       } catch { /* no record reachable: the free taste stands */ }
+      // The photo lifecycle stamp (HQ spec, 19 Oct 2026): a
+      // carer opening the signed-in app refreshes lastActiveAt.
+      // The value is the server's own clock and nothing else,
+      // which is the only value the rules arm admits. Fail
+      // soft: until the arm is published the write refuses,
+      // and the boot never breaks over a stamp.
+      try {
+        const stampPath = activityStampPath(uid, profile.side || "");
+        if (stampPath) await fs.setDoc(docAt(stampPath), { lastActiveAt: fs.serverTimestamp() }, { merge: true });
+      } catch { /* the stamp waits for its rules arm */ }
       try {
         const grab = async (path) => {
           const snap = await fs.getDocs(colAt(path));
