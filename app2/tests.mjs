@@ -910,6 +910,13 @@ const { planSave } = await import("./account-save.js");
   await pp.evaluate(() => { const b = [...document.querySelectorAll("#plansPop button")].find((x) => x.textContent.includes("Search Pass")); b.click(); });
   await pp.waitForTimeout(150);
   t("plans sheet: Join Search Pass records plan interest and closes the sheet", await pp.evaluate(() => window.__writes.length === 1 && window.__writes[0][0] === "plans" && window.__writes[0][1].plan === "search-pass" && !document.getElementById("plansPop")));
+  // G7 (Store Review): the renewal disclosure + the legal
+  // links stand ON the paywall surface itself.
+  await pp.evaluate(() => window.CARESITS_OPEN_PLANS && window.CARESITS_OPEN_PLANS());
+  await pp.waitForTimeout(120);
+  t("plans G7: the renewal disclosure stands on the paywall, prices rendered with the buttons (auto renew, no free month, cancel in Apple ID, open to the paid end, the Pass named non renewing)", await pp.evaluate(() => { const s = document.querySelector("#plansPop .plansLegal").textContent; return s.includes("A$14.95") && s.includes("renews on its own each month") && s.includes("no free month") && s.includes("A$24.95") && s.includes("Apple ID subscriptions") && s.includes("end of the paid month") && s.includes("never renews itself"); }));
+  t("plans G7: the Privacy Policy and Terms of Use links stand on the surface, pointing true", await pp.evaluate(() => { const as = [...document.querySelectorAll("#plansPop .plansLinks a")]; return as.length === 2 && as[0].href.includes("privacy.html") && as[1].href.includes("apple.com/legal") && as[1].textContent.includes("Terms of Use"); }));
+  await pp.evaluate(() => document.getElementById("plansPop")?.remove());
   await setMe({ uid: "f9", side: "family", plusExtras: true });
   await pp.evaluate(() => window.CARESITS_NAV("daystory"));
   await pp.waitForTimeout(150);
