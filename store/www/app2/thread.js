@@ -130,3 +130,12 @@ function bootThread() {
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bootThread);
 else bootThread();
+
+// The live boot publishes CARESITS_THREAD after this module
+// has booted (QA b104 Leg 14): the boot calls the render
+// hook, and opening the surface re-renders from the seam the
+// way the bin re-renders on open.
+if (typeof window !== "undefined") {
+  window.CARESITS_THREAD_RENDER = bootThread;
+  window.CARESITS_THREAD_OPEN = bootThread;
+}
