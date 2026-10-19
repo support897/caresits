@@ -848,7 +848,8 @@ const { planSave } = await import("./account-save.js");
   t("b107 Legs 9+10 same-session: a landed save raises the completeness flag on both hosts", src("./account-save.js").includes("h.CARESITS_PROFILE_COMPLETE = true"));
   t("b107 language ride: the pick writes the account doc, the boot seeds it back", src("./live.js").includes('case "language":') && src("./live.js").includes('localStorage.setItem("caresits-lang", appDoc.language)') && src("./trust.js").includes('write("language", { code })'));
   t("b108 language dispatch: the write settles before the reload, bounded", src("./trust.js").includes("return window.CARESITS_WRITE(kind, payload)") && src("./trust.js").includes("Promise.resolve(w).then(go, go)") && src("./trust.js").includes("setTimeout(go, 1500)"));
-  t("b108 save drain: the realm warms at entry, the judge looks twice, the shell and journey drain the envelope", src("./account-save.js").includes("export function warmSave") && src("./account-save.js").includes("export async function drainOutbox") && src("./account-save.js").includes("export async function frameUser") && src("./journey.js").includes("warmSave();") && src("./journey.js").includes("drainOutbox();") && src("./live.js").includes("m.drainOutbox()"));
+  t("b108 save drain: the realm warms at entry, the shell and journey drain the envelope", src("./account-save.js").includes("export function warmSave") && src("./account-save.js").includes("export async function drainOutbox") && src("./journey.js").includes("warmSave();") && src("./journey.js").includes("drainOutbox();") && src("./live.js").includes("m.drainOutbox()"));
+  t("b108 token step: the save awaits a live token before its first Firestore step", src("./account-save.js").includes("user.getIdToken(true)"));
 }
 
 // ---- Leg 11: the level picker (welcome choice + computed boundary) ----
