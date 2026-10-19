@@ -71,7 +71,7 @@ rules text stays on file, unused).
   GATEKEEPER's (this bucket only · object read + write
   + DELETE · NO LIST) and the SWEEPER's (this bucket
   only · object read + LIST + delete, riding the census
-  and the version purges). No admin rights, no account
+  and the quarantine purges). No admin rights, no account
   permissions on either. Separate files, created by PB
   into custody, the scope AND the account identity read
   back at creation (fresh account, her name). The
@@ -199,8 +199,8 @@ DAILY ORPHAN CENSUS (Q6 iv) rides the box's daily job
 (the sweeper's run, under the sweeper's list token):
 every bucket key is checked against the confirm ledger
 and the app state's references; an unconfirmed,
-unreferenced key older than 24 hours is purged (all
-versions) and counted in the run's report. THE
+unreferenced key older than 24 hours is purged
+outright and counted in the run's report. THE
 RESIDUAL, NAMED AND ACCEPTED: between PUT and confirm
 an oversize or wrong type object can exist: unreferenced,
 unreachable, unlisted. Existence without reachability
@@ -359,7 +359,7 @@ whose length differs from the signed length refused
 at R2 · no token 401 · anonymous token 401 · other
 user's upload/delete refused · CONFIRM legs: an
 oversize upload fails confirm and its object is
-deleted by the gatekeeper (all versions) · a magic
+deleted by the gatekeeper outright · a magic
 mismatch (a PDF header in a photo upload, and the
 reverse) fails confirm the same way · an unconfirmed
 key is never referenced by any app state · a GET for
