@@ -36,7 +36,11 @@ export function routeWrite(kind, payload, uid) {
     case "bin-delete": return { ok: true, op: "delete", path: payload.path };
     case "bin-restore": return { ok: true, op: "binRestore", binPath: payload.binPath, originPath: payload.originPath, originId: payload.originId || null, data: payload.data };
     case "dayStory-remove": return { ok: true, op: "delete", path: `users/${uid}/dayStory/${payload.id}` };
-    case "photo": return { ok: true, op: "merge", path: `profiles/${uid}`, data: { photoUrl: payload.photoUrl } };
+    // A fresh photo also clears the lifecycle's swept stamp
+    // (Ilse's ruling, 19 Oct 2026): the carer returns, adds a
+    // photo, and the profile is back in family search. A
+    // manual remove leaves the stamp as it stands.
+    case "photo": return { ok: true, op: "merge", path: `profiles/${uid}`, data: payload.photoUrl ? { photoUrl: payload.photoUrl, photoClearedAt: null } : { photoUrl: payload.photoUrl } };
     case "gallery": return { ok: true, op: "merge", path: `profiles/${uid}`, data: { card: { gallery: (Array.isArray(payload.gallery) ? payload.gallery : []).filter((u) => typeof u === "string" && u).slice(0, 4) } } };
     // The resume file record names a TEMPORARY object only
     // (Ilse's resume model, 19 Oct 2026): an uploaded resume is
