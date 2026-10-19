@@ -23,8 +23,8 @@ t("certificate keys: pdf only, name sanitised", () => {
   assert.equal(planUserKey({ uid: U, cls: "certificates", name: "check.jpg" }), null);
   assert.equal(planUserKey({ uid: "", cls: "certificates", name: "x.pdf" }), null);
 });
-t("day story keys live under pairs/ (A5)", () => {
-  assert.equal(planPairKey({ pairId: "pair-12345678", name: "day one.jpg" }), "pairs/pair-12345678/day_one.jpg");
+t("day story keys live under pairs/<pairId>/day-story/ (A5 as folded in)", () => {
+  assert.equal(planPairKey({ pairId: "pair-12345678", name: "day one.jpg" }), "pairs/pair-12345678/day-story/day_one.jpg");
   assert.equal(planPairKey({ pairId: "pair-12345678", name: "doc.pdf" }), null);
 });
 t("there is no resume shape anywhere in the planners", () => {
@@ -33,19 +33,24 @@ t("there is no resume shape anywhere in the planners", () => {
 });
 
 // the matrix
-const mine = { uid: U, keyUid: U, pair: null, side: "carer" };
+const mine = { uid: U, keyUid: U, pair: null, side: "carer", referenced: true };
 t("owner: every verb on own profile + certificates", () => {
   for (const cls of ["profile-photos", "certificates"]) for (const op of ["put", "get", "del", "confirm"])
     assert.equal(authorise({ ...mine, cls, op, key: "k" }).ok, true, `${cls}/${op}`);
 });
-t("another user: photo read only (Find), never write or delete", () => {
-  const other = { uid: V, keyUid: U, pair: null, side: "family" };
+t("Q6 (iii): an unreferenced key reads for NOBODY, owner included", () => {
+  assert.equal(authorise({ uid: U, keyUid: U, cls: "profile-photos", op: "get", key: "k", referenced: false }).reason, "unreferenced");
+  assert.equal(authorise({ uid: V, keyUid: U, cls: "profile-photos", op: "get", key: "k", referenced: false, side: "family" }).ok, false);
+  assert.equal(authorise({ uid: V, keyUid: U, cls: "certificates", op: "get", key: "k", referenced: true, side: "family", pair: { familyUid: V, carerUid: U, state: "hired" } }).ok, true);
+});
+t("another user: referenced photo read only (Find), never write or delete", () => {
+  const other = { uid: V, keyUid: U, pair: null, side: "family", referenced: true };
   assert.equal(authorise({ ...other, cls: "profile-photos", op: "get", key: "k" }).ok, true);
   assert.equal(authorise({ ...other, cls: "profile-photos", op: "put", key: "k" }).ok, false);
   assert.equal(authorise({ ...other, cls: "profile-photos", op: "del", key: "k" }).ok, false);
 });
 t("certificates: a contact pair family reads; open pair and strangers do not", () => {
-  const fam = { uid: V, keyUid: U, side: "family" };
+  const fam = { uid: V, keyUid: U, side: "family", referenced: true };
   assert.equal(authorise({ ...fam, cls: "certificates", op: "get", key: "k", pair: { familyUid: V, carerUid: U, state: "contact" } }).ok, true);
   assert.equal(authorise({ ...fam, cls: "certificates", op: "get", key: "k", pair: { familyUid: V, carerUid: U, state: "open" } }).ok, false);
   assert.equal(authorise({ ...fam, cls: "certificates", op: "get", key: "k", pair: null }).ok, false);
