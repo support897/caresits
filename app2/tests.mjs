@@ -847,6 +847,7 @@ const { planSave } = await import("./account-save.js");
   t("b107 Leg 7 residual: bin leaves the live list on restore and forever", src("./bin.js").includes("export function binLeave") && (src("./bin.js").match(/binLeave\(w\.CARESITS_BIN, item\.id\)/g) || []).length === 2);
   t("b107 Legs 9+10 same-session: a landed save raises the completeness flag on both hosts", src("./account-save.js").includes("h.CARESITS_PROFILE_COMPLETE = true"));
   t("b107 language ride: the pick writes the account doc, the boot seeds it back", src("./live.js").includes('case "language":') && src("./live.js").includes('localStorage.setItem("caresits-lang", appDoc.language)') && src("./trust.js").includes('write("language", { code })'));
+  t("b108 language dispatch: the write settles before the reload, bounded", src("./trust.js").includes("return window.CARESITS_WRITE(kind, payload)") && src("./trust.js").includes("Promise.resolve(w).then(go, go)") && src("./trust.js").includes("setTimeout(go, 1500)"));
 }
 
 // ---- Leg 11: the level picker (welcome choice + computed boundary) ----
