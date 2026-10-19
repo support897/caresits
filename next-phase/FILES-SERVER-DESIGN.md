@@ -250,9 +250,14 @@ what R2 has:
   no grace by design.
 - RULED PERMANENT DELETES (a user's confirmed delete
   forever, the bin's 30 day expiry) hard delete at the
-  act in the same way, inventory-proven.
-  retired; no trash keys exist in the design or the
-  gatekeeper core.
+  act in the same way, inventory-proven. LIFECYCLE
+  SWEEPS ARE THE ONE EXCEPTION TO "AT ONCE": they run
+  the two phases above, never an instant hard delete,
+  because on a store with no versions an instant sweep
+  would make any planner or stamp bug an unrecoverable
+  deletion of live carers' photos; the quarantine week
+  is the only machinery accident grace this platform
+  allows, and it never touches the user facing rule.
 
 ## Token verification and the revocation posture
 
