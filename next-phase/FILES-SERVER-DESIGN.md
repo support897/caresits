@@ -1,37 +1,53 @@
-# Caresitters files server: design for Security's read
+# Caresitters files home: design for Security's read
 
-Status: DESIGN, nothing built or deployed. Her word of
-19 Oct 2026 (18:27): Blaze is closed (prepayment refused);
-the file home is her own server. Capacity truth (step 1,
-reported to HQ): the Apex VPS (ServerHost 192.236.165.98,
-Debian 12, Docker, Caddy front door) is the fit box: 59 GB
-disk, 44 GB free read live 19 Oct; 3,915 MB RAM, ~1,295 MB
-available; idle load. Firestore and Auth stay on free Spark;
-rules v5, the _activity arm and _entitlements stand as-is.
+Status: DESIGN, nothing built or deployed. Her FINAL word
+of 19 Oct 2026 (18:35, by her tap, the catch printed on
+the option: "card on file to switch it on, $0 to use"):
+the file home is CLOUDFLARE R2: one private bucket,
+Asia-Pacific placement, no public access, no public dev
+URL. The path there: Blaze picked 17:52, killed by her
+word 18:27 (a prepayment demand at Confirm; Blaze is
+closed, never re-presented) · her own server commissioned
+18:27 and capacity-proven (the Apex VPS: 59 GB disk,
+44 GB free read live 19 Oct; it now hosts the gatekeeper
+and the sweeper instead of the bytes) · R2 picked over it
+18:35. Her one step is the Cloudflare enable sitting
+(card typed by her own fingers into Cloudflare's screen);
+on her confirm PB creates the bucket plus a scoped API
+token into custody. Firestore and Auth stay on free
+Spark; rules v5, the _activity arm and _entitlements
+stand as-is.
 
 ## The shape in one paragraph
 
-A small gatekeeper service of our own, running on the box
-in its own container, bound to a localhost port behind
-Caddy at files.caresits.xyz. It stores files in its own
-directory, verifies the app's Firebase login token on the
-server side, and hands out short lived signed links for
-upload, view and delete. No public links, no listing, no
-unauthenticated surface. The sealed Storage rules' privacy
-shape is re-implemented as service logic (the store rules
-text stays on file, unused).
+Files live ONLY in the private R2 bucket, under keys
+<uid>/<class>/<name>. A small gatekeeper service of our
+own, running on the Apex VPS in its own container behind
+Caddy at files.caresits.xyz, verifies the app's Firebase
+login token on the server side and hands out short lived
+PRESIGNED links (R2's own S3 signatures) for upload, view
+and delete. Bytes flow between the phone and R2 directly;
+the gatekeeper never touches a byte. No public links, no
+listing, no unauthenticated surface: an unauthenticated
+request to a known key refuses (a battery leg, per
+Security's charter). The sealed Storage rules' privacy
+shape is re-implemented as the authorisation matrix the
+gatekeeper enforces before it signs anything (the store
+rules text stays on file, unused).
 
 ## Runtime and footprint
 
-- Node.js, standard library only (http, crypto, fs). Zero
-  npm dependencies: nothing third party to audit, nothing
-  to rot, and the whole service is small enough to read in
-  one sitting at the design read.
-- Own container, own unprivileged service user, own data
-  directory /srv/caresitters-files (mounted into the
-  container only), own secrets file on the box (mode 600,
-  root readable only): the link signing secret, generated
-  on the box, never in chat, repo or client code.
+- Node.js, standard library only (http, crypto). Zero npm
+  dependencies: nothing third party to audit, nothing to
+  rot, and the whole service is small enough to read in
+  one sitting at the design read. Presigning is SigV4
+  HMAC over the request: standard library work.
+- Own container, own unprivileged service user, own
+  secrets file on the box (mode 600, root readable
+  only): the scoped R2 API token (created by PB into
+  custody: this bucket only, object read/write, nothing
+  else), never in chat, repo or client code. The client
+  never sees the token; it sees only presigned links.
 - Binds 127.0.0.1 on a free localhost port (8123 proposed);
   Caddy routes only files.caresits.xyz to it, the house
   pattern every tenant on this box already follows.
@@ -41,7 +57,7 @@ text stays on file, unused).
 
 ## Data layout and path safety
 
-Files live at /srv/caresitters-files/<uid>/<class>/<name>:
+Bucket keys run <uid>/<class>/<name>:
 
 - class "profile-photos": photo.jpg, extra-1.jpg ..
   extra-4.jpg (the client's existing planners name these).
@@ -53,10 +69,12 @@ Files live at /srv/caresitters-files/<uid>/<class>/<name>:
 - The resume PDF has NO class: it never uploads (device
   only extraction, see client adaptation).
 
-Every path segment is validated against strict allow
-patterns (uid shape, the class list, the name patterns).
-No dotdot, no absolute paths, no symlink following out of
-the root, and no listing endpoint exists at all.
+Every key segment is validated against strict allow
+patterns (uid shape, the class list, the name patterns)
+before anything is signed. The gatekeeper exposes no
+listing operation and signs no List call, ever; the
+bucket itself is private with no public dev URL, so a
+key alone is never a door.
 
 ## Authentication: the Firebase token, verified on the box
 
@@ -100,47 +118,49 @@ malformed or expired is a plain 401 with no detail.
 
 POST /v1/link { op: put | get | del, class, name } with
 the Bearer token. On an authorised request the service
-returns one link: https://files.caresits.xyz/f/<token>,
-where the token is base64url( payload ).base64url(
-HMAC-SHA256( secret, payload ) ) and the payload binds
-{ op, uid-scope path, exp }. TTL 10 minutes (uploads 15).
-The /f/ endpoint checks the MAC in constant time, the
-expiry, and that the op matches the HTTP method, then:
+returns one presigned R2 URL (SigV4; the signature binds
+the method, the exact key and the expiry). TTL 10
+minutes (uploads 15). The phone then speaks to R2
+directly:
 
-- PUT: streams the body to a temp file in the target
-  directory, enforces the class size cap while streaming
-  (abort and unlink on overflow), then renames into place
-  (a replace is atomic; a failed upload never leaves a
-  torn file). Content type is not trusted from the client;
-  it is assigned from the class and extension at serve
-  time.
-- GET: streams the file with the class content type,
-  X-Content-Type-Options: nosniff, and a Content Security
-  Policy of sandbox on document classes. Missing file:
-  plain 404.
-- DELETE: unlinks; missing is 404; success is 200 with an
-  empty body. Delete is proven client side by a fresh GET
-  link answering 404 (read-back, as everywhere).
+- PUT: the client uploads the object. The size caps are
+  enforced two ways: the client downscales before upload
+  (built), and the sweeper-side census (and the proof
+  battery) verifies object sizes by class; a presigned
+  PUT cannot carry a content-length condition under
+  SigV4 query signing, so the cap's hard enforcement is
+  the upload policy plus verification, stated plainly
+  rather than dressed as a signature property. Security
+  to rule whether that suffices or whether uploads route
+  through the gatekeeper after all for the cap's sake.
+- GET: R2 serves the object with its stored content
+  type (set at upload from the class map, never from
+  the client's claim). Missing key: R2's plain 404.
+- DELETE: presigned DELETE; success reads back as a
+  fresh presigned GET answering 404 (read-back, as
+  everywhere).
 
-Links are single path, single op, short lived. A leaked
-link is a 10 minute window onto one file with one verb,
-which is the exposure the design accepts and states.
+Links are single key, single op, short lived. A leaked
+link is a 10 minute window onto one object with one
+verb, which is the exposure the design accepts and
+states.
 
 ## The sweeper and the warner on the box
 
 The built planner/warner (photo-sweeper/) deploys as a
 scheduled job on the box (daily). Its executor deps map
-to this home: deleteObject = a service side unlink inside
-the data directory (no HTTP), photo facts read from
-Firestore. The server side Firestore access it needs
-(_activity stamps, profile photo fields, warning marks)
-rides a dedicated credential whose custody is Security's
-to rule: proposal is a service account JSON created for
-this job alone (read _activity + profiles, write the two
-photo fields + warning marks, nothing else), held on the
-box at mode 600. The warning email sends via Purelymail
-SMTP as hello@caresits.xyz; its credential likewise sits
-in the box's secrets file under Security's custody call.
+to this home: deleteObject = an R2 DeleteObject call
+under the same scoped token (S3 API from the box), photo
+facts read from Firestore. The server side Firestore
+access it needs (_activity stamps, profile photo fields,
+warning marks) rides a dedicated credential whose
+custody is Security's to rule: proposal is a service
+account JSON created for this job alone (read _activity
++ profiles, write the two photo fields + warning marks,
+nothing else), held on the box at mode 600. The warning
+email sends via Purelymail SMTP as hello@caresits.xyz;
+its credential likewise sits in the box's secrets file
+under Security's custody call.
 Every ruling stands verbatim: warn at 83 days, sweep at
 90, objects first then slots, missing stamp never swept,
 the never-stamped class on arm age plus an unrescued
@@ -214,5 +234,15 @@ objects and clears the slots, warning sent and marked.
 5. Whether the gatekeeper should also rate limit /v1/link
    per uid (proposal: yes, a simple in memory counter,
    generous ceiling, stated in the build).
+6. The PUT size cap's enforcement (see Signed links):
+   upload policy plus census verification, or route the
+   bytes through the gatekeeper for a hard mid-stream
+   cap. Security's call; the design does not hide the gap.
+7. The R2 token's scope as proposed (this bucket only,
+   object read/write): confirmed at PB's creation, with
+   the bucket privacy (no public access, no dev URL) as
+   a synthetic-proof battery item.
 
-Nothing deploys until this read lands.
+Nothing deploys until this read lands, and nothing is
+created in Cloudflare until her enable confirm lands
+and PB creates the bucket + token into custody.
