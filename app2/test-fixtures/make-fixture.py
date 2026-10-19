@@ -7,6 +7,7 @@ LINES = [
     "Nanny and babysitter",
     "Mobile 0412 555 018",
     "Email maria.santos@example.com",
+    "Home 12 Crown Street, Surry Hills 2031",
     "Languages Spanish and English",
     "Experience 6 years with babies and toddlers",
     "First Aid certificate current",
