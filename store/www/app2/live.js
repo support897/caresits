@@ -48,7 +48,6 @@ export function routeWrite(kind, payload, uid) {
     // family visible document. The name rides the profile doc
     // so the discard, the confirm and the account deletion can
     // each remove the object itself.
-    case "resume-file": return { ok: true, op: "merge", path: `profiles/${uid}`, data: { resumeFile: typeof payload.name === "string" ? payload.name : "" } };
     case "dayStory": return { ok: true, op: "add", path: `users/${uid}/dayStory`, data: { day: payload.day, tile: payload.tile, note: payload.note, at: payload.at } };
     case "photo-request": return { ok: true, op: "add", path: `users/${uid}/dayStory`, data: { day: payload.day, tile: "Photo moment", note: "A photo of the kids was asked for", at: payload.at } };
     case "timesheet": return { ok: true, op: "add", path: `users/${uid}/timesheets`, data: { day: payload.day, hours: payload.hours } };
@@ -95,7 +94,6 @@ export function trustSeamFrom(profile, card, questionnaire) {
     level,
     postcode: c.postcode || "",
     photoUrl: c.photoUrl || "",
-    resumeFile: c.resumeFile || "",
     // F14: the gallery rides inside the card map, up to four
     // photo URLs in slot order.
     gallery: (Array.isArray(cardBits.gallery) ? cardBits.gallery : []).filter((u) => typeof u === "string" && u).slice(0, 4),
