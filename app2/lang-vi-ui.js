@@ -115,6 +115,7 @@ export const UI_VI = {
  "journey.wFine": "Câu trả lời của bạn là của riêng bạn. Không gì được chia sẻ cho đến khi một cặp ghép đôi mở ra, và bạn có thể đổi bất kỳ câu trả lời nào bất cứ lúc nào.",
  "journey.dTitle": "Hoàn thành thật tốt",
  "journey.dLead": "Câu trả lời của bạn đã được lưu. Từ đây, chúng tôi xếp hàng những người chăm sóc hoặc gia đình phù hợp mọi yêu cầu bắt buộc bạn đặt ra.",
+ "journey.dLeadLocal": "Câu trả lời của bạn đã được lưu trên thiết bị này. Chúng sẽ vào tài khoản của bạn khi bạn đăng nhập.",
  "journey.dFine": "Không thông tin nào về bạn được hiển thị cho bất kỳ ai cho đến khi hồ sơ của bạn hoàn thiện và bạn đồng ý.",
  "find.member": "Một thành viên",
  "find.postcode": "Mã bưu điện {n}",
