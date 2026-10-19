@@ -243,7 +243,13 @@ function wire() {
   // from the answers, never claimed by the pick.
   document.querySelectorAll("[data-level]").forEach((b) => b.addEventListener("click", () => {
     const v = b.dataset.level;
-    if (v === "explore") { location.href = "index.html"; return; }
+    if (v === "explore") {
+      // Explore is a deliberate signed out entry: it carries the
+      // session marker the shell's signed out gate exempts.
+      try { sessionStorage.setItem("caresits-demo", "1"); } catch { /* storage off */ }
+      location.href = "index.html";
+      return;
+    }
     state.target = v;
     document.querySelectorAll("[data-level]").forEach((x) => x.classList.toggle("on", x === b));
     persistDraft();
