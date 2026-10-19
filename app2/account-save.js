@@ -1,3 +1,5 @@
+import { withTimeout } from "../accounts/account.js";
+
 // Caresitters app2 — Phase A slice 2: the journey finish, saved.
 // journey.js calls window.CARESITS_SAVE(bundle) when this file
 // is loaded beside it. Three writes, in the shapes the rules
@@ -80,6 +82,24 @@ export function planSave(bundle, opts) {
 
 const SDK = "../accounts/sdk";
 
+// The frame's user, judged honestly (QA b104 ROOT A): a
+// synchronous currentUser read in a frame whose session is
+// still restoring answers null for a user who IS signed in,
+// and a save judged on that read writes nothing while the
+// Done screen claims it saved. Wait for the restore to
+// settle, bounded, and judge on what then stands. (The
+// mutable bound object is the battery's shrink handle;
+// production never writes it.)
+export const FRAME_WAIT = { ms: 10000 };
+export async function frameUser(auth) {
+  let user = auth ? auth.currentUser : null;
+  if (!user && auth && typeof auth.authStateReady === "function") {
+    try { await withTimeout(auth.authStateReady(), FRAME_WAIT.ms, "session restore"); } catch { /* judge on what stands */ }
+    user = auth.currentUser;
+  }
+  return user || null;
+}
+
 export async function saveBundle(bundle, firebaseConfig) {
   const appMod = await import(`${SDK}/firebase-app.js`);
   const authMod = await import(`${SDK}/firebase-auth.js`);
@@ -88,7 +108,7 @@ export async function saveBundle(bundle, firebaseConfig) {
   // own auth session and would never see the signed-in user (R1).
   const app = appMod.getApps().find((a) => a.name === "[DEFAULT]") || appMod.initializeApp(firebaseConfig);
   const auth = authMod.getAuth(app);
-  const user = auth.currentUser;
+  const user = await frameUser(auth);
   if (!user || user.isAnonymous) return { saved: "local", reason: "signed-out" };
   const db = fsMod.getFirestore(app);
   const profSnap = await fsMod.getDoc(fsMod.doc(db, "users", user.uid));
