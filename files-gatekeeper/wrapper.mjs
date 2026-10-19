@@ -23,8 +23,12 @@
 // Run: node wrapper.mjs <credsJsonPath> <ledgerPath> <projectId> <port>
 // The creds file (mode 600, PB's custody route) carries
 // { accountId, bucket, accessKeyId, secretAccessKey }
-// for the GATEKEEPER's R2 token (this bucket only,
-// object read + write + delete, NO list — Q7).
+// for the GATEKEEPER's R2 token (this bucket only;
+// object read + write + delete, with list welded to
+// read by the platform — Q7 as amended, Security's
+// record 6606fc55. The compartment stands in the code:
+// this service never signs a list, proven by the
+// battery's source census leg).
 import fs from "node:fs";
 import { serve } from "./server.mjs";
 import { verifyIdToken, presign, makeBudget } from "./gatekeeper.mjs";
