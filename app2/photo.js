@@ -79,10 +79,12 @@ export async function uploadToStorage(path, blob) {
     const cfgMod = await import("./firebase-config.js");
     const appMod = await import(`${SDK}/firebase-app.js`);
     const storageMod = await import(`${SDK}/firebase-storage.js`);
+    // The DEFAULT app only, shared with the door: a named app carries
+    // its own auth session and would never see the signed-in user (R1).
     const existing = typeof appMod.getApps === "function"
-      ? appMod.getApps().find((a) => a.name === "app2-photo")
+      ? appMod.getApps().find((a) => a.name === "[DEFAULT]")
       : null;
-    const app = existing || appMod.initializeApp(cfgMod.firebaseConfig, "app2-photo");
+    const app = existing || appMod.initializeApp(cfgMod.firebaseConfig);
     const storage = storageMod.getStorage(app);
     const ref = storageMod.ref(storage, path);
     await storageMod.uploadBytes(ref, blob);
