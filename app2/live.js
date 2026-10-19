@@ -131,6 +131,15 @@ export function publishTrust(profile, card, questionnaire) {
   lastTrustInputs = { profile, card, questionnaire };
   const me = trustSeamFrom(profile, card, questionnaire);
   if (typeof window === "undefined") return me;
+  // The connect gate's completeness, judged from the saved
+  // facts the seam itself stands on (QA b107 Legs 9 + 10): a
+  // finished questionnaire, a side, a name. It was computed at
+  // boot from the user doc's name field alone, which the save
+  // never completes, so landed profiles read incomplete to
+  // every gate for the whole session.
+  window.CARESITS_PROFILE_COMPLETE = Boolean(
+    me.side && me.name && questionnaire && questionnaire.answers && Object.keys(questionnaire.answers).length
+  );
   const prev = window.CARESITS_TRUST || {};
   window.CARESITS_TRUST = { docs: prev.docs || [], reviews: prev.reviews || [], me };
   if (window.CARESITS_ME) {
