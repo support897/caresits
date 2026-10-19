@@ -7,6 +7,7 @@
 // carries ?twin=1; every other visit uses the production
 // config beside this file.
 import { levelOf } from "./levels.js";
+import { resolvePlan, entitlementFromRecord, plusExtrasOpen } from "../accounts/account.js";
 
 export function routeWrite(kind, payload, uid) {
   if (!uid) return { ok: false, reason: "signed-out" };
@@ -287,6 +288,28 @@ export async function bootLive() {
         window.CARESITS_ME = { uid, side: profile.side || "", name: profile.displayName || "" };
         window.CARESITS_PROFILE_COMPLETE = !!(profile.displayName && q.exists());
       } catch { /* the surfaces stand in their empty states */ }
+      // The entitlement record (payments chapter §3): read at boot
+      // for family accounts only. Carers never read it, and no free
+      // feature reads it; the gates take the resolved plan from this
+      // seam. A missing or unreachable record resolves to the free
+      // taste, which is the record's own answer for most families.
+      try {
+        const side = profile.side || "";
+        const createdRaw = u.metadata && u.metadata.creationTime ? Date.parse(u.metadata.creationTime) : NaN;
+        const createdAtMs = Number.isNaN(createdRaw) ? null : createdRaw;
+        let payment = null;
+        if (side !== "carer") {
+          const ent = await fs.getDoc(docAt(`_entitlements/${uid}`));
+          payment = entitlementFromRecord(ent.exists() ? ent.data() : null, Date.now());
+        }
+        const plan = resolvePlan({ side, comp: null, payment, now: Date.now() });
+        window.CARESITS_PLAN = plan;
+        window.CARESITS_ME = {
+          ...(window.CARESITS_ME || { uid }),
+          plan,
+          plusExtras: plusExtrasOpen({ plan, side, createdAtMs, now: Date.now() }),
+        };
+      } catch { /* no record reachable: the free taste stands */ }
       try {
         const grab = async (path) => {
           const snap = await fs.getDocs(colAt(path));
