@@ -149,14 +149,21 @@ malformed or expired is a plain 401 with no detail.
 
 POST /v1/link { op: put | get | del, class, name,
 bytes } with the Bearer token. On an authorised request
-the gatekeeper returns one presigned R2 URL. Every
-presign binds the bucket, the exact key, the verb and
-the expiry (R3); a PUT presign additionally signs the
-exact Content Length the client declares (it knows its
-byte count: it downscaled locally), so a length-tampered
-upload fails its signature at R2 and a tamper leg
-stands in the battery. TTLs: PUT and DELETE presigns
-live 5 MINUTES (A2: single use cannot be enforced on a
+the gatekeeper returns one signed door. Every door
+binds the bucket, the exact key, the verb and the
+window (R3). PUT IS ISSUED HEADER SIGNED (Security's
+strengthening, 19 Oct 2026): the gatekeeper returns the
+object URL plus the signed headers (Content Length and
+Content Type among them, both declared by the client:
+it knows its byte count, it downscaled locally, and
+the class fixes the type), and the client sends those
+headers verbatim with its PUT; R2 itself refuses a
+length or type mismatch at upload, and the battery's
+R3 leg runs in exactly this form. Query string
+presigns for PUT are NOT used. GET and DELETE ride
+presigned URLs as below. Confirm then catches what a
+signature cannot: the magic bytes. TTLs: PUT doors and
+DELETE presigns live 5 MINUTES (A2: single use cannot be enforced on a
 presign, so the window shrinks and replay inside it on
 the same key with the same verb is the accepted
 residual, stated not hidden); GET presigns live 10
@@ -206,33 +213,44 @@ which drops EXIF in the re-encode; the battery's
 served-bytes leg (read the served object, find no EXIF
 markers) stands unchanged as the proof.
 
-## Versioning (A1, RULED by Security's governing call)
+## Recovery without versioning (A1, FINAL SHAPE)
 
-Durability is the provider's (Cloudflare R2).
-VERSIONING IS ON for the bucket (Security's governing
-call, 19 Oct 2026, superseding this desk's earlier
-named no-versioning decision in full). The shape:
+CORRECTION OF RECORD (Security, 19 Oct 2026, their
+call withdrawn at their own chair): VERSIONING IS
+NOT AVAILABLE ON R2. Cloudflare's own S3
+compatibility table lists Get/PutBucketVersioning as
+NOT IMPLEMENTED, and there is no ListObjectVersions;
+R2 keeps no versions. This desk's original
+no-versioning decision was the only possibility on
+this platform. The recovery story is re-founded on
+what R2 has:
 
-- A user delete that the app bins (profile photos,
-  Day Story) is a plain delete: it leaves a DELETE
-  MARKER, and the app's 30 day Recently Deleted window
-  restores by removing the marker (the version reads
-  back byte equal). Versioning guards ACCIDENTS between
-  ruled events; it never softens a ruled delete.
-- RULED DELETES ARE PERMANENT: a user's confirmed
-  permanent delete (including the bin's 30 day purge),
-  an account deletion's deletes, and the lifecycle
-  sweeper's deletes PURGE ALL VERSIONS AT THE ACT: a
-  purge call in the same act reads the version list
-  back at zero (client side ruled deletes ride a
-  gatekeeper purge call; the sweeper purges inside its
-  own run under its own token).
-- Two synthetic proofs replace the restore drill and
-  BLOCK real photos until green: (a) accident recovery:
-  a delete-marker object restored from its version and
-  read back byte equal · (b) ruled-delete permanence:
-  after a ruled delete the version list reads zero.
-- The trash/ prefix shape this desk first named is
+- USER DELETES RIDE THE TRASH SHAPE (as first filed by
+  this desk): a user delete that the app bins (profile
+  photos, Day Story) MOVES the object under
+  trash/<owner-uid>/<original key>; the app's 30 day
+  Recently Deleted window restores by moving it back
+  (read back byte equal in the battery); the bin's
+  30 day expiry hard deletes the trash object.
+- THE SWEEPER DELETES IN TWO PHASES: at 90 days the
+  pass MOVES the photo object to a quarantine/ prefix
+  and clears the profile slot in the same pass (the
+  user's deletion is WHOLE at 90: the profile is out of
+  search and the slot is empty); the daily job then
+  HARD PURGES quarantine entries aged 7 more days.
+  That week is the machinery-accident grace versioning
+  would have given. RESCUE INSIDE THE WEEK IS
+  OPERATOR ONLY: there is no app path back from a
+  sweep, and this design DISCLOSES the +7 day byte
+  purge plainly so nobody calls the sweep incomplete.
+- ACCOUNT DELETION HARD DELETES AT THE ACT, proven by
+  an inventory read showing the user's keys at zero,
+  final by law. That finality is the named residual,
+  accepted: an account deletion is a ruled event with
+  no grace by design.
+- RULED PERMANENT DELETES (a user's confirmed delete
+  forever, the bin's 30 day expiry) hard delete at the
+  act in the same way, inventory-proven.
   retired; no trash keys exist in the design or the
   gatekeeper core.
 
@@ -259,10 +277,14 @@ design does not hold one until so ruled.
 
 The built planner/warner (photo-sweeper/) deploys as a
 scheduled job on the box (daily). Its executor deps map
-to this home: deleteObject = a version purging R2
-delete under THE SWEEPER'S OWN token (read + list +
-delete, Q7; S3 API from the box), photo
-facts read from Firestore. The server side Firestore
+to this home: the sweep's delete is TWO PHASE (the
+final shape ruling): at 90 days the object MOVES to a
+quarantine/ prefix (a copy plus a delete under THE
+SWEEPER'S OWN token, read + list + delete, Q7; S3 API
+from the box) and the slot clears in the same pass;
+the daily run HARD PURGES quarantine entries aged 7
+more days. The orphan census rides the same run.
+Photo facts read from Firestore. The server side Firestore
 access it needs (_activity stamps, profile photo fields,
 warning marks) rides a dedicated credential whose
 custody is Security's to rule: proposal is a service
@@ -352,16 +374,20 @@ refuses 404 · a GET link issued BEFORE the delete also
 refuses · the server side inventory (the scoped
 token's list, a proof plane tool only, never an
 endpoint) shows the key gone · replace leaves exactly
-one object · THE TWO VERSIONING PROOFS (blocking):
-a delete-marker object restored from its version and
-read back byte equal · a ruled delete leaving a
-version list of zero. BACKUP
+one object · THE RECOVERY PROOFS (blocking): a
+binned object moves to trash and restores byte equal ·
+the sweep's two phases proven: at 90 days the object
+stands in quarantine and the slot is cleared and the
+original key refuses · at +7 days the quarantine entry
+is hard purged and the inventory shows it gone · an
+account deletion's inventory reads zero. BACKUP
 + RESTORE: durability is the provider's (R2, A1); the
 restore drill is this battery run end to end on the
 real bucket with synthetic users before any real
 photo. Then the lifecycle legs on this home: upload,
-sweep pass deletes the objects and clears the slots,
-warning sent and marked.
+sweep pass moves the objects to quarantine and clears
+the slots, the +7 day purge follows, warning sent and
+marked.
 
 ## Open questions for Security's read
 
@@ -378,9 +404,14 @@ warning sent and marked.
 6. Verification placement: CONFIRM TIME (A3) governs;
    the through-gatekeeper streaming shape is superseded
    by the addendum and stands retired in this file.
-7. The R2 token's scope (this bucket only, object
-   read/write): confirmed at PB's creation, with R1's
-   bucket privacy proofs running before any real key.
+7. The R2 token scope OF RECORD (Q7 as amended):
+   TWO tokens, this bucket only: the gatekeeper's
+   (object read + write + DELETE, NO list) and the
+   sweeper's (object read + LIST + delete, deleting
+   under its own token), each in its OWN mode 600
+   secrets file (A8). Confirmed at PB's creation, with
+   R1's bucket privacy proofs running before any real
+   key.
 
 Nothing deploys until this read lands, and nothing is
 created in Cloudflare until her enable confirm lands
