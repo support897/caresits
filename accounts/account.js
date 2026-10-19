@@ -335,10 +335,9 @@ export async function deleteMyAccount() {
   // resume file are the user's personal files in the bucket,
   // and the account deletion removes them too, here, while
   // the session is live. Each delete is fail soft: a missing
-  // object must never block the account deletion itself. The
-  // resume name rides the profile doc; its path is sanitised
-  // with the same rule the uploader uses (the account layer
-  // cannot import the app layer, so the rule is read here).
+  // object must never block the account deletion itself.
+  // The resume carries no stored object at all (device only
+  // extraction, 19 Oct 2026), so the walk is the photo set.
   try {
     const appMod = await import(`${SDK}/firebase-app.js`);
     const stMod = await import(`${SDK}/firebase-storage.js`);
@@ -346,16 +345,10 @@ export async function deleteMyAccount() {
     try { app = appMod.getApp(); } catch { app = (appMod.getApps() || [])[0] || null; }
     if (app) {
       const storage = stMod.getStorage(app);
-      let resumeFile = "";
-      try {
-        const prof = await fsMod.getDoc(doc(_db, "profiles", _user.uid));
-        if (prof.exists()) resumeFile = prof.data().resumeFile || "";
-      } catch { /* the fixed paths still go */ }
       const uid = _user.uid;
       const paths = [
         `profile-photos/${uid}/photo.jpg`,
         ...[1, 2, 3, 4].map((s) => `profile-photos/${uid}/extra-${s}.jpg`),
-        ...(resumeFile ? [`resumes/${uid}/${String(resumeFile).replace(/[^A-Za-z0-9._]/g, "_")}`] : []),
       ];
       for (const p of paths) {
         try { await stMod.deleteObject(stMod.ref(storage, p)); } catch { /* not there: nothing to orphan */ }
