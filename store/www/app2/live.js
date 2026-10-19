@@ -486,6 +486,13 @@ export async function bootLive() {
         // seam is published here, from the member's real
         // documents, the moment the boot has read them.
         publishTrust(profile, cardData, qData);
+        // Land a finished journey still standing on this
+        // device (QA b108): when the account holds no
+        // questionnaire yet and a done envelope waits under
+        // this member's key, the shell drains it now — the
+        // save completes at a warm moment even when the
+        // journey's own attempt judged local at a cold one.
+        if (!qData) { import("./account-save.js").then((m) => m.drainOutbox()).catch(() => {}); }
         window.CARESITS_EXPORT_DATA = {
           profile: window.CARESITS_ME || null,
           card: cardSnap.exists() ? cardSnap.data() : null,
