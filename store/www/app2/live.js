@@ -355,6 +355,7 @@ export async function bootLive() {
       };
       let profile = {};
       let qData = {};
+      let qExists = false;
       try {
         // First-data reads are bounded (fleet census cure):
         // a wedged read takes the same missing-data path as
@@ -363,6 +364,7 @@ export async function bootLive() {
         const prof = await withTimeout(fs.getDoc(docAt(`users/${uid}`)), 15000, "profile read");
         profile = prof.exists() ? prof.data() : {};
         const q = await withTimeout(fs.getDoc(docAt(`users/${uid}/meta/questionnaire`)), 15000, "questionnaire read");
+        qExists = q.exists();
         qData = q.exists() ? q.data() : {};
         window.CARESITS_ME = { uid, side: profile.side || "", name: profile.displayName || "" };
         window.CARESITS_PROFILE_COMPLETE = !!(profile.displayName && q.exists());
@@ -492,7 +494,18 @@ export async function bootLive() {
         // this member's key, the shell drains it now — the
         // save completes at a warm moment even when the
         // journey's own attempt judged local at a cold one.
-        if (!qData) { import("./account-save.js").then((m) => m.drainOutbox()).catch(() => {}); }
+        // The guard reads the snapshot's EXISTENCE (QA b110
+        // member 3): qData is an object in both states, so a
+        // truthiness guard never fired once. The drain fires
+        // now and again seconds later — the firing instant's
+        // state is not ours to trust, the envelope read is
+        // cheap, and a drained key makes later attempts
+        // no-ops.
+        if (!qExists) {
+          const drain = () => { import("./account-save.js").then((m) => m.drainOutbox()).catch(() => {}); };
+          drain();
+          setTimeout(drain, 4000);
+        }
         window.CARESITS_EXPORT_DATA = {
           profile: window.CARESITS_ME || null,
           card: cardSnap.exists() ? cardSnap.data() : null,
@@ -517,6 +530,17 @@ export async function bootLive() {
         // the Messages surface and its empty state can render.
         window.CARESITS_THREAD = threadSeamFrom({ rels: seam.rels, names: seam.names, msgs: bootMsgs, uid });
         if (typeof window.CARESITS_THREAD_RENDER === "function") window.CARESITS_THREAD_RENDER();
+        // Find's data seam (QA b110 FLAGREAD): the pool was
+        // designed to publish from this warm fetch and never
+        // did, so Find judged every session by its own cold
+        // fetch at page load and waited forever. Publish it
+        // here, where the session and the documents stand,
+        // and let Find re-render from it.
+        try {
+          const fm = await import("./find.js");
+          window.CARESITS_FIND_DATA = await fm.fetchFindData(fs, db, uid);
+          if (typeof window.CARESITS_FIND_RENDER === "function") window.CARESITS_FIND_RENDER();
+        } catch { /* Find stands on its own fetch */ }
       } catch { /* matches and the board stand in their empty states */ }
       resolve({ on: true, signedIn: true, uid });
     });
