@@ -283,9 +283,9 @@ t("census: the walk-in ensure is bounded, and a timed-out ensure re-fires behind
   assert.ok(src.includes("withTimeout(ensureProfile(fsMod, u), DOOR_TIMEOUTS.ensure"), "the ensure races its bound");
   assert.ok(src.includes("catch { ensureProfile(fsMod, u).catch(() => {}); }"), "the re-fire stands behind the bound");
 });
-t("census: boot's first-data reads are bounded at all four sites", () => {
+t("census: boot's first-data reads are bounded at all five sites (four census + the b104 meta read)", () => {
   const src = readFileSync(new URL("../app2/live.js", import.meta.url), "utf8");
-  assert.equal((src.match(/withTimeout\(fs\.getDoc/g) || []).length, 4);
+  assert.equal((src.match(/withTimeout\(fs\.getDoc/g) || []).length, 5);
 });
 t("census: the door's layer load races a bound at all three buttons", () => {
   const src = readFileSync(new URL("../app2/door.js", import.meta.url), "utf8");
