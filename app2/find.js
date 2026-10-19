@@ -205,6 +205,27 @@ export function renderFind(root, viewerDoc, candidateDocs) {
   }
 }
 
+// The pool fetch, shared by Find's own cold path and the
+// shell's warm Phase C publication (QA b110 FLAGREAD): the
+// viewer's stitched card plus every candidate's, from the
+// live documents. A viewer with no card yet reads as null —
+// the waiting state is for them, and only them.
+export async function fetchFindData(fsMod, db, uid) {
+  const mine = await fsMod.getDoc(fsMod.doc(db, "profiles", uid));
+  if (!mine.exists()) return { viewer: null, candidates: [] };
+  const withAnswers = async (id, data) => {
+    const aSnap = await fsMod.getDocs(fsMod.collection(db, "profiles", id, "answers"));
+    const docs = [];
+    aSnap.forEach((d) => docs.push({ code: d.id, data: d.data() }));
+    return stitchAnswers({ uid: id, ...data }, docs);
+  };
+  const viewer = await withAnswers(uid, mine.data());
+  const snap = await fsMod.getDocs(fsMod.query(fsMod.collection(db, "profiles"), fsMod.limit(100)));
+  const candidates = [];
+  for (const d of snap.docs) { if (d.id !== uid) candidates.push(await withAnswers(d.id, d.data())); }
+  return { viewer, candidates };
+}
+
 async function bootFind() {
   const root = document.getElementById("findRoot");
   if (!root) return;
@@ -226,19 +247,8 @@ async function bootFind() {
     const user = await frameUser(authMod.getAuth(app));
     if (!user || user.isAnonymous) { renderFind(root, null, []); return; }
     const db = fsMod.getFirestore(app);
-    const mine = await fsMod.getDoc(fsMod.doc(db, "profiles", user.uid));
-    if (!mine.exists()) { renderFind(root, null, []); return; }
-    const withAnswers = async (uid, data) => {
-      const aSnap = await fsMod.getDocs(fsMod.collection(db, "profiles", uid, "answers"));
-      const docs = [];
-      aSnap.forEach((d) => docs.push({ code: d.id, data: d.data() }));
-      return stitchAnswers({ uid, ...data }, docs);
-    };
-    const viewer = await withAnswers(user.uid, mine.data());
-    const snap = await fsMod.getDocs(fsMod.query(fsMod.collection(db, "profiles"), fsMod.limit(100)));
-    const candidates = [];
-    for (const d of snap.docs) { if (d.id !== user.uid) candidates.push(await withAnswers(d.id, d.data())); }
-    renderFind(root, viewer, candidates);
+    const fd = await fetchFindData(fsMod, db, user.uid);
+    renderFind(root, fd.viewer, fd.candidates);
   } catch {
     renderFind(root, null, []);
   }
@@ -250,3 +260,7 @@ if (typeof document !== "undefined") {
 }
 
 window.CARESITS_EXCLUDE = (uid) => { excludedUids.add(uid); if (lastRender) renderFind(lastRender.root, lastRender.viewerDoc, lastRender.candidateDocs); };
+// The shell's warm boot publishes CARESITS_FIND_DATA after
+// this module's cold first pass; the re-render hook lets
+// that publication replace the cold judgement in place.
+window.CARESITS_FIND_RENDER = () => bootFind();
