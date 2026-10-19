@@ -28,7 +28,10 @@ import crypto from "node:crypto";
 //   profile photos  <uid>/profile-photos/photo.jpg | extra-<1..4>.jpg
 //   certificates    <uid>/certificates/<sanitised name>.pdf
 //   day story       pairs/<pairId>/<sanitised name>.jpg   (A5)
-//   trash (bin)     trash/<uid>/<original key>            (A1)
+// Versioning is ON at the bucket (Security's governing
+// call, 19 Oct 2026): user deletes leave delete markers
+// the bin window restores from; ruled deletes remove ALL
+// versions. There are no trash keys.
 
 export const CLASSES = {
   "profile-photos": { maxBytes: 5 * 1024 * 1024, magic: "jpeg", ext: ".jpg" },
@@ -64,12 +67,6 @@ export function planPairKey({ pairId, name } = {}) {
   const safe = safeName(name);
   if (!safe || !safe.toLowerCase().endsWith(".jpg")) return null;
   return `pairs/${pairId}/${safe}`;
-}
-
-export function planTrashKey({ uid, key } = {}) {
-  if (!UID_RE.test(uid || "") || typeof key !== "string" || !key) return null;
-  if (key.startsWith("trash/") || key.includes("..")) return null;
-  return `trash/${uid}/${key}`;
 }
 
 // ---------------------------------------------------------------------------
