@@ -66,6 +66,16 @@ export function planRestore(input) {
   return { ok: true, binId: item.id, binPath, originPath, originId };
 }
 
+// Leave the live bin list (QA b107 Leg 7 residual): Restore
+// and Delete forever removed the record and the card, but the
+// item stood in the live list, so the bin's next render in
+// the same session brought the card back. Pure: the list
+// without the item of this id.
+export function binLeave(current, id) {
+  const list = Array.isArray(current) ? current : [];
+  return list.filter((item) => item && item.id !== id);
+}
+
 // The bin's live list joins a same-session record (QA b104
 // Leg 7): the boot snapshot is the floor, never the ceiling.
 // Pure: the same record never joins twice.
@@ -147,6 +157,7 @@ export function renderBin(root, items) {
       // mirror would miss the record until the next boot. The
       // family module's own seam folds it back in at once.
       if (typeof w.CARESITS_FAMILY_RESTORE === "function") w.CARESITS_FAMILY_RESTORE(item.kind, item.data);
+      w.CARESITS_BIN = binLeave(w.CARESITS_BIN, item.id);
       card.remove();
     });
     const forever = el("button", "quietBtn", tr("bin.forever"));
@@ -156,6 +167,7 @@ export function renderBin(root, items) {
       const uid = w.CARESITS_ME && w.CARESITS_ME.uid;
       if (!uid) return;
       write("bin-delete", planBinDelete({ uid, binId: item.id }));
+      w.CARESITS_BIN = binLeave(w.CARESITS_BIN, item.id);
       card.remove();
     });
     card.append(restore, forever);
