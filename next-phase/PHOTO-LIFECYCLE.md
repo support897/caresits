@@ -33,12 +33,19 @@ would sweep live carers.)
 
 The sweeper core is built at photo-sweeper/ (planner plus
 executor, tests green, NOT DEPLOYED): nightly once the
-storage wave lands on Blaze, it deletes the profile
-images (the main photo and the four gallery objects, her
-words "the images", HQ ruling 19 Oct 2026) for carers 90
-or more days stale and clears the
-card's photoUrl in the same pass, object first, stamping
-photoClearedAt on the profile doc.
+storage wave lands (the home is Cloudflare R2 by her
+final word, 19 Oct 2026; Blaze is closed), it acts on the
+profile images (the main photo and the four gallery
+objects, her words "the images", HQ ruling 19 Oct 2026)
+for carers 90 or more days stale. THE DELETE IS TWO
+PHASE (Security's final shape ruling, 19 Oct 2026): at
+90 days the object moves to a quarantine prefix and the
+slot clears in the same pass (photoClearedAt stamped on
+the profile doc; the user's deletion is whole at 90);
+the daily job hard purges quarantine entries aged 7
+more days. That week is the machinery accident grace;
+rescue inside it is operator only, with no app path
+back.
 
 Refinements, settled by Ilse's tap (19 Oct 17:47) and
 built the same evening: the warning email (planner and
