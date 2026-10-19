@@ -29,6 +29,13 @@ export function routeWrite(kind, payload, uid) {
     case "dayStory-remove": return { ok: true, op: "delete", path: `users/${uid}/dayStory/${payload.id}` };
     case "photo": return { ok: true, op: "merge", path: `profiles/${uid}`, data: { photoUrl: payload.photoUrl } };
     case "gallery": return { ok: true, op: "merge", path: `profiles/${uid}`, data: { card: { gallery: (Array.isArray(payload.gallery) ? payload.gallery : []).filter((u) => typeof u === "string" && u).slice(0, 4) } } };
+    // The resume file record names a TEMPORARY object only
+    // (Ilse's resume model, 19 Oct 2026): an uploaded resume is
+    // an extraction waiting to be confirmed, never a kept or
+    // family visible document. The name rides the profile doc
+    // so the discard, the confirm and the account deletion can
+    // each remove the object itself.
+    case "resume-file": return { ok: true, op: "merge", path: `profiles/${uid}`, data: { resumeFile: typeof payload.name === "string" ? payload.name : "" } };
     case "dayStory": return { ok: true, op: "add", path: `users/${uid}/dayStory`, data: { day: payload.day, tile: payload.tile, note: payload.note, at: payload.at } };
     case "photo-request": return { ok: true, op: "add", path: `users/${uid}/dayStory`, data: { day: payload.day, tile: "Photo moment", note: "A photo of the kids was asked for", at: payload.at } };
     case "timesheet": return { ok: true, op: "add", path: `users/${uid}/timesheets`, data: { day: payload.day, hours: payload.hours } };
@@ -75,6 +82,7 @@ export function trustSeamFrom(profile, card, questionnaire) {
     level,
     postcode: c.postcode || "",
     photoUrl: c.photoUrl || "",
+    resumeFile: c.resumeFile || "",
     // F14: the gallery rides inside the card map, up to four
     // photo URLs in slot order.
     gallery: (Array.isArray(cardBits.gallery) ? cardBits.gallery : []).filter((u) => typeof u === "string" && u).slice(0, 4),
