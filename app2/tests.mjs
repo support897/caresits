@@ -909,6 +909,19 @@ const { planSave } = await import("./account-save.js");
   await p.close();
 }
 
+// ---- b112 FIND same-session: the save republishes the pool ----
+// The boot publishes Find's pool before a first session's
+// journey exists (truthfully empty); the landed save must
+// republish it in that same session, or Find waits until the
+// next boot (Test b112 Leg C). The shell installs the refresh
+// seam beside its boot publication; the save's publication
+// fires it on every host it touches.
+{
+  const src = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
+  t("b112 FIND: the shell installs a Find refresh seam beside its boot publication", src("./live.js").includes("window.CARESITS_FIND_REFRESH") && src("./live.js").includes("const publishFind"));
+  t("b112 FIND: the save's publication fires the Find refresh", src("./account-save.js").includes("h.CARESITS_FIND_REFRESH") && src("./account-save.js").includes("h.CARESITS_FIND_REFRESH()"));
+}
+
 // ---- Leg 11: the level picker (welcome choice + computed boundary) ----
 {
   const src = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
