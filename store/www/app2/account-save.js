@@ -282,6 +282,12 @@ export function publishSavedProfile(bundle, plan, uid) {
       // save that just landed IS the finished profile.
       if (bundle.answers && Object.keys(bundle.answers).length) h.CARESITS_PROFILE_COMPLETE = true;
       if (typeof h.CARESITS_TRUST_RENDER === "function") h.CARESITS_TRUST_RENDER();
+      // Find's pool was published at boot, before this save
+      // existed (Test b112 Leg C): a member who finishes the
+      // journey in their first session met a Find still
+      // holding the boot's empty read. The save that just
+      // landed republishes the pool on the shell host.
+      if (typeof h.CARESITS_FIND_REFRESH === "function") h.CARESITS_FIND_REFRESH();
     } catch { /* a seam refresh never breaks a save */ }
   }
 }
