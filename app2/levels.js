@@ -50,6 +50,25 @@ export function levelOf(side, answers) {
   return "full";
 }
 
+// The tier answers live as their own documents, keyed by
+// pair code, each carrying its value at .v; the level judges
+// a map keyed by field id. This merge is the one bridge
+// between the two shapes: the boot reads the documents back
+// through it, and the save's publication rebuilds through it.
+// Base answers always keep their own keys; a pair's value
+// answers for the fields that feed that pair.
+export function mergeDeepAnswers(baseAnswers, deepByPair, side) {
+  const out = { ...(baseAnswers || {}) };
+  const fields = (EXPANSION[side] || []).flatMap((p) => p.fields);
+  for (const f of fields) {
+    if (out[f.id] !== undefined) continue;
+    const e = (deepByPair || {})[f.pair];
+    const v = e && typeof e === "object" && "v" in e ? e.v : e;
+    if (v !== undefined) out[f.id] = v;
+  }
+  return out;
+}
+
 export function pairCap(levelA, levelB) {
   return LEVELS[Math.min(levelRank(levelA), levelRank(levelB))];
 }
