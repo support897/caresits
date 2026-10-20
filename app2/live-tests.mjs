@@ -56,6 +56,14 @@ t("trust publish (F15): docs and reviews already on the seam survive, me is repl
   assert.equal(rendered, 1);
   delete globalThis.window;
 });
+t("questions seam (N1): publishTrust stands the member's progress for Home", () => {
+  globalThis.window = {};
+  publishTrust({ side: "family", displayName: "Sam" }, { side: "family", displayName: "Sam" }, { side: "family", country: "Australia", answers: { country: "Australia", postcode: "4217" } });
+  assert.equal(globalThis.window.CARESITS_QUESTIONS.answered, 2);
+  assert.equal(globalThis.window.CARESITS_QUESTIONS.side, "family");
+  assert.equal(typeof globalThis.window.CARESITS_QUESTIONS.level, "string");
+  delete globalThis.window;
+});
 t("trust publish (F14): the card's gallery rides onto the seam and the member record", () => {
   globalThis.window = { CARESITS_ME: { uid: "u1", side: "carer", name: "Ana" } };
   const me = publishTrust(
