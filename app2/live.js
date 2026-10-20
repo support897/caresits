@@ -514,6 +514,18 @@ export async function bootLive() {
           calendar: null,
         };
       } catch { /* export and the bin stand in their empty states */ }
+      // Find's pool publisher, named so a later save can call
+      // it again (Test b112 Leg C): the boot publishes before
+      // a first session's journey exists, truthfully null, and
+      // the profile that lands minutes later must republish
+      // the pool, not leave Find waiting until the next boot.
+      // The save's own publication fires this seam.
+      const publishFind = async () => {
+        const fm = await import("./find.js");
+        window.CARESITS_FIND_DATA = await fm.fetchFindData(fs, db, uid);
+        if (typeof window.CARESITS_FIND_RENDER === "function") window.CARESITS_FIND_RENDER();
+      };
+      window.CARESITS_FIND_REFRESH = () => { publishFind().catch(() => {}); };
       try {
         // F19: Matches and the board read the member's real
         // pairs and jobs. The seam is published here, from the
@@ -536,11 +548,7 @@ export async function bootLive() {
         // fetch at page load and waited forever. Publish it
         // here, where the session and the documents stand,
         // and let Find re-render from it.
-        try {
-          const fm = await import("./find.js");
-          window.CARESITS_FIND_DATA = await fm.fetchFindData(fs, db, uid);
-          if (typeof window.CARESITS_FIND_RENDER === "function") window.CARESITS_FIND_RENDER();
-        } catch { /* Find stands on its own fetch */ }
+        try { await publishFind(); } catch { /* Find stands on its own fetch */ }
       } catch { /* matches and the board stand in their empty states */ }
       resolve({ on: true, signedIn: true, uid });
     });
