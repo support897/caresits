@@ -1,5 +1,6 @@
 import { withTimeout } from "../accounts/account.js";
 import { doneKey } from "./storage-keys.js";
+import { levelOf, mergeDeepAnswers } from "./levels.js";
 
 // Caresitters app2 — Phase A slice 2: the journey finish, saved.
 // journey.js calls window.CARESITS_SAVE(bundle) when this file
@@ -248,12 +249,24 @@ export async function saveBundle(bundle, firebaseConfig) {
 // re-renders its trust surfaces through the render seam
 // trust.js exposes. Empty facts never overwrite standing ones.
 export function publishSavedProfile(bundle, plan, uid) {
+  // The member's full saved state, judged the boot's way
+  // (QA night N1): the plan's per-code documents merge back
+  // into the field map, so the level and the progress seam
+  // this publication stands up agree with a fresh boot's.
+  const byPair = {};
+  for (const a of plan.answers || []) {
+    const code = String(a.path || "").split("/").pop();
+    if (code) byPair[code] = a.data || {};
+  }
+  const mergedAnswers = mergeDeepAnswers(bundle.answers || {}, byPair, bundle.side || "");
+  const savedLevel = Object.keys(mergedAnswers).length ? levelOf(bundle.side || "", mergedAnswers) : "";
   const fresh = {
     name: plan.card.data.displayName || "",
     side: bundle.side || plan.card.data.side || "",
     postcode: plan.card.data.postcode || "",
     photoUrl: plan.card.data.photoUrl || "",
     country: bundle.country || "",
+    ...(savedLevel ? { level: savedLevel } : {}),
   };
   // F14: the gallery the save just carried forward rides too,
   // so the seam and the stored card agree after a save.
@@ -281,6 +294,7 @@ export function publishSavedProfile(bundle, plan, uid) {
       // they finished in was refused on the stale flag. The
       // save that just landed IS the finished profile.
       if (bundle.answers && Object.keys(bundle.answers).length) h.CARESITS_PROFILE_COMPLETE = true;
+      h.CARESITS_QUESTIONS = { answered: Object.keys(mergedAnswers).length, level: savedLevel || "explore", side: bundle.side || "" };
       if (typeof h.CARESITS_TRUST_RENDER === "function") h.CARESITS_TRUST_RENDER();
       // Find's pool was published at boot, before this save
       // existed (Test b112 Leg C): a member who finishes the
