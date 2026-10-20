@@ -6,7 +6,7 @@
 // without a network. The twin is used only when the address
 // carries ?twin=1; every other visit uses the production
 // config beside this file.
-import { levelOf } from "./levels.js";
+import { levelOf, mergeDeepAnswers } from "./levels.js";
 import { resolvePlan, entitlementFromRecord, plusExtrasOpen, withTimeout } from "../accounts/account.js";
 
 // The photo lifecycle stamp path (HQ spec, 19 Oct 2026):
@@ -141,6 +141,15 @@ export function publishTrust(profile, card, questionnaire) {
   window.CARESITS_PROFILE_COMPLETE = Boolean(
     me.side && me.name && questionnaire && questionnaire.answers && Object.keys(questionnaire.answers).length
   );
+  // The progress seam (QA night N1): Home reads the member's
+  // questionnaire truth from here, never from the device keys
+  // alone — the drain consumes the done envelope by design,
+  // and a completed member must not read 0% on a fresh boot.
+  window.CARESITS_QUESTIONS = {
+    answered: questionnaire && questionnaire.answers ? Object.keys(questionnaire.answers).length : 0,
+    level: me.level || "explore",
+    side: me.side || "",
+  };
   const prev = window.CARESITS_TRUST || {};
   window.CARESITS_TRUST = { docs: prev.docs || [], reviews: prev.reviews || [], me };
   if (window.CARESITS_ME) {
@@ -366,6 +375,22 @@ export async function bootLive() {
         const q = await withTimeout(fs.getDoc(docAt(`users/${uid}/meta/questionnaire`)), 15000, "questionnaire read");
         qExists = q.exists();
         qData = q.exists() ? q.data() : {};
+        // The tier answers live as their own documents under
+        // profiles/{uid}/answers (QA night N1): judged from
+        // the questionnaire alone, a completed member's level
+        // read "explore" and their progress read zero, because
+        // the map the boot publishes by never contained the
+        // tiers. Merge the documents back in, so every seam
+        // below judges the member's FULL saved state. A failed
+        // read publishes with the base map; it never blocks
+        // the boot.
+        try {
+          const aSnap = await withTimeout(fs.getDocs(colAt(`profiles/${uid}/answers`)), 15000, "answers read");
+          const byPair = {};
+          aSnap.forEach((d) => { byPair[d.id] = d.data(); });
+          const merged = mergeDeepAnswers(qData.answers || {}, byPair, qData.side || profile.side || "");
+          if (Object.keys(merged).length > Object.keys(qData.answers || {}).length) qData = { ...qData, answers: merged };
+        } catch { /* the base map stands */ }
         window.CARESITS_ME = { uid, side: profile.side || "", name: profile.displayName || "" };
         window.CARESITS_PROFILE_COMPLETE = !!(profile.displayName && q.exists());
       } catch { /* the surfaces stand in their empty states */ }
