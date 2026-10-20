@@ -160,9 +160,21 @@ function findingHome(root) {
   find.append(findRow);
   root.append(find);
 
-  // Questionnaire progress card.
+  // Questionnaire progress card. The server seam (the boot's
+  // judgement of the member's FULL saved state) outranks the
+  // device keys: the drain consumes the done envelope by
+  // design, so a member who finished on any device read 0%
+  // here on every fresh boot (QA night N1). A completed seam
+  // reads done; a partial seam reads its true count; the
+  // device draft still speaks for a journey in progress on
+  // this device.
+  const sq = window.CARESITS_QUESTIONS || null;
+  const sideForTotal = (sq && sq.side) || (draft && draft.side) || (m && m.side) || "family";
+  const totalQ = ((sideForTotal === "carer" ? CARER_PAGES : FAMILY_PAGES).flatMap((p) => p.fields).length)
+    + ((EXPANSION[sideForTotal] || []).flatMap((p) => p.fields).length);
+  const serverDone = !!(sq && sq.answered > 0 && (sq.level === "full" || sq.answered >= totalQ));
   const q = el("section", "cardIn homeCard");
-  if (done) {
+  if (serverDone) {
     q.append(el("h2", "findTitle", tr("homes.qTitleDone")));
     q.append(el("p", "homeBody", tr("homes.qBodyDone")));
   } else if (draft) {
@@ -175,6 +187,17 @@ function findingHome(root) {
     const qb = el("button", "mainBtn", tr("homes.qFinishBtn")); qb.type = "button";
     qb.addEventListener("click", () => navTo("questionnaire"));
     q.append(qb);
+  } else if (sq && sq.answered > 0) {
+    const pct = Math.max(1, Math.min(99, Math.round((100 * sq.answered) / Math.max(1, totalQ))));
+    q.append(el("h2", "findTitle", tr("homes.qTitlePct", undefined, { n: pct })));
+    q.append(el("p", "homeBody", tr("homes.qBody")));
+    q.append(el("p", "homeBody homeWarm", tr("homes.qPerfect")));
+    const qb = el("button", "mainBtn", tr("homes.qFinishBtn")); qb.type = "button";
+    qb.addEventListener("click", () => navTo("questionnaire"));
+    q.append(qb);
+  } else if (done) {
+    q.append(el("h2", "findTitle", tr("homes.qTitleDone")));
+    q.append(el("p", "homeBody", tr("homes.qBodyDone")));
   } else {
     q.append(el("h2", "findTitle", tr("homes.qTitlePct", undefined, { n: 0 })));
     q.append(el("p", "homeBody", tr("homes.qBody")));
