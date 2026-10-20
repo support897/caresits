@@ -909,6 +909,21 @@ const { planSave } = await import("./account-save.js");
   await p.close();
 }
 
+// ---- Night N1: progress derives from the full saved state ----
+// A completed member on a fresh boot read 0% at Home and
+// "Exploring" on the Profile: the boot judged the level from
+// the questionnaire's base answers alone (the tiers live in
+// the per-code documents), and Home read only the device
+// keys, which the drain consumes by design. The boot merges
+// the documents in; publishTrust stands a progress seam;
+// Home derives from it; the save's publication rebuilds it.
+{
+  const src = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
+  t("N1: the boot merges the per-code answer documents into the judged map", src("./live.js").includes("mergeDeepAnswers(qData.answers || {}, byPair") && src("./live.js").includes("profiles/${uid}/answers"));
+  t("N1: publishTrust stands the progress seam and the save's publication rebuilds it", src("./live.js").includes("window.CARESITS_QUESTIONS") && src("./account-save.js").includes("h.CARESITS_QUESTIONS") && src("./account-save.js").includes("mergeDeepAnswers(bundle.answers || {}, byPair, bundle.side || \"\")"));
+  t("N1: Home's progress card derives from the server seam before the device keys", src("./homes.js").includes("window.CARESITS_QUESTIONS") && src("./homes.js").includes("serverDone"));
+}
+
 // ---- b112 FIND same-session: the save republishes the pool ----
 // The boot publishes Find's pool before a first session's
 // journey exists (truthfully empty); the landed save must
