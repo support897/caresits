@@ -164,6 +164,13 @@ export function publishTrust(profile, card, questionnaire) {
     };
   }
   if (typeof window.CARESITS_TRUST_RENDER === "function") window.CARESITS_TRUST_RENDER();
+  // Home derives its progress card from this seam, and the
+  // seam lands after the first paint (the deep answers read
+  // rides the boot): a Home painted before this publication
+  // must re-derive when it lands, or it can stand on a false
+  // 0% for a member whose questionnaire is complete (QA
+  // F-CS-RT-1, found on the real-account round trip).
+  if (typeof window.CARESITS_RENDER_HOME === "function") window.CARESITS_RENDER_HOME();
   return me;
 }
 
