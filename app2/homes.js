@@ -101,7 +101,14 @@ function defaultPosture() {
 function greeting(leadKey, leadVars) {
   const wrap = el("div", "homeHead");
   const name = myName();
-  wrap.append(el("h1", "homeHello", name ? tr("homes.helloName", undefined, { name }) : tr("homes.hello")));
+  // The salutation follows the device's own clock (Polar
+  // C2: the greeting was a fixed "Good morning" at every
+  // hour). Morning before noon, afternoon to five, evening
+  // after.
+  const h = new Date().getHours();
+  const part = h < 12 ? "" : h < 17 ? "Aft" : "Eve";
+  const helloKey = "homes.hello" + part + (name ? "Name" : "");
+  wrap.append(el("h1", "homeHello", tr(helloKey, undefined, name ? { name } : undefined)));
   wrap.append(el("p", "lead", tr(leadKey, undefined, leadVars)));
   const tl = el("p", "todayLine");
   tl.id = "todayLine";
