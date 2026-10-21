@@ -266,4 +266,33 @@ t("area: the save writes the area coordinates onto the card from its postcode", 
   assert.ok(!("latE2" in bare.card.data.card));
 });
 
+// F-CS-RT-1 (QA, real-account round trip on 114): a fresh
+// boot's Home could stand on "0% answered" for a completed
+// member when the seam landed after the first paint, and
+// nothing re-derived it. The card now asserts nothing
+// numeric before the seam, and the seam re-renders Home.
+const treeText = () => {
+  const texts = [];
+  (function walk(node) { if (node.textContent) texts.push(node.textContent); for (const c of node.children || []) walk(c); })(homeRoot);
+  return texts.join(" | ");
+};
+globalThis.localStorage.setItem("caresits-home-posture", "finding");
+delete globalThis.localStorage._m["caresits-app2-draft"];
+delete globalThis.localStorage._m["caresits-app2-questionnaire"];
+delete globalThis.CARESITS_QUESTIONS;
+await import("./homes.js?fcsrt1");
+t("F-CS-RT-1: before the seam lands, the finding home's card asserts no false 0%", () => {
+  const joined = treeText();
+  assert.ok(joined.includes("Reading your answers..."), "the reading line stands");
+  assert.ok(!joined.includes("0% answered"), "no false zero stands");
+});
+t("F-CS-RT-1: when the seam lands complete, the re-rendered card agrees with it", () => {
+  globalThis.CARESITS_QUESTIONS = { answered: 51, level: "full", side: "family" };
+  globalThis.window.CARESITS_RENDER_HOME();
+  const joined = treeText();
+  assert.ok(joined.includes("Your questions are answered"), "the done title stands");
+  assert.ok(!joined.includes("0% answered"), "no false zero stands");
+  delete globalThis.CARESITS_QUESTIONS;
+});
+
 console.log(`\nALL ${n} homes checks passed`);
