@@ -387,6 +387,7 @@ export const UI_AR = {
  "acct.tasteTitle": "التذوق المجاني، بكل وضوح",
  "acct.deleteTitle": "احذف حسابك",
  "acct.deleteBtn": "احذف حسابي",
+ "acct.deleteSure": "سيؤدي هذا إلى حذف حسابك وكل ما فيه نهائيًا.", "acct.reauthPw": "اكتب كلمة المرور لإثبات هويتك", "acct.deleteConfirmBtn": "نعم، احذف حسابي", "acct.deleteCancel": "الاحتفاظ بحسابي", "acct.reauthBad": "كلمة المرور غير صحيحة. لم يتم حذف أي شيء.",
  "acct.fail": "لم ينجح ذلك. حاول مرة أخرى.",
  "acct.noNet": "لم ينجح الاتصال. تحقق من الإنترنت وحاول مرة أخرى.",
  "acct.deleted": "تم حذف حسابك.",
