@@ -2,7 +2,7 @@
 import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import http from "node:http";
-import { resolvePlan, canSendMessage, isPassOpen, tasteDayKey, PLANS, entitlementFromRecord, plusExtrasOpen, PLUS_MONTH_MS, withTimeout, DOOR_TIMEOUTS, signInGoogle, signInApple } from "./account.js";
+import { resolvePlan, canSendMessage, isPassOpen, tasteDayKey, PLANS, entitlementFromRecord, plusExtrasOpen, PLUS_MONTH_MS, withTimeout, DOOR_TIMEOUTS, signInGoogle, signInApple, authInitShape } from "./account.js";
 
 let pass = 0;
 const t = (name, fn) => { fn(); pass++; console.log("ok -", name); };
@@ -290,6 +290,35 @@ t("census: boot's first-data reads are bounded at all six sites (four census + t
 t("census: the door's layer load races a bound at all three buttons", () => {
   const src = readFileSync(new URL("../app2/door.js", import.meta.url), "utf8");
   assert.equal((src.match(/await layerFast\(\)/g) || []).length, 3);
+});
+
+// ---- The door cure (bisect of record, 21 Oct 2026) ----
+// Her Google sign in completed at Firebase (lastLogin at the
+// film's minute) while the app never walked her in and never
+// spoke: plain getAuth's persistence resolution hangs sign in
+// results and the auth listener in the packaged webview. The
+// cure's pins: the native branch shape, the IndexedDB init,
+// both credential exchanges inside the bounded wait law, and
+// the door driving its own walk in from the resolved
+// credential with the listener as backstop.
+t("door cure: the native auth init shape is IndexedDB, the web shape is default", () => {
+  assert.equal(authInitShape(true), "indexeddb");
+  assert.equal(authInitShape(false), "default");
+});
+t("door cure: the auth init branches to initializeAuth with IndexedDB persistence on native", () => {
+  const src = readFileSync(new URL("./account.js", import.meta.url), "utf8");
+  assert.ok(src.includes("initializeAuth(app, { persistence: authMod.indexedDBLocalPersistence })"));
+  assert.ok(src.includes("initAuthForPlatform(authMod, app, isNativePlatform())"));
+});
+t("door cure: both credential exchanges stand inside the bounded wait law", () => {
+  const src = readFileSync(new URL("./account.js", import.meta.url), "utf8");
+  assert.equal((src.match(/"credential exchange"/g) || []).length, 2);
+});
+t("door cure: the door drives its walk in from the resolved credential, listener as backstop", () => {
+  const src = readFileSync(new URL("../app2/door.js", import.meta.url), "utf8");
+  assert.ok(src.includes("function walkIn()"));
+  assert.equal((src.match(/if \(cred && cred\.user\) walkIn\(\)/g) || []).length, 2);
+  assert.equal((src.match(/door\.working/g) || []).length, 2);
 });
 
 console.log(`\nALL ${pass} accounts checks passed`);
