@@ -1,5 +1,5 @@
 :root { --ink: #1E4D44; --ground: #FDF8F0; --teal: #9CC5B5; --blush: #F6CBD3; --card: #FFFFFF; --line: #D8E4DC; }
-body { margin: 0; background: var(--ground); color: var(--ink); font-family: "Atkinson Hyperlegible", system-ui, sans-serif; font-size: 17px; }
+body { margin: 0; background: var(--ground); color: var(--ink); font-family: "Atkinson Hyperlegible", system-ui, sans-serif; font-size: 17px; touch-action: manipulation; }
 .doorWrap { min-height: 100dvh; display: grid; place-items: center; padding: 24px 18px; padding-top: calc(24px + env(safe-area-inset-top, 0px)); box-sizing: border-box; }
 .doorCard { text-align: center; max-width: 400px; width: 100%; }
 .doorMark { width: 96px; height: 96px; }
