@@ -469,6 +469,7 @@ export const UI_ZH = {
  "homes.findCarers": "找照护者",
  "homes.seeMatches": "查看我的匹配",
  "homes.qTitlePct": "您的问题已回答了 {n}%",
+ "homes.qReading": "正在读取你的答案...",
  "homes.qTitleDone": "您的问题都已回答",
  "homes.qBody": "再多答几个问题，您的匹配会精准得多。",
  "homes.qBodyDone": "您的答案已收好。我们正在安排合适的人选。",
