@@ -110,6 +110,22 @@ await page.click("#sliver");
 await page.waitForTimeout(450);
 t("shell: tapping the sliver returns full content", await page.evaluate(() => !document.getElementById("layout").classList.contains("open")));
 t("shell: no page errors", errs.length === 0);
+{
+  // env() cannot be injected into a desktop browser, so the
+  // geometry is proven under the equivalent applied inset
+  // (47px, the tall iPhone status bar): the same padding
+  // the env() rule computes on device.
+  const sp2 = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await sp2.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
+  await sp2.goto("http://localhost:8933/index.html", { waitUntil: "networkidle" });
+  await sp2.addStyleTag({ content: ".topBar{padding-top:59px}" });
+  const btnBox = await sp2.evaluate(() => { const b = document.getElementById("menuBtn").getBoundingClientRect(); return { top: b.top, height: b.height }; });
+  t("safe-area: the menu button lands fully below a 47px status bar at 390x844", btnBox.top >= 47 && btnBox.height > 0);
+  await sp2.click("#menuBtn");
+  await sp2.waitForTimeout(450);
+  t("safe-area: the menu button stays tappable with the inset applied", await sp2.evaluate(() => document.getElementById("layout").classList.contains("open")));
+  await sp2.close();
+}
 
 
 // ---- Phase B: the Find surface ----
@@ -924,6 +940,24 @@ const { planSave } = await import("./account-save.js");
   t("C1: the area table stands in browse and both derivations ride it", src("./browse.js").includes("export function areaCoordsFor") && src("./account-save.js").includes("withAreaCoords(cardWithGallery") && src("./find.js").includes("areaCoordsFor(card.postcode || doc.postcode"));
   t("C1: an unplaceable pool reads the honest empty line, never a bare panel", src("./find.js").includes("find.mapEmpty") && src("./lang.js").includes("\"find.mapEmpty\""));
   t("C2: the greeting picks its salutation from the device hour", src("./homes.js").includes("new Date().getHours()") && src("./homes.js").includes("\"homes.hello\" + part"));
+}
+
+// ---- Safe-area (Ilse's fleet ruling, 21 Oct 2026) ----
+// The menu button sat at the very top edge under the iOS
+// status bar, untappable (her own phone screenshot on a
+// sibling app; the chrome pattern is the house's). The app
+// now extends under the bar by design (viewport-fit=cover
+// on its three pages) and every top chrome surface insets
+// itself by env(safe-area-inset-top): the shell top bar,
+// the open menu, the sheet wrap, the door wrap, the
+// journey head. The geometry leg below proves clearance +
+// tappability at the device shape under the equivalent
+// applied inset; the env() plumbing is proven on device.
+{
+  const src = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
+  const sat = (p) => (src(p).match(/env\(safe-area-inset-top/g) || []).length;
+  t("safe-area: every top chrome surface insets by the safe area", sat("./shell.css") === 3 && sat("./door.css") === 1 && sat("./styles.css") === 1);
+  t("safe-area: the app's three pages extend under the bar by design", ["./door.html", "./index.html", "./journey.html"].every((p) => src(p).includes("viewport-fit=cover")));
 }
 
 // ---- Night N1: progress derives from the full saved state ----
