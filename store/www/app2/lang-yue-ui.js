@@ -267,6 +267,7 @@ export const UI_YUE = {
  "plans.failed": "唔成功。冇收任何費用。",
  "plans.restore": "恢復之前嘅購買",
  "plans.restored": "你嘅計劃恢復咗。",
+ "plans.demoLine": "示範只能睇。免費加入先可以買計劃。",
  "plans.appOnly": "加入功能喺 Caresitters 應用程式入面。喺呢度撳加入只係話畀我哋知你有興趣。唔會收費。",
  "plans.renew2": "隨時可以喺 Apple ID 訂閱入面取消。你嘅計劃會開放到已付月份完結。",
  "plans.renewFinding": "Finding 每月 A$14.95。佢每個月會自動續期，直到你取消為止，而且冇免費月份。",
