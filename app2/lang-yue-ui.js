@@ -25,6 +25,7 @@ export const UI_YUE = {
  "door.noNet": "連接唔成功。請檢查你嘅網絡，再試一次。",
     "door.madeAccount": "呢個電郵係新嚟嘅，所以我哋幫你開咗個賬戶。歡迎你。",
  "door.doorFail": "這種方式沒有打開。請試試下面的電郵方式。",
+ "door.working": "正在幫你登入...",
  "door.forgotNeed": "先在上面輸入您的電郵，然後點擊忘記密碼。",
  "door.resetSent": "重設連結已經發送到您的電郵。",
  "door.resetFail": "現在無法發送。請過一會兒再試。",
