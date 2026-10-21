@@ -471,6 +471,7 @@ export const UI_AR = {
  "homes.findCarers": "ابحث عن مقدمي رعاية",
  "homes.seeMatches": "عرض تطابقاتي",
  "homes.qTitlePct": "تمت الإجابة على {n}% من أسئلتك",
+ "homes.qReading": "جارٍ قراءة إجاباتك...",
  "homes.qTitleDone": "تمت الإجابة على أسئلتك",
  "homes.qBody": "بضع إجابات أخرى وستصبح تطابقاتك أدق بكثير.",
  "homes.qBodyDone": "وصلت إجاباتك. نحن نرتب الأشخاص المناسبين.",
