@@ -75,6 +75,16 @@ button.dangerBtn { background:#A33B2E; border-color:#A33B2E; color:#fff; }
     <p class="small" data-i18n="legal.delete1">Only you can delete your account. Caresitters never deletes your data for you. Deleting removes your profile, your children, your Day Story, your documents and your messages from your account, for good. If you share a hire with a carer, their own copy of that hire stays theirs.</p>
     <p class="small" style="margin-top:8px" data-i18n="legal.delete2">Before you delete, you can download your data from inside the app. If you are signed in, the button below does the deletion now. If you cannot sign in, write to us from the email on your account and we will verify it is you and delete the account within 30 days.</p>
     <button class="door dangerBtn" id="deleteBtn" data-i18n="acct.deleteBtn">Delete my account</button>
+    <div id="deleteConfirm" hidden>
+      <p class="small" style="margin-top:10px" data-i18n="acct.deleteSure">Are you sure? This deletes your account and everything in it, for good.</p>
+      <div id="reauthPwWrap" hidden>
+        <label for="reauthPw" data-i18n="acct.reauthPw">Type your password to prove it is you</label>
+        <input id="reauthPw" type="password" autocomplete="current-password" placeholder="Your password">
+      </div>
+      <button class="door dangerBtn" id="deleteConfirmBtn" data-i18n="acct.deleteConfirmBtn">Yes, delete my account</button>
+      <button class="door" id="deleteCancelBtn" data-i18n="acct.deleteCancel">Keep my account</button>
+      <p id="deleteMsg" role="status" style="margin-top:10px; font-weight:700"></p>
+    </div>
   </div>
 </main>
 <script type="module">
@@ -106,7 +116,7 @@ const fillPlanPrices = () => {
   }
 };
 fillPlanPrices();
-import { initAccounts, signInGoogle, signInApple, signInEmail, signOutUser, deleteMyAccount, resolvePlan, PLANS } from "./account.js";
+import { initAccounts, signInGoogle, signInApple, signInEmail, signOutUser, deleteMyAccount, reauthenticateForDelete, resolvePlan, PLANS } from "./account.js";
 const msg = document.getElementById("msg");
 const setMsg = (t) => { msg.textContent = t || ""; };
 if (!FIREBASE_ON) {
@@ -114,7 +124,9 @@ if (!FIREBASE_ON) {
   for (const id of ["doorGoogle", "doorApple", "doorEmail", "deleteBtn"]) document.getElementById(id).disabled = true;
 } else {
   let madeAccount = false;
+  let currentUser = null;
   await initAccounts(firebaseConfig, (u) => {
+    currentUser = u;
     document.getElementById("planCard").hidden = !u;
     document.getElementById("doorsCard").hidden = !!u;
     if (u) {
@@ -138,7 +150,43 @@ if (!FIREBASE_ON) {
     }
   });
   document.getElementById("signOut").onclick = wrap(signOutUser);
-  document.getElementById("deleteBtn").onclick = wrap(async () => { await deleteMyAccount(); setMsg(tr("acct.deleted")); });
+  // The delete road (117 scoping): the first tap only opens
+  // the confirmation step. The walk runs after the person
+  // confirms AND proves it is them (reauthenticateForDelete);
+  // a failed proof deletes nothing and says so.
+  const deleteBtn = document.getElementById("deleteBtn");
+  const deleteConfirm = document.getElementById("deleteConfirm");
+  const deleteMsg = document.getElementById("deleteMsg");
+  const reauthPw = document.getElementById("reauthPw");
+  const setDeleteMsg = (t) => { deleteMsg.textContent = t || ""; };
+  deleteBtn.onclick = () => {
+    setDeleteMsg("");
+    reauthPw.value = "";
+    const providers = ((currentUser && currentUser.providerData) || []).map((p) => p && p.providerId);
+    document.getElementById("reauthPwWrap").hidden = !providers.includes("password");
+    deleteConfirm.hidden = false;
+    deleteBtn.hidden = true;
+  };
+  document.getElementById("deleteCancelBtn").onclick = () => {
+    deleteConfirm.hidden = true;
+    deleteBtn.hidden = false;
+    reauthPw.value = "";
+    setDeleteMsg("");
+  };
+  document.getElementById("deleteConfirmBtn").onclick = async () => {
+    setDeleteMsg("");
+    try {
+      await reauthenticateForDelete(reauthPw.value);
+      await deleteMyAccount();
+      deleteConfirm.hidden = true;
+      setMsg(tr("acct.deleted"));
+    } catch (e) {
+      const code = e && e.code;
+      if (code === "auth/wrong-password" || code === "auth/invalid-credential" || code === "auth/missing-password") setDeleteMsg(tr("acct.reauthBad"));
+      else if (code === "auth/network-request-failed" || code === "auth/timeout") setDeleteMsg(tr("acct.noNet"));
+      else setDeleteMsg(tr("acct.fail"));
+    }
+  };
 }
 </script>
 </body>
