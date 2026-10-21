@@ -267,6 +267,7 @@ export const UI_ZH = {
  "plans.failed": "没有成功。没有收取任何费用。",
  "plans.restore": "恢复以前的购买",
  "plans.restored": "你的计划已经恢复。",
+ "plans.demoLine": "演示只能浏览。免费加入后即可购买套餐。",
  "plans.appOnly": "加入功能在 Caresitters 应用里。在这里点加入只是告诉我们你有兴趣。不会收费。",
  "plans.renew2": "随时可在 Apple ID 订阅中取消。您的计划会一直开放到已付月份结束。",
  "plans.renewFinding": "Finding 每月 A$14.95。它每月自动续订，直到您取消为止，并且没有免费月份。",
