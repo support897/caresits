@@ -958,6 +958,7 @@ const { planSave } = await import("./account-save.js");
   const sat = (p) => (src(p).match(/env\(safe-area-inset-top/g) || []).length;
   t("safe-area: every top chrome surface insets by the safe area", sat("./shell.css") === 3 && sat("./door.css") === 1 && sat("./styles.css") === 1);
   t("safe-area: the app's three pages extend under the bar by design", ["./door.html", "./index.html", "./journey.html"].every((p) => src(p).includes("viewport-fit=cover")));
+  t("no-zoom: a double tap never zooms, on any of the app's pages (her ruling, 21 Oct)", ["./door.html", "./index.html", "./journey.html"].every((p) => src(p).includes("maximum-scale=1.0") && src(p).includes("user-scalable=no")) && ["./shell.css", "./door.css", "./styles.css"].every((p) => src(p).includes("touch-action: manipulation")));
 }
 
 // ---- Night N1: progress derives from the full saved state ----
