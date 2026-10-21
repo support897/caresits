@@ -1,6 +1,16 @@
 import { withTimeout } from "../accounts/account.js";
 import { doneKey } from "./storage-keys.js";
 import { levelOf, mergeDeepAnswers } from "./levels.js";
+import { areaCoordsFor } from "./browse.js";
+
+// The card carries its postcode AREA coordinates from the
+// save (Polar C1): the map and the distance read them, and
+// a postcode the area table cannot place writes none, so
+// no position is ever invented.
+function withAreaCoords(card, postcode) {
+  const a = areaCoordsFor(postcode);
+  return a ? { ...card, latE2: a.latE2, lngE2: a.lngE2 } : card;
+}
 
 // Caresitters app2 — Phase A slice 2: the journey finish, saved.
 // journey.js calls window.CARESITS_SAVE(bundle) when this file
@@ -84,7 +94,7 @@ export function planSave(bundle, opts) {
         displayName: bundle.side === "carer" ? (cardIn.displayName || displayName) : displayName,
         postcode: cardIn.postcode || "",
         photoUrl: photoUrl || "",
-        card: cardWithGallery(card, gallery),
+        card: withAreaCoords(cardWithGallery(card, gallery), cardIn.postcode || ""),
         looking: looking || { musts: {}, prefs: {} },
         updatedAt: nowIso,
       },
