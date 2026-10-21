@@ -314,6 +314,15 @@ t("door cure: both credential exchanges stand inside the bounded wait law", () =
   const src = readFileSync(new URL("./account.js", import.meta.url), "utf8");
   assert.equal((src.match(/"credential exchange"/g) || []).length, 2);
 });
+globalThis.window = { Capacitor: { isNativePlatform: () => true, Plugins: {} } };
+let loudErr = null; try { await signInGoogle(); } catch (e) { loudErr = e; }
+t("door cure: on native, a missing plugin fails loud instead of falling through to the popup (Google)", () => {
+  assert.ok(loudErr && /unavailable in this build/.test(loudErr.message));
+});
+let loudErrA = null; try { await signInApple(); } catch (e) { loudErrA = e; }
+t("door cure: on native, a missing plugin fails loud instead of falling through to the popup (Apple)", () => {
+  assert.ok(loudErrA && /unavailable in this build/.test(loudErrA.message));
+});
 t("door cure: the door drives its walk in from the resolved credential, listener as backstop", () => {
   const src = readFileSync(new URL("../app2/door.js", import.meta.url), "utf8");
   assert.ok(src.includes("function walkIn()"));
