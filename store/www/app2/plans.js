@@ -35,6 +35,9 @@ function planBtn(label, plan, wrap, card, status) {
     const res = await buyPlan(plan);
     if (res.ok) {
       status.textContent = tr("plans.done");
+    } else if (res.reason === "demo") {
+      status.textContent = tr("plans.demoLine");
+      b.disabled = false;
     } else if (res.reason === "cancelled") {
       status.textContent = "";
       b.disabled = false;
@@ -104,7 +107,7 @@ export function openPlans(reason) {
       restore.disabled = true;
       status.textContent = tr("plans.buying");
       const res = await restorePurchases();
-      status.textContent = res.ok ? tr("plans.restored") : tr("plans.failed");
+      status.textContent = res.ok ? tr("plans.restored") : (res.reason === "demo" ? tr("plans.demoLine") : tr("plans.failed"));
       restore.disabled = false;
     });
     card.append(restore);
