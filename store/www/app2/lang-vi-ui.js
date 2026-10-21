@@ -267,6 +267,7 @@ export const UI_VI = {
  "plans.failed": "Không thành công. Không bị tính phí gì cả.",
  "plans.restore": "Khôi phục giao dịch mua trước đây",
  "plans.restored": "Gói của bạn đã hoạt động lại.",
+ "plans.demoLine": "Bản demo chỉ để xem. Tham gia miễn phí để mua gói.",
  "plans.appOnly": "Việc tham gia nằm trong ứng dụng Caresitters. Chạm vào Tham gia ở đây chỉ cho chúng tôi biết bạn quan tâm. Không tính phí gì cả.",
  "plans.renew2": "Hủy bất cứ lúc nào trong phần đăng ký Apple ID. Gói của bạn vẫn mở đến hết tháng đã trả.",
  "plans.renewFinding": "Finding là A$14.95 một tháng. Gói tự gia hạn mỗi tháng cho đến khi bạn hủy, và không có tháng miễn phí.",
