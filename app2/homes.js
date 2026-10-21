@@ -205,6 +205,13 @@ function findingHome(root) {
   } else if (done) {
     q.append(el("h2", "findTitle", tr("homes.qTitleDone")));
     q.append(el("p", "homeBody", tr("homes.qBodyDone")));
+  } else if (!sq) {
+    // No seam has landed yet (the boot's deep read is still
+    // travelling): the card asserts nothing numeric. A 0%
+    // printed here would be a guess dressed as a fact, and
+    // for a completed member a false one (QA F-CS-RT-1).
+    // The publication re-renders Home when it lands.
+    q.append(el("h2", "findTitle", tr("homes.qReading")));
   } else {
     q.append(el("h2", "findTitle", tr("homes.qTitlePct", undefined, { n: 0 })));
     q.append(el("p", "homeBody", tr("homes.qBody")));
