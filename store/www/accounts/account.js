@@ -401,6 +401,58 @@ async function deactivateOwnDevice() {
   } catch { /* a missing doc or a closed network changes nothing */ }
 }
 
+// Re-authentication for the delete road (117 scoping, HQ
+// ruling 21 Oct 2026): before the walk runs, the person at
+// the screen proves they are still the account holder, the
+// way the fleet's delete roads do. Email accounts prove it
+// with their password. Google and Apple accounts prove it
+// with a fresh credential from their own door machinery,
+// mirrored here in miniature so the gated door functions
+// above stay untouched; on the open web the popup carries
+// the proof instead. Every exchange is bounded like a door
+// exchange, and a proof that fails deletes nothing.
+export async function reauthenticateForDelete(password) {
+  if (!_user) throw new Error("not signed in");
+  const m = await import(`${SDK}/firebase-auth.js`);
+  const providers = (_user.providerData || []).map((p) => p && p.providerId);
+  if (providers.includes("password")) {
+    if (!password) { const e = new Error("a password is needed to prove it is you"); e.code = "auth/missing-password"; throw e; }
+    const cred = m.EmailAuthProvider.credential(_user.email, password);
+    await withTimeout(m.reauthenticateWithCredential(_user, cred), DOOR_TIMEOUTS.native, "reauthentication");
+    return "password";
+  }
+  if (providers.includes("google.com")) {
+    const plugin = nativeAuthPlugin();
+    if (plugin) {
+      const result = await withTimeout(plugin.signInWithGoogle(), DOOR_TIMEOUTS.native, "native sign in");
+      const credential = result && result.credential;
+      if (!credential || !credential.idToken) throw new Error("native sign in returned no credential");
+      await withTimeout(m.reauthenticateWithCredential(_user, m.GoogleAuthProvider.credential(credential.idToken)), DOOR_TIMEOUTS.native, "reauthentication");
+      return "google.com";
+    }
+    if (isNativePlatform()) throw new Error("native sign in unavailable in this build");
+    await m.reauthenticateWithPopup(_user, new m.GoogleAuthProvider());
+    return "google.com";
+  }
+  if (providers.includes("apple.com")) {
+    const provider = new m.OAuthProvider("apple.com");
+    const plugin = nativeAuthPlugin();
+    if (plugin) {
+      const result = await withTimeout(plugin.signInWithApple(), DOOR_TIMEOUTS.native, "native sign in");
+      const credential = result && result.credential;
+      if (!credential || !credential.idToken) throw new Error("native sign in returned no credential");
+      await withTimeout(m.reauthenticateWithCredential(_user, provider.credential({ idToken: credential.idToken, rawNonce: credential.nonce })), DOOR_TIMEOUTS.native, "reauthentication");
+      return "apple.com";
+    }
+    if (isNativePlatform()) throw new Error("native sign in unavailable in this build");
+    await m.reauthenticateWithPopup(_user, provider);
+    return "apple.com";
+  }
+  const e = new Error("no sign in method can prove it is you");
+  e.code = "auth/no-recent-provider";
+  throw e;
+}
+
 // Account deletion is the user's own act (Never Delete law): the
 // app never deletes for them. This removes the user's folder and
 // then the account itself; it needs a fresh sign in, which the
@@ -448,6 +500,35 @@ export async function deleteMyAccount() {
   // hygiene under the Never Delete distinction.
   const devSnap = await getDocs(collection(_db, "profiles", _user.uid, "devices"));
   devSnap.forEach((d) => batch.delete(d.ref));
+  // The profile card and its per answer documents live at
+  // profiles/{uid} too (F-CS-DEL-1, proven owner side 21 Oct
+  // 2026: both stood whole after this walk ran). The answers
+  // are enumerated like the devices, then the card itself
+  // dies, so nothing the person answered outlives the
+  // account that spoke the deleted line.
+  const ansSnap = await getDocs(collection(_db, "profiles", _user.uid, "answers"));
+  ansSnap.forEach((d) => batch.delete(d.ref));
+  batch.delete(doc(_db, "profiles", _user.uid));
+  // The rest of the meta folder dies beside meta/app below:
+  // the questionnaire (every base answer), the emergency
+  // card and the reminders. The users catch all arm carries
+  // the owner delete for each of them.
+  batch.delete(doc(_db, "users", _user.uid, "meta", "questionnaire"));
+  batch.delete(doc(_db, "users", _user.uid, "meta", "emergency"));
+  batch.delete(doc(_db, "users", _user.uid, "meta", "reminders"));
+  // Blocks the user made, and the recently viewed record,
+  // enumerated like every other subcollection in this walk.
+  const blkSnap = await getDocs(collection(_db, "users", _user.uid, "blocks"));
+  blkSnap.forEach((d) => batch.delete(d.ref));
+  const recSnap = await getDocs(collection(_db, "users", _user.uid, "recently"));
+  recSnap.forEach((d) => batch.delete(d.ref));
+  // The entitlement record dies with the account (the fleet
+  // word for its class): the v6 arm grants the owner delete
+  // for exactly this walk, on the _activity precedent, with
+  // create and update still sealed. The events log is a
+  // sealed system record keyed by event id and is NOT part
+  // of this footprint.
+  batch.delete(doc(_db, "_entitlements", _user.uid));
   // Connect link invites live at the top level, keyed by the
   // family who made them (Security's zero orphans fence): the
   // walk enumerates the caller's own invites by familyUid and
