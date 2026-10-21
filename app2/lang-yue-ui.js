@@ -385,6 +385,7 @@ export const UI_YUE = {
  "acct.tasteTitle": "免費體驗，說清楚",
  "acct.deleteTitle": "刪除您的帳戶",
  "acct.deleteBtn": "刪除我的帳戶",
+ "acct.deleteSure": "呢個會永久刪除你嘅帳戶同入面所有嘢。", "acct.reauthPw": "輸入密碼,確認係你本人", "acct.deleteConfirmBtn": "係,刪除我嘅帳戶", "acct.deleteCancel": "保留我嘅帳戶", "acct.reauthBad": "密碼唔啱。冇刪除任何嘢。",
  "acct.fail": "沒有成功。請再試一次。",
  "acct.noNet": "連接唔成功。請檢查你嘅網絡，再試一次。",
  "acct.deleted": "您的帳戶已刪除。",
