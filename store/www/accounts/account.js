@@ -310,6 +310,13 @@ export async function signInGoogle() {
     if (!credential || !credential.idToken) throw new Error("native sign in returned no credential");
     return withTimeout(m.signInWithCredential(_auth, m.GoogleAuthProvider.credential(credential.idToken)), DOOR_TIMEOUTS.native, "credential exchange");
   }
+  // On native, a missing plugin fails LOUD, never falls
+  // through to the web popup (the fleet door chapter,
+  // 21 Oct 2026): the popup's return cannot complete inside
+  // the webview, and its silence is indistinguishable from
+  // a door that never spoke. The popup stands only where it
+  // belongs: the open web.
+  if (isNativePlatform()) throw new Error("native sign in unavailable in this build");
   return m.signInWithPopup(_auth, new m.GoogleAuthProvider());
 }
 
@@ -327,6 +334,7 @@ export async function signInApple() {
     // hashed nonce to Apple when it opened the sheet).
     return withTimeout(m.signInWithCredential(_auth, provider.credential({ idToken: credential.idToken, rawNonce: credential.nonce })), DOOR_TIMEOUTS.native, "credential exchange");
   }
+  if (isNativePlatform()) throw new Error("native sign in unavailable in this build");
   return m.signInWithPopup(_auth, provider);
 }
 
