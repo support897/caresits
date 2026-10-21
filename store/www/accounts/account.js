@@ -173,22 +173,24 @@ export const DOOR_TIMEOUTS = { native: 20000, ensure: 10000 };
 // webview (the door bisect of record, 21 Oct 2026: her Google
 // sign in completed at Firebase, lastLogin stamped at the
 // film's minute, and the app never walked her in and never
-// spoke, because plain getAuth leaves the default persistence
-// resolution to the webview, the shape firebase-js-sdk #5552
-// documents hanging sign in results and onAuthStateChanged
-// in iPhone Capacitor apps). On native the plugin's own
-// guide shape stands: initializeAuth with IndexedDB
-// persistence. The web keeps getAuth.
-export function authInitShape(native) { return native ? "indexeddb" : "default"; }
+// spoke). Plain getAuth names no persistence, so the default
+// chain settles through IndexedDB, the layer that can stall
+// inside WKWebView under the packaged app's scheme
+// (firebase-js-sdk #5552). On native the Auth is created the
+// way the fleet's device completing modular control (Ruefly)
+// creates it, like for like: initializeAuth naming
+// browserLocalPersistence, the reliable settler in that
+// webview. The web keeps getAuth.
+export function authInitShape(native) { return native ? "browserLocal" : "default"; }
 function isNativePlatform() {
   try { const cap = window.Capacitor; return !!(cap && typeof cap.isNativePlatform === "function" && cap.isNativePlatform()); }
   catch { return false; }
 }
 function initAuthForPlatform(authMod, app, native) {
-  if (authInitShape(native) === "indexeddb" && typeof authMod.initializeAuth === "function") {
+  if (authInitShape(native) === "browserLocal" && typeof authMod.initializeAuth === "function") {
     try {
-      const auth = authMod.initializeAuth(app, { persistence: authMod.indexedDBLocalPersistence });
-      console.info("[door] auth init: native indexedDB persistence");
+      const auth = authMod.initializeAuth(app, { persistence: authMod.browserLocalPersistence });
+      console.info("[door] auth init: native named persistence (browserLocal)");
       return auth;
     } catch { /* an instance already stands: fall through */ }
   }
