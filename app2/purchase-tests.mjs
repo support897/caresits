@@ -6,6 +6,7 @@
 // cancel-versus-fail split, and the refresh call.
 // Run: node purchase-tests.mjs
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 let n = 0, bad = 0;
 function t(name, fn) { n++; return Promise.resolve().then(fn).catch((e) => { bad++; console.log("FAIL:", name, "-", String(e && e.message).split("\n")[0]); }); }
@@ -100,6 +101,26 @@ await t("entitlementActive reads RevenueCat's own active map", () => {
 await t("the maps hold Finance's identifiers exactly", () => {
   assert.deepEqual(P.PACKAGES, { finding: "finding_monthly", "family-plus": "familyplus_monthly", "search-pass": "search_pass" });
   assert.deepEqual(P.ENTITLEMENTS, { finding: "finding", "family-plus": "family_plus", "search-pass": "search_pass" });
+});
+
+await t("fence: a demo session's buy stops at the door of the machinery, speaking the demo reason", async () => {
+  globalThis.sessionStorage = { getItem: () => "1" };
+  const before = calls.length;
+  const res = await P.buyPlan("finding");
+  assert.equal(res.ok, false); assert.equal(res.reason, "demo");
+  assert.equal(calls.length, before);
+});
+await t("fence: a demo session's restore stops the same way", async () => {
+  const before = calls.length;
+  const res = await P.restorePurchases();
+  assert.equal(res.ok, false); assert.equal(res.reason, "demo");
+  assert.equal(calls.length, before);
+  globalThis.sessionStorage = { getItem: () => null };
+});
+await t("fence: the plans sheet speaks the demo line for both money roads", () => {
+  const src = readFileSync(new URL("./plans.js", import.meta.url), "utf8");
+  assert.ok(src.includes('res.reason === "demo" ? tr("plans.demoLine")'));
+  assert.ok(src.includes('tr("plans.demoLine")'));
 });
 
 console.log(`\n${n - bad}/${n} purchase legs pass`);
