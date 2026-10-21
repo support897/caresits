@@ -35,14 +35,26 @@ function bounded(promise, ms) {
 }
 const layerFast = () => bounded(layer(), 15000);
 
+// One walk in, two drivers (the door bisect of record,
+// 21 Oct 2026): the auth state listener is the backstop, and
+// each social handler drives the same entry from its own
+// resolved credential, so a listener that never settles can
+// no longer strand a signed in user at a silent door.
+let walkedIn = false;
+function walkIn() {
+  if (walkedIn) return;
+  walkedIn = true;
+  try { sessionStorage.setItem("caresits-tour", "1"); } catch { /* storage off */ }
+  location.href = "index.html";
+}
+
 async function layer() {
   if (accounts) return accounts;
   accounts = await import("../accounts/account.js");
   await accounts.initAccounts(firebaseConfig, (u) => {
     if (u && !u.isAnonymous) {
       if (joinHold) return;
-      sessionStorage.setItem("caresits-tour", "1");
-      location.href = "index.html";
+      walkIn();
     }
   });
   return accounts;
@@ -81,8 +93,8 @@ $("#joinBtn").addEventListener("click", async () => {
     msg(tr(noNet ? "door.noNet" : "door.mismatch"));
   }
 });
-$("#googleBtn").addEventListener("click", async () => { try { const a = await layerFast(); await a.signInGoogle(); } catch { msg(tr("door.doorFail")); } });
-$("#appleBtn").addEventListener("click", async () => { try { const a = await layerFast(); await a.signInApple(); } catch { msg(tr("door.doorFail")); } });
+$("#googleBtn").addEventListener("click", async () => { msg(tr("door.working")); try { const a = await layerFast(); const cred = await a.signInGoogle(); if (cred && cred.user) walkIn(); } catch { msg(tr("door.doorFail")); } });
+$("#appleBtn").addEventListener("click", async () => { msg(tr("door.working")); try { const a = await layerFast(); const cred = await a.signInApple(); if (cred && cred.user) walkIn(); } catch { msg(tr("door.doorFail")); } });
 $("#forgotBtn").addEventListener("click", async () => {
   const email = $("#emailIn").value.trim();
   if (!email) { msg(tr("door.forgotNeed")); return; }
