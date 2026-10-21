@@ -385,6 +385,7 @@ export const UI_ZH = {
  "acct.tasteTitle": "免费体验，说清楚",
  "acct.deleteTitle": "删除您的账户",
  "acct.deleteBtn": "删除我的账户",
+ "acct.deleteSure": "这会永久删除你的帐户和其中的所有内容。", "acct.reauthPw": "输入密码,确认是你本人", "acct.deleteConfirmBtn": "是的,删除我的帐户", "acct.deleteCancel": "保留我的帐户", "acct.reauthBad": "密码不对。没有删除任何内容。",
  "acct.fail": "没有成功。请再试一次。",
  "acct.noNet": "连接没有成功。请检查您的网络，再试一次。",
  "acct.deleted": "您的账户已删除。",
