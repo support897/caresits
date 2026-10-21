@@ -385,6 +385,7 @@ export const UI_VI = {
  "acct.tasteTitle": "Bản dùng thử miễn phí, nói rõ ràng",
  "acct.deleteTitle": "Xóa tài khoản của bạn",
  "acct.deleteBtn": "Xóa tài khoản của tôi",
+ "acct.deleteSure": "Thao tác này sẽ xóa tài khoản và mọi thứ trong đó, vĩnh viễn.", "acct.reauthPw": "Nhập mật khẩu để xác nhận đó là bạn", "acct.deleteConfirmBtn": "Đúng, xóa tài khoản của tôi", "acct.deleteCancel": "Giữ tài khoản", "acct.reauthBad": "Mật khẩu không đúng. Chưa xóa gì cả.",
  "acct.fail": "Không thành công. Vui lòng thử lại.",
  "acct.noNet": "Kết nối không thành công. Hãy kiểm tra internet và thử lại.",
  "acct.deleted": "Tài khoản của bạn đã bị xóa.",
