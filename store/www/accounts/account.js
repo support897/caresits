@@ -176,27 +176,21 @@ export const DOOR_TIMEOUTS = { native: 20000, ensure: 10000 };
 // spoke). Plain getAuth names no persistence, so the default
 // chain settles through IndexedDB, the layer that can stall
 // inside WKWebView under the packaged app's scheme
-// (firebase-js-sdk #5552). On native the Auth is therefore
-// created with a NAMED persistence: initializeAuth naming
-// indexedDBLocalPersistence, the plugin guide's shape —
-// held as this app's evidence-named divergence (HQ ruling,
-// 21 Oct 2026): the fleet's other modular apps carry the
-// control's browserLocalPersistence, the device trails
-// arbitrate the two constants on hardware, and a stall
-// signature on this app's trail (a landed exchange with a
-// starved registration) swaps this constant to
-// browserLocalPersistence the same day. The web keeps
-// getAuth.
-export function authInitShape(native) { return native ? "indexedDB" : "default"; }
+// (firebase-js-sdk #5552). On native the Auth is created the
+// way the fleet's device completing modular control (Ruefly)
+// creates it, like for like: initializeAuth naming
+// browserLocalPersistence, the reliable settler in that
+// webview. The web keeps getAuth.
+export function authInitShape(native) { return native ? "browserLocal" : "default"; }
 function isNativePlatform() {
   try { const cap = window.Capacitor; return !!(cap && typeof cap.isNativePlatform === "function" && cap.isNativePlatform()); }
   catch { return false; }
 }
 function initAuthForPlatform(authMod, app, native) {
-  if (authInitShape(native) === "indexedDB" && typeof authMod.initializeAuth === "function") {
+  if (authInitShape(native) === "browserLocal" && typeof authMod.initializeAuth === "function") {
     try {
-      const auth = authMod.initializeAuth(app, { persistence: authMod.indexedDBLocalPersistence });
-      console.info("[door] auth init: native named persistence (indexedDB)");
+      const auth = authMod.initializeAuth(app, { persistence: authMod.browserLocalPersistence });
+      console.info("[door] auth init: native named persistence (browserLocal)");
       return auth;
     } catch { /* an instance already stands: fall through */ }
   }
