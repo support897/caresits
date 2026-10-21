@@ -25,6 +25,7 @@ export const UI_ZH = {
  "door.noNet": "连接没有成功。请检查您的网络，再试一次。",
     "door.madeAccount": "这个邮箱是新来的，所以我们为你创建了账户。欢迎加入。",
  "door.doorFail": "这种方式没有打开。请试试下面的邮箱方式。",
+ "door.working": "正在为你登录...",
  "door.forgotNeed": "先在上面输入您的邮箱，然后点击忘记密码。",
  "door.resetSent": "重置链接已经发送到您的邮箱。",
  "door.resetFail": "现在无法发送。请过一会儿再试。",
