@@ -469,6 +469,7 @@ export const UI_VI = {
  "homes.findCarers": "Tìm người chăm sóc",
  "homes.seeMatches": "Xem các kết quả phù hợp của tôi",
  "homes.qTitlePct": "Bạn đã trả lời {n}% câu hỏi",
+ "homes.qReading": "Đang đọc câu trả lời của bạn...",
  "homes.qTitleDone": "Bạn đã trả lời hết các câu hỏi",
  "homes.qBody": "Thêm vài câu trả lời nữa, kết quả phù hợp của bạn sẽ chính xác hơn nhiều.",
  "homes.qBodyDone": "Câu trả lời của bạn đã được ghi. Chúng tôi đang sắp xếp những người phù hợp.",
