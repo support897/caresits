@@ -140,6 +140,7 @@ html[data-theme="white"] body { background: #FFFFFF; }
 
 .viewToggle { display: flex; gap: 8px; margin: 10px 0; }
 .mapPanel { position: relative; height: 320px; border-radius: 18px; background: #eaf3ee; border: 1px solid #cfe3d8; overflow: hidden; }
+.mapEmpty { position: absolute; left: 0; right: 0; top: 42%; margin: 0; text-align: center; color: #4a6a5e; font-size: 15px; padding: 0 24px; }
 .mapPin { position: absolute; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%; border: 2px solid #fff; background: #1e4d44; color: #fff; font-weight: 700; cursor: pointer; }
 .mapNote { position: absolute; left: 10px; bottom: 8px; font-size: 12px; color: #1e4d44; background: rgba(255,255,255,.8); padding: 2px 8px; border-radius: 999px; }
 .mapSlot { margin-top: 10px; }
