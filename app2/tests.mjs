@@ -909,6 +909,23 @@ const { planSave } = await import("./account-save.js");
   await p.close();
 }
 
+// ---- Polar C1 + C2 (build 114 device round) ----
+// C1: the Find map stood empty for every real member — no
+// production save ever wrote card coordinates, so the pin
+// layout filtered the whole pool out while the suite
+// fixtures, which carried coordinates, passed. The cure:
+// an area centroid table, the save writes it, the Find
+// read derives it for cards saved before. C2: the home
+// greeting was a fixed "Good morning" at every hour; it
+// now follows the device clock, with keys in all seven
+// languages.
+{
+  const src = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
+  t("C1: the area table stands in browse and both derivations ride it", src("./browse.js").includes("export function areaCoordsFor") && src("./account-save.js").includes("withAreaCoords(cardWithGallery") && src("./find.js").includes("areaCoordsFor(card.postcode || doc.postcode"));
+  t("C1: an unplaceable pool reads the honest empty line, never a bare panel", src("./find.js").includes("find.mapEmpty") && src("./lang.js").includes("\"find.mapEmpty\""));
+  t("C2: the greeting picks its salutation from the device hour", src("./homes.js").includes("new Date().getHours()") && src("./homes.js").includes("\"homes.hello\" + part"));
+}
+
 // ---- Night N1: progress derives from the full saved state ----
 // A completed member on a fresh boot read 0% at Home and
 // "Exploring" on the Profile: the boot judged the level from
