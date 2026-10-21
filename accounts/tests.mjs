@@ -301,13 +301,13 @@ t("census: the door's layer load races a bound at all three buttons", () => {
 // both credential exchanges inside the bounded wait law, and
 // the door driving its own walk in from the resolved
 // credential with the listener as backstop.
-t("door cure: the native auth init shape is IndexedDB, the web shape is default", () => {
-  assert.equal(authInitShape(true), "indexeddb");
+t("door cure: the native auth init shape names browserLocal persistence, the web shape is default", () => {
+  assert.equal(authInitShape(true), "browserLocal");
   assert.equal(authInitShape(false), "default");
 });
-t("door cure: the auth init branches to initializeAuth with IndexedDB persistence on native", () => {
+t("door cure: the auth init branches to initializeAuth with browserLocal persistence on native", () => {
   const src = readFileSync(new URL("./account.js", import.meta.url), "utf8");
-  assert.ok(src.includes("initializeAuth(app, { persistence: authMod.indexedDBLocalPersistence })"));
+  assert.ok(src.includes("initializeAuth(app, { persistence: authMod.browserLocalPersistence })"));
   assert.ok(src.includes("initAuthForPlatform(authMod, app, isNativePlatform())"));
 });
 t("door cure: both credential exchanges stand inside the bounded wait law", () => {
