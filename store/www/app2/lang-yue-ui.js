@@ -469,6 +469,7 @@ export const UI_YUE = {
  "homes.findCarers": "搵照顧者",
  "homes.seeMatches": "睇我嘅配對",
  "homes.qTitlePct": "你嘅問題已經答咗 {n}%",
+ "homes.qReading": "正在讀取你嘅答案...",
  "homes.qTitleDone": "你嘅問題已經全部答晒",
  "homes.qBody": "再答多幾條，你嘅配對就會準好多。",
  "homes.qBodyDone": "你嘅答案已經收好。我哋而家安排合適嘅人選。",
