@@ -6,7 +6,7 @@
 // action layer, not here. Data arrives from the live account
 // layer when it can; otherwise the designed empty states
 // stand. Test and live hooks may set CARESITS_FIND_DATA.
-import { assembleBrowse, pinLayout, kmBetween, stitchAnswers } from "./browse.js";
+import { assembleBrowse, pinLayout, kmBetween, stitchAnswers, areaCoordsFor } from "./browse.js";
 import { t as tr } from "./lang.js";
 import { frameUser } from "./account-save.js";
 const labelText = (s) => tr({ "Perfect Pair": "find.label.perfect", "Strong Fit": "find.label.strong", "Good Fit": "find.label.good" }[s] || "find.label.good");
@@ -127,6 +127,7 @@ function mapSection(viewerDoc, candidateDocs, browse) {
     });
     panel.append(pin);
   }
+  if (!pins.length) panel.append(el("p", "mapEmpty", tr("find.mapEmpty")));
   panel.append(el("p", "mapNote", tr("find.mapNote")));
   wrap.append(panel, slot);
   return wrap;
@@ -217,7 +218,17 @@ export async function fetchFindData(fsMod, db, uid) {
     const aSnap = await fsMod.getDocs(fsMod.collection(db, "profiles", id, "answers"));
     const docs = [];
     aSnap.forEach((d) => docs.push({ code: d.id, data: d.data() }));
-    return stitchAnswers({ uid: id, ...data }, docs);
+    const doc = stitchAnswers({ uid: id, ...data }, docs);
+    // Area coordinates ride the card from the save; a card
+    // saved before they did derives them here from its
+    // postcode, so the map and the distance read every
+    // member by the same area truth (Polar C1).
+    const card = doc.card;
+    if (card && card.latE2 == null) {
+      const a = areaCoordsFor(card.postcode || doc.postcode || "");
+      if (a) { card.latE2 = a.latE2; card.lngE2 = a.lngE2; }
+    }
+    return doc;
   };
   const viewer = await withAnswers(uid, mine.data());
   const snap = await fsMod.getDocs(fsMod.query(fsMod.collection(db, "profiles"), fsMod.limit(100)));
