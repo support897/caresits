@@ -56,6 +56,13 @@ t("trust publish (F15): docs and reviews already on the seam survive, me is repl
   assert.equal(rendered, 1);
   delete globalThis.window;
 });
+t("home re-derive (F-CS-RT-1): a publication re-renders Home when it is mounted", () => {
+  let homeRenders = 0;
+  globalThis.window = { CARESITS_RENDER_HOME: () => { homeRenders += 1; } };
+  publishTrust({ side: "family", displayName: "Sam" }, { side: "family", displayName: "Sam" }, { side: "family", country: "Australia", answers: { country: "Australia" } });
+  assert.equal(homeRenders, 1);
+  delete globalThis.window;
+});
 t("questions seam (N1): publishTrust stands the member's progress for Home", () => {
   globalThis.window = {};
   publishTrust({ side: "family", displayName: "Sam" }, { side: "family", displayName: "Sam" }, { side: "family", country: "Australia", answers: { country: "Australia", postcode: "4217" } });
