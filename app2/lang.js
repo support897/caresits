@@ -10,6 +10,7 @@
 // which then lands here as a normal value. Machine-only words
 // never ship for those keys, by construction.
 
+import { accountKey } from "./storage-keys.js";
 import { Q_EN } from "./lang-q.js";
 import { Q_ES } from "./lang-q-es.js";
 import { Q_ZH } from "./lang-q-zh.js";
@@ -26,6 +27,17 @@ import { UI_HI } from "./lang-hi-ui.js";
 export const STRINGS = {
   en: {
     "door.tag": "Find care. Share the day.",
+    "door.rolePrompt": "What brings you here?",
+    "door.roleCareer": "Careers",
+    "door.roleCareerBody": "I am looking for care work",
+    "door.roleFamily": "Family",
+    "door.roleFamilyBody": "I need care for my family",
+    "door.roleCommunicate": "Communicate",
+    "door.roleCommunicateBody": "I want to stay in touch",
+    "door.roleCareerHeading": "A career in care",
+    "door.roleFamilyHeading": "Care for your family",
+    "door.roleCommunicateHeading": "Stay connected",
+    "door.changeRole": "Choose another role",
     "door.google": "Continue with Google",
     "door.apple": "Continue with Apple",
     "door.email": "Your email",
@@ -122,6 +134,9 @@ export const STRINGS = {
     "homes.helloAft": "Good afternoon",
     "homes.helloEveName": "Good evening, {name}",
     "homes.helloEve": "Good evening",
+    "homes.roleCareer": "Your care career",
+    "homes.roleFamily": "Your family",
+    "homes.roleCommunicate": "Your conversations",
     "homes.findingLead": "Let us find the right person for your family.",
     "homes.daysLeadName": "{name} is with the kids today.",
     "homes.daysLead": "The day, planned together.",
@@ -471,6 +486,17 @@ export const STRINGS = {
   },
   es: {
     "door.tag": "Encuentra cuidado. Comparte el día.",
+    "door.rolePrompt": "¿Qué te trae por aquí?",
+    "door.roleCareer": "Trabajo de cuidados",
+    "door.roleCareerBody": "Busco trabajo cuidando niños",
+    "door.roleFamily": "Familia",
+    "door.roleFamilyBody": "Busco cuidado para mi familia",
+    "door.roleCommunicate": "Comunicación",
+    "door.roleCommunicateBody": "Quiero mantenerme en contacto",
+    "door.roleCareerHeading": "Una carrera en cuidados",
+    "door.roleFamilyHeading": "Cuidado para tu familia",
+    "door.roleCommunicateHeading": "Sigamos en contacto",
+    "door.changeRole": "Elegir otro perfil",
     "door.google": "Continuar con Google",
     "door.apple": "Continuar con Apple",
     "door.email": "Tu correo electrónico",
@@ -566,6 +592,9 @@ export const STRINGS = {
     "homes.helloAft": "Buenas tardes",
     "homes.helloEveName": "Buenas noches, {name}",
     "homes.helloEve": "Buenas noches",
+    "homes.roleCareer": "Tu carrera en cuidados",
+    "homes.roleFamily": "Tu familia",
+    "homes.roleCommunicate": "Tus conversaciones",
     "homes.findingLead": "Busquemos a la persona adecuada para tu familia.",
     "homes.daysLeadName": "{name} está hoy con los niños.",
     "homes.daysLead": "El día, planeado juntos.",
@@ -923,7 +952,8 @@ Object.assign(STRINGS.hi, Q_HI);
 
 export function currentLang() {
   try {
-    const pick = localStorage.getItem("caresits-lang");
+    const key = accountKey("caresits-lang");
+    const pick = key ? localStorage.getItem(key) : null;
     if (pick && STRINGS[pick]) return pick;
   } catch { /* storage may be closed */ }
   const full = (navigator.language || "en").toLowerCase();
@@ -933,7 +963,7 @@ export function currentLang() {
 }
 
 export function setLang(code) {
-  try { localStorage.setItem("caresits-lang", code); } catch { /* fine */ }
+  try { const key = accountKey("caresits-lang"); if (key) localStorage.setItem(key, code); } catch { /* fine */ }
 }
 
 export function t(key, lang = currentLang(), vars = null) {

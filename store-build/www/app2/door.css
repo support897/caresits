@@ -1,0 +1,36 @@
+:root { --ink: #1E4D44; --ground: #FDF8F0; --teal: #9CC5B5; --blush: #F6CBD3; --card: #FFFFFF; --line: #D8E4DC; --role-accent: var(--ink); --role-soft: #EAF2ED; }
+html[data-entry-role="career"] { --role-accent: #9B4B25; --role-soft: #F8EADF; }
+html[data-entry-role="family"] { --role-accent: #1E4D44; --role-soft: #E6F2EC; }
+html[data-entry-role="communicate"] { --role-accent: #704A83; --role-soft: #F0E7F4; }
+body { margin: 0; background: var(--ground); color: var(--ink); font-family: "Atkinson Hyperlegible", system-ui, sans-serif; font-size: 17px; touch-action: manipulation; }
+.doorWrap { min-height: 100dvh; display: grid; place-items: center; padding: 24px 18px; padding-top: calc(24px + env(safe-area-inset-top, 0px)); box-sizing: border-box; }
+.doorCard { text-align: center; max-width: 400px; width: 100%; }
+.doorMark { width: 96px; height: 96px; }
+.doorWord { font-family: "Newsreader", Georgia, serif; font-size: 44px; margin: 10px 0 2px; }
+.doorTag { margin: 0 0 26px; font-size: 18px; }
+.roleChooser { margin: 24px 0; }
+.roleQuestion { font: 600 25px/1.2 "Newsreader", Georgia, serif; margin: 0 0 14px; }
+.roleChoices { display: grid; gap: 10px; }
+.roleOption { display: flex; flex-direction: column; gap: 4px; width: 100%; padding: 14px 16px; border: 1.5px solid var(--role-accent); border-radius: 16px; background: var(--role-soft); color: var(--ink); text-align: left; font: inherit; cursor: pointer; }
+.roleOption[data-role="career"] { --role-accent: #9B4B25; --role-soft: #F8EADF; }
+.roleOption[data-role="family"] { --role-accent: #1E4D44; --role-soft: #E6F2EC; }
+.roleOption[data-role="communicate"] { --role-accent: #704A83; --role-soft: #F0E7F4; }
+.roleChoiceTitle { color: var(--role-accent); font: 600 21px/1.2 "Newsreader", Georgia, serif; }
+.roleChoiceBody { font-size: 15px; }
+.roleOption:focus-visible, .changeRole:focus-visible { outline: 3px solid var(--role-accent); outline-offset: 3px; }
+.entryRoleHeading { color: var(--role-accent); font: 600 28px/1.2 "Newsreader", Georgia, serif; margin: 22px 0 2px; }
+.changeRole { margin: 0 0 16px; }
+.doorIcons { display: flex; gap: 16px; justify-content: center; margin-bottom: 26px; }
+.iconDoor { width: 64px; height: 64px; border-radius: 50%; background: var(--card); border: 1.5px solid var(--line); display: grid; place-items: center; cursor: pointer; }
+.doorLabel { display: block; text-align: left; font-weight: 700; margin: 0 0 8px; }
+.emailRow { display: flex; gap: 10px; align-items: center; }
+.doorInput { flex: 1; font: inherit; padding: 14px 16px; border: 1.5px solid var(--line); border-radius: 14px; background: #fff; color: var(--ink); box-sizing: border-box; width: 100%; }
+.roundNext { width: 52px; height: 52px; flex: none; border-radius: 50%; border: none; background: var(--ink); color: #fff; font-size: 24px; cursor: pointer; }
+.doorEmailLine { text-align: left; font-weight: 700; }
+.changeBtn { background: none; border: none; font: inherit; color: var(--ink); text-decoration: underline; cursor: pointer; padding: 2px 4px; }
+.mainBtn { background: var(--ink); color: #fff; border: none; border-radius: 999px; padding: 14px 22px; font: inherit; font-weight: 700; cursor: pointer; }
+.doorJoin { width: 100%; margin-top: 14px; }
+.doorForgot { margin: 12px 0 0; }
+.doorMsg { font-weight: 700; min-height: 24px; margin: 16px 0 0; }
+.doorDemo { margin-top: 26px; opacity: .8; }
+#authDoor[hidden], #entryRoleHeading[hidden] { display: none; }

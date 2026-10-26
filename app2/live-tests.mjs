@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { routeWrite, trustSeamFrom, publishTrust, refreshTrustName, writeDataFor, makeWriter, phaseCNameTargets, phaseCSeam, fetchPhaseC, activityStampPath, weekSeamFrom, threadSeamFrom } from "./live.js";
+import { accountKey } from "./storage-keys.js";
 import { frameUser, FRAME_WAIT, planSave, publishSavedProfile, drainOutbox } from "./account-save.js";
 let n = 0; const t = (name, fn) => { fn(); n += 1; console.log("ok -", name); };
 const ta = async (name, fn) => { await fn(); n += 1; console.log("ok -", name); };
@@ -11,6 +12,15 @@ t("router: children and story ride the owner's own folders, under their own ids 
 t("router: a message is the sender's own copy", () => { assert.equal(routeWrite("message", { pairId: "p", text: "hi", at: "x" }, "a").path, "users/a/messages"); });
 t("router: calendar kinds map to their delta homes", () => { assert.equal(routeWrite("request-decide", { pairId: "p", reqId: "R1", patch: {} }, "a").path, "schedule/p/requests/R1"); assert.equal(routeWrite("block-land", { path: "schedule/p/blocks", data: {} }, "a").op, "add"); });
 t("router: unknown kinds are refused", () => { assert.equal(routeWrite("teleport", {}, "a").ok, false); });
+t("entry role: each choice saves to its own uid app document", () => {
+  const r = routeWrite("entry-role", { entryRole: "communicate" }, "member-a");
+  assert.deepEqual(r, { ok: true, op: "merge", path: "users/member-a/meta/app", data: { entryRole: "communicate" } });
+  assert.equal(routeWrite("entry-role", { entryRole: "family" }, "member-b").path, "users/member-b/meta/app");
+  assert.equal(routeWrite("entry-role", { entryRole: "admin" }, "member-a").ok, false);
+  assert.equal(accountKey("caresits-name", "member-a"), "caresits-name-member-a");
+  assert.equal(accountKey("caresits-name", "member-b"), "caresits-name-member-b");
+  assert.equal(accountKey("caresits-name", null), null);
+});
 t("router: the two homes kinds land on their ruled shapes", () => {
   const inv = routeWrite("invite-create", { path: "invites/K7P2Q9AB", data: { familyUid: "a", label: "", createdAt: "x", usedBy: null } }, "a");
   assert.equal(inv.op, "set"); assert.equal(inv.path, "invites/K7P2Q9AB");

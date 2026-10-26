@@ -7,7 +7,7 @@ import { FAMILY_PAGES, CARER_PAGES, DAYS, PARTS, BANDS, AGES } from "./questions
 import { t as tr, applyI18n } from "./lang.js";
 import { slugify } from "../next-phase/engine/engine.mjs";
 import { COUNTRY_NAMES, packByName } from "./countries.js";
-import { draftKey, doneKey } from "./storage-keys.js";
+import { accountKey, draftKey, doneKey } from "./storage-keys.js";
 import { levelOf, levelRank } from "./levels.js";
 import { withTimeout } from "../accounts/account.js";
 import { warmSave, drainOutbox } from "./account-save.js";
@@ -404,10 +404,11 @@ async function finish() {
 const RESUME_KEY = "caresits-app2-resume-draft";
 function consumeResumeHandoff() {
   try {
-    const raw = localStorage.getItem(RESUME_KEY);
+    const key = accountKey(RESUME_KEY);
+    const raw = key ? localStorage.getItem(key) : null;
     if (!raw) return;
     const h = JSON.parse(raw);
-    localStorage.removeItem(RESUME_KEY);
+    localStorage.removeItem(key);
     if (!h || h.side !== "carer" || state.side === "family") return;
     state.side = "carer";
     for (const [k, v] of Object.entries(h.answers || {})) if (state.answers[k] === undefined) state.answers[k] = v;

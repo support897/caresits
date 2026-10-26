@@ -2,11 +2,20 @@
 import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import http from "node:http";
-import { resolvePlan, canSendMessage, isPassOpen, tasteDayKey, PLANS, entitlementFromRecord, plusExtrasOpen, PLUS_MONTH_MS, withTimeout, DOOR_TIMEOUTS, signInGoogle, signInApple, authInitShape } from "./account.js";
+import { resolvePlan, canSendMessage, isPassOpen, tasteDayKey, PLANS, entitlementFromRecord, plusExtrasOpen, PLUS_MONTH_MS, withTimeout, DOOR_TIMEOUTS, signInGoogle, signInApple, authInitShape, DELETE_BATCH_SIZE, chunkDeleteRefs } from "./account.js";
 
 let pass = 0;
 const t = (name, fn) => { fn(); pass++; console.log("ok -", name); };
 const NOW = Date.parse("2026-10-15T00:00:00Z");
+
+t("account deletion batches never exceed 400 writes", () => {
+  const refs = Array.from({ length: 1001 }, (_, id) => ({ id }));
+  const chunks = chunkDeleteRefs(refs);
+  assert.equal(DELETE_BATCH_SIZE, 400);
+  assert.deepEqual(chunks.map((chunk) => chunk.length), [400, 400, 201]);
+  assert.deepEqual(chunks.flat(), refs);
+  assert.deepEqual(chunkDeleteRefs([]), []);
+});
 
 t("carer is free forever, door open", () => {
   const p = resolvePlan({ side: "carer", comp: null, payment: null, now: NOW });
@@ -114,12 +123,14 @@ t("taste day key is a plain date", () => {
   assert.equal(tasteDayKey(new Date("2026-10-15T23:59:00Z")), "2026-10-15");
 });
 
-t("deletion walk enumerates the caller's own invites by familyUid (zero orphans)", () => {
+t("deletion walk batches the caller's own invites safely (zero orphans)", () => {
   const src = readFileSync(new URL("./account.js", import.meta.url), "utf8");
   const walk = src.slice(src.indexOf("export async function deleteMyAccount"));
+  assert.ok(src.includes("export const DELETE_BATCH_SIZE = 400"), "the deletion batch ceiling is 400");
+  assert.ok(src.includes("chunkDeleteRefs(refs)"), "delete refs are split into safe chunks");
   assert.ok(walk.includes('collection(_db, "invites")'), "the walk reaches the invites collection");
   assert.ok(walk.includes('where("familyUid", "==", _user.uid)'), "the walk enumerates by the caller's familyUid");
-  assert.ok(walk.includes("invSnap.forEach((d) => batch.delete(d.ref))"), "the caller's invites die in the same batch");
+  assert.ok(walk.includes("...invSnap.docs.map((d) => d.ref)"), "the caller's invites join the final chunked cleanup");
 });
 
 t("signup writer never reads the aggregates doc (programme shape)", () => {
@@ -166,7 +177,7 @@ t("native branch: bridge access is guarded, popup doors still stand for web and 
   assert.ok(src.includes("m.signInWithPopup(_auth, provider)"), "the web Apple popup stands (and is the native fallback)");
 });
 t("store config: the JS SDK owns the session (skipNativeAuth true)", () => {
-  const cfg = JSON.parse(readFileSync(new URL("../store/capacitor.config.json", import.meta.url), "utf8"));
+  const cfg = JSON.parse(readFileSync(new URL("../store-build/capacitor.config.json", import.meta.url), "utf8"));
   assert.equal(cfg.plugins.FirebaseAuthentication.skipNativeAuth, true);
 });
 t("store config: the native door providers are enabled (google.com + apple.com)", () => {
@@ -174,12 +185,12 @@ t("store config: the native door providers are enabled (google.com + apple.com)"
   // this list (its iOS source: handlers are created per config.providers);
   // without it both doors reject instantly with "provider is not enabled" —
   // the build 6 failure Ilse caught on her phone.
-  const cfg = JSON.parse(readFileSync(new URL("../store/capacitor.config.json", import.meta.url), "utf8"));
+  const cfg = JSON.parse(readFileSync(new URL("../store-build/capacitor.config.json", import.meta.url), "utf8"));
   assert.deepEqual(cfg.plugins.FirebaseAuthentication.providers, ["google.com", "apple.com"]);
 });
 
 // ---- Rules structure ----
-const rules = readFileSync(new URL("./firestore.rules", import.meta.url), "utf8");
+const rules = readFileSync(new URL("./firestore.rules.amended-v5.txt", import.meta.url), "utf8");
 t("rules: default wall, users touch only their own folder", () => {
   assert.ok(rules.includes("match /users/{uid}/{document=**}"));
   assert.ok(rules.includes("request.auth.uid == uid"));
@@ -196,9 +207,9 @@ t("rules: aggregates read is owner only, blanket write denied", () => {
   assert.ok(rules.includes("allow read: if isOwner();"));
 });
 t("rules: people counter rises only in paired writes", () => {
-  assert.ok(rules.includes("match /_owner/aggregates/people/main"));
+  assert.ok(rules.includes("match /_owner/aggregates/peopleTotal/main"));
   assert.ok(rules.includes("aggPairedSignup()"));
-  assert.ok(rules.includes("aggPlusOne('total')"));
+  assert.ok(rules.includes(".data.get('total', 0) == resource.data.get('total', 0) + 1;"));
 });
 t("rules: delete takes the path owner condition alone (verb split)", () => {
   const del = rules.match(/allow delete: if[^;]+;/s);

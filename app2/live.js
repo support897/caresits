@@ -7,6 +7,7 @@
 // carries ?twin=1; every other visit uses the production
 // config beside this file.
 import { levelOf, mergeDeepAnswers } from "./levels.js";
+import { accountKey } from "./storage-keys.js";
 import { resolvePlan, entitlementFromRecord, plusExtrasOpen, withTimeout } from "../accounts/account.js";
 
 // The photo lifecycle stamp path (HQ spec, 19 Oct 2026):
@@ -17,6 +18,8 @@ import { resolvePlan, entitlementFromRecord, plusExtrasOpen, withTimeout } from 
 export function activityStampPath(uid, side) {
   return uid && side === "carer" ? `_activity/${uid}` : null;
 }
+
+export const ENTRY_ROLES = Object.freeze(["career", "family", "communicate"]);
 
 export function routeWrite(kind, payload, uid) {
   if (!uid) return { ok: false, reason: "signed-out" };
@@ -59,6 +62,7 @@ export function routeWrite(kind, payload, uid) {
     case "reminder": return { ok: true, op: "merge", path: `users/${uid}/meta/reminders`, data: { text: payload.text, when: payload.when } };
     case "emergency": return { ok: true, op: "merge", path: `users/${uid}/meta/emergency`, data: { name: payload.name, phone: payload.phone } };
     case "appearance": return { ok: true, op: "merge", path: `users/${uid}/meta/app`, data: { background: payload.choice } };
+    case "entry-role": return ENTRY_ROLES.includes(payload.entryRole) ? { ok: true, op: "merge", path: `users/${uid}/meta/app`, data: { entryRole: payload.entryRole } } : { ok: false, reason: "invalid-role" };
     case "language": return { ok: true, op: "merge", path: `users/${uid}/meta/app`, data: { language: payload.code } };
     case "name": return { ok: true, op: "merge", path: `users/${uid}`, data: { displayName: payload.displayName } };
     case "message": return { ok: true, op: "add", path: `users/${uid}/messages`, data: { pairId: payload.pairId, text: payload.text, at: payload.at, mine: true } };
@@ -352,7 +356,7 @@ export async function bootLive() {
         // The uid seam is a pointer, not data: clearing it on
         // sign out deletes nothing, it only stops the device
         // keys resolving to the previous account (F16).
-        if (typeof window !== "undefined") window.CARESITS_UID = null;
+        if (typeof window !== "undefined") { window.CARESITS_UID = null; delete document.documentElement.dataset.entryRole; }
         gateSignedOut();
         resolve({ on: true, signedIn: false });
         return;
@@ -398,7 +402,7 @@ export async function bootLive() {
           const merged = mergeDeepAnswers(qData.answers || {}, byPair, qData.side || profile.side || "");
           if (Object.keys(merged).length > Object.keys(qData.answers || {}).length) qData = { ...qData, answers: merged };
         } catch { /* the base map stands */ }
-        window.CARESITS_ME = { uid, side: profile.side || "", name: profile.displayName || "" };
+        window.CARESITS_ME = { uid, side: profile.side || "", name: profile.displayName || "", entryRole: "" };
         window.CARESITS_PROFILE_COMPLETE = !!(profile.displayName && q.exists());
       } catch { /* the surfaces stand in their empty states */ }
       // The entitlement record (payments chapter §3): read at boot
@@ -494,10 +498,29 @@ export async function bootLive() {
           const reminderDoc = await docOr(`users/${uid}/meta/reminders`);
           const emergencyDoc = await docOr(`users/${uid}/meta/emergency`);
           const appDoc = await docOr(`users/${uid}/meta/app`);
+          let pendingRole = "";
+          try { pendingRole = sessionStorage.getItem("caresits-entry-role") || ""; } catch { /* session storage off */ }
+          let entryRole = ENTRY_ROLES.includes(appDoc && appDoc.entryRole) ? appDoc.entryRole : "";
+          if (ENTRY_ROLES.includes(pendingRole)) {
+            try {
+              const savedRole = await window.CARESITS_WRITE("entry-role", { entryRole: pendingRole });
+              if (savedRole && savedRole.ok) {
+                entryRole = pendingRole;
+                try { sessionStorage.removeItem("caresits-entry-role"); } catch { /* session storage off */ }
+              } else if (!entryRole) entryRole = pendingRole;
+            } catch { if (!entryRole) entryRole = pendingRole; }
+          }
+          if (entryRole) {
+            window.CARESITS_ME = { ...(window.CARESITS_ME || { uid }), entryRole };
+            document.documentElement.dataset.entryRole = entryRole;
+            if (typeof window.CARESITS_RENDER_HOME === "function") window.CARESITS_RENDER_HOME();
+          } else {
+            delete document.documentElement.dataset.entryRole;
+          }
           window.CARESITS_WEEK = weekSeamFrom({ timesheets: sheets, reminderDoc, emergencyDoc });
           if (typeof window.CARESITS_WEEK_RENDER === "function") window.CARESITS_WEEK_RENDER();
           if (appDoc && appDoc.background) {
-            try { localStorage.setItem("caresits-app2-bg", JSON.stringify({ choice: appDoc.background })); } catch { /* storage off */ }
+            try { const bgKey = accountKey("caresits-app2-bg", uid); if (bgKey) localStorage.setItem(bgKey, JSON.stringify({ choice: appDoc.background })); } catch { /* storage off */ }
           }
           // The member's language rides the account beside
           // their background (the save-forever law covers the
@@ -509,8 +532,9 @@ export async function bootLive() {
           // loops.
           if (appDoc && appDoc.language) {
             try {
-              if (localStorage.getItem("caresits-lang") !== appDoc.language) {
-                localStorage.setItem("caresits-lang", appDoc.language);
+              const langKey = accountKey("caresits-lang", uid);
+              if (langKey && localStorage.getItem(langKey) !== appDoc.language) {
+                localStorage.setItem(langKey, appDoc.language);
                 location.reload();
               }
             } catch { /* storage off */ }

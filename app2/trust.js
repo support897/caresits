@@ -1,5 +1,5 @@
 import { t as tr, currentLang, setLang } from "./lang.js";
-import { doneKey, draftKey } from "./storage-keys.js";
+import { accountKey, doneKey, draftKey } from "./storage-keys.js";
 import { downloadExport } from "./export.js";
 import { pushAvailable, getPushState, registerPush, togglePushKind } from "./push.js";
 import { uploadProfilePhoto, uploadGalleryPhoto, deleteFromStorage, planPathFromUrl, removeProfilePhoto } from "./photo.js";
@@ -33,8 +33,8 @@ const emptyBox = (root, title, words) => {
 
 // The Checks surface speaks the viewer's own country's check
 // name and register kind (country packs). The country comes from
-// the signed in profile when present, else from this device's
-// saved questionnaire or draft, else Australia.
+// the signed-in profile or that member's saved questionnaire/draft.
+// If none is present, the UI does not guess a country.
 function viewerCountryName() {
   const me = (window.CARESITS_TRUST || {}).me || {};
   if ((window.CARESITS_ME || {}).country) return window.CARESITS_ME.country;
@@ -45,14 +45,15 @@ function viewerCountryName() {
     const d = JSON.parse(localStorage.getItem(draftKey()) || "null");
     if (d && d.answers && d.answers.country) return d.answers.country;
   } catch { /* no local copy */ }
-  return "Australia";
+  return "";
 }
 
 export function renderChecks(root, docs) {
   root.replaceChildren();
   root.append(el("h2", "findTitle", tr("shell.checksNav")));
   root.append(el("p", "findPool", tr("checks.lead")));
-  const pack = packByName(viewerCountryName()) || packById("AU");
+  const country = viewerCountryName();
+  const pack = country ? packByName(country) : null;
   if (pack) {
     const me = (window.CARESITS_TRUST || {}).me || {};
     const facts = checkFor(pack, me.postcode || (window.CARESITS_ME || {}).postcode);
@@ -270,7 +271,8 @@ export function renderProfile(root, me) {
       use.addEventListener("click", () => {
         try {
           const h = buildHandoff(draft);
-          localStorage.setItem("caresits-app2-resume-draft", JSON.stringify(h));
+          const key = accountKey("caresits-app2-resume-draft");
+          if (key) localStorage.setItem(key, JSON.stringify(h));
         } catch { /* storage off */ }
         out.append(el("p", "gateMsg", tr("resume.saved")));
       });
@@ -335,14 +337,16 @@ export function renderSettings(root) {
   card.append(el("h3", "findName", tr("trust.background")));
   card.append(el("p", null, tr("trust.backgroundBody")));
   const row = el("div", "chipRow");
-  const saved = (() => { try { return JSON.parse(localStorage.getItem(BG_KEY)) || { choice: "brand" }; } catch { return { choice: "brand" }; } })();
+  const bgKey = accountKey(BG_KEY);
+  const saved = (() => { try { return bgKey ? JSON.parse(localStorage.getItem(bgKey)) || { choice: "brand" } : { choice: "brand" }; } catch { return { choice: "brand" }; } })();
   for (const [key, label] of [["brand", tr("trust.bg.brand")], ["white", tr("trust.bg.white")], ["black", tr("trust.bg.black")], ["upload", tr("trust.bg.upload")]]) {
     const b = el("button", "chipBtn" + (saved.choice === key ? " on" : ""), label);
     b.type = "button";
     b.dataset.bg = key;
     b.addEventListener("click", () => {
       if (key === "upload") { fileIn.click(); return; }
-      localStorage.setItem(BG_KEY, JSON.stringify({ choice: key }));
+      const bgKey = accountKey(BG_KEY);
+      if (bgKey) localStorage.setItem(bgKey, JSON.stringify({ choice: key }));
       applyBackground(key, null);
       write("appearance", { choice: key });
       renderSettings(root);
@@ -366,8 +370,8 @@ export function renderSettings(root) {
       c.height = Math.round(img.height * scale);
       c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
       const url = c.toDataURL("image/jpeg", 0.82);
-      localStorage.setItem(BG_KEY, JSON.stringify({ choice: "upload" }));
-      localStorage.setItem(BG_KEY + "-img", url);
+      const bgKey = accountKey(BG_KEY);
+      if (bgKey) { localStorage.setItem(bgKey, JSON.stringify({ choice: "upload" })); localStorage.setItem(bgKey + "-img", url); }
       applyBackground("upload", url);
       write("appearance", { choice: "upload" });
       renderSettings(root);
@@ -379,8 +383,8 @@ export function renderSettings(root) {
     const rm = el("button", "quietBtn", tr("trust.removePic"));
     rm.type = "button";
     rm.addEventListener("click", () => {
-      localStorage.setItem(BG_KEY, JSON.stringify({ choice: "brand" }));
-      localStorage.removeItem(BG_KEY + "-img");
+      const bgKey = accountKey(BG_KEY);
+      if (bgKey) { localStorage.setItem(bgKey, JSON.stringify({ choice: "brand" })); localStorage.removeItem(bgKey + "-img"); }
       applyBackground("brand", null);
       write("appearance", { choice: "brand" });
       renderSettings(root);
@@ -492,8 +496,9 @@ function bootTrust() {
   if (p) renderProfile(p, d.me || {});
   if (pv) renderPrivacy(pv);
   if (s) renderSettings(s);
-  const saved = (() => { try { return JSON.parse(localStorage.getItem(BG_KEY)) || { choice: "brand" }; } catch { return { choice: "brand" }; } })();
-  applyBackground(saved.choice, saved.choice === "upload" ? localStorage.getItem(BG_KEY + "-img") : null);
+  const bgKey = accountKey(BG_KEY);
+  const saved = (() => { try { return bgKey ? JSON.parse(localStorage.getItem(bgKey)) || { choice: "brand" } : { choice: "brand" }; } catch { return { choice: "brand" }; } })();
+  applyBackground(saved.choice, saved.choice === "upload" && bgKey ? localStorage.getItem(bgKey + "-img") : null);
 }
 
 // The live bridge re-publishes the trust seam when the signed

@@ -7,6 +7,7 @@
 // the NEXT visit as one small quiet bubble, then never
 // again (the fleet rule). A missing name blocks nothing.
 import { t as tr } from "./lang.js";
+import { accountKey } from "./storage-keys.js";
 const LS_NAME = "caresits-name";
 const LS_TOUR = "caresits-tour-state";
 const el = (tag, cls, text) => {
@@ -15,11 +16,12 @@ const el = (tag, cls, text) => {
   if (text != null) n.textContent = text;
   return n;
 };
-const state = () => { try { return JSON.parse(localStorage.getItem(LS_TOUR)) || {}; } catch { return {}; } };
-const saveState = (s) => localStorage.setItem(LS_TOUR, JSON.stringify(s));
-const myName = () => localStorage.getItem(LS_NAME) || "";
+const state = () => { try { const key = accountKey(LS_TOUR); return key ? JSON.parse(localStorage.getItem(key)) || {} : {}; } catch { return {}; } };
+const saveState = (s) => { const key = accountKey(LS_TOUR); if (key) localStorage.setItem(key, JSON.stringify(s)); };
+const myName = () => { const key = accountKey(LS_NAME); return key ? localStorage.getItem(key) || "" : ""; };
 function setName(v) {
-  localStorage.setItem(LS_NAME, v);
+  const key = accountKey(LS_NAME);
+  if (key) localStorage.setItem(key, v);
   if (typeof window.CARESITS_WRITE === "function") window.CARESITS_WRITE("name", { displayName: v });
   // The name lands in this session too: the live layer refreshes
   // the profile seam, and Home re-renders with the name in it.

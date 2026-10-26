@@ -1,0 +1,22 @@
+{
+  "appId": "shop.ilseplacencia.caresitters",
+  "appName": "Caresitters",
+  "webDir": "www",
+  "experimental": {
+    "ios": {
+      "spm": {
+        "packageOptions": {
+          "@capacitor-firebase/authentication": {
+            "symlink": true
+          }
+        }
+      }
+    }
+  },
+  "plugins": {
+    "FirebaseAuthentication": {
+      "providers": ["google.com", "apple.com"],
+      "skipNativeAuth": true
+    }
+  }
+}

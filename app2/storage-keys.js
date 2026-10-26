@@ -23,6 +23,10 @@ export function currentUid() {
   return null;
 }
 
+export function accountKey(base, uid = currentUid()) {
+  return uid ? `${base}-${uid}` : null;
+}
+
 export function draftKey() {
   const uid = currentUid();
   return uid ? "caresits-app2-draft-" + uid : "caresits-app2-draft";

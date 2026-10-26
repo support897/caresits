@@ -61,6 +61,10 @@ h1, h2 { font-family: "Newsreader", Georgia, serif; font-weight: 600; line-heigh
 #journeyFrame { width: 100%; height: calc(100dvh - 140px); border: none; border-radius: 18px; background: var(--ground); }
 
 .findTitle { font-family: "Newsreader", Georgia, serif; font-size: 28px; margin: 4px 0 6px; }
+html[data-entry-role="career"] { --entry-accent: #9B4B25; --entry-soft: #F8EADF; }
+html[data-entry-role="family"] { --entry-accent: #1E4D44; --entry-soft: #E6F2EC; }
+html[data-entry-role="communicate"] { --entry-accent: #704A83; --entry-soft: #F0E7F4; }
+.homeRoleHeading { display: inline-block; margin: 0 0 8px; padding: 5px 11px; border-left: 4px solid var(--entry-accent, var(--ink)); border-radius: 9px; background: var(--entry-soft, #EAF2ED); color: var(--entry-accent, var(--ink)); font-weight: 700; }
 .findPool { margin: 0 0 14px; font-weight: 700; }
 .findList { display: grid; gap: 14px; margin-bottom: 16px; }
 .findCard { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 18px; }

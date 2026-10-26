@@ -453,6 +453,22 @@ export async function reauthenticateForDelete(password) {
   throw e;
 }
 
+export const DELETE_BATCH_SIZE = 400;
+
+export function chunkDeleteRefs(refs, max = DELETE_BATCH_SIZE) {
+  const chunks = [];
+  for (let i = 0; i < refs.length; i += max) chunks.push(refs.slice(i, i + max));
+  return chunks;
+}
+
+export async function deleteRefsInBatches(fsMod, db, refs) {
+  for (const chunk of chunkDeleteRefs(refs)) {
+    const batch = fsMod.writeBatch(db);
+    for (const ref of chunk) batch.delete(ref);
+    await batch.commit();
+  }
+}
+
 // Account deletion is the user's own act (Never Delete law): the
 // app never deletes for them. This removes the user's folder and
 // then the account itself; it needs a fresh sign in, which the
@@ -461,7 +477,7 @@ export async function reauthenticateForDelete(password) {
 export async function deleteMyAccount() {
   if (!_user) throw new Error("not signed in");
   const fsMod = await import(`${SDK}/firebase-firestore.js`);
-  const { doc, collection, getDocs, writeBatch } = fsMod;
+  const { doc, collection, getDocs } = fsMod;
   // Storage objects (HQ deletion ruling, 19 Oct 2026): the
   // profile photo, the four gallery slots and any temporary
   // resume file are the user's personal files in the bucket,
@@ -488,10 +504,9 @@ export async function deleteMyAccount() {
     }
   } catch { /* storage may be closed; the deletion proceeds */ }
   const subs = ["children", "dayStory", "roster", "timesheets", "documents", "messages", "jobs"];
-  const batch = writeBatch(_db);
   for (const sub of subs) {
     const snap = await getDocs(collection(_db, "users", _user.uid, sub));
-    snap.forEach((d) => batch.delete(d.ref));
+    await deleteRefsInBatches(fsMod, _db, snap.docs.map((d) => d.ref));
   }
   // Device docs live under the card, not the user folder
   // (Security fence 1), so the walk names them on their own
@@ -499,7 +514,7 @@ export async function deleteMyAccount() {
   // rotating credential, not user data, so it dies here as
   // hygiene under the Never Delete distinction.
   const devSnap = await getDocs(collection(_db, "profiles", _user.uid, "devices"));
-  devSnap.forEach((d) => batch.delete(d.ref));
+  await deleteRefsInBatches(fsMod, _db, devSnap.docs.map((d) => d.ref));
   // The profile card and its per answer documents live at
   // profiles/{uid} too (F-CS-DEL-1, proven owner side 21 Oct
   // 2026: both stood whole after this walk ran). The answers
@@ -507,41 +522,40 @@ export async function deleteMyAccount() {
   // dies, so nothing the person answered outlives the
   // account that spoke the deleted line.
   const ansSnap = await getDocs(collection(_db, "profiles", _user.uid, "answers"));
-  ansSnap.forEach((d) => batch.delete(d.ref));
-  batch.delete(doc(_db, "profiles", _user.uid));
+  await deleteRefsInBatches(fsMod, _db, ansSnap.docs.map((d) => d.ref));
   // The rest of the meta folder dies beside meta/app below:
   // the questionnaire (every base answer), the emergency
   // card and the reminders. The users catch all arm carries
   // the owner delete for each of them.
-  batch.delete(doc(_db, "users", _user.uid, "meta", "questionnaire"));
-  batch.delete(doc(_db, "users", _user.uid, "meta", "emergency"));
-  batch.delete(doc(_db, "users", _user.uid, "meta", "reminders"));
   // Blocks the user made, and the recently viewed record,
   // enumerated like every other subcollection in this walk.
   const blkSnap = await getDocs(collection(_db, "users", _user.uid, "blocks"));
-  blkSnap.forEach((d) => batch.delete(d.ref));
+  await deleteRefsInBatches(fsMod, _db, blkSnap.docs.map((d) => d.ref));
   const recSnap = await getDocs(collection(_db, "users", _user.uid, "recently"));
-  recSnap.forEach((d) => batch.delete(d.ref));
+  await deleteRefsInBatches(fsMod, _db, recSnap.docs.map((d) => d.ref));
   // The entitlement record dies with the account (the fleet
   // word for its class): the v6 arm grants the owner delete
   // for exactly this walk, on the _activity precedent, with
   // create and update still sealed. The events log is a
   // sealed system record keyed by event id and is NOT part
   // of this footprint.
-  batch.delete(doc(_db, "_entitlements", _user.uid));
   // Connect link invites live at the top level, keyed by the
   // family who made them (Security's zero orphans fence): the
   // walk enumerates the caller's own invites by familyUid and
   // removes them, so no live code outlives its maker's account.
   const { query, where } = fsMod;
   const invSnap = await getDocs(query(collection(_db, "invites"), where("familyUid", "==", _user.uid)));
-  invSnap.forEach((d) => batch.delete(d.ref));
-  batch.delete(doc(_db, "users", _user.uid, "meta", "app"));
-  // The lifecycle stamp dies with the account (its rules arm
-  // allows the owner delete for exactly this walk).
-  batch.delete(doc(_db, "_activity", _user.uid));
-  batch.delete(doc(_db, "users", _user.uid));
-  await batch.commit();
+  await deleteRefsInBatches(fsMod, _db, [
+    doc(_db, "profiles", _user.uid),
+    doc(_db, "users", _user.uid, "meta", "questionnaire"),
+    doc(_db, "users", _user.uid, "meta", "emergency"),
+    doc(_db, "users", _user.uid, "meta", "reminders"),
+    doc(_db, "_entitlements", _user.uid),
+    ...invSnap.docs.map((d) => d.ref),
+    doc(_db, "users", _user.uid, "meta", "app"),
+    doc(_db, "_activity", _user.uid),
+    doc(_db, "users", _user.uid),
+  ]);
   const m = await import(`${SDK}/firebase-auth.js`);
   await m.deleteUser(_user);
 }

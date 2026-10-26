@@ -11,7 +11,7 @@
 // shopping, calendar-actions); this file only renders and
 // wires the writes the live layer already routes.
 import { t as tr } from "./lang.js";
-import { doneKey, draftKey } from "./storage-keys.js";
+import { accountKey, doneKey, draftKey } from "./storage-keys.js";
 import { planDay, planWeek, mondayOfISO, INTERESTS } from "./activities.js";
 import { repairChild, ageText, todayLineText } from "./family.js";
 import { assembleBrowse } from "./browse.js";
@@ -62,7 +62,7 @@ function myName() {
   // (HQ ruling on Leg 3 Note 2): on a shared device, a demo
   // never greets with the last person's name. The name renders
   // in the tour itself and inside the signed in account world.
-  if (m && m.uid) { try { return localStorage.getItem("caresits-name") || ""; } catch { return ""; } }
+  if (m && m.uid) { try { return localStorage.getItem(accountKey("caresits-name", m.uid)) || ""; } catch { return ""; } }
   return "";
 }
 function pairs() {
@@ -93,7 +93,7 @@ function readJson(key) { try { return JSON.parse(localStorage.getItem(key) || "n
 const state = { posture: null, shopItems: null, decided: new Set(), linkMsg: "", openMsg: "" };
 
 function defaultPosture() {
-  try { const saved = localStorage.getItem(POSTURE_KEY); if (saved === "finding" || saved === "days") return saved; } catch { /* storage off */ }
+  try { const key = accountKey(POSTURE_KEY); const saved = key ? localStorage.getItem(key) : null; if (saved === "finding" || saved === "days") return saved; } catch { /* storage off */ }
   return hasLivePair() ? "days" : "finding";
 }
 
@@ -108,6 +108,9 @@ function greeting(leadKey, leadVars) {
   const h = new Date().getHours();
   const part = h < 12 ? "" : h < 17 ? "Aft" : "Eve";
   const helloKey = "homes.hello" + part + (name ? "Name" : "");
+  const currentMember = me();
+  const roleHeading = { career: "homes.roleCareer", family: "homes.roleFamily", communicate: "homes.roleCommunicate" }[currentMember?.entryRole];
+  if (roleHeading) wrap.append(el("p", "homeRoleHeading", tr(roleHeading)));
   wrap.append(el("h1", "homeHello", tr(helloKey, undefined, name ? { name } : undefined)));
   wrap.append(el("p", "lead", tr(leadKey, undefined, leadVars)));
   const tl = el("p", "todayLine");
@@ -133,7 +136,7 @@ function postureSwitch(current) {
     b.type = "button";
     b.addEventListener("click", () => {
       state.posture = id;
-      try { localStorage.setItem(POSTURE_KEY, id); } catch { /* storage off */ }
+      try { const key = accountKey(POSTURE_KEY); if (key) localStorage.setItem(key, id); } catch { /* storage off */ }
       renderHome();
     });
     return b;
@@ -364,7 +367,7 @@ function linkCard() {
     let code = "";
     const hook = window.CARESITS_HOMES || {};
     if (hook.invite && hook.invite.code) code = hook.invite.code;
-    if (!code) { try { code = localStorage.getItem(INVITE_KEY) || ""; } catch { code = ""; } }
+    if (!code) { try { const key = accountKey(INVITE_KEY, m?.uid); code = key ? localStorage.getItem(key) || "" : ""; } catch { code = ""; } }
     if (code && isCode(code)) {
       card.append(el("p", "linkCode", inviteLinkText(code)));
       const row = el("div", "homeBtnRow");
@@ -385,7 +388,7 @@ function linkCard() {
         const plan = planInviteCreate({ familyUid: m.uid, code: makeCode(), label: myName(), nowIso: nowIso() });
         if (!plan.ok) { state.linkMsg = tr("homes.codeBad"); renderHome(); return; }
         write(plan.kind, { path: plan.path, data: plan.data });
-        try { localStorage.setItem(INVITE_KEY, plan.code); } catch { /* storage off */ }
+        try { const key = accountKey(INVITE_KEY, m?.uid); if (key) localStorage.setItem(key, plan.code); } catch { /* storage off */ }
         state.linkMsg = "";
         renderHome();
       });

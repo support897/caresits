@@ -1,0 +1,127 @@
+import { RC_PUBLIC_KEY } from "./rc-config.js";
+import { withTimeout } from "../accounts/account.js";
+
+// Plugin calls are bounded (fleet census cure): a native
+// stall must land on the sheet's honest failure line,
+// never pin it on "buying" forever. purchasePackage is
+// deliberately NOT capped: it is anchored to the visible
+// store sheet, which the user can cancel — the sheet is
+// its bound. (The values live in a mutable object so the
+// battery can shrink them; production never writes it.)
+export const PURCHASE_TIMEOUTS = { configure: 15000, offerings: 20000, restore: 30000 };
+// Caresitters app2 — the purchase seam (payments chapter,
+// the enabling build). Buttons live in plans.js; this
+// module is the only road to the store: RevenueCat's
+// Capacitor plugin, reached through the guarded bridge
+// exactly like the Firebase auth doors (no bundler in
+// this app). The plugin's app user id is the Firebase
+// uid, so the webhook's record and the app's own record
+// are the same person by construction. Entitlements are
+// read from the app's own _entitlements record (live.js);
+// RevenueCat's customer info is used here only for the
+// instant answer at the button (bought / restored), never
+// as the app's source of truth.
+//
+// Package identifiers are Finance's read-back verbatim
+// (RC project 2969203c, offering "Current").
+export const PACKAGES = {
+  finding: "finding_monthly",
+  "family-plus": "familyplus_monthly",
+  "search-pass": "search_pass",
+};
+export const ENTITLEMENTS = {
+  finding: "finding",
+  "family-plus": "family_plus",
+  "search-pass": "search_pass",
+};
+
+export function purchasesPlugin() {
+  if (typeof window === "undefined") return null;
+  const cap = window.Capacitor;
+  if (!cap || typeof cap.isNativePlatform !== "function" || !cap.isNativePlatform()) return null;
+  const plugin = cap.Plugins && cap.Plugins.Purchases;
+  if (!plugin || typeof plugin.configure !== "function" || typeof plugin.getOfferings !== "function"
+    || typeof plugin.purchasePackage !== "function" || typeof plugin.restorePurchases !== "function") return null;
+  return plugin;
+}
+
+export function purchaseAvailable() {
+  return !!RC_PUBLIC_KEY && !!purchasesPlugin();
+}
+
+let configuredFor = "";
+export async function configurePurchases(uid) {
+  const plugin = purchasesPlugin();
+  if (!plugin || !RC_PUBLIC_KEY || !uid) return false;
+  if (configuredFor === uid) return true;
+  try {
+    await withTimeout(plugin.configure({ apiKey: RC_PUBLIC_KEY, appUserID: uid }), PURCHASE_TIMEOUTS.configure, "purchases configure");
+    configuredFor = uid;
+    return true;
+  } catch { return false; }
+}
+
+// Pick this plan's package out of an offerings object.
+// Pure: the battery drives it with a fake offerings.
+export function pickPackage(offerings, plan) {
+  const want = PACKAGES[plan];
+  const list = offerings && offerings.current && Array.isArray(offerings.current.availablePackages)
+    ? offerings.current.availablePackages : [];
+  return list.find((p) => p && p.identifier === want) || null;
+}
+
+// Does RevenueCat's own info say this entitlement is
+// active right now? The instant answer at the button.
+export function entitlementActive(customerInfo, plan) {
+  const want = ENTITLEMENTS[plan];
+  const active = customerInfo && customerInfo.entitlements && customerInfo.entitlements.active;
+  return !!(active && want && active[want]);
+}
+
+const myUid = () => (typeof window !== "undefined" && window.CARESITS_ME && window.CARESITS_ME.uid) || "";
+
+// The demo fence (account mandatory settlement, HQ 21 Oct
+// 2026): the demo is a fenced look in, and its money roads
+// stop at the door of the purchase machinery, speaking the
+// demo line. The signal is the shell gate's own marker.
+export function isDemoSession() {
+  try { return typeof sessionStorage !== "undefined" && sessionStorage.getItem("caresits-demo") === "1"; }
+  catch { return false; }
+}
+
+// buyPlan(plan) -> { ok, reason?, customerInfo? }
+// reason "cancelled" is the user's own change of mind:
+// the sheet simply re-enables, no error words.
+export async function buyPlan(plan) {
+  if (isDemoSession()) return { ok: false, reason: "demo" };
+  const plugin = purchasesPlugin();
+  if (!plugin || !PACKAGES[plan]) return { ok: false, reason: "unavailable" };
+  if (!(await configurePurchases(myUid()))) return { ok: false, reason: "unavailable" };
+  let offerings;
+  try { offerings = await withTimeout(plugin.getOfferings(), PURCHASE_TIMEOUTS.offerings, "offerings"); } catch { return { ok: false, reason: "offerings" }; }
+  const pkg = pickPackage(offerings, plan);
+  if (!pkg) return { ok: false, reason: "package" };
+  try {
+    const res = await plugin.purchasePackage({ aPackage: pkg });
+    const info = res && res.customerInfo;
+    if (typeof window !== "undefined" && typeof window.CARESITS_REFRESH_PLAN === "function") window.CARESITS_REFRESH_PLAN();
+    return { ok: true, customerInfo: info, active: entitlementActive(info, plan) };
+  } catch (e) {
+    if (e && (e.code === "1" || /cancel/i.test(String(e.message || e)))) return { ok: false, reason: "cancelled" };
+    return { ok: false, reason: "failed" };
+  }
+}
+
+export async function restorePurchases() {
+  if (isDemoSession()) return { ok: false, reason: "demo" };
+  const plugin = purchasesPlugin();
+  if (!plugin) return { ok: false, reason: "unavailable" };
+  if (!(await configurePurchases(myUid()))) return { ok: false, reason: "unavailable" };
+  try {
+    const res = await withTimeout(plugin.restorePurchases(), PURCHASE_TIMEOUTS.restore, "restore");
+    const info = res && res.customerInfo;
+    if (typeof window !== "undefined" && typeof window.CARESITS_REFRESH_PLAN === "function") window.CARESITS_REFRESH_PLAN();
+    const active = info && info.entitlements && info.entitlements.active ? Object.keys(info.entitlements.active) : [];
+    return { ok: true, customerInfo: info, active };
+  } catch { return { ok: false, reason: "failed" }; }
+}

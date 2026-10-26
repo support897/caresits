@@ -208,7 +208,9 @@ globalThis.document = {
   querySelector: () => null,
   querySelectorAll: () => [],
 };
-globalThis.localStorage.setItem("caresits-home-posture", "days");
+globalThis.CARESITS_UID = "test-user-a";
+globalThis.CARESITS_ME = { uid: "test-user-a", entryRole: "career" };
+globalThis.localStorage.setItem("caresits-home-posture-test-user-a", "days");
 globalThis.CARESITS_FAMILY = { side: "family", children: miaLeo };
 await import("./homes.js");
 const findByClass = (node, cls, out = []) => {
@@ -216,6 +218,10 @@ const findByClass = (node, cls, out = []) => {
   for (const c of node.children || []) findByClass(c, cls, out);
   return out;
 };
+t("home heading: signed-in entry role is shown as its own heading", () => {
+  const headings = findByClass(homeRoot, "homeRoleHeading");
+  assert.equal(headings[0]?.textContent, "Your care career");
+});
 t("week strip: the seven day labels are the day words, not journey.day.undefined", () => {
   const cells = findByClass(homeRoot, "weekCell");
   assert.equal(cells.length, 7);
@@ -276,9 +282,9 @@ const treeText = () => {
   (function walk(node) { if (node.textContent) texts.push(node.textContent); for (const c of node.children || []) walk(c); })(homeRoot);
   return texts.join(" | ");
 };
-globalThis.localStorage.setItem("caresits-home-posture", "finding");
-delete globalThis.localStorage._m["caresits-app2-draft"];
-delete globalThis.localStorage._m["caresits-app2-questionnaire"];
+globalThis.localStorage.setItem("caresits-home-posture-test-user-a", "finding");
+delete globalThis.localStorage._m["caresits-app2-draft-test-user-a"];
+delete globalThis.localStorage._m["caresits-app2-questionnaire-test-user-a"];
 delete globalThis.CARESITS_QUESTIONS;
 await import("./homes.js?fcsrt1");
 t("F-CS-RT-1: before the seam lands, the finding home's card asserts no false 0%", () => {
