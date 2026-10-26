@@ -419,6 +419,10 @@ function consumeResumeHandoff() {
 
 export function bootJourney() {
   applyI18n();
+  window.CARESITS_REFRESH_LANGUAGE = () => {
+    applyI18n();
+    if (state.side && !$("#journey").hidden) render();
+  };
   wire();
   // Warm this realm's session restore now, at page entry,
   // not lazily at Finish (QA b108); and land any finished

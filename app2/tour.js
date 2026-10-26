@@ -29,7 +29,7 @@ function setName(v) {
   if (typeof window.CARESITS_RENDER_HOME === "function") window.CARESITS_RENDER_HOME();
 }
 
-const STEPS = [
+const steps = () => [
   { title: tr("tour.t1t"), body: tr("tour.t1b"), name: true },
   { title: tr("tour.t2t"), body: tr("tour.t2b"), menu: true },
   { title: tr("tour.t3t"), body: tr("tour.t3b") },
@@ -38,6 +38,7 @@ const STEPS = [
 ];
 
 function closeTour(answered) {
+  window.CARESITS_TOUR_REFRESH_LANGUAGE = null;
   document.getElementById("tourPop")?.remove();
   document.getElementById("layout")?.classList.remove("open");
   const s = state();
@@ -55,8 +56,10 @@ function runTour() {
   let i = 0;
   const body = el("div", "tourBody");
   const render = () => {
+    const priorName = document.getElementById("tourNameIn")?.value || "";
     body.replaceChildren();
-    const step = STEPS[i];
+    const step = steps()[i];
+    x.setAttribute("aria-label", tr("tour.close"));
     const img = el("img", "bunnyBig");
     img.src = "bunny/bunny-hello.png";
     img.alt = tr("tour.bunnyAlt");
@@ -66,6 +69,7 @@ function runTour() {
       const input = el("input", "txtIn tourName");
       input.placeholder = tr("tour.namePh");
       input.id = "tourNameIn";
+      input.value = priorName;
       body.append(input);
     }
     if (step.done) {
@@ -86,7 +90,10 @@ function runTour() {
       });
       body.append(next);
     }
-    body.append(el("p", "tourCount", tr("tour.step", undefined, { a: i + 1, b: STEPS.length })));
+    body.append(el("p", "tourCount", tr("tour.step", undefined, { a: i + 1, b: 5 })));
+  };
+  window.CARESITS_TOUR_REFRESH_LANGUAGE = () => {
+    if (document.getElementById("tourPop")) render();
   };
   x.addEventListener("click", () => closeTour(!!myName()));
   card.append(x, body);
@@ -104,15 +111,25 @@ function quietBubble() {
   const img = el("img", "bubbleBunny");
   img.src = "bunny/bunny-hello.png";
   img.alt = "";
-  bub.append(img, el("p", "bubbleText", tr("tour.bubble")));
+  const bubbleText = el("p", "bubbleText", tr("tour.bubble"));
+  bub.append(img, bubbleText);
   const input = el("input", "txtIn tourName");
   input.placeholder = tr("tour.namePh");
   const save = el("button", "mainBtn actBtn", tr("tour.save"));
   save.type = "button";
-  save.addEventListener("click", () => { const v = input.value.trim(); if (v) setName(v); bub.remove(); });
   const x = el("button", "quietBtn", tr("tour.notNow"));
   x.type = "button";
-  x.addEventListener("click", () => bub.remove());
+  const refresh = () => {
+    bubbleText.textContent = tr("tour.bubble");
+    input.placeholder = tr("tour.namePh");
+    save.textContent = tr("tour.save");
+    x.textContent = tr("tour.notNow");
+  };
+  window.CARESITS_TOUR_REFRESH_LANGUAGE = () => {
+    if (document.getElementById("nameBubble")) refresh();
+  };
+  save.addEventListener("click", () => { const v = input.value.trim(); if (v) setName(v); bub.remove(); window.CARESITS_TOUR_REFRESH_LANGUAGE = null; });
+  x.addEventListener("click", () => { bub.remove(); window.CARESITS_TOUR_REFRESH_LANGUAGE = null; });
   bub.append(input, save, x);
   document.body.append(bub);
 }

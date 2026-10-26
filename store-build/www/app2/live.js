@@ -8,6 +8,7 @@
 // config beside this file.
 import { levelOf, mergeDeepAnswers } from "./levels.js";
 import { accountKey } from "./storage-keys.js";
+import { applyI18n } from "./lang.js";
 import { resolvePlan, entitlementFromRecord, plusExtrasOpen, withTimeout } from "../accounts/account.js";
 
 // The photo lifecycle stamp path (HQ spec, 19 Oct 2026):
@@ -523,22 +524,23 @@ export async function bootLive() {
             try { const bgKey = accountKey("caresits-app2-bg", uid); if (bgKey) localStorage.setItem(bgKey, JSON.stringify({ choice: appDoc.background })); } catch { /* storage off */ }
           }
           // The member's language rides the account beside
-          // their background (the save-forever law covers the
-          // pick as it covers the background): seed the device
-          // key from the account, and if that changes the
-          // pick, reload once into the member's own language.
-          // The seed is its own guard: after the reload the
-          // key already equals the account's, so it never
-          // loops.
+          // their background. Seed the device key, then refresh
+          // translated text in place so the first-run tour and
+          // any open questionnaire survive account restoration.
           if (appDoc && appDoc.language) {
             try {
               const langKey = accountKey("caresits-lang", uid);
               if (langKey && localStorage.getItem(langKey) !== appDoc.language) {
                 localStorage.setItem(langKey, appDoc.language);
-                location.reload();
               }
             } catch { /* storage off */ }
           }
+          // The tour and questionnaire can render before auth restores
+          // the account's language key. Refresh the shell and both live
+          // overlays after the account document has settled.
+          applyI18n();
+          window.CARESITS_TOUR_REFRESH_LANGUAGE?.();
+          document.getElementById("journeyFrame")?.contentWindow?.CARESITS_REFRESH_LANGUAGE?.();
         } catch { /* the week surfaces stand in their empty states */ }
         // F15: My Profile renders from the trust seam, and the
         // seam is published here, from the member's real

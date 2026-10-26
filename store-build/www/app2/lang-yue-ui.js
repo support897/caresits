@@ -4,9 +4,21 @@
 // HUMAN CHECK RULE: keys under "checks." and "legal." carry NO
 // Chinese values here, exactly as in Spanish. They stay English
 // until a human checker approves words for this language.
-// Coverage: Spanish UI table 400 keys · translated 400 · fenced by design 12 English checks./legal. UI keys, absent here as in Spanish.
+// Coverage: 611 translated app UI keys; human-check phrases remain in English by design.
 export const UI_YUE = {
  "door.tag": "找到照護，分享每一天。",
+
+ "door.rolePrompt": "你來這裡是為了甚麼？",
+ "door.roleCareer": "照顧工作",
+ "door.roleCareerBody": "我正在尋找兒童照顧工作",
+ "door.roleFamily": "家庭",
+ "door.roleFamilyBody": "我需要為家人安排照顧",
+ "door.roleCommunicate": "保持聯絡",
+ "door.roleCommunicateBody": "我想保持聯絡",
+ "door.roleCareerHeading": "投身照顧工作",
+ "door.roleFamilyHeading": "為你的家人尋找照顧",
+ "door.roleCommunicateHeading": "保持聯絡",
+ "door.changeRole": "選擇其他角色",
  "door.google": "使用 Google 繼續",
  "door.apple": "使用 Apple 繼續",
  "door.email": "您的電郵",
@@ -462,6 +474,9 @@ export const UI_YUE = {
  "homes.helloAft": "下午好",
  "homes.helloEveName": "晚上好，{name}",
  "homes.helloEve": "晚上好",
+ "homes.roleCareer": "你的照顧事業",
+ "homes.roleFamily": "你的家庭",
+ "homes.roleCommunicate": "你的對話",
  "homes.findingLead": "等我哋為你屋企搵到合適嘅人。",
  "homes.daysLeadName": "{name}今日同小朋友一齊。",
  "homes.daysLead": "呢一日，一齊計劃。",

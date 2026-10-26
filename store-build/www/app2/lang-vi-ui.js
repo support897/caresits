@@ -4,9 +4,21 @@
 // HUMAN CHECK RULE: keys under "checks." and "legal." carry NO
 // Vietnamese values here, exactly as in Spanish. They stay English
 // until a human checker approves words for this language.
-// Coverage: Spanish UI table 395 keys · translated 395 (386 matching the Chinese table + 9 country keys the build wave added to STRINGS after the Chinese build) · fenced by design 12 English checks./legal. UI keys, absent here as in Spanish.
+// Coverage: 611 translated app UI keys; human-check phrases remain in English by design.
 export const UI_VI = {
  "door.tag": "Tìm người chăm sóc. Chia sẻ mỗi ngày.",
+
+ "door.rolePrompt": "Bạn đến đây vì điều gì?",
+ "door.roleCareer": "Công việc chăm sóc",
+ "door.roleCareerBody": "Tôi đang tìm công việc chăm sóc trẻ",
+ "door.roleFamily": "Gia đình",
+ "door.roleFamilyBody": "Tôi cần người chăm sóc cho gia đình",
+ "door.roleCommunicate": "Kết nối",
+ "door.roleCommunicateBody": "Tôi muốn giữ liên lạc",
+ "door.roleCareerHeading": "Sự nghiệp trong ngành chăm sóc",
+ "door.roleFamilyHeading": "Chăm sóc cho gia đình bạn",
+ "door.roleCommunicateHeading": "Giữ liên lạc",
+ "door.changeRole": "Chọn vai trò khác",
  "door.google": "Tiếp tục với Google",
  "door.apple": "Tiếp tục với Apple",
  "door.email": "Email của bạn",
@@ -462,6 +474,9 @@ export const UI_VI = {
  "homes.helloAft": "Chào buổi chiều",
  "homes.helloEveName": "Chào buổi tối, {name}",
  "homes.helloEve": "Chào buổi tối",
+ "homes.roleCareer": "Sự nghiệp chăm sóc của bạn",
+ "homes.roleFamily": "Gia đình bạn",
+ "homes.roleCommunicate": "Các cuộc trò chuyện của bạn",
  "homes.findingLead": "Hãy tìm người phù hợp cho gia đình bạn.",
  "homes.daysLeadName": "{name} đang ở cùng các bé hôm nay.",
  "homes.daysLead": "Một ngày được lên kế hoạch cùng nhau.",

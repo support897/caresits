@@ -4,9 +4,21 @@
 // HUMAN CHECK RULE: keys under "checks." and "legal." carry NO
 // Hindi values here, exactly as in Spanish. They stay English
 // until a human checker approves words for this language.
-// Coverage: Arabic UI table 400 keys · translated 400 · fenced by design 12 English checks./legal. UI keys, absent here as in Spanish.
+// Coverage: 611 translated app UI keys; human-check phrases remain in English by design.
 export const UI_HI = {
  "door.tag": "देखभाल ढूँढिए। दिन साझा कीजिए।",
+
+ "door.rolePrompt": "आप यहाँ क्यों आए हैं?",
+ "door.roleCareer": "देखभाल के क्षेत्र में काम",
+ "door.roleCareerBody": "मुझे बच्चों की देखभाल का काम चाहिए",
+ "door.roleFamily": "परिवार",
+ "door.roleFamilyBody": "मुझे अपने परिवार के लिए देखभाल चाहिए",
+ "door.roleCommunicate": "संपर्क",
+ "door.roleCommunicateBody": "मुझे संपर्क में रहना है",
+ "door.roleCareerHeading": "देखभाल में करियर",
+ "door.roleFamilyHeading": "आपके परिवार की देखभाल",
+ "door.roleCommunicateHeading": "जुड़े रहें",
+ "door.changeRole": "दूसरी भूमिका चुनें",
  "door.google": "Google के साथ आगे बढ़िए",
  "door.apple": "Apple के साथ आगे बढ़िए",
  "door.email": "आपका ईमेल",
@@ -462,6 +474,9 @@ export const UI_HI = {
  "homes.helloAft": "नमस्ते",
  "homes.helloEveName": "नमस्ते, {name}",
  "homes.helloEve": "नमस्ते",
+ "homes.roleCareer": "देखभाल के क्षेत्र में आपका करियर",
+ "homes.roleFamily": "आपका परिवार",
+ "homes.roleCommunicate": "आपकी बातचीत",
  "homes.findingLead": "आइए आपके परिवार के लिए सही व्यक्ति खोजें।",
  "homes.daysLeadName": "{name} आज बच्चों के साथ है।",
  "homes.daysLead": "दिन, मिलकर योजनाबद्ध।",

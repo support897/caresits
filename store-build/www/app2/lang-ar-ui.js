@@ -4,11 +4,23 @@
 // HUMAN CHECK RULE: keys under "checks." and "legal." carry NO
 // Arabic values here, exactly as in Spanish. They stay English
 // until a human checker approves words for this language.
-// Coverage: Spanish UI table 395 keys · translated 395 (386 matching the Chinese table + 9 country keys the build wave added to STRINGS after the Chinese build) · fenced by design 12 English checks./legal. UI keys, absent here as in Spanish.
+// Coverage: 611 translated app UI keys; human-check phrases remain in English by design.
 // RTL note: these are string values only; layout direction is a
 // wiring concern and is not set here.
 export const UI_AR = {
  "door.tag": "ابحث عن الرعاية. شارك اليوم.",
+
+ "door.rolePrompt": "ما الذي أتى بك إلى هنا؟",
+ "door.roleCareer": "وظائف في رعاية الأطفال",
+ "door.roleCareerBody": "أبحث عن عمل في مجال رعاية الأطفال",
+ "door.roleFamily": "العائلة",
+ "door.roleFamilyBody": "أحتاج إلى رعاية لعائلتي",
+ "door.roleCommunicate": "التواصل",
+ "door.roleCommunicateBody": "أريد البقاء على تواصل",
+ "door.roleCareerHeading": "مسار مهني في رعاية الأطفال",
+ "door.roleFamilyHeading": "رعاية لعائلتك",
+ "door.roleCommunicateHeading": "ابقَ على تواصل",
+ "door.changeRole": "اختر دورًا آخر",
  "door.google": "المتابعة مع Google",
  "door.apple": "المتابعة مع Apple",
  "door.email": "بريدك الإلكتروني",
@@ -464,6 +476,9 @@ export const UI_AR = {
  "homes.helloAft": "مساء الخير",
  "homes.helloEveName": "مساء الخير، {name}",
  "homes.helloEve": "مساء الخير",
+ "homes.roleCareer": "مسارك المهني في رعاية الأطفال",
+ "homes.roleFamily": "عائلتك",
+ "homes.roleCommunicate": "محادثاتك",
  "homes.findingLead": "لنجد الشخص المناسب لعائلتك.",
  "homes.daysLeadName": "{name} مع الأطفال اليوم.",
  "homes.daysLead": "اليوم، مخطط له معًا.",
