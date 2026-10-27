@@ -129,6 +129,10 @@ html[data-entry-role="communicate"] { --entry-accent: #704A83; --entry-soft: #F0
 body.hasPhotoBg { background-size: cover; background-position: center; background-attachment: fixed; }
 body.hasPhotoBg .surface, body.hasPhotoBg .topBar { background: rgba(253, 248, 240, .88); }
 html[data-theme="black"] body { background: #141414; color: #F3EDE2; }
+/* Cards stay light in black mode, so give their text a matching dark ink. */
+html[data-theme="black"] .findCard,
+html[data-theme="black"] .cardIn,
+html[data-theme="black"] .sheetCard { color: #1E4D44; }
 html[data-theme="white"] body { background: #FFFFFF; }
 .threadList { margin-bottom: 14px; }
 .msgRow { max-width: 82%; padding: 10px 14px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); }
