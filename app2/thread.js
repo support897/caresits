@@ -127,7 +127,11 @@ function bootThread() {
   const root = document.getElementById("threadRoot");
   if (!root) return;
   const d = window.CARESITS_THREAD;
-  if (d) renderThread(root, d);
+  if (d && d.pairId) renderThread(root, d);
+  else {
+    root.replaceChildren();
+    root.append(el("h2", "findTitle", tr("thread.title")), el("p", "findPool", tr("thread.empty")));
+  }
 }
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bootThread);

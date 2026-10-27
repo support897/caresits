@@ -541,23 +541,40 @@ export async function bootLive() {
           const appDoc = await docOr(`users/${uid}/meta/app`);
           let pendingRole = "";
           try { pendingRole = sessionStorage.getItem("caresits-entry-role") || ""; } catch { /* session storage off */ }
-          let entryRole = ENTRY_ROLES.includes(appDoc && appDoc.entryRole) ? appDoc.entryRole : "";
-          if (ENTRY_ROLES.includes(pendingRole)) {
+          const savedRole = ENTRY_ROLES.includes(appDoc && appDoc.entryRole) ? appDoc.entryRole : "";
+          const savedSide = qData.side || profile.side || "";
+          const inferredRole = savedSide === "carer" ? "career" : savedSide === "family" ? "family" : "";
+          // The role on the account wins on return. A door choice is
+          // saved only for a new account that has no role or profile side.
+          let entryRole = savedRole || inferredRole || "";
+          if (!entryRole && ENTRY_ROLES.includes(pendingRole)) {
+            entryRole = pendingRole;
             try {
-              const savedRole = await window.CARESITS_WRITE("entry-role", { entryRole: pendingRole });
-              if (savedRole && savedRole.ok) {
-                entryRole = pendingRole;
-                try { sessionStorage.removeItem("caresits-entry-role"); } catch { /* session storage off */ }
-              } else if (!entryRole) entryRole = pendingRole;
-            } catch { if (!entryRole) entryRole = pendingRole; }
+              const saved = await window.CARESITS_WRITE("entry-role", { entryRole });
+              if (saved && saved.ok) { try { sessionStorage.removeItem("caresits-entry-role"); } catch { /* session storage off */ } }
+            } catch { /* keep this session's chosen role; retry next visit */ }
+          } else if (!savedRole && inferredRole) {
+            try { await window.CARESITS_WRITE("entry-role", { entryRole }); } catch { /* the profile side still identifies this member */ }
           }
+          if (savedRole && pendingRole) {
+            try { sessionStorage.removeItem("caresits-entry-role"); } catch { /* session storage off */ }
+          }
+          const roleSide = entryRole === "career" ? "carer" : entryRole === "family" ? "family" : entryRole === "communicate" ? "communicate" : "";
+          const effectiveSide = roleSide || profile.side || qData.side || "";
+          window.CARESITS_ME = {
+            ...(window.CARESITS_ME || { uid }),
+            uid, side: effectiveSide, entryRole,
+            country: qData.country || qData.answers?.country || window.CARESITS_ME?.country || "",
+          };
           if (entryRole) {
-            window.CARESITS_ME = { ...(window.CARESITS_ME || { uid }), entryRole };
             document.documentElement.dataset.entryRole = entryRole;
-            if (typeof window.CARESITS_RENDER_HOME === "function") window.CARESITS_RENDER_HOME();
+            window.CARESITS_ROLE_NAV?.(entryRole);
           } else {
             delete document.documentElement.dataset.entryRole;
           }
+          window.CARESITS_RENDER_HOME?.();
+          window.CARESITS_ACCOUNT_READY = true;
+          document.dispatchEvent(new CustomEvent("caresits-account-ready", { detail: { uid, entryRole } }));
           window.CARESITS_WEEK = weekSeamFrom({ timesheets: sheets, reminderDoc, emergencyDoc });
           if (typeof window.CARESITS_WEEK_RENDER === "function") window.CARESITS_WEEK_RENDER();
           if (appDoc && appDoc.background) {
@@ -585,7 +602,7 @@ export async function bootLive() {
         // F15: My Profile renders from the trust seam, and the
         // seam is published here, from the member's real
         // documents, the moment the boot has read them.
-        publishTrust(profile, cardData, qData);
+        publishTrust({ ...profile, side: window.CARESITS_ME?.side || profile.side || qData.side || "" }, cardData, qData);
         // Land a finished journey still standing on this
         // device (QA b108): when the account holds no
         // questionnaire yet and a done envelope waits under

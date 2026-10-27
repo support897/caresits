@@ -218,10 +218,36 @@ const findByClass = (node, cls, out = []) => {
   for (const c of node.children || []) findByClass(c, cls, out);
   return out;
 };
+const homeText = () => {
+  const texts = [];
+  (function walk(node) { if (node.textContent) texts.push(node.textContent); for (const c of node.children || []) walk(c); })(homeRoot);
+  return texts.join(" | ");
+};
 t("home heading: signed-in entry role is shown as its own heading", () => {
   const headings = findByClass(homeRoot, "homeRoleHeading");
   assert.equal(headings[0]?.textContent, "Your care career");
 });
+t("carer home: profile and urgent requests replace family matching", () => {
+  const text = homeText();
+  assert.ok(text.includes("Your carer profile"));
+  assert.ok(text.includes("Urgent care requests"));
+  assert.ok(!text.includes("Let us find the right person for your family."));
+  assert.ok(!text.includes("Find carers"));
+});
+t("communicate home: shows conversations without matching actions", () => {
+  globalThis.CARESITS_UID = "test-communicate";
+  globalThis.CARESITS_ME = { uid: "test-communicate", side: "communicate", entryRole: "communicate" };
+  globalThis.CARESITS_RENDER_HOME();
+  const text = homeText();
+  assert.ok(text.includes("Your conversations"));
+  assert.ok(text.includes("No conversations yet."));
+  assert.ok(!text.includes("Find carers"));
+  assert.ok(!text.includes("See my matches"));
+});
+globalThis.CARESITS_UID = "test-family";
+globalThis.CARESITS_ME = { uid: "test-family", side: "family", entryRole: "family" };
+globalThis.localStorage.setItem("caresits-home-posture-test-family", "days");
+globalThis.CARESITS_RENDER_HOME();
 t("week strip: the seven day labels are the day words, not journey.day.undefined", () => {
   const cells = findByClass(homeRoot, "weekCell");
   assert.equal(cells.length, 7);
@@ -277,11 +303,9 @@ t("area: the save writes the area coordinates onto the card from its postcode", 
 // member when the seam landed after the first paint, and
 // nothing re-derived it. The card now asserts nothing
 // numeric before the seam, and the seam re-renders Home.
-const treeText = () => {
-  const texts = [];
-  (function walk(node) { if (node.textContent) texts.push(node.textContent); for (const c of node.children || []) walk(c); })(homeRoot);
-  return texts.join(" | ");
-};
+const treeText = homeText;
+globalThis.CARESITS_UID = "test-user-a";
+globalThis.CARESITS_ME = { uid: "test-user-a", side: "family", entryRole: "family" };
 globalThis.localStorage.setItem("caresits-home-posture-test-user-a", "finding");
 delete globalThis.localStorage._m["caresits-app2-draft-test-user-a"];
 delete globalThis.localStorage._m["caresits-app2-questionnaire-test-user-a"];

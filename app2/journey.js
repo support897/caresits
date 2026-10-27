@@ -52,7 +52,25 @@ const COUNTRY_PAGE = {
   title: "Your country", bunny: "point-guide", _tk: "country.title", _country: true,
   fields: [{ id: "country", label: "Which country will the care happen in?", type: "select", options: COUNTRY_NAMES, required: true }],
 };
-const storedCountry = () => state.answers.country || (window.CARESITS_ME && window.CARESITS_ME.country) || null;
+function shellMember() {
+  try { if (window.parent && window.parent !== window) return window.parent.CARESITS_ME || null; } catch { /* standalone journey */ }
+  return window.CARESITS_ME || null;
+}
+const storedCountry = () => state.answers.country || shellMember()?.country || null;
+function startForEntryRole() {
+  if (state.side || interacted) return false;
+  const member = shellMember() || {};
+  const role = member.entryRole;
+  const side = role === "career" || member.side === "carer" ? "carer" : role === "family" || member.side === "family" ? "family" : "";
+  if (!side) return false;
+  state.side = side;
+  state.page = 0;
+  state.countryStep = !storedCountry();
+  $("#welcome").hidden = true;
+  $("#journey").hidden = false;
+  render();
+  return true;
+}
 
 const pages = () => {
   if (state.countryStep === null) state.countryStep = !storedCountry();
@@ -441,6 +459,8 @@ export function bootJourney() {
   consumeResumeHandoff();
   syncLevelPick();
   if (state.side) { $("#welcome").hidden = true; $("#journey").hidden = false; render(); }
+  else if (window.parent?.CARESITS_ACCOUNT_READY) startForEntryRole();
+  try { window.parent.document.addEventListener("caresits-account-ready", startForEntryRole); } catch { /* standalone journey */ }
   // The uid seam can land a beat after this frame boots (the
   // shell's live bridge publishes it when its session resolves).
   // Until the user interacts, a changed key reloads the journey
@@ -459,6 +479,6 @@ export function bootJourney() {
     consumeResumeHandoff();
     syncLevelPick();
     if (state.side) { $("#welcome").hidden = true; $("#journey").hidden = false; render(); }
-    else { $("#welcome").hidden = false; $("#journey").hidden = true; }
+    else if (!startForEntryRole()) { $("#welcome").hidden = false; $("#journey").hidden = true; }
   }, 250);
 }

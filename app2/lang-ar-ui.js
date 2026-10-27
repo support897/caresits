@@ -611,5 +611,22 @@ export const UI_AR = {
  "act.gardendig.t": "الحفر في الحديقة",
  "act.gardendig.n": "أصص وتربة والبحث عن الديدان",
  "act.freeplay.t": "اللعب الحر",
- "act.freeplay.n": "الألعاب جاهزة والخيال يعمل"
+ "act.freeplay.n": "الألعاب جاهزة والخيال يعمل",
+ "trust.sideCommunicate": "التواصل",
+ "homes.careerLead": "أكملي ملفكِ كمقدمة رعاية وتواصلي مع العائلات.",
+ "homes.careerProfileTitle": "ملفكِ كمقدمة رعاية",
+ "homes.careerProfileBody": "أجيبي عن أسئلة مقدمة الرعاية لتتعرف العائلات على خبرتكِ ومواعيدكِ المتاحة.",
+ "homes.careerProfileDone": "ملفكِ كمقدمة رعاية جاهز.",
+ "homes.careerProfileStart": "ملفكِ ينتظر إجاباتكِ.",
+ "homes.careerQuestionnaire": "افتحي الاستبيان",
+ "homes.careerJobsTitle": "طلبات رعاية عاجلة",
+ "homes.careerJobsBody": "اطّلعي على طلبات العائلات التي تحتاج إلى رعاية قريبًا.",
+ "homes.careerJobsOpen": "عرض الطلبات العاجلة",
+ "homes.careerGuide": "يساعد ملفكِ وإجاباتكِ العائلات على معرفة الرعاية التي تقدمينها.",
+ "homes.communicateLead": "مساحة هادئة للبقاء على تواصل.",
+ "homes.conversations": "محادثاتكِ",
+ "homes.communicateBody": "افتحي محادثة عندما يناسبكِ. هذه المساحة للتواصل، وليست للمطابقة.",
+ "homes.openConversations": "فتح المحادثات",
+ "homes.noConversations": "لا توجد محادثات بعد. ستظهر رسائلكِ هنا عندما تتواصلين مع أحدهم."
+
 };
