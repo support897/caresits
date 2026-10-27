@@ -358,7 +358,10 @@ export async function signInEmail(email, password, name) {
         // mark, so every door announces the creation out loud.
         cred.createdAccount = true;
         return cred;
-      } catch {
+      } catch (createError) {
+        // A failed create can reveal that sign up is offline; do not
+        // mask that useful network answer with the earlier credential error.
+        if (createError && (createError.code === "auth/network-request-failed" || createError.code === "auth/timeout")) throw createError;
         throw e;
       }
     }

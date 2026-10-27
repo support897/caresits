@@ -258,6 +258,12 @@ t("Leg 19: a creation at sign in carries the mark, so no door can stay silent ab
   assert.ok(fn.includes("cred.createdAccount = true"), "the create path marks the credential");
   assert.ok(fn.indexOf("createUserWithEmailAndPassword") < fn.indexOf("cred.createdAccount = true"), "the mark follows the create");
 });
+t("email sign-in keeps network failures from the create fallback", () => {
+  const src = readFileSync(new URL("./account.js", import.meta.url), "utf8");
+  const fn = src.slice(src.indexOf("export async function signInEmail"), src.indexOf("export async function signOutUser"));
+  assert.ok(fn.includes("catch (createError)"), "the create error is inspected");
+  assert.ok(fn.includes("createError.code === \"auth/network-request-failed\""), "a create network failure is rethrown instead of masked");
+});
 t("Leg 19: the app door announces a creation out loud before the walk in", () => {
   const src = readFileSync(new URL("../app2/door.js", import.meta.url), "utf8");
   assert.ok(src.includes('tr("door.madeAccount")'), "the door speaks the creation line");

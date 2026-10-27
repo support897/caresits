@@ -33,7 +33,7 @@ export const UI_ZH = {
  "door.needPw": "输入密码，然后点击加入。",
  "door.busy": "请稍等。",
  "door.fail": "没有成功。检查一下邮箱和密码，再试一次。",
- "door.mismatch": "邮箱或密码不对。再试一次，或者使用下方的忘记密码。",
+ "door.mismatch": "此密码与该邮箱不匹配。请重试，或点按“忘记密码？”。",
  "door.noNet": "连接没有成功。请检查您的网络，再试一次。",
     "door.madeAccount": "这个邮箱是新来的，所以我们为你创建了账户。欢迎加入。",
  "door.doorFail": "这种方式没有打开。请试试下面的邮箱方式。",

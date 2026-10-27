@@ -31,6 +31,8 @@ ck("the door names a dead connection honestly, and the inline Add forms name wha
   const { readFileSync } = await import("node:fs");
   const door = readFileSync(new URL("./door.js", import.meta.url), "utf8");
   assert.ok(door.includes("auth/network-request-failed") && door.includes("door.noNet"), "door.js branches on the network code to door.noNet");
+  assert.ok(door.includes("auth/wrong-password") && door.includes("door.mismatch") && door.includes("door.fail"), "the door distinguishes bad passwords from other sign-in failures");
+  assert.equal(STRINGS.en["door.mismatch"], "That password does not match this email. Try again or tap Forgot your password.");
   const fam = readFileSync(new URL("./family.js", import.meta.url), "utf8");
   assert.ok(fam.includes("form.needChild"), "the children form names the missing name");
   const week = readFileSync(new URL("./week.js", import.meta.url), "utf8");

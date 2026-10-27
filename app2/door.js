@@ -131,8 +131,10 @@ $("#joinBtn").addEventListener("click", async () => {
     location.href = "index.html";
   } catch (e) {
     joinHold = false;
-    const noNet = e && (e.code === "auth/network-request-failed" || e.code === "auth/timeout");
-    msg(tr(noNet ? "door.noNet" : "door.mismatch"));
+    const code = e && e.code;
+    const noNet = code === "auth/network-request-failed" || code === "auth/timeout";
+    const badPassword = ["auth/wrong-password", "auth/invalid-credential", "auth/user-not-found"].includes(code);
+    msg(tr(noNet ? "door.noNet" : badPassword ? "door.mismatch" : "door.fail"));
   }
 });
 $("#googleBtn").addEventListener("click", async () => { msg(tr("door.working")); try { const a = await layerFast(); const cred = await a.signInGoogle(); if (cred && cred.user) walkIn(); } catch { msg(tr("door.doorFail")); } });

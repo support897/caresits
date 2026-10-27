@@ -33,7 +33,7 @@ export const UI_VI = {
  "door.needPw": "Nhập mật khẩu của bạn, rồi chạm Tham gia.",
  "door.busy": "Chờ một chút.",
  "door.fail": "Không thành công. Kiểm tra email và mật khẩu, rồi thử lại.",
- "door.mismatch": "Email hoặc mật khẩu không khớp. Thử lại, hoặc dùng Quên mật khẩu bên dưới.",
+ "door.mismatch": "Mật khẩu này không khớp với email này. Hãy thử lại hoặc nhấn Quên mật khẩu.",
  "door.noNet": "Kết nối không thành công. Hãy kiểm tra internet và thử lại.",
     "door.madeAccount": "Email này mới ở đây, nên chúng tôi đã tạo tài khoản cho bạn. Chào mừng bạn vào.",
  "door.doorFail": "Cách vào đó không mở được. Thử cách bằng email bên dưới.",
