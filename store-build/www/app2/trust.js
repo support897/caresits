@@ -40,9 +40,11 @@ function viewerCountryName() {
   if ((window.CARESITS_ME || {}).country) return window.CARESITS_ME.country;
   if (me.country) return me.country;
   try {
-    const q = JSON.parse(localStorage.getItem(doneKey()) || "null");
+    const qKey = doneKey();
+    const q = qKey ? JSON.parse(localStorage.getItem(qKey) || "null") : null;
     if (q && (q.country || (q.answers && q.answers.country))) return q.country || q.answers.country;
-    const d = JSON.parse(localStorage.getItem(draftKey()) || "null");
+    const dKey = draftKey();
+    const d = dKey ? JSON.parse(localStorage.getItem(dKey) || "null") : null;
     if (d && d.answers && d.answers.country) return d.answers.country;
   } catch { /* no local copy */ }
   return "";
@@ -101,7 +103,7 @@ export function renderProfile(root, me) {
   root.append(el("h2", "findTitle", tr("shell.profile")));
   const card = el("div", "findCard");
   card.append(el("h3", "findName", me.name || tr("trust.nameWaits")));
-  card.append(el("p", "findPlace", (me.side === "carer" ? tr("trust.sideCarer") : tr("trust.sideFamily")) + (me.postcode ? " · " + tr("find.postcode", undefined, { n: me.postcode }) : "")));
+  card.append(el("p", "findPlace", (me.side === "carer" ? tr("trust.sideCarer") : me.side === "communicate" ? tr("trust.sideCommunicate") : tr("trust.sideFamily")) + (me.postcode ? " · " + tr("find.postcode", undefined, { n: me.postcode }) : "")));
   if (me.level) {
     card.append(el("p", "findPlace", tr("level.profileLabel")));
     card.append(el("p", null, tr("level." + me.level)));

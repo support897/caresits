@@ -5,6 +5,8 @@
 // DORMANT while firebase-config.js is empty: connects to nothing,
 // changes nothing, and the certified app runs as it does today.
 
+import { clearSessionMarkers } from "../app2/storage-keys.js";
+
 // ---------- Pure plan logic (unit tested in accounts/tests.mjs) ----------
 
 export const PLANS = {
@@ -356,7 +358,10 @@ export async function signInEmail(email, password, name) {
         // mark, so every door announces the creation out loud.
         cred.createdAccount = true;
         return cred;
-      } catch {
+      } catch (createError) {
+        // A failed create can reveal that sign up is offline; do not
+        // mask that useful network answer with the earlier credential error.
+        if (createError && (createError.code === "auth/network-request-failed" || createError.code === "auth/timeout")) throw createError;
         throw e;
       }
     }
@@ -372,7 +377,9 @@ export async function signOutUser() {
   // hygiene never blocks a sign out.
   await deactivateOwnDevice();
   const m = await import(`${SDK}/firebase-auth.js`);
-  return m.signOut(_auth);
+  const result = await m.signOut(_auth);
+  clearSessionMarkers();
+  return result;
 }
 
 // The device id key is owned by app2/push.js

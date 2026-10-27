@@ -107,7 +107,8 @@ export function downloadExport() {
 
   let questionnaire = null;
   try {
-    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(doneKey()) : null;
+    const key = doneKey();
+    const raw = key && typeof localStorage !== "undefined" ? localStorage.getItem(key) : null;
     questionnaire = raw ? JSON.parse(raw) : null;
   } catch {
     questionnaire = null;
@@ -118,7 +119,8 @@ export function downloadExport() {
     // holds the user's answers, so they ride in the copy. A
     // finished bundle always wins (it is read first, above).
     try {
-      const rawDraft = typeof localStorage !== "undefined" ? localStorage.getItem(draftKey()) : null;
+      const key = draftKey();
+      const rawDraft = key && typeof localStorage !== "undefined" ? localStorage.getItem(key) : null;
       const draft = rawDraft ? JSON.parse(rawDraft) : null;
       if (draft && draft.answers) questionnaire = { answers: draft.answers };
     } catch {

@@ -88,9 +88,9 @@ function myChildren() {
   const fam = window.CARESITS_FAMILY || {};
   return (fam.children || []).map(repairChild);
 }
-function readJson(key) { try { return JSON.parse(localStorage.getItem(key) || "null"); } catch { return null; } }
+function readJson(key) { if (!key) return null; try { return JSON.parse(localStorage.getItem(key) || "null"); } catch { return null; } }
 
-const state = { posture: null, shopItems: null, decided: new Set(), linkMsg: "", openMsg: "" };
+const state = { posture: null, shopItems: null, decided: new Set(), linkMsg: "", openMsg: "", uid: null };
 
 function defaultPosture() {
   try { const key = accountKey(POSTURE_KEY); const saved = key ? localStorage.getItem(key) : null; if (saved === "finding" || saved === "days") return saved; } catch { /* storage off */ }
@@ -561,11 +561,68 @@ function daysHome(root) {
   root.append(guideLine("homes.guideDays"));
 }
 
+function entryRole() {
+  const m = me() || {};
+  if (m.entryRole === "communicate" || m.side === "communicate") return "communicate";
+  if (m.entryRole === "career" || m.side === "carer") return "career";
+  return "family";
+}
+
+function careerHome(root) {
+  root.append(greeting("homes.careerLead"));
+  const profile = el("section", "cardIn homeCard");
+  profile.append(el("h2", "findTitle", tr("homes.careerProfileTitle")));
+  profile.append(el("p", "homeBody", tr("homes.careerProfileBody")));
+  const status = window.CARESITS_PROFILE_COMPLETE ? tr("homes.careerProfileDone") : tr("homes.careerProfileStart");
+  profile.append(el("p", "homeBody homeWarm", status));
+  const questionnaire = el("button", "mainBtn", tr("homes.careerQuestionnaire"));
+  questionnaire.type = "button";
+  questionnaire.addEventListener("click", () => navTo("questionnaire"));
+  profile.append(questionnaire);
+  root.append(profile);
+
+  const jobs = el("section", "cardIn homeCard homeUrgent");
+  jobs.append(el("h2", "findTitle", tr("homes.careerJobsTitle")));
+  jobs.append(el("p", "homeBody", tr("homes.careerJobsBody")));
+  const board = el("button", "mainBtn", tr("homes.careerJobsOpen"));
+  board.type = "button";
+  board.addEventListener("click", () => navTo("board"));
+  jobs.append(board);
+  root.append(jobs);
+  root.append(guideLine("homes.careerGuide"));
+}
+
+function communicateHome(root) {
+  root.append(greeting("homes.communicateLead"));
+  const card = el("section", "cardIn homeCard");
+  card.append(el("h2", "findTitle", tr("homes.conversations")));
+  card.append(el("p", "homeBody", tr("homes.communicateBody")));
+  const thread = window.CARESITS_THREAD;
+  if (thread && thread.pairId) {
+    card.append(el("h3", "findName", thread.otherName || tr("thread.title")));
+  } else {
+    const img = el("img", "bunnyBig");
+    img.src = "bunny/bunny-rest-calm.png";
+    img.alt = "";
+    card.append(img, el("p", "homeBody", tr("homes.noConversations")));
+  }
+  const open = el("button", "mainBtn", tr("homes.openConversations"));
+  open.type = "button";
+  open.addEventListener("click", () => navTo("thread"));
+  card.append(open);
+  root.append(card);
+}
+
 function renderHome() {
   const root = document.getElementById("homeRoot");
   if (!root) return;
-  if (!state.posture) state.posture = defaultPosture();
+  const uid = (me() || {}).uid || null;
+  if (state.uid !== uid) { state.uid = uid; state.posture = null; }
   root.replaceChildren();
+  const role = entryRole();
+  if (role === "career") { careerHome(root); return; }
+  if (role === "communicate") { communicateHome(root); return; }
+  if (!state.posture) state.posture = defaultPosture();
   if (state.posture === "days") daysHome(root); else findingHome(root);
 }
 

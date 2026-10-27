@@ -40,7 +40,7 @@ const todayKey = () => new Date().toISOString().slice(0, 10);
 // session add is never left out of the user's own copy.
 const familyNow = { children: [], entries: [], side: "family" };
 
-export function renderChildren(root, rawChildren) {
+export function renderChildren(root, rawChildren, editingId = null) {
   const children = (rawChildren || []).map((kid) => normaliseChild(kid));
   familyNow.children = children;
   root.replaceChildren();
@@ -62,21 +62,27 @@ export function renderChildren(root, rawChildren) {
     card.append(el("p", "findPlace", tr("family.themeWord", undefined, { t: themeName(theme[0], theme[1]) })));
     if (kid.ageYears != null) card.append(el("p", "findPlace", ageText(kid.ageYears)));
     if (kid.loves.length) card.append(el("p", "findPlace", tr("family.kidLovesLine", undefined, { list: kid.loves.map((id) => tr("homes.love." + id)).join(", ") })));
+    const edit = el("button", "quietBtn", tr("family.editChild"));
+    edit.type = "button";
+    edit.addEventListener("click", () => renderChildren(root, children, kid.id));
     const rm = el("button", "quietBtn", tr("family.remove"));
     rm.type = "button";
     rm.addEventListener("click", () => confirmRemove(kid, card));
-    card.append(rm);
+    card.append(edit, rm);
     list.append(card);
   }
   root.append(list);
+  const editingKid = editingId ? children.find((kid) => kid.id === editingId) : null;
   const form = el("div", "findCard");
-  form.append(el("h3", "findName", tr("family.addChild")));
+  form.append(el("h3", "findName", tr(editingKid ? "family.editChild" : "family.addChild")));
   const name = el("input", "txtIn");
   name.placeholder = tr("family.namePh");
   name.id = "kName";
+  if (editingKid) name.value = editingKid.name;
   const themeSel = el("select", "txtIn");
   themeSel.id = "kTheme";
   for (const [id, label] of THEMES) { const o = el("option", null, themeName(id, label)); o.value = id; themeSel.append(o); }
+  if (editingKid) themeSel.value = editingKid.theme;
   const ageSel = el("select", "txtIn");
   ageSel.id = "kAge";
   ageSel.setAttribute("aria-label", tr("family.agePick"));
@@ -84,12 +90,13 @@ export function renderChildren(root, rawChildren) {
   ageBlank.value = "";
   ageSel.append(ageBlank);
   for (let a = 0; a <= 12; a += 1) { const o = el("option", null, ageText(a)); o.value = String(a); ageSel.append(o); }
+  if (editingKid && editingKid.ageYears != null) ageSel.value = String(editingKid.ageYears);
   const loveLabel = el("p", "findPlace", tr("family.lovesLabel"));
   const loveRow = el("div", "chipRow");
   loveRow.id = "kLoves";
-  const pickedLoves = new Set();
+  const pickedLoves = new Set(editingKid?.loves || []);
   for (const love of INTERESTS) {
-    const c = el("button", "chipBtn", tr(love.key));
+    const c = el("button", "chipBtn" + (pickedLoves.has(love.id) ? " on" : ""), tr(love.key));
     c.type = "button";
     c.dataset.love = love.id;
     c.addEventListener("click", () => {
@@ -98,7 +105,7 @@ export function renderChildren(root, rawChildren) {
     });
     loveRow.append(c);
   }
-  const add = el("button", "mainBtn", tr("family.add"));
+  const add = el("button", "mainBtn", tr(editingKid ? "family.saveChild" : "family.add"));
   add.type = "button";
   add.id = "kAdd";
   const formMsg = el("p", "formMsg");
@@ -110,11 +117,17 @@ export function renderChildren(root, rawChildren) {
     // The kid is minted first and the write carries its id:
     // the server record stands under this same id (id unity,
     // QA b104 Leg 7), so remove, bin and restore all find it.
-    const kid = { id: "local-" + Date.now(), name: n, theme: themeSel.value, ageYears, loves };
+    const kid = { ...(editingKid || {}), id: editingKid?.id || "local-" + Date.now(), name: n, theme: themeSel.value, ageYears, loves };
     write("child-add", { id: kid.id, name: n, theme: themeSel.value, ageYears, loves });
-    renderChildren(root, [...children, kid]);
+    renderChildren(root, editingKid ? children.map((oldKid) => oldKid.id === kid.id ? kid : oldKid) : [...children, kid]);
   });
   form.append(name, themeSel, ageSel, loveLabel, loveRow, add, formMsg);
+  if (editingKid) {
+    const cancel = el("button", "closeBtn", tr("family.cancel"));
+    cancel.type = "button";
+    cancel.addEventListener("click", () => renderChildren(root, children));
+    form.append(cancel);
+  }
   root.append(form);
 }
 

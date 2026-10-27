@@ -4,7 +4,7 @@
 // HUMAN CHECK RULE: keys under "checks." and "legal." carry NO
 // Arabic values here, exactly as in Spanish. They stay English
 // until a human checker approves words for this language.
-// Coverage: 611 translated app UI keys; human-check phrases remain in English by design.
+// Coverage: 639 translated app UI keys; human-check phrases remain in English by design.
 // RTL note: these are string values only; layout direction is a
 // wiring concern and is not set here.
 export const UI_AR = {
@@ -35,7 +35,7 @@ export const UI_AR = {
  "door.needPw": "أضف كلمة المرور الخاصة بك، ثم اضغط على انضمام.",
  "door.busy": "لحظة واحدة.",
  "door.fail": "لم ينجح ذلك. تحقق من البريد الإلكتروني وكلمة المرور، ثم حاول مرة أخرى.",
- "door.mismatch": "لم يتطابق البريد الإلكتروني أو كلمة المرور. حاول مرة أخرى، أو استخدم خيار نسيت أدناه.",
+ "door.mismatch": "كلمة المرور هذه لا تطابق هذا البريد الإلكتروني. حاول مرة أخرى أو اضغط على «هل نسيت كلمة المرور؟».",
  "door.noNet": "لم ينجح الاتصال. تحقق من الإنترنت وحاول مرة أخرى.",
     "door.madeAccount": "هذا البريد جديد هنا، لذا أنشأنا لك حسابا. مرحبا بك.",
  "door.doorFail": "لم يفتح هذا الباب. جرب طريقة البريد الإلكتروني أدناه.",
@@ -51,6 +51,10 @@ export const UI_AR = {
  "tour.t3b": "يرتب البحث الأشخاص الذين يناسبونك. المطابقات ولوحة العاجل موجودة أيضًا في البحث عن الرعاية.",
  "tour.t4t": "مساحات عائلتك",
  "tour.t4b": "ينمو الأطفال وقصة اليوم وجدول المناوبات هنا أثناء استخدامك لها. أشياؤك لك وحدك.",
+ "tour.carer.t4t": "عملك في الرعاية",
+ "tour.carer.t4b": "ينمو ملفك الشخصي وخبرتك وتوافرك هنا مع استخدامك لها. معلوماتك تخصك وحدك.",
+ "tour.communicate.t4t": "محادثاتك",
+ "tour.communicate.t4b": "تجد هنا محادثاتك وخططك المشتركة. أشياؤك لك وحدك.",
  "tour.t5t": "أنت جاهز تمامًا",
  "tour.t5b": "هذه هي الجولة كاملة. أنا هنا في الزاوية متى احتجت إليّ.",
  "tour.namePh": "اسمك",
@@ -175,6 +179,11 @@ export const UI_AR = {
  "board.lead": "مساعدة مطلوبة قريبًا، بالقرب منك. البحث دائمًا مجاني.",
  "board.postTitle": "نشر وظيفة",
  "board.whenPh": "متى؟ اليوم أو غدًا أو نهاية هذا الأسبوع",
+ "board.when": "متى",
+ "board.today": "اليوم",
+ "board.tomorrow": "غدًا",
+ "board.weekend": "عطلة نهاية الأسبوع هذه",
+ "board.postMissing": "أضف رمزك البريدي وبضع كلمات عن المساعدة التي تحتاجها.",
  "board.postcodePh": "رمزك البريدي",
  "board.notePh": "بعض الكلمات عن المساعدة التي تحتاجها",
  "board.post": "انشر الوظيفة",
@@ -213,6 +222,9 @@ export const UI_AR = {
  "family.addChild": "إضافة طفل",
  "family.namePh": "اسمهم الأول",
  "family.add": "إضافة",
+ "family.editChild": "تعديل الطفل",
+ "family.saveChild": "حفظ التغييرات",
+ "family.cancel": "إلغاء",
  "family.removeTitle": "إزالة {name}؟",
  "family.removeBody": "ينقل هذا {name} خارج تطبيقك، إلى المحذوفات الأخيرة، حيث يبقى لمدة 30 يومًا. الحذف نهائيًا لا يمكن التراجع عنه. نزّل بياناتك أولًا إذا أردت نسخة.",
  "family.yesRemove": "نعم، أزل",
@@ -611,5 +623,22 @@ export const UI_AR = {
  "act.gardendig.t": "الحفر في الحديقة",
  "act.gardendig.n": "أصص وتربة والبحث عن الديدان",
  "act.freeplay.t": "اللعب الحر",
- "act.freeplay.n": "الألعاب جاهزة والخيال يعمل"
+ "act.freeplay.n": "الألعاب جاهزة والخيال يعمل",
+ "trust.sideCommunicate": "التواصل",
+ "homes.careerLead": "أكملي ملفكِ كمقدمة رعاية وتواصلي مع العائلات.",
+ "homes.careerProfileTitle": "ملفكِ كمقدمة رعاية",
+ "homes.careerProfileBody": "أجيبي عن أسئلة مقدمة الرعاية لتتعرف العائلات على خبرتكِ ومواعيدكِ المتاحة.",
+ "homes.careerProfileDone": "ملفكِ كمقدمة رعاية جاهز.",
+ "homes.careerProfileStart": "ملفكِ ينتظر إجاباتكِ.",
+ "homes.careerQuestionnaire": "افتحي الاستبيان",
+ "homes.careerJobsTitle": "طلبات رعاية عاجلة",
+ "homes.careerJobsBody": "اطّلعي على طلبات العائلات التي تحتاج إلى رعاية قريبًا.",
+ "homes.careerJobsOpen": "عرض الطلبات العاجلة",
+ "homes.careerGuide": "يساعد ملفكِ وإجاباتكِ العائلات على معرفة الرعاية التي تقدمينها.",
+ "homes.communicateLead": "مساحة هادئة للبقاء على تواصل.",
+ "homes.conversations": "محادثاتكِ",
+ "homes.communicateBody": "افتحي محادثة عندما يناسبكِ. هذه المساحة للتواصل، وليست للمطابقة.",
+ "homes.openConversations": "فتح المحادثات",
+ "homes.noConversations": "لا توجد محادثات بعد. ستظهر رسائلكِ هنا عندما تتواصلين مع أحدهم."
+
 };

@@ -24,12 +24,13 @@ const el = (tag, cls, text) => {
   return n;
 };
 const write = (kind, payload) => { if (typeof window.CARESITS_WRITE === "function") window.CARESITS_WRITE(kind, payload); };
+let activePlansClose = null;
 
-function planBtn(label, plan, wrap, card, status) {
+function planBtn(label, plan, wrap, card, status, closeSheet) {
   const b = el("button", "mainBtn popBtn", label);
   b.type = "button";
   b.addEventListener("click", async () => {
-    if (!purchaseAvailable()) { write("plans", { plan }); wrap.remove(); return; }
+    if (!purchaseAvailable()) { write("plans", { plan }); closeSheet(); return; }
     b.disabled = true;
     status.textContent = tr("plans.buying");
     const res = await buyPlan(plan);
@@ -53,10 +54,25 @@ function planBtn(label, plan, wrap, card, status) {
 // Plus feature, so it speaks first (the locked tap rule, 19 Oct
 // 2026). Opened from Settings it simply presents the plans.
 export function openPlans(reason) {
-  document.getElementById("plansPop")?.remove();
+  activePlansClose?.();
   const wrap = el("div", "sheetWrap");
   wrap.id = "plansPop";
-  const card = el("div", "sheetCard tourCard");
+  let keyHandler = null;
+  const closeSheet = () => {
+    wrap.remove();
+    if (keyHandler) document.removeEventListener("keydown", keyHandler);
+    if (activePlansClose === closeSheet) activePlansClose = null;
+  };
+  activePlansClose = closeSheet;
+  keyHandler = (event) => { if (event.key === "Escape") closeSheet(); };
+  document.addEventListener("keydown", keyHandler);
+  wrap.addEventListener("click", (event) => { if (event.target === wrap) closeSheet(); });
+  const card = el("div", "sheetCard tourCard plansSheet");
+  const close = el("button", "closeBtn plansCloseTop", tr("plans.close"));
+  close.type = "button";
+  close.setAttribute("aria-label", tr("plans.close"));
+  close.addEventListener("click", closeSheet);
+  card.append(close);
   const img = el("img", "bunnyBig");
   img.src = "bunny/bunny-encourage.png";
   img.alt = tr("popup.bunnyAlt");
@@ -64,11 +80,11 @@ export function openPlans(reason) {
   if (reason === "plus") card.append(el("p", null, tr("plans.locked")));
   const status = el("p", "plansStatus");
   card.append(el("p", null, popupPriceLine("popup.finding", "finding")));
-  card.append(planBtn(tr("popup.joinFinding"), "finding", wrap, card, status));
+  card.append(planBtn(tr("popup.joinFinding"), "finding", wrap, card, status, closeSheet));
   card.append(el("p", null, popupPriceLine("popup.plus", "plus")));
-  card.append(planBtn(tr("popup.joinPlus"), "family-plus", wrap, card, status));
+  card.append(planBtn(tr("popup.joinPlus"), "family-plus", wrap, card, status, closeSheet));
   card.append(el("p", null, popupPriceLine("plans.pass", "pass")));
-  card.append(planBtn(tr("plans.joinPass"), "search-pass", wrap, card, status));
+  card.append(planBtn(tr("plans.joinPass"), "search-pass", wrap, card, status, closeSheet));
   // The renewal disclosure + the legal links stand ON
   // the paywall (Store Review's G7 item, HQ's fix wave
   // on the fleet's proven pattern): the whole renewal
@@ -114,10 +130,6 @@ export function openPlans(reason) {
   } else {
     card.append(el("p", null, tr("plans.appOnly")));
   }
-  const close = el("button", "mainBtn popBtn", tr("plans.close"));
-  close.type = "button";
-  close.addEventListener("click", () => wrap.remove());
-  card.append(close);
   wrap.append(card);
   document.body.append(wrap);
 }

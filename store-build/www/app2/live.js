@@ -7,7 +7,8 @@
 // carries ?twin=1; every other visit uses the production
 // config beside this file.
 import { levelOf, mergeDeepAnswers } from "./levels.js";
-import { accountKey } from "./storage-keys.js";
+import { accountKey, clearSessionMarkers } from "./storage-keys.js";
+import { cleanJobListings } from "./pair-actions.js";
 import { applyI18n } from "./lang.js";
 import { resolvePlan, entitlementFromRecord, plusExtrasOpen, withTimeout } from "../accounts/account.js";
 
@@ -131,6 +132,28 @@ let lastTrustInputs = null;
 // here and applied at every publication until the documents
 // themselves carry it.
 let pendingTrustName = "";
+
+function resetMemberSeams(uid) {
+  pendingTrustName = "";
+  lastTrustInputs = null;
+  if (typeof window === "undefined") return;
+  window.CARESITS_ME = { uid, side: "", name: "", entryRole: "" };
+  window.CARESITS_TRUST = { me: { uid, side: "", name: "" }, checks: [], reviews: [] };
+  window.CARESITS_QUESTIONS = null;
+  window.CARESITS_PROFILE_COMPLETE = false;
+  window.CARESITS_PLAN = null;
+  window.CARESITS_FAMILY = { children: [], entries: [], side: "" };
+  window.CARESITS_BIN = [];
+  window.CARESITS_WEEK = { timesheets: [], reminder: null, emergency: null };
+  window.CARESITS_PHASE_C = { viewer: { uid, side: "" }, rels: [], jobs: [], names: {} };
+  window.CARESITS_THREAD = null;
+  window.CARESITS_FIND_DATA = null;
+  window.CARESITS_EXPORT_DATA = null;
+  window.CARESITS_CALENDAR = null;
+  for (const name of ["CARESITS_RENDER_HOME", "CARESITS_FAMILY_RENDER", "CARESITS_PHASE_C_RENDER", "CARESITS_THREAD_RENDER", "CARESITS_TRUST_RENDER", "CARESITS_WEEK_RENDER", "CARESITS_BIN_RENDER", "CARESITS_FIND_RENDER"]) {
+    try { window[name]?.(); } catch { /* an empty seam remains safe */ }
+  }
+}
 
 export function publishTrust(profile, card, questionnaire) {
   if (pendingTrustName) profile = { ...(profile || {}), displayName: pendingTrustName };
@@ -321,7 +344,7 @@ export async function fetchPhaseC(fs, db, uid, side) {
   const ownJobs = await grabQuery("jobs", fs.where("familyUid", "==", uid));
   const byId = new Map();
   for (const job of [...openJobs, ...ownJobs]) byId.set(job.id, job);
-  const jobs = [...byId.values()];
+  const jobs = cleanJobListings([...byId.values()]);
   const names = {};
   for (const other of phaseCNameTargets(uid, side, rels, jobs)) {
     try {
@@ -354,16 +377,34 @@ export async function bootLive() {
   return new Promise((resolve) => {
     authMod.onAuthStateChanged(auth, async (u) => {
       if (!u || u.isAnonymous) {
-        // The uid seam is a pointer, not data: clearing it on
-        // sign out deletes nothing, it only stops the device
-        // keys resolving to the previous account (F16).
-        if (typeof window !== "undefined") { window.CARESITS_UID = null; delete document.documentElement.dataset.entryRole; }
+        const previousUid = typeof window !== "undefined" ? window.CARESITS_UID : null;
+        // The uid seam is a pointer, not data. Dropping it switches
+        // all subsequent reads away from that member without deleting
+        // any of their uid-scoped records.
+        if (typeof window !== "undefined") {
+          window.CARESITS_UID = null;
+          window.CARESITS_AUTH_STATE = "signed-out";
+          window.CARESITS_ACCOUNT_READY = false;
+          delete document.documentElement.dataset.entryRole;
+          if (previousUid) { clearSessionMarkers(); resetMemberSeams(null); }
+        }
         gateSignedOut();
         resolve({ on: true, signedIn: false });
         return;
       }
       const uid = u.uid;
-      if (typeof window !== "undefined") window.CARESITS_UID = uid;
+      const previousUid = typeof window !== "undefined" ? window.CARESITS_UID : null;
+      if (typeof window !== "undefined") {
+        window.CARESITS_UID = uid;
+        window.CARESITS_AUTH_STATE = "signed-in";
+        if (previousUid !== uid) {
+          window.CARESITS_ACCOUNT_READY = false;
+          // Keep the newly chosen door role until it is saved; clear
+          // only stale session flags and the prior account's locale.
+          clearSessionMarkers({ preserveEntryRole: true, preserveLanguage: false });
+          resetMemberSeams(uid);
+        }
+      }
       const docAt = (path) => fs.doc(db, ...path.split("/"));
       const colAt = (path) => fs.collection(db, ...path.split("/"));
       window.CARESITS_WRITE = makeWriter(fs, db, uid);
@@ -501,23 +542,40 @@ export async function bootLive() {
           const appDoc = await docOr(`users/${uid}/meta/app`);
           let pendingRole = "";
           try { pendingRole = sessionStorage.getItem("caresits-entry-role") || ""; } catch { /* session storage off */ }
-          let entryRole = ENTRY_ROLES.includes(appDoc && appDoc.entryRole) ? appDoc.entryRole : "";
-          if (ENTRY_ROLES.includes(pendingRole)) {
+          const savedRole = ENTRY_ROLES.includes(appDoc && appDoc.entryRole) ? appDoc.entryRole : "";
+          const savedSide = qData.side || profile.side || "";
+          const inferredRole = savedSide === "carer" ? "career" : savedSide === "family" ? "family" : "";
+          // The role on the account wins on return. A door choice is
+          // saved only for a new account that has no role or profile side.
+          let entryRole = savedRole || inferredRole || "";
+          if (!entryRole && ENTRY_ROLES.includes(pendingRole)) {
+            entryRole = pendingRole;
             try {
-              const savedRole = await window.CARESITS_WRITE("entry-role", { entryRole: pendingRole });
-              if (savedRole && savedRole.ok) {
-                entryRole = pendingRole;
-                try { sessionStorage.removeItem("caresits-entry-role"); } catch { /* session storage off */ }
-              } else if (!entryRole) entryRole = pendingRole;
-            } catch { if (!entryRole) entryRole = pendingRole; }
+              const saved = await window.CARESITS_WRITE("entry-role", { entryRole });
+              if (saved && saved.ok) { try { sessionStorage.removeItem("caresits-entry-role"); } catch { /* session storage off */ } }
+            } catch { /* keep this session's chosen role; retry next visit */ }
+          } else if (!savedRole && inferredRole) {
+            try { await window.CARESITS_WRITE("entry-role", { entryRole }); } catch { /* the profile side still identifies this member */ }
           }
+          if (savedRole && pendingRole) {
+            try { sessionStorage.removeItem("caresits-entry-role"); } catch { /* session storage off */ }
+          }
+          const roleSide = entryRole === "career" ? "carer" : entryRole === "family" ? "family" : entryRole === "communicate" ? "communicate" : "";
+          const effectiveSide = roleSide || profile.side || qData.side || "";
+          window.CARESITS_ME = {
+            ...(window.CARESITS_ME || { uid }),
+            uid, side: effectiveSide, entryRole,
+            country: qData.country || qData.answers?.country || window.CARESITS_ME?.country || "",
+          };
           if (entryRole) {
-            window.CARESITS_ME = { ...(window.CARESITS_ME || { uid }), entryRole };
             document.documentElement.dataset.entryRole = entryRole;
-            if (typeof window.CARESITS_RENDER_HOME === "function") window.CARESITS_RENDER_HOME();
+            window.CARESITS_ROLE_NAV?.(entryRole);
           } else {
             delete document.documentElement.dataset.entryRole;
           }
+          window.CARESITS_RENDER_HOME?.();
+          window.CARESITS_ACCOUNT_READY = true;
+          document.dispatchEvent(new CustomEvent("caresits-account-ready", { detail: { uid, entryRole } }));
           window.CARESITS_WEEK = weekSeamFrom({ timesheets: sheets, reminderDoc, emergencyDoc });
           if (typeof window.CARESITS_WEEK_RENDER === "function") window.CARESITS_WEEK_RENDER();
           if (appDoc && appDoc.background) {
@@ -545,7 +603,7 @@ export async function bootLive() {
         // F15: My Profile renders from the trust seam, and the
         // seam is published here, from the member's real
         // documents, the moment the boot has read them.
-        publishTrust(profile, cardData, qData);
+        publishTrust({ ...profile, side: window.CARESITS_ME?.side || profile.side || qData.side || "" }, cardData, qData);
         // Land a finished journey still standing on this
         // device (QA b108): when the account holds no
         // questionnaire yet and a done envelope waits under
@@ -629,5 +687,7 @@ function gateSignedOut() {
 }
 
 if (typeof document !== "undefined" && !window.CARESITS_LIVE_OFF) {
+  if (!window.CARESITS_AUTH_STATE) window.CARESITS_AUTH_STATE = "loading";
+  window.CARESITS_ACCOUNT_READY = false;
   bootLive().catch(() => {});
 }

@@ -14,6 +14,20 @@ const TITLES = {};
 function openMenu() { layout.classList.add("open"); }
 function closeMenu() { layout.classList.remove("open"); }
 
+function setRoleNavigation(entryRole) {
+  const communicate = entryRole === "communicate";
+  const career = entryRole === "career";
+  const finding = document.querySelector('[data-group="finding"]');
+  const family = document.querySelector('[data-group="family"]');
+  const week = document.querySelector('[data-group="week"]');
+  const conversations = document.getElementById("commMessages");
+  if (finding) finding.hidden = communicate;
+  if (family) family.hidden = career || communicate;
+  if (week) week.hidden = communicate;
+  if (conversations) conversations.hidden = !communicate;
+}
+window.CARESITS_ROLE_NAV = setRoleNavigation;
+
 // The Family Plus gate (payments chapter §2 + FEATURE-SPLIT): the
 // Day Story, the roster and the timesheet are Family Plus features
 // for families. The gate sits here, at the one nav choke point

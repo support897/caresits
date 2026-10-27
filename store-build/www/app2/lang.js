@@ -52,7 +52,7 @@ export const STRINGS = {
     "door.needPw": "Add your password, then tap Join.",
     "door.busy": "One moment.",
     "door.fail": "That did not work. Check the email and password, then try again.",
-    "door.mismatch": "Email or password did not match. Have another go, or use Forgot below.",
+    "door.mismatch": "That password does not match this email. Try again or tap Forgot your password.",
     "door.noNet": "The connection did not get through. Check your internet and have another go.",
     "door.madeAccount": "That email is new here, so we made your account. Welcome in.",
     "door.doorFail": "That door did not open. Try the email way below.",
@@ -68,6 +68,10 @@ export const STRINGS = {
     "tour.t3b": "Find lines up the people who fit. Matches and the urgent board live in Finding care too.",
     "tour.t4t": "Your family spaces",
     "tour.t4b": "Children, Day Story and the roster grow here as you use them. Your things are yours alone.",
+    "tour.carer.t4t": "Your care work",
+    "tour.carer.t4b": "Your profile, experience and availability grow here as you use them. Your things are yours alone.",
+    "tour.communicate.t4t": "Your conversations",
+    "tour.communicate.t4b": "Your conversations and shared plans live here. Your things are yours alone.",
     "tour.t5t": "You are all set",
     "tour.t5b": "That is the whole tour. I am here in the corner whenever you need me.",
     "tour.namePh": "Your name",
@@ -137,6 +141,21 @@ export const STRINGS = {
     "homes.roleCareer": "Your care career",
     "homes.roleFamily": "Your family",
     "homes.roleCommunicate": "Your conversations",
+    "homes.careerLead": "Build your care profile and connect with families.",
+    "homes.careerProfileTitle": "Your carer profile",
+    "homes.careerProfileBody": "Answer the carer questions so families can understand your experience and availability.",
+    "homes.careerProfileDone": "Your carer profile is ready.",
+    "homes.careerProfileStart": "Your profile is waiting for your answers.",
+    "homes.careerQuestionnaire": "Open your questionnaire",
+    "homes.careerJobsTitle": "Urgent care requests",
+    "homes.careerJobsBody": "See requests from families who need care soon.",
+    "homes.careerJobsOpen": "View urgent requests",
+    "homes.careerGuide": "Your profile and questions help families see the care you offer.",
+    "homes.communicateLead": "A calm place to stay in touch.",
+    "homes.conversations": "Your conversations",
+    "homes.communicateBody": "Open a conversation when you are ready. This space is for keeping in touch, not matching.",
+    "homes.openConversations": "Open conversations",
+    "homes.noConversations": "No conversations yet. When you connect with someone, your messages will appear here.",
     "homes.findingLead": "Let us find the right person for your family.",
     "homes.daysLeadName": "{name} is with the kids today.",
     "homes.daysLead": "The day, planned together.",
@@ -276,7 +295,9 @@ export const STRINGS = {
     "matches.confirm": "Confirm contact", "matches.hired": "Mark as hired", "matches.end": "End",
     "board.lead": "Help needed soon, near you. Looking is always free.",
     "board.postTitle": "Post a job", "board.whenPh": "When? Today, tomorrow, this weekend",
+    "board.when": "When", "board.today": "Today", "board.tomorrow": "Tomorrow", "board.weekend": "This weekend",
     "board.postcodePh": "Your postcode", "board.notePh": "A few words about the help you need",
+    "board.postMissing": "Add your postcode and a few words about the help you need.",
     "board.post": "Post the job",
     "board.gatePost": "Finish your profile and questions first, then this post can go up. The bunny will walk you there.",
     "board.gateNote": "Finish your profile and questions first, then your note can go. The bunny will walk you there.",
@@ -292,7 +313,8 @@ export const STRINGS = {
     "family.tile.Note to parents": "Note to parents",
     "family.noKids": "No children here yet",
     "family.noKidsBody": "Add your first child below. Their card is private: only you, and a carer you are working with, can ever see it.",
-    "family.remove": "Remove", "family.addChild": "Add a child", "family.namePh": "Their first name", "family.add": "Add",
+    "family.remove": "Remove", "family.addChild": "Add a child", "family.editChild": "Edit child", "family.namePh": "Their first name", "family.add": "Add",
+    "family.saveChild": "Save changes", "family.cancel": "Cancel",
     "family.removeTitle": "Remove {name}?",
     "family.removeBody": "This moves {name} out of your app, into Recently Deleted, where it stays for 30 days. Deleting forever cannot be undone. Download your data first if you want a copy.",
     "family.yesRemove": "Yes, remove", "family.keep": "Keep",
@@ -319,7 +341,7 @@ export const STRINGS = {
     "checks.providedBy": "Provided by the carer", "checks.fallbackTitle": "Check",
     "trust.reviewsEmpty": "No reviews yet",
     "trust.reviewsEmptyBody": "Reviews from families and carers you have worked with will gather here.",
-    "trust.nameWaits": "Your name waits in the tour", "trust.sideCarer": "Carer", "trust.sideFamily": "Family",
+    "trust.nameWaits": "Your name waits in the tour", "trust.sideCarer": "Carer", "trust.sideFamily": "Family", "trust.sideCommunicate": "Communicate",
     "trust.profileBody": "Your questionnaire answers live in your private space. Your card shows only what matching needs.",
     "trust.seeQ": "See the questionnaire",
     "trust.privacyBody": "The full policy stands on the Caresitters site, in plain words, with its date on it.",
@@ -511,7 +533,7 @@ export const STRINGS = {
     "door.needPw": "Escribe tu contraseña y luego toca Unirme.",
     "door.busy": "Un momento.",
     "door.fail": "Eso no funcionó. Revisa el correo y la contraseña e inténtalo de nuevo.",
-    "door.mismatch": "El correo o la contraseña no coinciden. Inténtalo otra vez o usa Olvidaste abajo.",
+    "door.mismatch": "Esta contraseña no coincide con este correo. Inténtalo de nuevo o toca ¿Olvidaste tu contraseña?",
     "door.noNet": "La conexión no llegó. Revisa tu internet e inténtalo otra vez.",
     "door.madeAccount": "Ese correo es nuevo aquí, así que creamos tu cuenta. Bienvenido.",
     "door.doorFail": "Esa puerta no se abrió. Prueba con el correo aquí abajo.",
@@ -527,6 +549,10 @@ export const STRINGS = {
     "tour.t3b": "Buscar reúne a las personas que encajan contigo. Los matches y el tablón urgente también viven en Buscar cuidado.",
     "tour.t4t": "Los espacios de tu familia",
     "tour.t4b": "Niños, Historia del día y la agenda crecen aquí a medida que los usas. Tus cosas son solo tuyas.",
+    "tour.carer.t4t": "Tu trabajo de cuidados",
+    "tour.carer.t4b": "Tu perfil, experiencia y disponibilidad crecen aquí a medida que los usas. Tus cosas son solo tuyas.",
+    "tour.communicate.t4t": "Tus conversaciones",
+    "tour.communicate.t4b": "Tus conversaciones y planes compartidos viven aquí. Tus cosas son solo tuyas.",
     "tour.t5t": "Ya está todo listo",
     "tour.t5b": "Ese es todo el recorrido. Estoy aquí en la esquina cuando me necesites.",
     "tour.namePh": "Tu nombre",
@@ -595,6 +621,21 @@ export const STRINGS = {
     "homes.roleCareer": "Tu carrera en cuidados",
     "homes.roleFamily": "Tu familia",
     "homes.roleCommunicate": "Tus conversaciones",
+    "homes.careerLead": "Completa tu perfil de cuidadora y conecta con familias.",
+    "homes.careerProfileTitle": "Tu perfil de cuidadora",
+    "homes.careerProfileBody": "Responde las preguntas para que las familias conozcan tu experiencia y disponibilidad.",
+    "homes.careerProfileDone": "Tu perfil de cuidadora está listo.",
+    "homes.careerProfileStart": "Tu perfil espera tus respuestas.",
+    "homes.careerQuestionnaire": "Abrir tu cuestionario",
+    "homes.careerJobsTitle": "Solicitudes de cuidado urgentes",
+    "homes.careerJobsBody": "Consulta las solicitudes de familias que necesitan cuidado pronto.",
+    "homes.careerJobsOpen": "Ver solicitudes urgentes",
+    "homes.careerGuide": "Tu perfil y tus respuestas ayudan a las familias a conocer el cuidado que ofreces.",
+    "homes.communicateLead": "Un lugar tranquilo para mantener el contacto.",
+    "homes.conversations": "Tus conversaciones",
+    "homes.communicateBody": "Abre una conversación cuando quieras. Este espacio es para hablar, no para buscar coincidencias.",
+    "homes.openConversations": "Abrir conversaciones",
+    "homes.noConversations": "Todavía no hay conversaciones. Cuando conectes con alguien, tus mensajes aparecerán aquí.",
     "homes.findingLead": "Busquemos a la persona adecuada para tu familia.",
     "homes.daysLeadName": "{name} está hoy con los niños.",
     "homes.daysLead": "El día, planeado juntos.",
@@ -734,6 +775,8 @@ export const STRINGS = {
     "matches.confirm": "Confirmar contacto", "matches.hired": "Marcar como contratada", "matches.end": "Terminar",
     "board.lead": "Ayuda necesaria pronto, cerca de ti. Mirar siempre es gratis.",
     "board.postTitle": "Publicar un trabajo", "board.whenPh": "¿Cuándo? Hoy, mañana, este fin de semana",
+    "board.when": "Cuándo", "board.today": "Hoy", "board.tomorrow": "Mañana", "board.weekend": "Este fin de semana",
+    "board.postMissing": "Añade tu código postal y unas palabras sobre la ayuda que necesitas.",
     "board.postcodePh": "Tu código postal", "board.notePh": "Unas palabras sobre la ayuda que necesitas",
     "board.post": "Publicar el trabajo",
     "board.gatePost": "Termina tu perfil y tus preguntas primero, y luego esta publicación podrá subir. El conejito te llevará allí.",
@@ -750,7 +793,8 @@ export const STRINGS = {
     "family.tile.Note to parents": "Nota para los padres",
     "family.noKids": "Todavía no hay niños aquí",
     "family.noKidsBody": "Añade a tu primer niño abajo. Su tarjeta es privada: solo tú, y una cuidadora que trabaje contigo, pueden verla.",
-    "family.remove": "Quitar", "family.addChild": "Añadir un niño", "family.namePh": "Su primer nombre", "family.add": "Añadir",
+    "family.remove": "Quitar", "family.addChild": "Añadir un niño", "family.editChild": "Editar niño", "family.namePh": "Su primer nombre", "family.add": "Añadir",
+    "family.saveChild": "Guardar cambios", "family.cancel": "Cancelar",
     "family.removeTitle": "¿Quitar a {name}?",
     "family.removeBody": "Esto mueve a {name} fuera de tu app, a Eliminados recientemente, donde se queda por 30 días. Borrar para siempre no se puede deshacer. Descarga tus datos primero si quieres una copia.",
     "family.yesRemove": "Sí, quitar", "family.keep": "Mantener",
@@ -773,7 +817,7 @@ export const STRINGS = {
     "form.needShift": "Agrega primero las horas.", "form.needReminder": "Primero escribe el recordatorio.",
     "trust.reviewsEmpty": "Todavía no hay reseñas",
     "trust.reviewsEmptyBody": "Las reseñas de familias y cuidadoras con las que has trabajado se reunirán aquí.",
-    "trust.nameWaits": "Tu nombre te espera en el recorrido", "trust.sideCarer": "Cuidadora", "trust.sideFamily": "Familia",
+    "trust.nameWaits": "Tu nombre te espera en el recorrido", "trust.sideCarer": "Cuidadora", "trust.sideFamily": "Familia", "trust.sideCommunicate": "Comunicación",
     "trust.profileBody": "Las respuestas de tu cuestionario viven en tu espacio privado. Tu tarjeta muestra solo lo que el emparejamiento necesita.",
     "trust.seeQ": "Ver el cuestionario",
     "trust.privacyBody": "La política completa está en el sitio de Caresitters, en palabras claras, con su fecha.",
@@ -955,6 +999,12 @@ export function currentLang() {
     const key = accountKey("caresits-lang");
     const pick = key ? localStorage.getItem(key) : null;
     if (pick && STRINGS[pick]) return pick;
+    // The signed-out door has no uid to read the account's saved
+    // language. Carry only a session-level display choice there.
+    if (!key) {
+      const doorPick = sessionStorage.getItem("caresits-door-language");
+      if (doorPick && STRINGS[doorPick]) return doorPick;
+    }
   } catch { /* storage may be closed */ }
   const full = (navigator.language || "en").toLowerCase();
   if (full.startsWith("yue") || full.startsWith("zh-hk") || full.startsWith("zh-tw") || full.startsWith("zh-mo")) return "yue";
@@ -964,6 +1014,7 @@ export function currentLang() {
 
 export function setLang(code) {
   try { const key = accountKey("caresits-lang"); if (key) localStorage.setItem(key, code); } catch { /* fine */ }
+  try { sessionStorage.setItem("caresits-door-language", code); } catch { /* session storage is optional */ }
 }
 
 export function t(key, lang = currentLang(), vars = null) {
