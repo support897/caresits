@@ -51,7 +51,9 @@ export function cleanJobListings(jobs) {
   return (Array.isArray(jobs) ? jobs : []).filter((job) => {
     if (!job || typeof job !== "object") return false;
     const words = [job.id, job.title, job.name, job.when, job.note, job.description].map((v) => String(v || "")).join(" ");
-    return !testLabel.test(words);
+    const hasUsefulDetails = [job.postcode, job.title, job.name, job.note, job.description]
+      .some((v) => String(v || "").trim());
+    return hasUsefulDetails && !testLabel.test(words);
   });
 }
 
