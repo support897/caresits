@@ -221,7 +221,7 @@ globalThis.document = {
   querySelectorAll: () => [],
 };
 globalThis.CARESITS_UID = "test-user-a";
-globalThis.CARESITS_ME = { uid: "test-user-a", entryRole: "career" };
+globalThis.CARESITS_ME = { uid: "test-user-a", side: "carer", entryRole: "career" };
 globalThis.localStorage.setItem("caresits-home-posture-test-user-a", "days");
 globalThis.CARESITS_FAMILY = { side: "family", children: miaLeo };
 await import("./homes.js");
@@ -239,10 +239,12 @@ t("home heading: signed-in entry role is shown as its own heading", () => {
   const headings = findByClass(homeRoot, "homeRoleHeading");
   assert.equal(headings[0]?.textContent, "Your care career");
 });
-t("carer home: profile and urgent requests replace family matching", () => {
+t("carer home: profile, urgent requests and an invite-accept path replace family matching", () => {
   const text = homeText();
   assert.ok(text.includes("Your carer profile"));
   assert.ok(text.includes("Urgent care requests"));
+  assert.ok(text.includes("Were you sent a link?"));
+  assert.ok(!text.includes("Make my link"));
   assert.ok(!text.includes("Let us find the right person for your family."));
   assert.ok(!text.includes("Find carers"));
 });

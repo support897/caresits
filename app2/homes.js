@@ -384,11 +384,13 @@ function linkCard() {
       card.append(row);
     } else {
       const mk = el("button", "mainBtn", tr("homes.makeLink")); mk.type = "button";
-      mk.addEventListener("click", () => {
+      mk.addEventListener("click", async () => {
         if (!m || !m.uid) { state.linkMsg = tr("homes.codeBad"); renderHome(); return; }
         const plan = planInviteCreate({ familyUid: m.uid, code: makeCode(), label: myName(), nowIso: nowIso(), learningPlan: m.learningPlan || window.CARESITS_LEARNING_PLAN });
         if (!plan.ok) { state.linkMsg = tr("homes.codeBad"); renderHome(); return; }
-        write(plan.kind, { path: plan.path, data: plan.data });
+        mk.disabled = true;
+        const result = await write(plan.kind, { path: plan.path, data: plan.data });
+        if (!result?.ok) { state.linkMsg = tr("homes.linkSaveFailed"); renderHome(); return; }
         try { const key = accountKey(INVITE_KEY, m?.uid); if (key) localStorage.setItem(key, plan.code); } catch { /* storage off */ }
         state.linkMsg = "";
         renderHome();
@@ -419,6 +421,11 @@ function linkCard() {
     if (!plan.ok) { state.openMsg = tr("homes.codeBad"); renderHome(); return; }
     const result = await write(plan.kind, { relPath: plan.relPath, relData: plan.relData, invitePath: plan.invitePath, stamp: plan.stamp });
     if (!result?.ok) { state.openMsg = tr("homes.codeBad"); renderHome(); return; }
+    if (plan.relData.learningPlan) {
+      const shared = normaliseLearningPlan(plan.relData.learningPlan);
+      window.CARESITS_LEARNING_PLAN = shared;
+      if (me()) window.CARESITS_ME = { ...me(), learningPlan: shared };
+    }
     state.openMsg = tr("homes.connectedOk");
     renderHome();
     window.CARESITS_SHOW_CONNECTED_PROMPT?.(plan.pairId);
@@ -593,6 +600,7 @@ function careerHome(root) {
   board.addEventListener("click", () => navTo("board"));
   jobs.append(board);
   root.append(jobs);
+  root.append(linkCard());
   root.append(guideLine("homes.careerGuide"));
 }
 

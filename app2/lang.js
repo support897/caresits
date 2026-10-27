@@ -289,6 +289,7 @@ export const STRINGS = {
     "homes.codePh": "Your code",
     "homes.connectBtn": "Connect",
     "homes.codeBad": "That code did not work. Check it and try again.",
+    "homes.linkSaveFailed": "We could not save this link. Try again.",
     "homes.connectedOk": "You are connected. Find each other in Matches.",
     "homes.manageTitle": "Run the days together",
     "homes.tileSchedule": "Schedule",
