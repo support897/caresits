@@ -11,6 +11,7 @@
   --line: #D8E4DC;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { height: 100%; }
 body { margin: 0; background: var(--ground); color: var(--ink); font-family: "Atkinson Hyperlegible", system-ui, sans-serif; font-size: 17px; line-height: 1.5; touch-action: manipulation; }
 h1, h2 { font-family: "Newsreader", Georgia, serif; font-weight: 600; line-height: 1.15; }
