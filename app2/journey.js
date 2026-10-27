@@ -3,7 +3,7 @@
 // the bundle (private answers + the matching card + the looking
 // spec) goes to window.CARESITS_SAVE when the account layer wires
 // it, and always lands in local storage so nothing is ever lost.
-import { FAMILY_PAGES, CARER_PAGES, DAYS, PARTS, BANDS, AGES } from "./questions.js";
+import { FAMILY_PAGES, CARER_PAGES, DAYS, PARTS, BANDS, AGES, EXPERIENCE_YEAR_CHOICES, experienceComplete } from "./questions.js";
 import { t as tr, applyI18n } from "./lang.js";
 import { slugify } from "../next-phase/engine/engine.mjs";
 import { COUNTRY_NAMES, packByName } from "./countries.js";
@@ -30,7 +30,6 @@ const codeOf = (f) => f.pair || f.id;
 const keyFor = (f) => { const c = codeOf(f); const qk = "q." + state.side + "." + c; return tr(qk) === qk ? "q." + c : qk; };
 const L = (f) => { const k = keyFor(f); const v = tr(k); return v === k ? f.label : v; };
 const O = (f, o, i) => { const k = keyFor(f) + ".o" + i; const v = tr(k); return v === k ? o : v; };
-const YEAR_PICKS = ["", "0", "1", "2", "3", "4", "5", "7", "10", "15", "20"];
 import { EXPANSION } from "./questions2.js";
 
 const $ = (s) => document.querySelector(s);
@@ -142,8 +141,8 @@ function fieldHtml(f) {
     body = `<div class="gridWrap"><table class="grid"><thead><tr><th></th>${PARTS.map((p) => `<th>${tr("journey.part." + p)}</th>`).join("")}</tr></thead><tbody>${DAYS.map((d) => `<tr><th>${tr("journey.day." + d)}</th>${PARTS.map((p) => `<td><button type="button" class="cell ${((v || {})[d] || []).includes(p) ? "on" : ""}" data-grid="${f.id}" data-day="${d}" data-part="${p}" aria-label="${d} ${p}"></button></td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
   }
   if (f.type === "band") body = `<div class="bandRow"><label>${tr("journey.from")} <select data-band="${f.id}" data-end="min">${AGES.map((a) => `<option value="${a}" ${String(v?.[0] ?? "") === a ? "selected" : ""}>${a}</option>`).join("")}</select></label><label>${tr("journey.to")} <select data-band="${f.id}" data-end="max">${AGES.map((a) => `<option value="${a}" ${String(v?.[1] ?? "") === a ? "selected" : ""}>${a}</option>`).join("")}</select></label></div>`;
-  if (f.type === "experience") body = `<div class="expRows">${BANDS.map((b) => `<label>${tr("journey.ages", undefined, { b })} <select data-exp="${f.id}" data-bandname="${b}">${YEAR_PICKS.map((y) => `<option value="${y}" ${String((v || {})[b] ?? "") === y ? "selected" : ""}>${y === "" ? tr("journey.pick") : y + (y === "20" ? "+" : "")}</option>`).join("")}</select></label>`).join("")}</div>`;
-  if (f.type === "expchecks") body = `<div class="expRows">${BANDS.slice(0, 4).map((b) => `<label>${tr("journey.yearsAges", undefined, { b })} <select data-exp="${f.id}" data-bandname="${b}">${YEAR_PICKS.map((y) => `<option value="${y}" ${String((v?.years || {})[b] ?? "") === y ? "selected" : ""}>${y === "" ? tr("journey.pick") : y + (y === "20" ? "+" : "")}</option>`).join("")}</select></label>`).join("")}</div><div class="chips">${["Register verified", "Document sighted", "Getting them now"].map((o, oi) => `<button type="button" class="chip ${v?.checks === o ? "on" : ""}" data-expchecks="${f.id}" data-value="${o}">${tr(["checks.level.register", "checks.level.sighted", "checks.level.getting"][oi])}</button>`).join("")}</div>`;
+  if (f.type === "experience") body = `<div class="expRows">${BANDS.map((b) => `<label>${tr("journey.ages", undefined, { b })} <select data-exp="${f.id}" data-bandname="${b}">${EXPERIENCE_YEAR_CHOICES.map((y) => `<option value="${y}" ${String((v || {})[b] ?? "") === y ? "selected" : ""}>${y === "" ? tr("journey.pick") : y + (y === "20" ? "+" : "")}</option>`).join("")}</select></label>`).join("")}</div>`;
+  if (f.type === "expchecks") body = `<div class="expRows">${BANDS.slice(0, 4).map((b) => `<label>${tr("journey.yearsAges", undefined, { b })} <select data-exp="${f.id}" data-bandname="${b}">${EXPERIENCE_YEAR_CHOICES.map((y) => `<option value="${y}" ${String((v?.years || {})[b] ?? "") === y ? "selected" : ""}>${y === "" ? tr("journey.pick") : y + (y === "20" ? "+" : "")}</option>`).join("")}</select></label>`).join("")}</div><div class="chips">${["Register verified", "Document sighted", "Getting them now"].map((o, oi) => `<button type="button" class="chip ${v?.checks === o ? "on" : ""}" data-expchecks="${f.id}" data-value="${o}">${tr(["checks.level.register", "checks.level.sighted", "checks.level.getting"][oi])}</button>`).join("")}</div>`;
   if (f.type === "homefacts") body = `<div class="chips"><button type="button" class="chip ${v?.petsOk ? "on" : ""}" data-home="${f.id}" data-key="petsOk">${tr("journey.petsOk")}</button><button type="button" class="chip ${v?.smokerOk ? "on" : ""}" data-home="${f.id}" data-key="smokerOk">${tr("journey.smokerOk")}</button><button type="button" class="chip ${v?.nonSmokerHousehold ? "on" : ""}" data-home="${f.id}" data-key="nonSmokerHousehold">${tr("journey.nonSmokerHome")}</button></div>`;
   if (f.companionText) body += `<input type="text" data-field="${f.id}Note" value="${state.answers[f.id + "Note"] ?? ""}" placeholder="${tr("journey.addNote")}" autocomplete="off">`;
   const strength = f.strength
@@ -158,7 +157,7 @@ function answered(f) {
   if (Array.isArray(v)) return v.length > 0;
   if (f.type === "grid") return Object.values(v).some((a) => a.length);
   if (f.type === "band") return Array.isArray(v) && v[0] != null && v[1] != null;
-  if (f.type === "experience") return Object.values(v).some((x) => x !== "" && x != null);
+  if (f.type === "experience") return experienceComplete(v);
   if (f.type === "expchecks") return Boolean(v?.checks) || Object.values(v?.years || {}).some((x) => x !== "" && x != null);
   if (f.type === "homefacts") return true;
   return true;
@@ -209,7 +208,7 @@ function wire() {
     if (st) state.strengths[st.dataset.strength] = st.dataset.value;
     persistDraft(); render();
   });
-  $("#fields").addEventListener("change", (e) => { const ev = new Event("input", { bubbles: true }); Object.defineProperty(ev, "target", { value: e.target }); onFieldInput(ev); });
+  $("#fields").addEventListener("change", (e) => { onFieldInput(e); render(); });
   $("#fields").addEventListener("input", onFieldInput);
   function onFieldInput(e) {
     const inp = e.target;
