@@ -73,9 +73,9 @@ async function setActiveSide(side) {
     return false;
   }
   if (status) status.textContent = "";
-  if (typeof window.CARESITS_TOUR_START_SIDE === "function") window.CARESITS_TOUR_START_SIDE(side);
   if (side === "communicate") show("thread");
   else show("home");
+  if (typeof window.CARESITS_TOUR_START_SIDE === "function") window.CARESITS_TOUR_START_SIDE(side);
   return true;
 }
 window.CARESITS_SET_ACTIVE_SIDE = setActiveSide;

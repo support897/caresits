@@ -335,6 +335,14 @@ export function applyBackground(choice, dataUrl) {
 export function renderSettings(root) {
   root.replaceChildren();
   root.append(el("h2", "findTitle", tr("shell.settings")));
+  const tourCard = el("div", "findCard");
+  tourCard.append(el("h3", "findName", tr("tour.settingsTitle")));
+  tourCard.append(el("p", null, tr("tour.settingsBody")));
+  const replay = el("button", "mainBtn", tr("tour.replay"));
+  replay.type = "button";
+  replay.addEventListener("click", () => window.CARESITS_REPLAY_SIDE_TOUR?.());
+  tourCard.append(replay);
+  root.append(tourCard);
   const card = el("div", "findCard");
   card.append(el("h3", "findName", tr("trust.background")));
   card.append(el("p", null, tr("trust.backgroundBody")));

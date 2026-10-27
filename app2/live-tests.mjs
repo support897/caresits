@@ -28,6 +28,11 @@ t("active side: each view persists in the signed-in account app document", () =>
   assert.equal(routeWrite("active-side", { side: "career" }, "member-b").path, "users/member-b/meta/app");
   assert.equal(routeWrite("active-side", { side: "admin" }, "member-a").ok, false);
 });
+t("side tours: completion is remembered in that account without sharing other sides", () => {
+  assert.deepEqual(routeWrite("side-tour", { side: "family" }, "member-a"), { ok: true, op: "merge", path: "users/member-a/meta/app", data: { tourFamilyDone: true } });
+  assert.deepEqual(routeWrite("side-tour", { side: "career" }, "member-b").data, { tourCareerDone: true });
+  assert.equal(routeWrite("side-tour", { side: "admin" }, "member-a").ok, false);
+});
 t("router: the two homes kinds land on their ruled shapes", () => {
   const inv = routeWrite("invite-create", { path: "invites/K7P2Q9AB", data: { familyUid: "a", label: "", createdAt: "x", usedBy: null } }, "a");
   assert.equal(inv.op, "set"); assert.equal(inv.path, "invites/K7P2Q9AB");

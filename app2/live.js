@@ -67,6 +67,10 @@ export function routeWrite(kind, payload, uid) {
     case "appearance": return { ok: true, op: "merge", path: `users/${uid}/meta/app`, data: { background: payload.choice } };
     case "entry-role": return ENTRY_ROLES.includes(payload.entryRole) ? { ok: true, op: "merge", path: `users/${uid}/meta/app`, data: { entryRole: payload.entryRole } } : { ok: false, reason: "invalid-role" };
     case "active-side": return ENTRY_ROLES.includes(payload.side) ? { ok: true, op: "merge", path: `users/${uid}/meta/app`, data: { activeSide: payload.side } } : { ok: false, reason: "invalid-side" };
+    case "side-tour": {
+      const field = { family: "tourFamilyDone", career: "tourCareerDone", communicate: "tourCommunicateDone" }[payload.side];
+      return field ? { ok: true, op: "merge", path: `users/${uid}/meta/app`, data: { [field]: true } } : { ok: false, reason: "invalid-side" };
+    }
     case "learning-plan": {
       const plan = publicLearningPlan(normaliseLearningPlan(payload.plan));
       return { ok: true, op: "learningPlan", path: `users/${uid}/meta/app`, profilePath: `profiles/${uid}`, data: { learningPlan: plan }, profileData: { learningPlan: plan }, pairPath: typeof payload.pairId === "string" && payload.pairId ? `relationships/${payload.pairId}` : "", pairData: { learningPlan: plan } };
@@ -581,6 +585,7 @@ export async function bootLive() {
             ...(window.CARESITS_ME || { uid }),
             uid, side: effectiveSide, entryRole,
             activeSide: ["family", "career", "communicate"].includes(appDoc?.activeSide) ? appDoc.activeSide : entryRole,
+            sideTours: { family: appDoc?.tourFamilyDone === true, career: appDoc?.tourCareerDone === true, communicate: appDoc?.tourCommunicateDone === true },
             learningPlan: appDoc?.learningPlan || cardData?.learningPlan ? normaliseLearningPlan(appDoc?.learningPlan || cardData?.learningPlan) : null,
             country: qData.country || qData.answers?.country || window.CARESITS_ME?.country || "",
           };
