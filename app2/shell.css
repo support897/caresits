@@ -209,3 +209,15 @@ html[data-theme="white"] body { background: #FFFFFF; }
 .homeMatchName { font-weight: 800; }
 .homeMatchMeta { display: inline-flex; gap: 8px; align-items: center; }
 .homeMatchWhy { color: var(--soft); font-size: 14px; }
+
+.learningCard { display: grid; gap: 12px; }
+.learningStep { margin: 4px 0 0; color: var(--entry-accent, #1e4d44); font-weight: 700; }
+.learningSubhead { margin: 6px 0 0; font-weight: 700; }
+.learningChoices { margin-block: 6px; }
+.learningAgeList { display: grid; gap: 10px; }
+.learningAgeRow { display: grid; grid-template-columns: minmax(72px, 1fr) minmax(150px, 2fr) auto; align-items: center; gap: 8px; }
+.learningChildLabel { font-weight: 600; }
+.learningAgeRow select, .learningCard input { min-width: 0; }
+.learningAdd { justify-self: start; min-height: 44px; }
+.learningActions { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 420px) { .learningAgeRow { grid-template-columns: 1fr; } }

@@ -352,9 +352,22 @@ match /profiles/{uid} {
   allow create, update: if signedIn() && !isAnon()
     && request.auth.uid == uid
     && request.resource.data.keys().hasOnly(
-      ["side", "displayName", "postcode", "photoUrl", "card", "looking", "updatedAt", "level"])
+      ["side", "displayName", "postcode", "photoUrl", "card", "looking", "updatedAt", "level", "learningPlan"])
     && (!("level" in request.resource.data)
         || request.resource.data.level in ["explore", "quick", "better", "full"])
+    && (!("learningPlan" in request.resource.data)
+        || (request.resource.data.learningPlan is map
+            && request.resource.data.learningPlan.keys().hasOnly(["children", "areas", "styles", "languages", "otherLanguage", "step", "setupComplete", "updatedAt"])
+            && request.resource.data.learningPlan.children is list
+            && request.resource.data.learningPlan.children.size() <= 20
+            && request.resource.data.learningPlan.areas is list
+            && request.resource.data.learningPlan.areas.size() <= 10
+            && request.resource.data.learningPlan.styles is list
+            && request.resource.data.learningPlan.styles.size() <= 10
+            && request.resource.data.learningPlan.languages is list
+            && request.resource.data.learningPlan.languages.size() <= 20
+            && request.resource.data.learningPlan.otherLanguage is string
+            && request.resource.data.learningPlan.otherLanguage.size() <= 60))
     && request.resource.data.card.keys().hasOnly(
       ["childrenBands", "languages", "pets", "smokerHousehold", "scheduleNeed",
        "payOffered", "age", "nationality", "cultureOffer", "smoker", "experience", "checksLevel",
@@ -494,7 +507,7 @@ match /relationships/{pairId} {
   allow read: if signedIn() && request.auth.uid in resource.data.members;
   allow create: if signedIn() && !isAnon()
     && request.resource.data.keys().hasOnly(
-      ["members", "familyUid", "carerUid", "state", "createdBy", "createdAt", "createdDay"])
+      ["members", "familyUid", "carerUid", "state", "createdBy", "createdAt", "createdDay", "learningPlan"])
     && request.resource.data.familyUid != request.resource.data.carerUid
     && request.resource.data.members.size() == 2
     && request.resource.data.members.hasAll(
@@ -502,6 +515,8 @@ match /relationships/{pairId} {
     && request.auth.uid in request.resource.data.members
     && request.resource.data.createdBy == request.auth.uid
     && request.resource.data.state == "pending"
+    && (!("learningPlan" in request.resource.data)
+        || request.resource.data.learningPlan is map)
     && !("contactBy" in request.resource.data)
     && ((request.resource.data.familyUid == request.auth.uid
           && get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.side == "family")
@@ -514,8 +529,14 @@ match /relationships/{pairId} {
     && request.auth.uid in resource.data.members
     && !blockedEitherWay(resource.data.familyUid, resource.data.carerUid)
     && (
+      // Learning preferences belong to this pair and are editable only by
+      // either member after contact is accepted. OWNER MUST DEPLOY this rules text.
+      (resource.data.state in ["contact", "hired"]
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["learningPlan"])
+        && request.resource.data.learningPlan is map
+        && request.resource.data.learningPlan.keys().hasOnly(["children", "areas", "styles", "languages", "otherLanguage", "step", "setupComplete", "updatedAt"]))
       // Ending is unilateral, from any state; state only.
-      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(["state"])
+      || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(["state"])
         && request.resource.data.state == "ended")
       // The contact step: the member who did not create accepts,
       // and is recorded as contactBy in the same write.

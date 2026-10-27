@@ -177,3 +177,77 @@ export function planWeek(children, mondayISO) {
   }
   return out;
 }
+
+
+// Communicate's optional learning plan. A band list is deliberately
+// separate from the legacy planner above so existing day plans stay stable.
+export const LEARNING_AGE_BANDS = [
+  { id: "0-6m", key: "learning.age.0-6m" },
+  { id: "6-12m", key: "learning.age.6-12m" },
+  { id: "1-2y", key: "learning.age.1-2y" },
+  { id: "2-3y", key: "learning.age.2-3y" },
+  { id: "3-5y", key: "learning.age.3-5y" },
+  { id: "5-8y", key: "learning.age.5-8y" },
+  { id: "8-12y", key: "learning.age.8-12y" },
+];
+export const LEARNING_BAND_IDS = LEARNING_AGE_BANDS.map((band) => band.id);
+export const LEARNING_AREAS = [
+  "language", "movement", "music", "art", "nature", "numbers",
+  "feelings", "early-reading", "independence", "sensory-play",
+];
+export const LEARNING_STYLES = [
+  "montessori", "waldorf", "reggio-emilia", "play-based", "forest-school",
+  "charlotte-mason", "traditional", "screen-light", "no-preference",
+];
+const uniqueKnown = (values, allowed) => Array.isArray(values)
+  ? [...new Set(values.filter((value) => allowed.includes(value)))].slice(0, 20)
+  : [];
+
+// A whole-year age from the existing family profile can only suggest a
+// conservative band. Zero maps to the youngest band; families can change it.
+export function learningBandForAge(ageYears) {
+  const age = Number(ageYears);
+  if (!Number.isInteger(age) || age < 0 || age > 12) return "";
+  if (age === 0) return "0-6m";
+  if (age === 1) return "1-2y";
+  if (age === 2) return "2-3y";
+  if (age <= 4) return "3-5y";
+  if (age <= 8) return "5-8y";
+  return "8-12y";
+}
+
+// Child names and IDs never travel into the public profile or the shared
+// pair plan: only age bands and optional learning preferences are kept.
+export function normaliseLearningPlan(raw) {
+  const source = raw && typeof raw === "object" ? raw : {};
+  const children = Array.isArray(source.children)
+    ? source.children.map((child) => ({ band: LEARNING_BAND_IDS.includes(child?.band) ? child.band : "" })).slice(0, 20)
+    : [];
+  return {
+    children,
+    areas: uniqueKnown(source.areas, LEARNING_AREAS),
+    styles: uniqueKnown(source.styles, LEARNING_STYLES),
+    languages: Array.isArray(source.languages)
+      ? [...new Set(source.languages.filter((v) => typeof v === "string" && v.trim()).map((v) => v.trim()))].slice(0, 20)
+      : [],
+    otherLanguage: typeof source.otherLanguage === "string" ? source.otherLanguage.trim().slice(0, 60) : "",
+    step: Number.isInteger(source.step) ? Math.max(0, Math.min(2, source.step)) : 0,
+    setupComplete: source.setupComplete === true,
+    updatedAt: typeof source.updatedAt === "string" ? source.updatedAt : "",
+  };
+}
+export const normalizeLearningPlan = normaliseLearningPlan;
+
+export function publicLearningPlan(raw) {
+  const plan = normaliseLearningPlan(raw);
+  return {
+    children: plan.children,
+    areas: plan.areas,
+    styles: plan.styles,
+    languages: plan.languages,
+    otherLanguage: plan.otherLanguage,
+    step: plan.step,
+    setupComplete: plan.setupComplete,
+    updatedAt: plan.updatedAt,
+  };
+}

@@ -12,7 +12,8 @@
 // wires the writes the live layer already routes.
 import { t as tr } from "./lang.js";
 import { accountKey, doneKey, draftKey } from "./storage-keys.js";
-import { planDay, planWeek, mondayOfISO, INTERESTS } from "./activities.js";
+import { planDay, planWeek, mondayOfISO, INTERESTS, LEARNING_AGE_BANDS, LEARNING_AREAS, LEARNING_STYLES, normaliseLearningPlan, learningBandForAge } from "./activities.js";
+import { LANGS } from "./questions.js";
 import { repairChild, ageText, todayLineText } from "./family.js";
 import { assembleBrowse } from "./browse.js";
 import { FAMILY_PAGES, CARER_PAGES } from "./questions.js";
@@ -592,8 +593,188 @@ function careerHome(root) {
   root.append(guideLine("homes.careerGuide"));
 }
 
+function learningPlanKey() { return accountKey("caresits-learning-plan-draft"); }
+function saveLearningDraft(plan) {
+  const clean = normaliseLearningPlan({ ...plan, updatedAt: new Date().toISOString() });
+  const key = learningPlanKey();
+  try { if (key) localStorage.setItem(key, JSON.stringify(clean)); } catch { /* private storage is optional */ }
+  window.CARESITS_LEARNING_PLAN = clean;
+  if (window.CARESITS_ME) window.CARESITS_ME = { ...window.CARESITS_ME, learningPlan: clean };
+  return clean;
+}
+function initialLearningPlan() {
+  const stored = readJson(learningPlanKey());
+  const shared = window.CARESITS_LEARNING_PLAN || window.CARESITS_ME?.learningPlan;
+  const pairPlan = (window.CARESITS_PHASE_C?.rels || []).find((rel) => ["contact", "hired"].includes(rel.state) && rel.learningPlan)?.learningPlan;
+  if (pairPlan) return normaliseLearningPlan(pairPlan);
+  if (shared) return normaliseLearningPlan(shared);
+  if (stored) return normaliseLearningPlan(stored);
+  const kids = myChildren();
+  return normaliseLearningPlan({ children: kids.map((kid) => ({ band: learningBandForAge(kid.ageYears) })) });
+}
+function persistLearningPlan(plan) {
+  const clean = saveLearningDraft(plan);
+  const rels = window.CARESITS_PHASE_C?.rels || [];
+  const pair = rels.find((rel) => ["contact", "hired"].includes(rel.state));
+  const pairId = pair?.id || "";
+  const save = window.CARESITS_WRITE;
+  if (typeof save === "function") {
+    Promise.resolve(save("learning-plan", { plan: clean, pairId })).then((result) => {
+      if (result && result.ok && pairId) {
+        window.CARESITS_LEARNING_PLAN = clean;
+        window.CARESITS_RENDER_HOME?.();
+      }
+    }).catch(() => {});
+  }
+  return clean;
+}
+function learningChoiceRow(items, values, keyPrefix, onChange) {
+  const row = el("div", "chipRow learningChoices");
+  for (const item of items) {
+    const id = typeof item === "string" ? item : item.id;
+    const label = typeof item === "string" ? tr("learning." + keyPrefix + "." + item) : tr(item.key);
+    const button = el("button", "chipBtn" + (values.includes(id) ? " on" : ""), label);
+    button.type = "button";
+    button.setAttribute?.("aria-pressed", String(values.includes(id)));
+    button.addEventListener("click", () => onChange(id));
+    row.append(button);
+  }
+  return row;
+}
+function learningSetupCard() {
+  let plan = initialLearningPlan();
+  const card = el("section", "cardIn homeCard learningCard");
+  card.append(el("h2", "findTitle", tr("learning.title")));
+  card.append(el("p", "homeBody", tr("learning.lead")));
+  if (!plan.setupComplete) {
+    const step = plan.step;
+    const stepName = ["learning.stepAge", "learning.stepAreas", "learning.stepStyle"][step];
+    card.append(el("p", "learningStep", tr("learning.step", undefined, { n: step + 1 })), el("h3", "findName", tr(stepName)));
+    if (step === 0) {
+      card.append(el("p", "findPlace", tr("learning.ageHelp")));
+      const list = el("div", "learningAgeList");
+      if (!plan.children.length) plan.children = [{ band: "" }];
+      const renderAges = () => {
+        list.replaceChildren();
+        plan.children.forEach((child, index) => {
+          const row = el("label", "learningAgeRow");
+          const name = el("span", "learningChildLabel", tr("learning.child", undefined, { n: index + 1 }));
+          const select = el("select", "txtIn");
+          select.setAttribute?.("aria-label", tr("learning.childAge", undefined, { n: index + 1 }));
+          const blank = el("option", null, tr("learning.chooseAge")); blank.value = ""; select.append(blank);
+          for (const band of LEARNING_AGE_BANDS) { const option = el("option", null, tr(band.key)); option.value = band.id; select.append(option); }
+          select.value = child.band || "";
+          select.addEventListener("change", () => {
+            plan.children[index] = { band: select.value };
+            plan = saveLearningDraft(plan);
+          });
+          row.append(name, select);
+          if (plan.children.length > 1) {
+            const remove = el("button", "quietBtn", tr("learning.removeChild"));
+            remove.type = "button";
+            remove.addEventListener("click", () => {
+              plan.children.splice(index, 1);
+              plan = saveLearningDraft(plan);
+              renderAges();
+            });
+            row.append(remove);
+          }
+          list.append(row);
+        });
+      };
+      renderAges();
+      const add = el("button", "quietBtn learningAdd", tr("learning.addChild"));
+      add.type = "button";
+      add.addEventListener("click", () => {
+        plan.children.push({ band: "" });
+        plan = saveLearningDraft(plan);
+        renderAges();
+      });
+      card.append(list, add);
+    } else if (step === 1) {
+      card.append(el("p", "findPlace", tr("learning.optional")));
+      card.append(learningChoiceRow(LEARNING_AREAS, plan.areas, "area", (id) => {
+        plan.areas = plan.areas.includes(id) ? plan.areas.filter((v) => v !== id) : [...plan.areas, id];
+        plan = saveLearningDraft(plan);
+        window.CARESITS_RENDER_HOME?.();
+      }));
+    } else {
+      card.append(el("p", "findPlace", tr("learning.optional")));
+      card.append(el("p", "learningSubhead", tr("learning.stylesTitle")));
+      card.append(learningChoiceRow(LEARNING_STYLES, plan.styles, "style", (id) => {
+        plan.styles = plan.styles.includes(id) ? plan.styles.filter((v) => v !== id) : [...plan.styles, id];
+        plan = saveLearningDraft(plan);
+        window.CARESITS_RENDER_HOME?.();
+      }));
+      card.append(el("p", "learningSubhead", tr("learning.languagesTitle")));
+      const languageOptions = [...new Set([...LANGS, "Cantonese", "Other"])];
+      const langRow = el("div", "chipRow learningChoices");
+      for (const language of languageOptions) {
+        const selected = plan.languages.includes(language);
+        const button = el("button", "chipBtn" + (selected ? " on" : ""), language === "Other" ? tr("learning.other") : language);
+        button.type = "button";
+        button.setAttribute?.("aria-pressed", String(selected));
+        button.addEventListener("click", () => {
+          plan.languages = selected ? plan.languages.filter((v) => v !== language) : [...plan.languages, language];
+          plan = saveLearningDraft(plan);
+          window.CARESITS_RENDER_HOME?.();
+        });
+        langRow.append(button);
+      }
+      card.append(langRow);
+      if (plan.languages.includes("Other")) {
+        const other = el("input", "txtIn");
+        other.placeholder = tr("learning.otherLanguagePh");
+        other.value = plan.otherLanguage;
+        other.addEventListener("input", () => { plan.otherLanguage = other.value; plan = saveLearningDraft(plan); });
+        card.append(other);
+      }
+    }
+    const actions = el("div", "homeBtnRow learningActions");
+    if (step > 0) {
+      const back = el("button", "ghostBtn", tr("learning.back"));
+      back.type = "button";
+      back.addEventListener("click", () => { plan = persistLearningPlan({ ...plan, step: step - 1, setupComplete: false }); window.CARESITS_RENDER_HOME?.(); });
+      actions.append(back);
+    }
+    const skip = el("button", "ghostBtn", tr("learning.skip"));
+    skip.type = "button";
+    skip.addEventListener("click", () => {
+      const last = step === 2;
+      plan = persistLearningPlan({ ...plan, step: last ? 2 : step + 1, setupComplete: last });
+      window.CARESITS_RENDER_HOME?.();
+    });
+    const next = el("button", "mainBtn", tr(step === 2 ? "learning.finish" : "learning.continue"));
+    next.type = "button";
+    next.addEventListener("click", () => {
+      const last = step === 2;
+      plan = persistLearningPlan({ ...plan, step: last ? 2 : step + 1, setupComplete: last });
+      window.CARESITS_RENDER_HOME?.();
+    });
+    actions.append(skip, next);
+    card.append(actions);
+  } else {
+    const summary = [];
+    const ages = plan.children.map((child) => LEARNING_AGE_BANDS.find((band) => band.id === child.band)).filter(Boolean).map((band) => tr(band.key));
+    if (ages.length) summary.push(ages.join(", "));
+    if (plan.areas.length) summary.push(plan.areas.map((id) => tr("learning.area." + id)).join(", "));
+    if (plan.styles.length) summary.push(plan.styles.map((id) => tr("learning.style." + id)).join(", "));
+    if (plan.languages.length) summary.push(plan.languages.join(", "));
+    card.append(el("p", "homeBody", summary.join(" · ") || tr("learning.noChoices")));
+    const edit = el("button", "ghostBtn", tr("learning.edit"));
+    edit.type = "button";
+    edit.addEventListener("click", () => {
+      plan = persistLearningPlan({ ...plan, step: 0, setupComplete: false });
+      window.CARESITS_RENDER_HOME?.();
+    });
+    card.append(edit);
+  }
+  return card;
+}
+
 function communicateHome(root) {
   root.append(greeting("homes.communicateLead"));
+  root.append(learningSetupCard());
   const card = el("section", "cardIn homeCard");
   card.append(el("h2", "findTitle", tr("homes.conversations")));
   card.append(el("p", "homeBody", tr("homes.communicateBody")));

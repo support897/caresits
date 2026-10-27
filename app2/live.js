@@ -9,6 +9,7 @@
 import { levelOf, mergeDeepAnswers } from "./levels.js";
 import { accountKey, clearSessionMarkers } from "./storage-keys.js";
 import { cleanJobListings } from "./pair-actions.js";
+import { normaliseLearningPlan, publicLearningPlan } from "./activities.js";
 import { applyI18n } from "./lang.js";
 import { resolvePlan, entitlementFromRecord, plusExtrasOpen, withTimeout } from "../accounts/account.js";
 
@@ -65,6 +66,10 @@ export function routeWrite(kind, payload, uid) {
     case "emergency": return { ok: true, op: "merge", path: `users/${uid}/meta/emergency`, data: { name: payload.name, phone: payload.phone } };
     case "appearance": return { ok: true, op: "merge", path: `users/${uid}/meta/app`, data: { background: payload.choice } };
     case "entry-role": return ENTRY_ROLES.includes(payload.entryRole) ? { ok: true, op: "merge", path: `users/${uid}/meta/app`, data: { entryRole: payload.entryRole } } : { ok: false, reason: "invalid-role" };
+    case "learning-plan": {
+      const plan = publicLearningPlan(normaliseLearningPlan(payload.plan));
+      return { ok: true, op: "learningPlan", path: `users/${uid}/meta/app`, profilePath: `profiles/${uid}`, data: { learningPlan: plan }, profileData: { learningPlan: plan }, pairPath: typeof payload.pairId === "string" && payload.pairId ? `relationships/${payload.pairId}` : "", pairData: { learningPlan: plan } };
+    }
     case "language": return { ok: true, op: "merge", path: `users/${uid}/meta/app`, data: { language: payload.code } };
     case "name": return { ok: true, op: "merge", path: `users/${uid}`, data: { displayName: payload.displayName } };
     case "message": return { ok: true, op: "add", path: `users/${uid}/messages`, data: { pairId: payload.pairId, text: payload.text, at: payload.at, mine: true } };
@@ -137,7 +142,8 @@ function resetMemberSeams(uid) {
   pendingTrustName = "";
   lastTrustInputs = null;
   if (typeof window === "undefined") return;
-  window.CARESITS_ME = { uid, side: "", name: "", entryRole: "" };
+  window.CARESITS_ME = { uid, side: "", name: "", entryRole: "", activeSide: "" };
+  window.CARESITS_LEARNING_PLAN = null;
   window.CARESITS_TRUST = { me: { uid, side: "", name: "" }, checks: [], reviews: [] };
   window.CARESITS_QUESTIONS = null;
   window.CARESITS_PROFILE_COMPLETE = false;
@@ -243,6 +249,14 @@ export function makeWriter(fs, db, uid) {
       if (r.op === "set") await fs.setDoc(docAt(r.path), data);
       else if (r.op === "update") await fs.updateDoc(docAt(r.path), data);
       else if (r.op === "merge") await fs.setDoc(docAt(r.path), data, { merge: true });
+      else if (r.op === "learningPlan") {
+        const batch = fs.writeBatch(db);
+        batch.set(docAt(r.path), data, { merge: true });
+        const profile = await fs.getDoc(docAt(r.profilePath));
+        if (profile.exists()) batch.set(docAt(r.profilePath), r.profileData, { merge: true });
+        if (r.pairPath) batch.update(docAt(r.pairPath), r.pairData);
+        await batch.commit();
+      }
       else if (r.op === "add") await fs.addDoc(colAt(r.path), data);
       else if (r.op === "delete") await fs.deleteDoc(docAt(r.path));
       else if (r.op === "binRestore") {
@@ -565,17 +579,20 @@ export async function bootLive() {
           window.CARESITS_ME = {
             ...(window.CARESITS_ME || { uid }),
             uid, side: effectiveSide, entryRole,
+            activeSide: ["family", "career", "communicate"].includes(appDoc?.activeSide) ? appDoc.activeSide : entryRole,
+            learningPlan: normaliseLearningPlan(appDoc?.learningPlan || cardData?.learningPlan || {}),
             country: qData.country || qData.answers?.country || window.CARESITS_ME?.country || "",
           };
-          if (entryRole) {
-            document.documentElement.dataset.entryRole = entryRole;
-            window.CARESITS_ROLE_NAV?.(entryRole);
+          window.CARESITS_LEARNING_PLAN = window.CARESITS_ME.learningPlan;
+          if (window.CARESITS_ME.activeSide) {
+            document.documentElement.dataset.entryRole = window.CARESITS_ME.activeSide;
+            window.CARESITS_ROLE_NAV?.(window.CARESITS_ME.activeSide);
           } else {
             delete document.documentElement.dataset.entryRole;
           }
           window.CARESITS_RENDER_HOME?.();
           window.CARESITS_ACCOUNT_READY = true;
-          document.dispatchEvent(new CustomEvent("caresits-account-ready", { detail: { uid, entryRole } }));
+          document.dispatchEvent(new CustomEvent("caresits-account-ready", { detail: { uid, entryRole, activeSide: window.CARESITS_ME.activeSide } }));
           window.CARESITS_WEEK = weekSeamFrom({ timesheets: sheets, reminderDoc, emergencyDoc });
           if (typeof window.CARESITS_WEEK_RENDER === "function") window.CARESITS_WEEK_RENDER();
           if (appDoc && appDoc.background) {
@@ -655,6 +672,11 @@ export async function bootLive() {
         // the seam carries empty lists and the designed empty
         // states stand.
         const seam = await fetchPhaseC(fs, db, uid, window.CARESITS_ME?.side || profile.side || "");
+        const sharedRel = (seam.rels || []).find((rel) => ["contact", "hired"].includes(rel.state) && rel.learningPlan);
+        if (sharedRel?.learningPlan) {
+          window.CARESITS_LEARNING_PLAN = normaliseLearningPlan(sharedRel.learningPlan);
+          window.CARESITS_ME = { ...(window.CARESITS_ME || {}), learningPlan: window.CARESITS_LEARNING_PLAN };
+        }
         window.CARESITS_PHASE_C = seam;
         if (typeof window.CARESITS_PHASE_C_RENDER === "function") window.CARESITS_PHASE_C_RENDER();
         // Leg 14: the thread seam publishes from the same

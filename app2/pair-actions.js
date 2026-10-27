@@ -4,7 +4,7 @@
 // ride the account layer when the rules publish.
 export const pairIdFor = (a, b) => (a < b ? `${a}_${b}` : `${b}_${a}`);
 
-export function planContact({ familyUid, carerUid, createdBy, nowIso, createdDay, profileComplete }) {
+export function planContact({ familyUid, carerUid, createdBy, nowIso, createdDay, profileComplete, learningPlan = null }) {
   // The browse gate (founder ruling, 15 Oct 2026): everyone can look at
   // everyone, free. Messaging anyone takes a finished profile
   // and the full questionnaire. Browsing itself is never gated.
@@ -19,6 +19,7 @@ export function planContact({ familyUid, carerUid, createdBy, nowIso, createdDay
       familyUid, carerUid,
       state: "pending",
       createdBy, createdAt: nowIso, createdDay,
+      ...(learningPlan && typeof learningPlan === "object" ? { learningPlan } : {}),
     },
   };
 }
