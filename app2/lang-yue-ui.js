@@ -4,7 +4,7 @@
 // HUMAN CHECK RULE: keys under "checks." and "legal." carry NO
 // Chinese values here, exactly as in Spanish. They stay English
 // until a human checker approves words for this language.
-// Coverage: 611 translated app UI keys; human-check phrases remain in English by design.
+// Coverage: 639 translated app UI keys; human-check phrases remain in English by design.
 export const UI_YUE = {
  "door.tag": "找到照護，分享每一天。",
 
@@ -49,6 +49,26 @@ export const UI_YUE = {
  "tour.t3b": "查找會列出合適的人選。匹配和緊急公告板也都在「尋找照護」裏。",
  "tour.t4t": "您的家庭空間",
  "tour.t4b": "孩子、每日故事和排班表會隨着您的使用在這裏成長。您的東西只屬於您自己。",
+ "trust.sideCommunicate": "溝通",
+ "homes.careerLead": "完善你的照顧資料，並與家庭建立聯繫。",
+ "homes.careerProfileTitle": "你的照顧者資料",
+ "homes.careerProfileBody": "回答照顧者問題，讓家庭了解你的經驗和可服務時間。",
+ "homes.careerProfileDone": "你的照顧者資料已準備好。",
+ "homes.careerProfileStart": "你的資料正等待你的回答。",
+ "homes.careerQuestionnaire": "打開你的問卷",
+ "homes.careerJobsTitle": "緊急照顧請求",
+ "homes.careerJobsBody": "查看近期需要照顧的家庭請求。",
+ "homes.careerJobsOpen": "查看緊急請求",
+ "homes.careerGuide": "你的資料和回答能幫助家庭了解你提供的照顧。",
+ "homes.communicateLead": "一個輕鬆保持聯絡的地方。",
+ "homes.conversations": "你的對話",
+ "homes.communicateBody": "準備好時開啟對話。這裡用來保持聯絡，不用來配對。",
+ "homes.openConversations": "開啟對話",
+ "homes.noConversations": "目前還沒有對話。與人聯繫後，你的訊息會顯示在這裡。",
+ "tour.carer.t4t": "你的照顧工作",
+ "tour.carer.t4b": "你的個人資料、經驗和可服務時間會在這裡逐步完善。你的資料只屬於你。",
+ "tour.communicate.t4t": "你的對話",
+ "tour.communicate.t4b": "你的對話和共享計劃都在這裡。你的資料只屬於你。",
  "tour.t5t": "一切就緒",
  "tour.t5b": "介紹就到這裏。需要我的時候，我就在角落裏。",
  "tour.namePh": "您的名字",
@@ -173,6 +193,11 @@ export const UI_YUE = {
  "board.lead": "您附近急需幫助。瀏覽永遠免費。",
  "board.postTitle": "發佈工作",
  "board.whenPh": "甚麼時候？今天、明天、這個週末",
+ "board.when": "何時",
+ "board.today": "今天",
+ "board.tomorrow": "明天",
+ "board.weekend": "今個週末",
+ "board.postMissing": "請填上郵政編號，並簡單說說你需要的幫助。",
  "board.postcodePh": "您的郵政編號",
  "board.notePh": "簡單說說您需要的幫助",
  "board.post": "發佈工作",
@@ -211,6 +236,9 @@ export const UI_YUE = {
  "family.addChild": "新增孩子",
  "family.namePh": "他們的名字",
  "family.add": "新增",
+ "family.editChild": "編輯孩子",
+ "family.saveChild": "儲存更改",
+ "family.cancel": "取消",
  "family.removeTitle": "移除 {name} 嗎？",
  "family.removeBody": "這會把 {name} 移出您的應用，放進最近刪除，在那裏保留 30 天。永久刪除無法撤銷。如果您想留一份副本，請先下載您的數據。",
  "family.yesRemove": "是的，移除",

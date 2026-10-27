@@ -4,7 +4,7 @@
 // HUMAN CHECK RULE: keys under "checks." and "legal." carry NO
 // Vietnamese values here, exactly as in Spanish. They stay English
 // until a human checker approves words for this language.
-// Coverage: 611 translated app UI keys; human-check phrases remain in English by design.
+// Coverage: 639 translated app UI keys; human-check phrases remain in English by design.
 export const UI_VI = {
  "door.tag": "Tìm người chăm sóc. Chia sẻ mỗi ngày.",
 
@@ -49,6 +49,26 @@ export const UI_VI = {
  "tour.t3b": "Tìm kiếm sẽ xếp hàng những người phù hợp. Các cặp ghép đôi và bảng việc gấp cũng nằm trong Tìm người chăm sóc.",
  "tour.t4t": "Không gian gia đình của bạn",
  "tour.t4b": "Các bé, Câu chuyện mỗi ngày và lịch trực sẽ lớn dần tại đây khi bạn dùng. Mọi thứ của bạn là của riêng bạn.",
+ "trust.sideCommunicate": "Giao tiếp",
+ "homes.careerLead": "Hoàn thiện hồ sơ chăm sóc và kết nối với các gia đình.",
+ "homes.careerProfileTitle": "Hồ sơ người chăm sóc của bạn",
+ "homes.careerProfileBody": "Trả lời câu hỏi dành cho người chăm sóc để các gia đình hiểu kinh nghiệm và thời gian rảnh của bạn.",
+ "homes.careerProfileDone": "Hồ sơ người chăm sóc của bạn đã sẵn sàng.",
+ "homes.careerProfileStart": "Hồ sơ của bạn đang chờ câu trả lời.",
+ "homes.careerQuestionnaire": "Mở bảng câu hỏi của bạn",
+ "homes.careerJobsTitle": "Yêu cầu chăm sóc khẩn cấp",
+ "homes.careerJobsBody": "Xem yêu cầu từ các gia đình cần người chăm sóc sớm.",
+ "homes.careerJobsOpen": "Xem yêu cầu khẩn cấp",
+ "homes.careerGuide": "Hồ sơ và câu trả lời giúp các gia đình hiểu dịch vụ chăm sóc bạn cung cấp.",
+ "homes.communicateLead": "Một nơi nhẹ nhàng để giữ liên lạc.",
+ "homes.conversations": "Các cuộc trò chuyện của bạn",
+ "homes.communicateBody": "Mở cuộc trò chuyện khi bạn sẵn sàng. Đây là nơi giữ liên lạc, không phải ghép đôi.",
+ "homes.openConversations": "Mở cuộc trò chuyện",
+ "homes.noConversations": "Chưa có cuộc trò chuyện nào. Tin nhắn sẽ hiện ở đây khi bạn kết nối với ai đó.",
+ "tour.carer.t4t": "Công việc chăm sóc của bạn",
+ "tour.carer.t4b": "Hồ sơ, kinh nghiệm và thời gian rảnh của bạn sẽ được hoàn thiện tại đây. Thông tin của bạn chỉ thuộc về bạn.",
+ "tour.communicate.t4t": "Cuộc trò chuyện của bạn",
+ "tour.communicate.t4b": "Các cuộc trò chuyện và kế hoạch chung của bạn ở đây. Thông tin chỉ thuộc về bạn.",
  "tour.t5t": "Bạn đã sẵn sàng",
  "tour.t5b": "Đó là toàn bộ vòng tham quan. Mình ở ngay góc màn hình mỗi khi bạn cần.",
  "tour.namePh": "Tên của bạn",
@@ -173,6 +193,11 @@ export const UI_VI = {
  "board.lead": "Cần giúp gấp, gần bạn. Xem lúc nào cũng miễn phí.",
  "board.postTitle": "Đăng việc",
  "board.whenPh": "Khi nào? Hôm nay, ngày mai, cuối tuần này",
+ "board.when": "Khi nào",
+ "board.today": "Hôm nay",
+ "board.tomorrow": "Ngày mai",
+ "board.weekend": "Cuối tuần này",
+ "board.postMissing": "Hãy thêm mã bưu điện và vài dòng về sự giúp đỡ bạn cần.",
  "board.postcodePh": "Mã bưu điện của bạn",
  "board.notePh": "Vài dòng về sự giúp đỡ bạn cần",
  "board.post": "Đăng việc này",
@@ -211,6 +236,9 @@ export const UI_VI = {
  "family.addChild": "Thêm một bé",
  "family.namePh": "Tên của bé",
  "family.add": "Thêm",
+ "family.editChild": "Sửa thông tin bé",
+ "family.saveChild": "Lưu thay đổi",
+ "family.cancel": "Hủy",
  "family.removeTitle": "Xóa {name}?",
  "family.removeBody": "Thao tác này đưa {name} ra khỏi ứng dụng của bạn, vào mục Đã xóa gần đây, ở đó trong 30 ngày. Xóa vĩnh viễn thì không thể hoàn tác. Tải dữ liệu của bạn trước nếu bạn muốn giữ một bản sao.",
  "family.yesRemove": "Đúng, xóa đi",

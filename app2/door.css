@@ -34,3 +34,10 @@ body { margin: 0; background: var(--ground); color: var(--ink); font-family: "At
 .doorMsg { font-weight: 700; min-height: 24px; margin: 16px 0 0; }
 .doorDemo { margin-top: 26px; opacity: .8; }
 #authDoor[hidden], #entryRoleHeading[hidden] { display: none; }
+
+html[dir="rtl"] .roleOption,
+html[dir="rtl"] .doorLabel,
+html[dir="rtl"] .doorEmailLine { text-align: right; }
+html[dir="rtl"] .emailRow { direction: rtl; }
+html[dir="rtl"] .doorInput[type="email"],
+html[dir="rtl"] .doorInput[type="password"] { direction: ltr; text-align: left; }

@@ -76,6 +76,9 @@ export function renderBoard(root, viewer, jobs) {
     form.append(el("h3", "findName", tr("board.postTitle")));
     const when = el("select", "txtIn");
     when.setAttribute("aria-label", tr("board.when"));
+    when.id = "jobWhen";
+    const whenLabel = el("label", "findPlace", tr("board.when"));
+    whenLabel.htmlFor = when.id;
     for (const [value, label] of [["Today", tr("board.today")], ["Tomorrow", tr("board.tomorrow")], ["This weekend", tr("board.weekend")]]) {
       const option = el("option", null, label);
       option.value = value;
@@ -83,10 +86,10 @@ export function renderBoard(root, viewer, jobs) {
     }
     const suburb = el("input", "txtIn");
     suburb.placeholder = tr("board.postcodePh");
-    suburb.setAttribute("aria-label", tr("board.postcode"));
+    suburb.setAttribute("aria-label", tr("board.postcodePh"));
     const note = el("input", "txtIn");
     note.placeholder = tr("board.notePh");
-    note.setAttribute("aria-label", tr("board.note"));
+    note.setAttribute("aria-label", tr("board.notePh"));
     const post = el("button", "mainBtn", tr("board.post"));
     post.type = "button";
     const msg = el("p", "gateMsg", "");
@@ -96,7 +99,7 @@ export function renderBoard(root, viewer, jobs) {
       if (!plan.ok && plan.reason === "profile-incomplete") { msg.textContent = tr("board.gatePost"); walkToQuestions(); return; }
       if (plan.ok) write("job", plan);
     });
-    form.append(when, suburb, note, post, msg);
+    form.append(whenLabel, when, suburb, note, post, msg);
     root.append(form);
   }
   if (!visibleJobs.length) {

@@ -296,7 +296,6 @@ export const STRINGS = {
     "board.lead": "Help needed soon, near you. Looking is always free.",
     "board.postTitle": "Post a job", "board.whenPh": "When? Today, tomorrow, this weekend",
     "board.when": "When", "board.today": "Today", "board.tomorrow": "Tomorrow", "board.weekend": "This weekend",
-    "board.postcode": "Your postcode", "board.note": "A few words about the help you need",
     "board.postcodePh": "Your postcode", "board.notePh": "A few words about the help you need",
     "board.postMissing": "Add your postcode and a few words about the help you need.",
     "board.post": "Post the job",
@@ -550,6 +549,10 @@ export const STRINGS = {
     "tour.t3b": "Buscar reúne a las personas que encajan contigo. Los matches y el tablón urgente también viven en Buscar cuidado.",
     "tour.t4t": "Los espacios de tu familia",
     "tour.t4b": "Niños, Historia del día y la agenda crecen aquí a medida que los usas. Tus cosas son solo tuyas.",
+    "tour.carer.t4t": "Tu trabajo de cuidados",
+    "tour.carer.t4b": "Tu perfil, experiencia y disponibilidad crecen aquí a medida que los usas. Tus cosas son solo tuyas.",
+    "tour.communicate.t4t": "Tus conversaciones",
+    "tour.communicate.t4b": "Tus conversaciones y planes compartidos viven aquí. Tus cosas son solo tuyas.",
     "tour.t5t": "Ya está todo listo",
     "tour.t5b": "Ese es todo el recorrido. Estoy aquí en la esquina cuando me necesites.",
     "tour.namePh": "Tu nombre",
@@ -772,6 +775,8 @@ export const STRINGS = {
     "matches.confirm": "Confirmar contacto", "matches.hired": "Marcar como contratada", "matches.end": "Terminar",
     "board.lead": "Ayuda necesaria pronto, cerca de ti. Mirar siempre es gratis.",
     "board.postTitle": "Publicar un trabajo", "board.whenPh": "¿Cuándo? Hoy, mañana, este fin de semana",
+    "board.when": "Cuándo", "board.today": "Hoy", "board.tomorrow": "Mañana", "board.weekend": "Este fin de semana",
+    "board.postMissing": "Añade tu código postal y unas palabras sobre la ayuda que necesitas.",
     "board.postcodePh": "Tu código postal", "board.notePh": "Unas palabras sobre la ayuda que necesitas",
     "board.post": "Publicar el trabajo",
     "board.gatePost": "Termina tu perfil y tus preguntas primero, y luego esta publicación podrá subir. El conejito te llevará allí.",
@@ -788,7 +793,8 @@ export const STRINGS = {
     "family.tile.Note to parents": "Nota para los padres",
     "family.noKids": "Todavía no hay niños aquí",
     "family.noKidsBody": "Añade a tu primer niño abajo. Su tarjeta es privada: solo tú, y una cuidadora que trabaje contigo, pueden verla.",
-    "family.remove": "Quitar", "family.addChild": "Añadir un niño", "family.namePh": "Su primer nombre", "family.add": "Añadir",
+    "family.remove": "Quitar", "family.addChild": "Añadir un niño", "family.editChild": "Editar niño", "family.namePh": "Su primer nombre", "family.add": "Añadir",
+    "family.saveChild": "Guardar cambios", "family.cancel": "Cancelar",
     "family.removeTitle": "¿Quitar a {name}?",
     "family.removeBody": "Esto mueve a {name} fuera de tu app, a Eliminados recientemente, donde se queda por 30 días. Borrar para siempre no se puede deshacer. Descarga tus datos primero si quieres una copia.",
     "family.yesRemove": "Sí, quitar", "family.keep": "Mantener",
@@ -993,6 +999,12 @@ export function currentLang() {
     const key = accountKey("caresits-lang");
     const pick = key ? localStorage.getItem(key) : null;
     if (pick && STRINGS[pick]) return pick;
+    // The signed-out door has no uid to read the account's saved
+    // language. Carry only a session-level display choice there.
+    if (!key) {
+      const doorPick = sessionStorage.getItem("caresits-door-language");
+      if (doorPick && STRINGS[doorPick]) return doorPick;
+    }
   } catch { /* storage may be closed */ }
   const full = (navigator.language || "en").toLowerCase();
   if (full.startsWith("yue") || full.startsWith("zh-hk") || full.startsWith("zh-tw") || full.startsWith("zh-mo")) return "yue";
@@ -1002,6 +1014,7 @@ export function currentLang() {
 
 export function setLang(code) {
   try { const key = accountKey("caresits-lang"); if (key) localStorage.setItem(key, code); } catch { /* fine */ }
+  try { sessionStorage.setItem("caresits-door-language", code); } catch { /* session storage is optional */ }
 }
 
 export function t(key, lang = currentLang(), vars = null) {

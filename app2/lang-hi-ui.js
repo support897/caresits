@@ -4,7 +4,7 @@
 // HUMAN CHECK RULE: keys under "checks." and "legal." carry NO
 // Hindi values here, exactly as in Spanish. They stay English
 // until a human checker approves words for this language.
-// Coverage: 611 translated app UI keys; human-check phrases remain in English by design.
+// Coverage: 639 translated app UI keys; human-check phrases remain in English by design.
 export const UI_HI = {
  "door.tag": "देखभाल ढूँढिए। दिन साझा कीजिए।",
 
@@ -49,6 +49,26 @@ export const UI_HI = {
  "tour.t3b": "ढूँढना उन लोगों को सामने लाता है जो ठीक बैठते हैं। मेल और ज़रूरी बोर्ड भी देखभाल ढूँढने में ही रहते हैं।",
  "tour.t4t": "आपके परिवार की जगहें",
  "tour.t4b": "बच्चे, दिन की कहानी और सूची यहाँ बढ़ते हैं जैसे आप इन्हें इस्तेमाल करते हैं। आपकी चीज़ें सिर्फ़ आपकी हैं।",
+ "trust.sideCommunicate": "बातचीत",
+ "homes.careerLead": "अपनी देखभाल प्रोफ़ाइल बनाएँ और परिवारों से जुड़ें।",
+ "homes.careerProfileTitle": "आपकी देखभालकर्ता प्रोफ़ाइल",
+ "homes.careerProfileBody": "देखभालकर्ता के सवालों के जवाब दें, ताकि परिवार आपका अनुभव और उपलब्ध समय समझ सकें।",
+ "homes.careerProfileDone": "आपकी देखभालकर्ता प्रोफ़ाइल तैयार है।",
+ "homes.careerProfileStart": "आपकी प्रोफ़ाइल आपके जवाबों की प्रतीक्षा कर रही है।",
+ "homes.careerQuestionnaire": "अपना प्रश्नपत्र खोलें",
+ "homes.careerJobsTitle": "तत्काल देखभाल के अनुरोध",
+ "homes.careerJobsBody": "उन परिवारों के अनुरोध देखें जिन्हें जल्द देखभाल चाहिए।",
+ "homes.careerJobsOpen": "तत्काल अनुरोध देखें",
+ "homes.careerGuide": "आपकी प्रोफ़ाइल और जवाब परिवारों को आपकी देखभाल समझने में मदद करते हैं।",
+ "homes.communicateLead": "संपर्क में बने रहने की एक शांत जगह।",
+ "homes.conversations": "आपकी बातचीत",
+ "homes.communicateBody": "तैयार होने पर बातचीत खोलें। यह संपर्क में रहने की जगह है, मेल खोजने की नहीं।",
+ "homes.openConversations": "बातचीत खोलें",
+ "homes.noConversations": "अभी कोई बातचीत नहीं है। किसी से जुड़ने पर आपके संदेश यहाँ दिखेंगे।",
+ "tour.carer.t4t": "आपका देखभाल कार्य",
+ "tour.carer.t4b": "आपकी प्रोफ़ाइल, अनुभव और उपलब्ध समय यहाँ आपके साथ बेहतर होते हैं। आपकी जानकारी केवल आपकी है।",
+ "tour.communicate.t4t": "आपकी बातचीत",
+ "tour.communicate.t4b": "आपकी बातचीत और साझा योजनाएँ यहाँ हैं। आपकी जानकारी केवल आपकी है।",
  "tour.t5t": "आप पूरी तरह तैयार हैं",
  "tour.t5b": "पूरी सैर यही है। जब भी ज़रूरत हो, मैं कोने में यहीं हूँ।",
  "tour.namePh": "आपका नाम",
@@ -173,6 +193,11 @@ export const UI_HI = {
  "board.lead": "पास में जल्द मदद चाहिए। देखना हमेशा मुफ़्त है।",
  "board.postTitle": "काम लगाइए",
  "board.whenPh": "कब? आज, कल, इस सप्ताह के अंत में",
+ "board.when": "कब",
+ "board.today": "आज",
+ "board.tomorrow": "कल",
+ "board.weekend": "इस सप्ताहांत",
+ "board.postMissing": "अपना पिन कोड और ज़रूरी मदद के बारे में कुछ शब्द लिखें।",
  "board.postcodePh": "आपका पिन कोड",
  "board.notePh": "आपको चाहिए वाली मदद के बारे में कुछ शब्द",
  "board.post": "काम लगाइए",
@@ -211,6 +236,9 @@ export const UI_HI = {
  "family.addChild": "बच्चा जोड़िए",
  "family.namePh": "उनका पहला नाम",
  "family.add": "जोड़िए",
+ "family.editChild": "बच्चे की जानकारी संपादित करें",
+ "family.saveChild": "बदलाव सहेजें",
+ "family.cancel": "रद्द करें",
  "family.removeTitle": "{name} को हटाएँ?",
  "family.removeBody": "यह {name} को आपके ऐप से हटाकर हाल में हटाए गए में डाल देता है, जहाँ यह 30 दिन रहता है। हमेशा के लिए हटाना वापस नहीं हो सकता। अगर आपको एक प्रति चाहिए तो पहले अपना डेटा उतार लीजिए।",
  "family.yesRemove": "हाँ, हटाइए",

@@ -4,7 +4,7 @@
 // HUMAN CHECK RULE: keys under "checks." and "legal." carry NO
 // Arabic values here, exactly as in Spanish. They stay English
 // until a human checker approves words for this language.
-// Coverage: 611 translated app UI keys; human-check phrases remain in English by design.
+// Coverage: 639 translated app UI keys; human-check phrases remain in English by design.
 // RTL note: these are string values only; layout direction is a
 // wiring concern and is not set here.
 export const UI_AR = {
@@ -51,6 +51,10 @@ export const UI_AR = {
  "tour.t3b": "يرتب البحث الأشخاص الذين يناسبونك. المطابقات ولوحة العاجل موجودة أيضًا في البحث عن الرعاية.",
  "tour.t4t": "مساحات عائلتك",
  "tour.t4b": "ينمو الأطفال وقصة اليوم وجدول المناوبات هنا أثناء استخدامك لها. أشياؤك لك وحدك.",
+ "tour.carer.t4t": "عملك في الرعاية",
+ "tour.carer.t4b": "ينمو ملفك الشخصي وخبرتك وتوافرك هنا مع استخدامك لها. معلوماتك تخصك وحدك.",
+ "tour.communicate.t4t": "محادثاتك",
+ "tour.communicate.t4b": "تجد هنا محادثاتك وخططك المشتركة. أشياؤك لك وحدك.",
  "tour.t5t": "أنت جاهز تمامًا",
  "tour.t5b": "هذه هي الجولة كاملة. أنا هنا في الزاوية متى احتجت إليّ.",
  "tour.namePh": "اسمك",
@@ -175,6 +179,11 @@ export const UI_AR = {
  "board.lead": "مساعدة مطلوبة قريبًا، بالقرب منك. البحث دائمًا مجاني.",
  "board.postTitle": "نشر وظيفة",
  "board.whenPh": "متى؟ اليوم أو غدًا أو نهاية هذا الأسبوع",
+ "board.when": "متى",
+ "board.today": "اليوم",
+ "board.tomorrow": "غدًا",
+ "board.weekend": "عطلة نهاية الأسبوع هذه",
+ "board.postMissing": "أضف رمزك البريدي وبضع كلمات عن المساعدة التي تحتاجها.",
  "board.postcodePh": "رمزك البريدي",
  "board.notePh": "بعض الكلمات عن المساعدة التي تحتاجها",
  "board.post": "انشر الوظيفة",
@@ -213,6 +222,9 @@ export const UI_AR = {
  "family.addChild": "إضافة طفل",
  "family.namePh": "اسمهم الأول",
  "family.add": "إضافة",
+ "family.editChild": "تعديل الطفل",
+ "family.saveChild": "حفظ التغييرات",
+ "family.cancel": "إلغاء",
  "family.removeTitle": "إزالة {name}؟",
  "family.removeBody": "ينقل هذا {name} خارج تطبيقك، إلى المحذوفات الأخيرة، حيث يبقى لمدة 30 يومًا. الحذف نهائيًا لا يمكن التراجع عنه. نزّل بياناتك أولًا إذا أردت نسخة.",
  "family.yesRemove": "نعم، أزل",

@@ -1,12 +1,15 @@
 import assert from "node:assert/strict";
 Object.defineProperty(globalThis, "navigator", { value: { language: "es-ES" }, configurable: true });
 globalThis.localStorage = { _m: {}, getItem(k) { return this._m[k] ?? null; }, setItem(k, v) { this._m[k] = v; } };
+globalThis.sessionStorage = { _m: {}, getItem(k) { return this._m[k] ?? null; }, setItem(k, v) { this._m[k] = v; }, removeItem(k) { delete this._m[k]; } };
 globalThis.window = { CARESITS_UID: "lang-user" };
-const { t, currentLang, setLang, STRINGS } = await import("./lang.js");
+const { t, currentLang, setLang, applyI18n, STRINGS } = await import("./lang.js");
 let n = 0; const ck = (name, fn) => { fn(); n++; console.log("ok -", name); };
 ck("device language picks Spanish", () => assert.equal(currentLang(), "es"));
 ck("a translated key reads Spanish", () => assert.equal(t("door.join"), "Unirme a Caresitters"));
 ck("the signed-in user's language pick wins over the device", () => { setLang("en"); assert.equal(t("door.join"), "Join Caresitters"); assert.equal(localStorage.getItem("caresits-lang-lang-user"), "en"); setLang("es"); });
+ck("the signed-out door follows the last chosen language", () => { setLang("ar"); window.CARESITS_UID = null; assert.equal(currentLang(), "ar"); assert.equal(t("door.rolePrompt"), "ما الذي أتى بك إلى هنا؟"); window.CARESITS_UID = "lang-user"; setLang("es"); });
+ck("Arabic door direction is right to left", () => { globalThis.document = { documentElement: {} }; applyI18n({ querySelectorAll: () => [] }, "ar"); assert.equal(document.documentElement.lang, "ar"); assert.equal(document.documentElement.dir, "rtl"); });
 ck("an untranslated key falls back to English, never blank", () => assert.equal(t("checks.level.register", "es"), STRINGS.en["checks.level.register"] ?? "checks.level.register"));
 ck("checks words carry NO Spanish value (human check rule)", () => assert.ok(Object.keys(STRINGS.es).every((k) => !k.startsWith("checks.") && !k.startsWith("legal."))));
 ck("every English door key has a Spanish twin", () => { for (const k of Object.keys(STRINGS.en)) if (k.startsWith("door.")) assert.ok(STRINGS.es[k], k); });

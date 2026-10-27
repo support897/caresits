@@ -9,6 +9,8 @@ import { firebaseConfig } from "./firebase-config.js";
 const $ = (s) => document.querySelector(s);
 import { t as tr, applyI18n } from "./lang.js";
 applyI18n();
+const syncNextDirection = () => { const next = $("#nextBtn"); if (next) next.textContent = document.documentElement.dir === "rtl" ? "←" : "→"; };
+syncNextDirection();
 const msg = (t) => { $("#doorMsg").textContent = t || ""; };
 const ENTRY_ROLE_SESSION_KEY = "caresits-entry-role";
 const ENTRY_ROLES = new Set(["career", "family", "communicate"]);
