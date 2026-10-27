@@ -592,6 +592,10 @@ export async function bootLive() {
                 localStorage.setItem(langKey, appDoc.language);
               }
             } catch { /* storage off */ }
+            // The signed-out door has no uid for the account locale.
+            // Seed its display-only session preference after account
+            // restoration; the previous member's value was cleared above.
+            try { sessionStorage.setItem("caresits-door-language", appDoc.language); } catch { /* session storage off */ }
           }
           // The tour and questionnaire can render before auth restores
           // the account's language key. Refresh the shell and both live
