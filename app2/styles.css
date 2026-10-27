@@ -73,3 +73,19 @@ table.grid th { font-size: 13px; padding: 4px; text-transform: capitalize; }
 .gridChoices .chip { min-height: 46px; border-radius: 14px; }
 @media (prefers-reduced-motion: reduce) { .answerCard, .barFill { transition: none; } .answerCard:hover { transform: none; } }
 @media (max-width: 360px) { .jNav { flex-wrap: wrap; } .jNav .mainBtn { flex-basis: 100%; order: 3; } .jNav #backBtn { order: 1; } .jNav #skipBtn { order: 2; margin-inline-start: auto; } }
+
+/* The questionnaire shows each short bunny note only on its first visit. */
+.questionWhy {
+  display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 8px; align-items: center;
+  margin: 12px 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 14px;
+  background: #F7EFE3; text-align: start;
+}
+.questionWhy img { width: 34px; height: auto; }
+.questionWhy p { margin: 0; font-size: 15px; line-height: 1.35; }
+.questionWhyHide { min-height: 44px; padding: 8px; border: 0; border-radius: 10px; background: transparent; color: var(--ink); font: inherit; font-size: 13px; text-decoration: underline; cursor: pointer; }
+[dir="rtl"] .questionWhy { direction: rtl; }
+@media (max-width: 350px) {
+  .questionWhy { grid-template-columns: 32px minmax(0, 1fr); }
+  .questionWhy img { width: 30px; }
+  .questionWhyHide { grid-column: 2; justify-self: start; }
+}

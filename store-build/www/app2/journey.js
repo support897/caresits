@@ -34,6 +34,50 @@ const O = (f, o, i) => { const k = keyFor(f) + ".o" + i; const v = tr(k); return
 
 const $ = (s) => document.querySelector(s);
 const state = { side: null, page: 0, answers: {}, strengths: {}, resumeFeed: [], countryStep: null, target: "quick", beyond: false, stage: "essentials", choicePages: {}, gridDays: {} };
+const WHY_KEY = "caresits-question-why";
+let activeWhyIdentity = "";
+let activeWhyVisible = false;
+function questionWhyData(uid = shellMember()?.uid) {
+  try {
+    const key = accountKey(`${WHY_KEY}-${state.side}`, uid);
+    return key ? JSON.parse(localStorage.getItem(key) || "{}") || {} : {};
+  } catch { return {}; }
+}
+function saveQuestionWhyData(data, uid = shellMember()?.uid) {
+  try {
+    const key = accountKey(`${WHY_KEY}-${state.side}`, uid);
+    if (key) localStorage.setItem(key, JSON.stringify(data));
+  } catch { /* storage may be unavailable */ }
+}
+function questionWhyMarkup(field) {
+  const uid = shellMember()?.uid;
+  if (!uid || !field) return "";
+  const identity = `${uid}:${state.side}:${field.id}`;
+  if (identity !== activeWhyIdentity) {
+    activeWhyIdentity = identity;
+    activeWhyVisible = false;
+    const data = questionWhyData(uid);
+    if (!data.seen?.[field.id] && !data.hidden?.[field.id]) {
+      data.seen = { ...(data.seen || {}), [field.id]: true };
+      saveQuestionWhyData(data, uid);
+      activeWhyVisible = true;
+    }
+  }
+  if (!activeWhyVisible) return "";
+  const key = `guide.why.${field.id}`;
+  const copy = tr(key) === key ? tr("guide.why.default") : tr(key);
+  return `<aside class="questionWhy" aria-label="${escapeHtml(tr("guide.whyHeading"))}"><img src="bunny/bunny-point-guide.png" alt="" aria-hidden="true"><p>${escapeHtml(copy)}</p><button type="button" class="questionWhyHide" data-hide-question-why aria-label="${escapeHtml(tr("guide.hideWhy"))}">${escapeHtml(tr("guide.hideWhy"))}</button></aside>`;
+}
+function hideQuestionWhy() {
+  const field = pages()[state.page]?.fields?.[0];
+  const uid = shellMember()?.uid;
+  if (!uid || !field) return;
+  const data = questionWhyData(uid);
+  data.hidden = { ...(data.hidden || {}), [field.id]: true };
+  saveQuestionWhyData(data, uid);
+  activeWhyVisible = false;
+  render();
+}
 // F16: the draft lives under the key the shared helper resolves
 // for whoever is signed in on this device (see storage-keys.js).
 // The journey session works in ONE slot: the slot is resolved at
@@ -237,7 +281,7 @@ function render() {
   $("#pageCount").textContent = tr("journey.page", undefined, { a: questionNumber, b: total });
   $("#barFill").style.width = `${Math.round((questionNumber / Math.max(total, 1)) * 100)}%`;
   $("#optionalLead").hidden = state.stage !== "optional";
-  $("#fields").innerHTML = p.fields.map((f) => fieldHtml(f, true)).join("");
+  $("#fields").innerHTML = questionWhyMarkup(first) + p.fields.map((f) => fieldHtml(f, true)).join("");
   $("#backBtn").textContent = tr("journey.back");
   $("#backBtn").style.visibility = state.page === 0 && state.stage === "essentials" ? "hidden" : "visible";
   $("#skipBtn").textContent = tr("tour.nameSkip");
@@ -248,6 +292,8 @@ function render() {
 
 function wire() {
   $("#fields").addEventListener("click", (e) => {
+    const hideWhy = e.target.closest("[data-hide-question-why]");
+    if (hideWhy) { hideQuestionWhy(); return; }
     const choicePage = e.target.closest("[data-choice-page]");
     if (choicePage) { state.choicePages[choicePage.dataset.choicePage] = Number(choicePage.dataset.page) || 0; render(); return; }
     const noPreference = e.target.closest("[data-no-preference]");

@@ -423,44 +423,61 @@ t("shell: no page errors", errs.length === 0);
   tp.on("pageerror", (e) => terrs.push(String(e)));
   await tp.goto("http://localhost:8933/index.html", { waitUntil: "networkidle" });
   await tp.waitForTimeout(300);
-  t("tour: first run asks for a name", await tp.evaluate(() => !!document.getElementById("tourPop") && document.getElementById("tourPop").textContent.includes("What name should I use for you?")));
-  await tp.fill("#tourNameIn", "Sam");
-  await tp.click("#tourPop .mainBtn");
-  t("tour: next screen offers two family choices", await tp.evaluate(() => localStorage.getItem("caresits-name-tour-user") === "Sam" && document.querySelectorAll("#tourPop .tourChoiceBtn").length === 2 && document.getElementById("tourPop").textContent.includes("Look around")));
-  await tp.click('#tourPop .tourChoiceBtn:nth-child(2)');
-  t("tour: first coach-mark points to Home", await tp.evaluate(() => document.getElementById("tourPop").textContent.includes("Home is your starting place") && document.querySelector('[data-bottom-tab="family-home"]').classList.contains("tourSpotlight")));
-  await tp.click("#tourPop .mainBtn");
-  t("tour: second coach-mark points to Find", await tp.evaluate(() => document.getElementById("tourPop").textContent.includes("Find the right fit") && document.querySelector('[data-bottom-tab="family-find"]').classList.contains("tourSpotlight")));
-  await tp.click("#tourPop .mainBtn");
-  t("tour: third coach-mark points to More", await tp.evaluate(() => document.getElementById("tourPop").textContent.includes("More keeps the rest") && document.querySelector('[data-bottom-tab="family-more"]').classList.contains("tourSpotlight") && document.getElementById("tourPop").textContent.includes("Step 3 of 3")));
-  await tp.click("#tourPop .mainBtn");
-  t("tour: the three-mark walk ends cleanly", await tp.evaluate(() => !document.getElementById("tourPop") && JSON.parse(localStorage.getItem("caresits-side-tours-tour-user")).family === true));
+  t("tour: first run opens with one short bunny sentence, progress, Next, and Skip guide", await tp.evaluate(() => !!document.getElementById("tourPop") && document.querySelector("#tourPop .guideWords").textContent.includes("Hi, I’m the Caresitters bunny") && document.querySelector("#tourPop .guideCount").textContent.startsWith("Step 1 of ") && document.querySelector("#tourPop .guideSkip").textContent === "Skip guide"));
+  await tp.click("#tourPop .guideNext");
+  t("tour: the family side is explained before navigation", await tp.evaluate(() => document.querySelector("#tourPop .guideWords").textContent.includes("families find and organise care")));
+  await tp.click("#tourPop .guideNext");
+  t("tour: the guide explains the questionnaire notes", await tp.evaluate(() => document.querySelector("#tourPop .guideWords").textContent.includes("Each question has a short note")));
+  await tp.click("#tourPop .guideNext");
+  t("tour: the existing name onboarding keeps one Next and Skip guide", await tp.evaluate(() => !!document.querySelector("#tourPop .guideName") && document.querySelector("#tourPop .guideNext").textContent === "Next"));
+  await tp.fill("#tourPop .guideName", "Sam");
+  await tp.click("#tourPop .guideNext");
+  t("tour: the guide highlights Home first", await tp.evaluate(() => localStorage.getItem("caresits-name-tour-user") === "Sam" && document.querySelector('[data-bottom-tab="family-home"]').classList.contains("tourSpotlight")));
+  await tp.click("#tourPop .guideNext");
+  t("tour: the guide highlights Find", await tp.evaluate(() => document.querySelector('[data-bottom-tab="family-find"]').classList.contains("tourSpotlight")));
+  await tp.click("#tourPop .guideNext");
+  t("tour: the guide highlights Our family", await tp.evaluate(() => document.querySelector('[data-bottom-tab="family-family"]').classList.contains("tourSpotlight")));
+  await tp.click("#tourPop .guideNext");
+  t("tour: the guide highlights Week", await tp.evaluate(() => document.querySelector('[data-bottom-tab="family-week"]').classList.contains("tourSpotlight")));
+  await tp.click("#tourPop .guideNext");
+  t("tour: the guide highlights More", await tp.evaluate(() => document.querySelector('[data-bottom-tab="family-more"]').classList.contains("tourSpotlight")));
+  await tp.click("#tourPop .guideNext");
+  t("tour: More opens and Switch side is explained", await tp.evaluate(() => document.getElementById("layout").classList.contains("open") && document.querySelector("#tourPop .guideWords").textContent.includes("Switch side")));
+  const guideCopy = [];
+  for (let step = 0; step < 60 && await tp.locator("#tourPop").count(); step++) {
+    guideCopy.push(await tp.locator("#tourPop .guideWords").textContent());
+    await tp.click("#tourPop .guideNext");
+  }
+  t("tour: every visible More item is explained, including safety, deleted items, checks, and reviews", ["Emergency", "Recently Deleted", "Checks", "Reviews", "Help", "Settings"].every((word) => guideCopy.some((line) => line.includes(word))));
+  t("tour: completion is remembered per side and uid", await tp.evaluate(() => !document.getElementById("tourPop") && JSON.parse(localStorage.getItem("caresits-side-tours-tour-user")).family === true && JSON.parse(localStorage.getItem("caresits-guide-progress-family-tour-user")).done === true));
+  await tp.evaluate(() => window.CARESITS_NAV("settings"));
+  await tp.waitForTimeout(100);
+  await tp.evaluate(() => [...document.querySelectorAll("#settingsRoot button")].find((b) => b.textContent === "Replay the guide")?.click());
+  t("tour: Settings replays the completed guide", await tp.evaluate(() => document.getElementById("tourPop")?.querySelector(".guideWords")?.textContent.includes("Hi, I’m the Caresitters bunny")));
+  await tp.click("#tourPop .guideSkip");
+  await tp.evaluate(() => {
+    window.CARESITS_UID = "other-tour-user";
+    window.CARESITS_ME = { uid: "other-tour-user", side: "family", entryRole: "family", activeSide: "family", sideTours: {} };
+    window.CARESITS_ROLE_NAV("family");
+    window.CARESITS_TOUR_START_SIDE("family");
+  });
+  t("tour: a different uid gets its own first guide", await tp.evaluate(() => document.getElementById("tourPop")?.querySelector(".guideWords")?.textContent.includes("Hi, I’m the Caresitters bunny")));
+  await tp.click("#tourPop .guideSkip");
+  await tp.evaluate(() => {
+    window.CARESITS_UID = "tour-user";
+    window.CARESITS_ME = { uid: "tour-user", side: "family", entryRole: "family", activeSide: "family", sideTours: { family: true } };
+    window.CARESITS_ROLE_NAV("family");
+  });
+  t("tour: returning uid sees no guide after a second login", await tp.evaluate(() => !document.getElementById("tourPop")));
   await tp.evaluate(() => {
     window.CARESITS_ME = { ...window.CARESITS_ME, activeSide: "career" };
+    window.CARESITS_UID = "tour-user";
     window.CARESITS_ROLE_NAV("career");
     window.CARESITS_TOUR_START_SIDE("career");
   });
-  t("tour: carer first-run offers profile building or jobs", await tp.evaluate(() => document.getElementById("tourPop").textContent.includes("Build my profile") && document.getElementById("tourPop").textContent.includes("See jobs") && document.querySelectorAll("#tourPop .tourChoiceBtn").length === 2));
+  t("tour: carer side gets a separate guide and tab", await tp.evaluate(() => document.getElementById("tourPop")?.querySelector(".guideWords")?.textContent.includes("carers find work") && document.querySelector('[data-bottom-tab="career-home"]').classList.contains("tourSpotlight")));
   t("tour: no page errors", terrs.length === 0);
   await tp.close();
-
-  const rp = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await rp.addInitScript(() => {
-    window.CARESITS_LIVE_OFF = true; window.CARESITS_UID = "rp-user";
-    window.CARESITS_ME = { uid: "rp-user", side: "family", entryRole: "family", activeSide: "family", sideTours: { family: true } };
-    window.CARESITS_ACCOUNT_READY = true;
-    localStorage.setItem("caresits-tour-state-rp-user", JSON.stringify({ closedUnanswered: true }));
-    localStorage.setItem("caresits-side-tours-rp-user", JSON.stringify({ family: true }));
-  });
-  await rp.goto("http://localhost:8933/index.html", { waitUntil: "networkidle" });
-  await rp.waitForTimeout(300);
-  t("tour: the name is re offered once, as one small quiet bubble", await rp.evaluate(() => !!document.getElementById("nameBubble") && !document.getElementById("tourPop")));
-  await rp.evaluate(() => [...document.querySelectorAll("#nameBubble button")].find((b) => b.textContent === "Not now").click());
-  await rp.evaluate(() => sessionStorage.clear());
-  await rp.reload({ waitUntil: "networkidle" });
-  await rp.waitForTimeout(300);
-  t("tour: after the one re offer, never again", await rp.evaluate(() => !document.getElementById("nameBubble")));
-  await rp.close();
 }
 
 

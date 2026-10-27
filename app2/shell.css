@@ -131,6 +131,54 @@ html[data-entry-role="communicate"] { --entry-accent: #704A83; --entry-soft: #F0
 .calReq { margin-bottom: 10px; }
 .clash { color: #8A4B0F; }
 
+.guideWrap {
+  position: fixed; inset: 0; z-index: 45; display: flex; align-items: flex-end;
+  justify-content: center; padding: 8px; padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  pointer-events: none;
+}
+.guideBubble {
+  width: min(460px, calc(100vw - 16px)); display: grid;
+  grid-template-columns: 36px minmax(0, 1fr); gap: 6px 10px; align-items: start;
+  position: relative; padding: 12px; border: 1px solid var(--line); border-radius: 18px;
+  background: var(--card); color: var(--ink); box-shadow: 0 8px 28px rgba(30, 77, 68, .2);
+  text-align: start; pointer-events: none;
+}
+.guideBubble::after {
+  content: ""; position: absolute; inset-inline-end: 34px; bottom: -9px; width: 16px; height: 16px;
+  background: var(--card); border-inline-end: 1px solid var(--line); border-bottom: 1px solid var(--line); transform: rotate(45deg);
+}
+.guideBunny { grid-column: 1; grid-row: 1; width: 36px; height: auto; }
+.guideWords { grid-column: 2; grid-row: 1; margin: 0; align-self: center; line-height: 1.35; }
+.guideName { grid-column: 1 / -1; width: 100%; min-height: 44px; border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px; font: inherit; pointer-events: auto; }
+.guideActions { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; gap: 8px; pointer-events: none; }
+.guideActions button { min-height: 44px; pointer-events: auto; }
+.guideActions .guideSkip { padding: 8px 14px; }
+.guideProgressRow { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.guideProgress { display: flex; align-items: center; gap: 4px; }
+.guideDot { width: 6px; height: 6px; border-radius: 50%; background: var(--line); }
+.guideDot.on { background: var(--entry-accent, var(--ink)); }
+.guideCount { font-size: 13px; opacity: .78; white-space: nowrap; }
+.guideWrap.menuOpen { padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+.guideWrap.menuOpen .guideBubble { width: min(460px, calc(100vw - 16px)); }
+@media (max-width: 350px) {
+  .guideBubble { gap: 5px 8px; padding: 10px; }
+  .guideBunny { width: 32px; }
+  .guideActions .guideSkip { padding-inline: 10px; }
+}
+.questionWhy {
+  display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 8px; align-items: center;
+  margin: 12px 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 14px;
+  background: #F7EFE3; text-align: start;
+}
+.questionWhy img { width: 34px; height: auto; }
+.questionWhy p { margin: 0; font-size: 15px; line-height: 1.35; }
+.questionWhyHide { min-height: 44px; padding: 8px; border: 0; border-radius: 10px; background: transparent; color: var(--ink); font: inherit; font-size: 13px; text-decoration: underline; cursor: pointer; }
+[dir="rtl"] .guideBubble, [dir="rtl"] .questionWhy { direction: rtl; }
+@media (max-width: 350px) {
+  .questionWhy { grid-template-columns: 32px minmax(0, 1fr); }
+  .questionWhy img { width: 30px; }
+  .questionWhyHide { grid-column: 2; justify-self: start; }
+}
 .tourCard { text-align: center; }
 .tourActions { justify-content: center; }
 .tourSpotlight { position: relative; z-index: 41; background: #fff7e8 !important; box-shadow: 0 0 0 3px var(--teal), 0 0 0 6px rgba(30, 77, 68, .18); pointer-events: none; }
@@ -400,4 +448,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .urgentChoiceList { grid-template-columns: 1fr; }
   .weekTab { min-width: 72px; padding-inline: 10px; }
   .childSheetCard { padding: 18px; }
+}
+
+@media (max-height: 260px) {
+  .guideWrap:not(.menuOpen) { padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+  .guideBubble { padding: 8px; gap: 4px 8px; }
+  .guideBunny { width: 28px; }
+  .guideProgressRow { gap: 4px; }
 }
