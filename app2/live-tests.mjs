@@ -22,6 +22,12 @@ t("entry role: each choice saves to its own uid app document", () => {
   assert.equal(accountKey("caresits-name", "member-b"), "caresits-name-member-b");
   assert.equal(accountKey("caresits-name", null), null);
 });
+t("active side: each view persists in the signed-in account app document", () => {
+  const r = routeWrite("active-side", { side: "communicate" }, "member-a");
+  assert.deepEqual(r, { ok: true, op: "merge", path: "users/member-a/meta/app", data: { activeSide: "communicate" } });
+  assert.equal(routeWrite("active-side", { side: "career" }, "member-b").path, "users/member-b/meta/app");
+  assert.equal(routeWrite("active-side", { side: "admin" }, "member-a").ok, false);
+});
 t("router: the two homes kinds land on their ruled shapes", () => {
   const inv = routeWrite("invite-create", { path: "invites/K7P2Q9AB", data: { familyUid: "a", label: "", createdAt: "x", usedBy: null } }, "a");
   assert.equal(inv.op, "set"); assert.equal(inv.path, "invites/K7P2Q9AB");

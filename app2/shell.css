@@ -50,6 +50,14 @@ h1, h2 { font-family: "Newsreader", Georgia, serif; font-weight: 600; line-heigh
 .navGroupBody { display: none; padding-left: 12px; }
 .navGroup.open .navGroupBody { display: block; }
 .navBtn.top { font-weight: 700; }
+.sideSwitch { margin: 8px 0 12px; padding: 12px; border: 1px solid var(--line); border-radius: 16px; background: rgba(255, 255, 255, .72); }
+.sideSwitch h2 { font-family: "Atkinson Hyperlegible", system-ui, sans-serif; font-size: 17px; margin: 0 0 4px; }
+.sideActiveLine { margin: 0 0 8px; font-size: 14px; }
+.sideSwitchChoices { display: grid; gap: 6px; }
+.sideSwitchChoices button { min-height: 42px; width: 100%; border: 1.5px solid var(--line); border-radius: 12px; background: var(--card); color: var(--ink); font: inherit; text-align: start; padding: 8px 11px; cursor: pointer; }
+.sideSwitchChoices button[aria-pressed="true"] { background: var(--teal); border-color: var(--ink); font-weight: 700; }
+.sideSwitchChoices button:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.sideSwitchStatus { margin: 6px 0 0; font-size: 13px; }
 
 .topBar { display: flex; align-items: center; gap: 12px; padding: 12px 16px; padding-top: calc(12px + env(safe-area-inset-top, 0px)); border-bottom: 1px solid var(--line); background: var(--card); position: sticky; top: 0; }
 .brandHeart { width: 22px; height: 22px; vertical-align: -4px; }

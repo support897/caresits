@@ -66,6 +66,7 @@ export function routeWrite(kind, payload, uid) {
     case "emergency": return { ok: true, op: "merge", path: `users/${uid}/meta/emergency`, data: { name: payload.name, phone: payload.phone } };
     case "appearance": return { ok: true, op: "merge", path: `users/${uid}/meta/app`, data: { background: payload.choice } };
     case "entry-role": return ENTRY_ROLES.includes(payload.entryRole) ? { ok: true, op: "merge", path: `users/${uid}/meta/app`, data: { entryRole: payload.entryRole } } : { ok: false, reason: "invalid-role" };
+    case "active-side": return ENTRY_ROLES.includes(payload.side) ? { ok: true, op: "merge", path: `users/${uid}/meta/app`, data: { activeSide: payload.side } } : { ok: false, reason: "invalid-side" };
     case "learning-plan": {
       const plan = publicLearningPlan(normaliseLearningPlan(payload.plan));
       return { ok: true, op: "learningPlan", path: `users/${uid}/meta/app`, profilePath: `profiles/${uid}`, data: { learningPlan: plan }, profileData: { learningPlan: plan }, pairPath: typeof payload.pairId === "string" && payload.pairId ? `relationships/${payload.pairId}` : "", pairData: { learningPlan: plan } };

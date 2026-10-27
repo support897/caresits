@@ -1,4 +1,4 @@
-import { applyI18n } from "./lang.js";
+import { applyI18n, t as tr } from "./lang.js";
 applyI18n();
 // Caresitters app2 shell — her nav shape of 15 Oct 2026.
 // Menu hidden on load. Opening it gives the menu most of the
@@ -27,6 +27,61 @@ function setRoleNavigation(entryRole) {
   if (conversations) conversations.hidden = !communicate;
 }
 window.CARESITS_ROLE_NAV = setRoleNavigation;
+const ACTIVE_SIDES = ["family", "career", "communicate"];
+function resolvedActiveSide(me = window.CARESITS_ME || {}) {
+  if (ACTIVE_SIDES.includes(me.activeSide)) return me.activeSide;
+  if (ACTIVE_SIDES.includes(me.entryRole)) return me.entryRole;
+  return me.side === "carer" ? "career" : me.side === "communicate" ? "communicate" : "family";
+}
+function refreshSideSwitch(side = resolvedActiveSide()) {
+  const box = document.getElementById("sideSwitch");
+  if (!box) return;
+  const me = window.CARESITS_ME || {};
+  box.hidden = !me.uid;
+  const buttons = [...box.querySelectorAll("[data-side-choice]")];
+  for (const button of buttons) {
+    const selected = button.dataset.sideChoice === side;
+    button.classList.toggle("on", selected);
+    button.setAttribute("aria-pressed", selected ? "true" : "false");
+  }
+  const selectedButton = buttons.find((button) => button.dataset.sideChoice === side);
+  const name = document.getElementById("activeSideName");
+  if (name) name.textContent = selectedButton?.textContent || "";
+}
+async function setActiveSide(side) {
+  if (!ACTIVE_SIDES.includes(side)) return false;
+  const previous = resolvedActiveSide();
+  const me = window.CARESITS_ME || {};
+  if (!me.uid) return false;
+  for (const button of document.querySelectorAll("[data-side-choice]")) button.disabled = true;
+  window.CARESITS_ME = { ...me, activeSide: side };
+  document.documentElement.dataset.entryRole = side;
+  setRoleNavigation(side);
+  refreshSideSwitch(side);
+  let result = null;
+  try {
+    if (typeof window.CARESITS_WRITE === "function") result = await window.CARESITS_WRITE("active-side", { side });
+  } catch { result = null; }
+  for (const button of document.querySelectorAll("[data-side-choice]")) button.disabled = false;
+  const status = document.getElementById("sideSwitchStatus");
+  if (!result?.ok) {
+    window.CARESITS_ME = { ...window.CARESITS_ME, activeSide: previous };
+    document.documentElement.dataset.entryRole = previous;
+    setRoleNavigation(previous);
+    refreshSideSwitch(previous);
+    if (status) status.textContent = tr("shell.sideSaveFailed");
+    return false;
+  }
+  if (status) status.textContent = "";
+  if (typeof window.CARESITS_TOUR_START_SIDE === "function") window.CARESITS_TOUR_START_SIDE(side);
+  if (side === "communicate") show("thread");
+  else show("home");
+  return true;
+}
+window.CARESITS_SET_ACTIVE_SIDE = setActiveSide;
+document.querySelectorAll("[data-side-choice]").forEach((button) => button.addEventListener("click", () => setActiveSide(button.dataset.sideChoice)));
+document.addEventListener("caresits-account-ready", () => refreshSideSwitch());
+refreshSideSwitch();
 
 // The Family Plus gate (payments chapter §2 + FEATURE-SPLIT): the
 // Day Story, the roster and the timesheet are Family Plus features
