@@ -120,6 +120,12 @@ t("invites: plan create shapes the invite doc Security ruled", () => {
   assert.equal(p.path, "invites/K7P2Q9AB");
   assert.deepEqual(p.data, { familyUid: "fam1", label: "The Smiths", createdAt: "2026-10-17T00:00:00.000Z", usedBy: null });
 });
+t("invites: a family learning plan rides the private invite without child names", () => {
+  const plan = planInviteCreate({ familyUid: "fam1", code: "K7P2Q9AB", label: "Family", nowIso: "2026-10-17T00:00:00.000Z", learningPlan: { children: [{ band: "3-5y", name: "Mia", id: "private" }], styles: ["montessori"], languages: ["Spanish"], setupComplete: true } });
+  assert.deepEqual(plan.data.learningPlan.children, [{ band: "3-5y" }]);
+  assert.deepEqual(plan.data.learningPlan.styles, ["montessori"]);
+  assert.ok(!JSON.stringify(plan.data).includes("private") && !JSON.stringify(plan.data).includes("Mia"));
+});
 t("invites: plan create refuses a bad code and a signed out maker", () => {
   assert.equal(planInviteCreate({ familyUid: "f", code: "ILO0188X", nowIso: "x" }).reason, "bad-code");
   assert.equal(planInviteCreate({ familyUid: "", code: "K7P2Q9AB", nowIso: "x" }).reason, "signed-out");
@@ -137,6 +143,12 @@ t("invites: accept builds the relationship in the sealed shape, stamp moves used
   });
   assert.deepEqual(p.stamp, { usedBy: "carer9" });
   assert.equal(p.invitePath, "invites/K7P2Q9AB");
+});
+t("invites: accepting combines the family plan with carer preferences", () => {
+  const p = planInviteAccept({ code: "K7P2Q9AB", invite: { ...invite, learningPlan: { children: [{ band: "3-5y" }], styles: ["montessori"], languages: ["Spanish"], setupComplete: true } }, accepterUid: "carer9", nowIso: "2026-10-18T10:00:00.000Z", learningPlan: { styles: ["waldorf"], areas: ["music"], languages: ["English"], setupComplete: true } });
+  assert.deepEqual(p.relData.learningPlan.children, [{ band: "3-5y" }]);
+  assert.deepEqual(p.relData.learningPlan.styles, ["montessori", "waldorf"]);
+  assert.deepEqual(p.relData.learningPlan.languages, ["Spanish", "English"]);
 });
 t("invites: accept refuses a used code, your own link, a bad code and no invite", () => {
   assert.equal(planInviteAccept({ code: "K7P2Q9AB", invite: { ...invite, usedBy: "someone" }, accepterUid: "carer9", nowIso: "x" }).reason, "already-used");

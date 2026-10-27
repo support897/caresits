@@ -386,7 +386,7 @@ function linkCard() {
       const mk = el("button", "mainBtn", tr("homes.makeLink")); mk.type = "button";
       mk.addEventListener("click", () => {
         if (!m || !m.uid) { state.linkMsg = tr("homes.codeBad"); renderHome(); return; }
-        const plan = planInviteCreate({ familyUid: m.uid, code: makeCode(), label: myName(), nowIso: nowIso() });
+        const plan = planInviteCreate({ familyUid: m.uid, code: makeCode(), label: myName(), nowIso: nowIso(), learningPlan: m.learningPlan || window.CARESITS_LEARNING_PLAN });
         if (!plan.ok) { state.linkMsg = tr("homes.codeBad"); renderHome(); return; }
         write(plan.kind, { path: plan.path, data: plan.data });
         try { const key = accountKey(INVITE_KEY, m?.uid); if (key) localStorage.setItem(key, plan.code); } catch { /* storage off */ }
@@ -415,11 +415,9 @@ function linkCard() {
     if (typeof window.CARESITS_INVITE_LOOKUP === "function") { try { invite = await window.CARESITS_INVITE_LOOKUP(code); } catch { invite = null; } }
     if (!invite && window.CARESITS_HOMES && typeof window.CARESITS_HOMES.inviteByCode === "function") invite = window.CARESITS_HOMES.inviteByCode(code);
     if (!invite && window.CARESITS_INVITES) invite = window.CARESITS_INVITES[code] || null;
-    const plan = planInviteAccept({ code, invite, accepterUid: uid, nowIso: nowIso() });
+    const plan = planInviteAccept({ code, invite, accepterUid: uid, nowIso: nowIso(), learningPlan: me()?.learningPlan });
     if (!plan.ok) { state.openMsg = tr("homes.codeBad"); renderHome(); return; }
-    const accepterPlan = me()?.learningPlan;
-    const relData = accepterPlan ? { ...plan.relData, learningPlan: normaliseLearningPlan(accepterPlan) } : plan.relData;
-    const result = await write(plan.kind, { relPath: plan.relPath, relData, invitePath: plan.invitePath, stamp: plan.stamp });
+    const result = await write(plan.kind, { relPath: plan.relPath, relData: plan.relData, invitePath: plan.invitePath, stamp: plan.stamp });
     if (!result?.ok) { state.openMsg = tr("homes.codeBad"); renderHome(); return; }
     state.openMsg = tr("homes.connectedOk");
     renderHome();

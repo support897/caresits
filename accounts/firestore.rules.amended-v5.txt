@@ -487,7 +487,10 @@ match /profiles/{uid}/answers/{code} {
       allow create: if signedIn() && !isAnon()
         && code.matches("^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{8}$")
         && request.resource.data.keys().hasAll(['familyUid', 'label', 'createdAt'])
-        && request.resource.data.keys().hasOnly(['familyUid', 'label', 'createdAt', 'usedBy'])
+        && request.resource.data.keys().hasOnly(['familyUid', 'label', 'createdAt', 'usedBy', 'learningPlan'])
+        && (!("learningPlan" in request.resource.data)
+            || (request.resource.data.learningPlan is map
+              && request.resource.data.learningPlan.keys().hasOnly(["children", "areas", "styles", "languages", "otherLanguage", "step", "setupComplete", "updatedAt"])))
         && request.resource.data.familyUid == request.auth.uid
         && request.resource.data.label is string
         && request.resource.data.label.size() <= 60
