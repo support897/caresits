@@ -417,9 +417,13 @@ function linkCard() {
     if (!invite && window.CARESITS_INVITES) invite = window.CARESITS_INVITES[code] || null;
     const plan = planInviteAccept({ code, invite, accepterUid: uid, nowIso: nowIso() });
     if (!plan.ok) { state.openMsg = tr("homes.codeBad"); renderHome(); return; }
-    write(plan.kind, { relPath: plan.relPath, relData: plan.relData, invitePath: plan.invitePath, stamp: plan.stamp });
+    const accepterPlan = me()?.learningPlan;
+    const relData = accepterPlan ? { ...plan.relData, learningPlan: normaliseLearningPlan(accepterPlan) } : plan.relData;
+    const result = await write(plan.kind, { relPath: plan.relPath, relData, invitePath: plan.invitePath, stamp: plan.stamp });
+    if (!result?.ok) { state.openMsg = tr("homes.codeBad"); renderHome(); return; }
     state.openMsg = tr("homes.connectedOk");
     renderHome();
+    window.CARESITS_SHOW_CONNECTED_PROMPT?.(plan.pairId);
   });
   row.append(input, go);
   open.append(row);

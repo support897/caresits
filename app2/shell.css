@@ -100,6 +100,9 @@ html[data-entry-role="communicate"] { --entry-accent: #704A83; --entry-soft: #F0
 .quietBtn { background: none; border: none; font: inherit; font-size: 15px; color: var(--ink); opacity: .75; cursor: pointer; padding: 4px 2px; text-decoration: underline; }
 .sheetWrap { position: fixed; inset: 0; background: rgba(30, 77, 68, .45); display: grid; place-items: center; padding: 18px; padding-top: calc(18px + env(safe-area-inset-top, 0px)); z-index: 40; }
 .sheetCard { background: var(--card); border-radius: 22px; padding: 22px; max-width: 430px; width: 100%; box-sizing: border-box; }
+.connectedPromptCard { text-align: start; }
+.connectedPromptCard .homeBtnRow { margin-top: 18px; }
+.connectedPromptCard .homeBtnRow button { min-height: 46px; }
 .plansSheet { position: relative; padding-top: 58px; max-height: calc(100vh - 36px); max-height: calc(100dvh - 36px); overflow-y: auto; }
 .plansCloseTop { position: absolute; top: 12px; right: 14px; }
 .sheetX { float: right; }
