@@ -75,6 +75,23 @@ export const STRINGS = {
     "learning.back": "Back",
     "learning.edit": "Edit learning choices",
     "learning.noChoices": "No choices yet. You can edit this any time.",
+    "learning.ideasTitle": "Ideas for today",
+    "learning.ageNeeded": "Choose an age band to see safe, age-matched ideas.",
+    "learning.showDifferent": "Show different ideas",
+    "learning.minutes": "{n} min",
+    "learning.materials": "At home: {items}",
+    "learning.safety": "Safety: {note}",
+    "learning.favourite": "Save favourite",
+    "learning.favourited": "Saved",
+    "learning.favouritesTitle": "Favourites",
+    "learning.removeFavourite": "Remove",
+    "learning.doneToday": "Done today",
+    "learning.doneSaved": "Added to Day Story",
+    "learning.saveFailed": "Could not save this yet. Try again.",
+    "learning.sayIt": "Say it in {language}",
+    "learning.vocabHello": "hello",
+    "learning.vocabMore": "more",
+    "learning.vocabThanks": "thank you",
     "door.tag": "Find care. Share the day.",
     "door.rolePrompt": "What brings you here?",
     "door.roleHelp": "Families find care. Carers find care work. Already connected? Share the day together.",
@@ -606,6 +623,23 @@ export const STRINGS = {
     "learning.back": "Atrás",
     "learning.edit": "Editar opciones de aprendizaje",
     "learning.noChoices": "Aún no hay opciones. Puedes cambiarlas cuando quieras.",
+    "learning.ideasTitle": "Ideas para hoy",
+    "learning.ageNeeded": "Elige un rango de edad para ver ideas seguras y adecuadas.",
+    "learning.showDifferent": "Ver otras ideas",
+    "learning.minutes": "{n} min",
+    "learning.materials": "En casa: {items}",
+    "learning.safety": "Seguridad: {note}",
+    "learning.favourite": "Guardar favorito",
+    "learning.favourited": "Guardado",
+    "learning.favouritesTitle": "Favoritos",
+    "learning.removeFavourite": "Quitar",
+    "learning.doneToday": "Hecho hoy",
+    "learning.doneSaved": "Añadido a la Historia del día",
+    "learning.saveFailed": "No se pudo guardar todavía. Inténtalo de nuevo.",
+    "learning.sayIt": "Dilo en {language}",
+    "learning.vocabHello": "hola",
+    "learning.vocabMore": "más",
+    "learning.vocabThanks": "gracias",
     "door.tag": "Encuentra cuidado. Comparte el día.",
     "door.rolePrompt": "¿Qué te trae por aquí?",
     "door.roleHelp": "Las familias buscan cuidado. Las personas cuidadoras buscan trabajo. Si ya se conocen, compartan el día.",
@@ -1115,6 +1149,12 @@ export function currentLang() {
 export function setLang(code) {
   try { const key = accountKey("caresits-lang"); if (key) localStorage.setItem(key, code); } catch { /* fine */ }
   try { sessionStorage.setItem("caresits-door-language", code); } catch { /* session storage is optional */ }
+}
+
+export function learningActivityCopy(activity, lang = currentLang()) {
+  if (!activity) return { title: "", howTo: "" };
+  if (lang === "es") return { title: activity.titleEs || activity.title || "", howTo: activity.howToEs || activity.howTo || "" };
+  return { title: activity.title || "", howTo: activity.howTo || "" };
 }
 
 export function t(key, lang = currentLang(), vars = null) {

@@ -10,9 +10,9 @@
 // is made by the pure planners (activities, invites,
 // shopping, calendar-actions); this file only renders and
 // wires the writes the live layer already routes.
-import { t as tr } from "./lang.js";
+import { t as tr, learningActivityCopy } from "./lang.js";
 import { accountKey, doneKey, draftKey } from "./storage-keys.js";
-import { planDay, planWeek, mondayOfISO, INTERESTS, LEARNING_AGE_BANDS, LEARNING_AREAS, LEARNING_STYLES, normaliseLearningPlan, learningBandForAge } from "./activities.js";
+import { planDay, planWeek, mondayOfISO, INTERESTS, LEARNING_AGE_BANDS, LEARNING_AREAS, LEARNING_STYLES, normaliseLearningPlan, learningBandForAge, LEARNING_ACTIVITY_BANK, suggestLearningActivities, learningVocabulary } from "./activities.js";
 import { LANGS } from "./questions.js";
 import { repairChild, ageText, todayLineText } from "./family.js";
 import { assembleBrowse } from "./browse.js";
@@ -772,9 +772,124 @@ function learningSetupCard() {
   return card;
 }
 
+const FAVOURITES_KEY = "caresits-learning-favourites";
+const IDEA_OFFSET_KEY = "caresits-learning-idea-offset";
+function readFavourites() {
+  const saved = readJson(accountKey(FAVOURITES_KEY));
+  return Array.isArray(saved) ? [...new Set(saved.filter((id) => typeof id === "string"))] : [];
+}
+function writeFavourites(ids) {
+  const key = accountKey(FAVOURITES_KEY);
+  try { if (key) localStorage.setItem(key, JSON.stringify([...new Set(ids)])); } catch { /* private storage is optional */ }
+}
+function currentIdeaOffset() {
+  const saved = readJson(accountKey(IDEA_OFFSET_KEY));
+  return saved?.day === todayISO() && Number.isInteger(saved.offset) ? saved.offset : 0;
+}
+function saveIdeaOffset(offset) {
+  const key = accountKey(IDEA_OFFSET_KEY);
+  try { if (key) localStorage.setItem(key, JSON.stringify({ day: todayISO(), offset })); } catch { /* private storage is optional */ }
+}
+function learningIdeasCard() {
+  const plan = initialLearningPlan();
+  const card = el("section", "cardIn homeCard learningCard");
+  card.append(el("h2", "findTitle", tr("learning.ideasTitle")));
+  const ageBands = [...new Set(plan.children.map((child) => child.band).filter(Boolean))];
+  if (!ageBands.length) {
+    card.append(el("p", "homeBody", tr("learning.ageNeeded")));
+    const edit = el("button", "ghostBtn", tr("learning.edit"));
+    edit.type = "button";
+    edit.addEventListener("click", () => {
+      const current = initialLearningPlan();
+      persistLearningPlan({ ...current, step: 0, setupComplete: false });
+      window.CARESITS_RENDER_HOME?.();
+    });
+    card.append(edit);
+    return card;
+  }
+  const offset = currentIdeaOffset();
+  const ideas = suggestLearningActivities(plan, offset, 4);
+  const favourites = new Set(readFavourites());
+  const doneKey = accountKey("caresits-learning-done-today");
+  const doneData = readJson(doneKey);
+  const doneIds = new Set(doneData?.day === todayISO() && Array.isArray(doneData.ids) ? doneData.ids : []);
+  const list = el("div", "learningIdeaList");
+  for (const activity of ideas) {
+    const copy = learningActivityCopy(activity);
+    const item = el("article", "findCard learningIdea");
+    item.append(el("h3", "findName", copy.title));
+    item.append(el("p", "findPlace", `${activity.bands.map((id) => tr(LEARNING_AGE_BANDS.find((b) => b.id === id)?.key || "")).join(", ")} · ${tr("learning.minutes", undefined, { n: activity.minutes })}`));
+    item.append(el("p", "homeBody", copy.howTo));
+    item.append(el("p", "findPlace", tr("learning.materials", undefined, { items: activity.materialsHome })));
+    item.append(el("p", "learningSafety", tr("learning.safety", undefined, { note: activity.safety })));
+    for (const language of plan.languages.slice(0, 3)) {
+      const vocab = learningVocabulary(language);
+      if (!vocab.length) continue;
+      const words = vocab.map(([, word]) => word).join(" · ");
+      item.append(el("p", "learningVocab", `${tr("learning.sayIt", undefined, { language })}: ${words}`));
+    }
+    const actions = el("div", "homeBtnRow learningActions");
+    const fav = el("button", "ghostBtn", favourites.has(activity.id) ? tr("learning.favourited") : tr("learning.favourite"));
+    fav.type = "button";
+    fav.setAttribute?.("aria-pressed", String(favourites.has(activity.id)));
+    fav.addEventListener("click", () => {
+      if (favourites.has(activity.id)) favourites.delete(activity.id); else favourites.add(activity.id);
+      writeFavourites([...favourites]);
+      window.CARESITS_RENDER_HOME?.();
+    });
+    const done = el("button", doneIds.has(activity.id) ? "ghostBtn" : "mainBtn", doneIds.has(activity.id) ? tr("learning.doneSaved") : tr("learning.doneToday"));
+    done.type = "button";
+    done.disabled = doneIds.has(activity.id);
+    done.addEventListener("click", async () => {
+      const day = todayISO();
+      const uid = me()?.uid || "member";
+      const id = `learning-${uid}-${day}-${activity.id}`;
+      const entry = { id, day, tile: "Activity", note: copy.title, at: new Date().toISOString() };
+      const save = write("dayStory", entry);
+      if (save) {
+        const result = await Promise.resolve(save);
+        if (result && result.ok === false) { done.textContent = tr("learning.saveFailed"); return; }
+      }
+      const existing = window.CARESITS_FAMILY || { children: [], entries: [] };
+      const entries = [...(existing.entries || []).filter((old) => old.id !== id), entry];
+      window.CARESITS_FAMILY = { ...existing, entries };
+      const key = accountKey("caresits-learning-done-today");
+      try { if (key) localStorage.setItem(key, JSON.stringify({ day, ids: [...doneIds, activity.id] })); } catch { /* private storage is optional */ }
+      window.CARESITS_FAMILY_RENDER?.();
+      window.CARESITS_RENDER_HOME?.();
+    });
+    actions.append(fav, done);
+    item.append(actions);
+    list.append(item);
+  }
+  card.append(list);
+  const show = el("button", "ghostBtn", tr("learning.showDifferent"));
+  show.type = "button";
+  show.addEventListener("click", () => {
+    saveIdeaOffset(offset + ideas.length);
+    window.CARESITS_RENDER_HOME?.();
+  });
+  card.append(show);
+  const savedIdeas = LEARNING_ACTIVITY_BANK.filter((activity) => favourites.has(activity.id) && activity.bands.some((band) => ageBands.includes(band)));
+  if (savedIdeas.length) {
+    card.append(el("h3", "findName", tr("learning.favouritesTitle")));
+    const favList = el("div", "chipRow learningChoices");
+    for (const activity of savedIdeas) {
+      const name = learningActivityCopy(activity).title;
+      const remove = el("button", "chipBtn on", name + " · " + tr("learning.removeFavourite"));
+      remove.type = "button";
+      remove.addEventListener("click", () => { favourites.delete(activity.id); writeFavourites([...favourites]); window.CARESITS_RENDER_HOME?.(); });
+      favList.append(remove);
+    }
+    card.append(favList);
+  }
+  return card;
+}
+
 function communicateHome(root) {
   root.append(greeting("homes.communicateLead"));
   root.append(learningSetupCard());
+  if (initialLearningPlan().setupComplete) root.append(learningIdeasCard());
   const card = el("section", "cardIn homeCard");
   card.append(el("h2", "findTitle", tr("homes.conversations")));
   card.append(el("p", "homeBody", tr("homes.communicateBody")));
