@@ -322,3 +322,37 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+/* Find cards and the bottom-sheet filters. */
+.findToolbar { display: flex; justify-content: flex-end; margin: -4px 0 8px; }
+.findFilterOpen { min-height: 44px; padding: 9px 16px; }
+.findFilterOpen:focus-visible, .findFilterClose:focus-visible, .findActions button:focus-visible, .findFilterActions button:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.trustRow { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.trustChip { display: inline-flex; align-items: center; min-height: 28px; border: 1px solid var(--line); border-radius: 999px; background: #E9F2ED; color: var(--ink); padding: 3px 10px; font-size: 13px; font-weight: 700; }
+.findWhyHeading { margin: 12px 0 2px; font-size: 15px; }
+.findActions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin-top: 14px; }
+.findActions button { min-height: 46px; padding: 10px 12px; }
+.findActions .findMsg { width: auto; }
+.findDetails { border-top: 1px solid var(--line); margin-top: 10px; padding-top: 8px; }
+.findDetailLine { margin: 4px 0; }
+.findEmptyAction { width: min(100%, 300px); min-height: 48px; margin-top: 16px; }
+.filterSheetWrap { align-items: end; padding: 0; }
+.filterSheetCard { width: min(100%, 620px); max-width: 620px; max-height: 86vh; max-height: 86dvh; overflow-y: auto; border-radius: 22px 22px 0 0; padding: 20px 18px calc(16px + env(safe-area-inset-bottom, 0px)); }
+.findFilterHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.findFilterTitle { margin: 0; font-family: "Newsreader", Georgia, serif; font-size: 26px; }
+.findFilterClose { min-height: 44px; }
+.findFilterHelp { margin: 6px 0 12px; color: var(--soft); }
+.findFilterGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; }
+.findFilterField { display: grid; gap: 4px; min-width: 0; }
+.findFilterLabel { font-weight: 700; font-size: 14px; }
+.findFilterSelect { min-height: 44px; margin: 0; }
+.findFilterCheck { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 12px; background: #fff; font-weight: 600; }
+.findFilterCheck input { width: 20px; height: 20px; accent-color: var(--ink); }
+.findMoreFilters { display: block; min-height: 44px; margin: 8px 0; }
+.findExtraFilters { padding-top: 2px; }
+.findFilterActions { position: sticky; bottom: -1px; display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 14px; padding: 12px 0 2px; border-top: 1px solid var(--line); background: var(--card); }
+.findFilterActions button { min-height: 46px; }
+@media (max-width: 600px) {
+  .filterSheetCard { width: 100%; max-height: 86dvh; border-radius: 22px 22px 0 0; padding-inline: 16px; }
+  .findFilterGrid { grid-template-columns: minmax(0, 1fr); }
+}

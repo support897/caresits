@@ -93,21 +93,52 @@ export function renderMatches(root, viewerUid, rels, names) {
     img.src = "bunny/bunny-rest-calm.png";
     img.alt = tr("find.bunnyRest");
     box.append(img, el("h3", null, tr("find.noneTitle")), el("p", null, tr("matches.emptyBody")));
+    const action = el("button", "mainBtn", tr("matches.emptyAction"));
+    action.type = "button";
+    action.addEventListener("click", () => window.CARESITS_NAV?.("find"));
+    box.append(action);
     root.append(box);
     return;
   }
   const list = el("div", "findList");
   for (const rel of rels) {
     const otherUid = rel.members.find((m) => m !== viewerUid);
+    const name = names[otherUid] || tr("find.member");
     const card = el("article", "findCard");
-    card.append(el("h3", "findName", names[otherUid] || tr("find.member")));
-    card.append(el("p", "findPlace", STATE_WORDS[rel.state] || rel.state));
+    const head = el("div", "findHead");
+    head.append(el("div", "findInitial", name.slice(0, 1)));
+    const who = el("div", "findWho");
+    who.append(el("h3", "findName", name));
+    who.append(el("p", "findPlace", STATE_WORDS[rel.state] || rel.state));
+    head.append(who);
+    card.append(head);
+    const status = el("div", "trustRow");
+    status.append(el("span", "trustChip", STATE_WORDS[rel.state] || rel.state));
+    card.append(status);
     for (const reason of rel.learningMatches || []) {
       const value = reason.type === "style" ? tr("learning.style." + reason.value)
         : reason.type === "area" ? tr("learning.area." + reason.value) : reason.value;
       const key = reason.type === "style" ? "learning.matchStyle" : reason.type === "area" ? "learning.matchArea" : "learning.matchLanguage";
       card.append(el("p", "learningMatchReason", tr(key, undefined, { style: value, area: value, language: value })));
     }
+    const details = el("div", "findDetails");
+    details.hidden = true;
+    details.append(el("p", "findDetailLine", tr("matches.detailsBody", undefined, { state: STATE_WORDS[rel.state] || rel.state })));
+    card.append(details);
+    const actionRow = el("div", "findActions");
+    const detailsButton = el("button", "ghostBtn findDetailsBtn", tr("find.details"));
+    detailsButton.type = "button";
+    detailsButton.setAttribute("aria-expanded", "false");
+    detailsButton.addEventListener("click", () => {
+      details.hidden = !details.hidden;
+      detailsButton.setAttribute("aria-expanded", String(!details.hidden));
+      detailsButton.textContent = tr(details.hidden ? "find.details" : "find.hideDetails");
+    });
+    const message = el("button", "mainBtn findMsg", tr("find.message"));
+    message.type = "button";
+    message.addEventListener("click", () => window.CARESITS_NAV?.("thread"));
+    actionRow.append(detailsButton, message);
+    card.append(actionRow);
     const row = el("div", "actRow");
     const addBtn = (label, to) => {
       const plan = planTransition(rel, viewerUid, to);
@@ -127,11 +158,11 @@ export function renderMatches(root, viewerUid, rels, names) {
     if (rel.state === "pending" && rel.createdBy !== viewerUid) addBtn(tr("matches.confirm"), "contact");
     if (rel.state === "contact" && rel.familyUid === viewerUid) addBtn(tr("matches.hired"), "hired");
     if (rel.state !== "ended") addBtn(tr("matches.end"), "ended");
-    card.append(row);
+    if (row.childElementCount) card.append(row);
     const quiet = el("div", "quietRow");
     const rep = el("button", "quietBtn", tr("find.report"));
     rep.type = "button";
-    rep.addEventListener("click", () => window.CARESITS_REPORT?.(otherUid, { surface: "profile", snapshot: { items: ["match"], text: "", title: names[otherUid] || tr("find.member") } }));
+    rep.addEventListener("click", () => window.CARESITS_REPORT?.(otherUid, { surface: "profile", snapshot: { items: ["match"], text: "", title: name } }));
     const blk = el("button", "quietBtn", tr("find.block"));
     blk.type = "button";
     blk.addEventListener("click", () => window.CARESITS_BLOCK?.(otherUid, card));
