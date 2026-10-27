@@ -47,7 +47,7 @@ export function planTransition(rel, actorUid, to) {
 // Public jobs can include old QA records. Hide known test labels without
 // collapsing legitimate customer posts that happen to share their details.
 export function cleanJobListings(jobs) {
-  const testLabel = /\burgent(?:cap|job)[a-z0-9_-]*\b|\bmicro[\s_-]*job(?:[\s_-]*[a-z0-9_-]+)?\b/i;
+  const testLabel = /\burgent(?:cap|job)[a-z0-9_-]*\b|\bmicro[\s_-]*job(?:[\s_-]*[a-z0-9_-]+)?\b|\btest[\s_-]*job\b/i;
   return (Array.isArray(jobs) ? jobs : []).filter((job) => {
     if (!job || typeof job !== "object") return false;
     const words = [job.id, job.title, job.name, job.when, job.note, job.description].map((v) => String(v || "")).join(" ");

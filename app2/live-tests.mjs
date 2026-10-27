@@ -320,6 +320,7 @@ t("urgent board: test labels are hidden without suppressing legitimate repeated 
     { id: "UrgentCap2b", familyUid: "f1", when: "Saturday", postcode: "4217", note: "Saturday morning help" },
     { id: "UrgentJobNight", familyUid: "f1", when: "Saturday", postcode: "4217", note: "Saturday morning help" },
     { id: "micro-3", familyUid: "f2", when: "Today", postcode: "4220", note: "micro job" },
+    { id: "test-4", familyUid: "f4", when: "Today", postcode: "4220", note: "test job" },
     { id: "real-1", familyUid: "f3", when: "Tomorrow", postcode: "2000", note: "Help after school" },
     { id: "real-2", familyUid: "f3", when: "Tomorrow", postcode: "2000", note: "Help after school" },
   ]);
