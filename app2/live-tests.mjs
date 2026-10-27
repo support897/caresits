@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { routeWrite, trustSeamFrom, publishTrust, refreshTrustName, writeDataFor, makeWriter, phaseCNameTargets, phaseCSeam, fetchPhaseC, activityStampPath, weekSeamFrom, threadSeamFrom } from "./live.js";
 import { accountKey, draftKey, doneKey, clearSessionMarkers } from "./storage-keys.js";
+import { cleanJobListings } from "./pair-actions.js";
 import { frameUser, FRAME_WAIT, planSave, publishSavedProfile, drainOutbox } from "./account-save.js";
 let n = 0; const t = (name, fn) => { fn(); n += 1; console.log("ok -", name); };
 const ta = async (name, fn) => { await fn(); n += 1; console.log("ok -", name); };
@@ -313,6 +314,16 @@ t("phase C names (F19): a carer also needs the families who posted the board job
   const rels = [{ members: ["c9", "f1"] }];
   const jobs = [{ familyUid: "f1" }, { familyUid: "f2" }, { familyUid: "c9" }];
   assert.deepEqual(phaseCNameTargets("c9", "carer", rels, jobs).sort(), ["f1", "f2"]);
+});
+t("urgent board: test labels are hidden without suppressing legitimate repeated details", () => {
+  const jobs = cleanJobListings([
+    { id: "UrgentCap2b", familyUid: "f1", when: "Saturday", postcode: "4217", note: "Saturday morning help" },
+    { id: "UrgentJobNight", familyUid: "f1", when: "Saturday", postcode: "4217", note: "Saturday morning help" },
+    { id: "micro-3", familyUid: "f2", when: "Today", postcode: "4220", note: "micro job" },
+    { id: "real-1", familyUid: "f3", when: "Tomorrow", postcode: "2000", note: "Help after school" },
+    { id: "real-2", familyUid: "f3", when: "Tomorrow", postcode: "2000", note: "Help after school" },
+  ]);
+  assert.deepEqual(jobs.map((job) => job.id), ["real-1", "real-2"]);
 });
 t("phase C seam (F19): the shape is viewer, pairs, jobs and names, empty by default", () => {
   assert.deepEqual(phaseCSeam({ uid: "f1", side: "family" }), { viewer: { uid: "f1", side: "family" }, rels: [], jobs: [], names: {} });

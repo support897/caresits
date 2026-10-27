@@ -4,7 +4,7 @@
 // CARESITS_WRITE (the live account layer) when it is present.
 // The browse gate lives in the planners: an unfinished profile
 // is walked to the questionnaire, never scolded.
-import { planContact, planTransition, planJobPost, planInterest } from "./pair-actions.js";
+import { planContact, planTransition, planJobPost, planInterest, cleanJobListings } from "./pair-actions.js";
 
 const el = (tag, cls, text) => {
   const n = document.createElement(tag);
@@ -67,30 +67,39 @@ export function renderMatches(root, viewerUid, rels, names) {
 }
 
 export function renderBoard(root, viewer, jobs) {
+  const visibleJobs = cleanJobListings(jobs);
   root.replaceChildren();
   root.append(el("h2", "findTitle", tr("shell.board")));
   root.append(el("p", "findPool", tr("board.lead")));
   if (viewer?.side === "family") {
     const form = el("div", "findCard");
     form.append(el("h3", "findName", tr("board.postTitle")));
-    const when = el("input", "txtIn");
-    when.placeholder = tr("board.whenPh");
+    const when = el("select", "txtIn");
+    when.setAttribute("aria-label", tr("board.when"));
+    for (const [value, label] of [["Today", tr("board.today")], ["Tomorrow", tr("board.tomorrow")], ["This weekend", tr("board.weekend")]]) {
+      const option = el("option", null, label);
+      option.value = value;
+      when.append(option);
+    }
     const suburb = el("input", "txtIn");
     suburb.placeholder = tr("board.postcodePh");
+    suburb.setAttribute("aria-label", tr("board.postcode"));
     const note = el("input", "txtIn");
     note.placeholder = tr("board.notePh");
+    note.setAttribute("aria-label", tr("board.note"));
     const post = el("button", "mainBtn", tr("board.post"));
     post.type = "button";
     const msg = el("p", "gateMsg", "");
     post.addEventListener("click", () => {
-      const plan = planJobPost({ familyUid: viewer.uid, when: when.value || tr("board.soon"), dayParts: [], postcode: suburb.value, bands: [], note: note.value, nowIso: nowIso(), profileComplete: profileDone() });
+      if (!suburb.value.trim() || !note.value.trim()) { msg.textContent = tr("board.postMissing"); return; }
+      const plan = planJobPost({ familyUid: viewer.uid, when: when.value || tr("board.soon"), dayParts: [], postcode: suburb.value.trim(), bands: [], note: note.value.trim(), nowIso: nowIso(), profileComplete: profileDone() });
       if (!plan.ok && plan.reason === "profile-incomplete") { msg.textContent = tr("board.gatePost"); walkToQuestions(); return; }
       if (plan.ok) write("job", plan);
     });
     form.append(when, suburb, note, post, msg);
     root.append(form);
   }
-  if (!jobs.length) {
+  if (!visibleJobs.length) {
     const box = el("div", "cardIn");
     const img = el("img", "bunnyBig");
     img.src = "bunny/bunny-rest-calm.png";
@@ -100,7 +109,7 @@ export function renderBoard(root, viewer, jobs) {
     return;
   }
   const list = el("div", "findList");
-  for (const job of jobs) {
+  for (const job of visibleJobs) {
     const card = el("article", "findCard");
     card.append(el("h3", "findName", job.postcode ? tr("find.postcode", undefined, { n: job.postcode }) : tr("board.nearby")));
     card.append(el("p", "findPlace", (job.when || tr("board.soon")) + (job.note ? " · " + job.note : "")));

@@ -8,6 +8,7 @@
 // config beside this file.
 import { levelOf, mergeDeepAnswers } from "./levels.js";
 import { accountKey, clearSessionMarkers } from "./storage-keys.js";
+import { cleanJobListings } from "./pair-actions.js";
 import { applyI18n } from "./lang.js";
 import { resolvePlan, entitlementFromRecord, plusExtrasOpen, withTimeout } from "../accounts/account.js";
 
@@ -343,7 +344,7 @@ export async function fetchPhaseC(fs, db, uid, side) {
   const ownJobs = await grabQuery("jobs", fs.where("familyUid", "==", uid));
   const byId = new Map();
   for (const job of [...openJobs, ...ownJobs]) byId.set(job.id, job);
-  const jobs = [...byId.values()];
+  const jobs = cleanJobListings([...byId.values()]);
   const names = {};
   for (const other of phaseCNameTargets(uid, side, rels, jobs)) {
     try {
