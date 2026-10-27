@@ -17,10 +17,8 @@ body { margin: 0; background: var(--ground); color: var(--ink); font-family: "At
 h1, h2 { font-family: "Newsreader", Georgia, serif; font-weight: 600; line-height: 1.15; }
 .lead { font-size: 19px; }
 
-/* The layout: menu hidden on load, content full screen.
-   Her shape (15 Oct 2026): menu open means the menu takes most
-   of the screen and the content shrinks to a thin sliver at the
-   edge. Tapping the sliver or closing returns full content. */
+/* The content fills the screen; the bottom tabs stay in reach.
+   More opens the familiar grouped menu. */
 .layout { display: flex; height: 100dvh; overflow: hidden; }
 .menu {
   flex: 0 0 0; width: 0; overflow: hidden; background: #F7EFE3;
@@ -243,3 +241,84 @@ html[data-theme="white"] body { background: #FFFFFF; }
 .learningIdea .homeBtnRow { justify-content: flex-start; }
 
 .learningMatchReason { color: var(--entry-accent, #1e4d44); font-weight: 600; }
+
+/* Visible, thumb-ready navigation for the three Caresitters sides. */
+.topBar { z-index: 5; }
+.brandLine { flex: 1 1 auto; min-width: 0; }
+.homeSideSwitchBtn {
+  flex: 0 0 auto; min-height: 44px; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--ground); color: var(--ink); padding: 6px 11px; font: inherit;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.bottomNav {
+  position: fixed; z-index: 25; inset: auto 0 0; display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px;
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--line); background: rgba(255,255,255,.97);
+  box-shadow: 0 -5px 18px rgba(30,77,68,.06); backdrop-filter: blur(12px);
+}
+.bottomTab {
+  min-width: 0; min-height: 52px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 2px; padding: 4px 2px;
+  border: 0; border-radius: 13px; background: transparent; color: var(--ink);
+  font: inherit; font-size: 11px; font-weight: 700; line-height: 1.1; cursor: pointer;
+}
+.bottomTab svg { width: 21px; height: 21px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.bottomTab span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bottomTab.on { background: var(--entry-soft, #E6F2EC); color: var(--entry-accent, var(--ink)); }
+.bottomTab.on svg { stroke-width: 2.2; }
+.content { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+.navBtn, .navGroupHead, .closeBtn, .mainBtn, .ghostBtn, .chipBtn, .chip { min-height: 44px; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 3px solid var(--entry-accent, var(--ink)); outline-offset: 2px;
+}
+.menuHead { padding-top: 2px; }
+#closeBtn { min-height: 44px; }
+.sideSwitchChoices button { min-height: 44px; }
+.helpCard { text-align: start; }
+.helpCard .bunnyBig { display: block; width: 76px; margin: 0 auto 8px; }
+.helpCard .homeBtnRow { display: grid; gap: 10px; margin-top: 16px; }
+.helpCard .homeBtnRow button { width: 100%; }
+.sidePickerCard { text-align: start; }
+.sidePickerCard h2 { margin-top: 8px; }
+.sidePickerCard .sideSwitchChoices { margin-top: 14px; }
+.tourChoiceList { display: grid; gap: 12px; margin-top: 18px; }
+.tourChoiceBtn {
+  width: 100%; min-height: 60px; border: 1.5px solid var(--line); border-radius: 16px;
+  background: var(--entry-soft, #E6F2EC); color: var(--ink); padding: 14px 18px;
+  font: inherit; font-size: 18px; font-weight: 700; text-align: left; cursor: pointer;
+}
+.tourChoiceBtn:hover { border-color: var(--entry-accent, var(--ink)); }
+.tourCoachWrap {
+  position: fixed; inset: 0; z-index: 40; display: flex; align-items: flex-end;
+  justify-content: center; padding: 14px; padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  background: transparent; pointer-events: none;
+}
+.tourCoachCard { pointer-events: auto; max-width: 430px; text-align: left; padding: 18px; }
+.tourCoachCard .tourBody { min-height: 0; }
+.tourCoachCard .bunnyBig { float: left; width: 48px; margin: 0 12px 4px 0; }
+.tourCoachCard h3 { margin: 4px 0 5px; }
+.tourCoachCard p { margin: 0 0 12px; }
+.tourCoachCard .tourActions { clear: both; justify-content: flex-end; }
+.tourCoachCard .tourCount { margin: 4px 0 0; text-align: right; }
+.tourSpotlight { box-shadow: inset 0 0 0 2px var(--entry-accent, var(--ink)), 0 0 0 2px var(--card); }
+.layout.open .bottomNav { display: none; }
+@media (max-width: 600px) {
+  .layout.open .menu {
+    position: fixed; inset: 0; z-index: 35; width: 100vw; height: 100dvh;
+    flex: 0 0 100%; padding: 16px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+    padding-top: calc(16px + env(safe-area-inset-top, 0px)); overflow-y: auto;
+  }
+  .layout.open .sliver, .layout.open .content { display: none; }
+  .layout.open .bottomNav { display: none; }
+  .menuTitle { font-size: 22px; }
+  .bottomTab { font-size: 10.5px; }
+}
+@media (max-width: 350px) {
+  .bottomNav { padding-left: 4px; padding-right: 4px; gap: 2px; }
+  .bottomTab { font-size: 10px; }
+  .homeSideSwitchBtn { font-size: 12px; padding-inline: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}

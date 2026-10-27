@@ -4,7 +4,7 @@
 // HUMAN CHECK RULE: keys under "checks." and "legal." carry NO
 // Chinese values here, exactly as in Spanish. They stay English
 // until a human checker approves words for this language.
-// Coverage: 639 translated app UI keys; human-check phrases remain in English by design.
+// Coverage: 670 translated app UI keys; human-check phrases remain in English by design.
 export const UI_ZH = {
  "door.tag": "找到照护，分享每一天。",
 
@@ -42,7 +42,7 @@ export const UI_ZH = {
  "door.resetSent": "重置链接已经发送到您的邮箱。",
  "door.resetFail": "现在无法发送。请过一会儿再试。",
  "tour.t1t": "您好，我是 Caresitters 小兔子",
- "tour.t1b": "我带您四处看看。首先：您叫什么名字？",
+ "tour.t1b": "我该怎么称呼你？",
  "tour.t2t": "这是您的菜单",
  "tour.t2b": "所有功能都在这里面。在您点击菜单之前，它会一直收好，让您的屏幕保持清爽。",
  "tour.t3t": "寻找照护，或者被找到",
@@ -637,5 +637,29 @@ export const UI_ZH = {
  "act.gardendig.t": "在花园里挖土",
  "act.gardendig.n": "花盆、泥土和找蚯蚓",
  "act.freeplay.t": "自由玩耍",
- "act.freeplay.n": "拿出玩具，开启想象"
+ "act.freeplay.n": "拿出玩具，开启想象",
+ "tour.choiceTitle": "你想先做什么？",
+ "tour.choice.family.primary": "寻找照护人员",
+ "tour.choice.family.secondary": "先看看",
+ "tour.choice.career.primary": "建立我的资料",
+ "tour.choice.career.secondary": "查看工作",
+ "tour.choice.communicate.primary": "浏览活动点子",
+ "tour.choice.communicate.secondary": "查看消息",
+ "tour.nameSkip": "暂时跳过",
+ "tour.continue": "保存并继续",
+ "tour.coach.home.title": "首页是你的起点。",
+ "tour.coach.home.body": "回到这里查看接下来的步骤。",
+ "tour.coach.find.title": "找到合适的人选。",
+ "tour.coach.find.body": "看看哪些人可能适合你的家庭。",
+ "tour.coach.profile.title": "打造属于你的个人资料。",
+ "tour.coach.profile.body": "添加信息，帮助家庭了解你。",
+ "tour.coach.more.title": "更多选项都在“更多”里。",
+ "tour.coach.more.body": "设置、帮助和切换身份的选项都在那里。",
+ "tour.coach.ideas.title": "今天的活动点子。",
+ "tour.coach.ideas.body": "寻找适合一起进行的简单活动。",
+ "tour.coach.messages.title": "继续保持联系。",
+ "tour.coach.messages.body": "需要时可以在这里查看消息。",
+ "shell.more": "更多", "shell.jobs": "工作", "shell.messages": "消息", "shell.ideas": "点子", "shell.navigation": "主导航", "shell.help": "帮助",
+ "help.title": "需要什么帮助？", "help.body": "选择一个开始的地方。已保存的回答会留在此设备上。", "help.answers": "更新我的回答", "help.privacy": "阅读隐私政策",
+
 };

@@ -14,6 +14,7 @@ ck("an untranslated key falls back to English, never blank", () => assert.equal(
 ck("checks words carry NO Spanish value (human check rule)", () => assert.ok(Object.keys(STRINGS.es).every((k) => !k.startsWith("checks.") && !k.startsWith("legal."))));
 ck("every English door key has a Spanish twin", () => { for (const k of Object.keys(STRINGS.en)) if (k.startsWith("door.")) assert.ok(STRINGS.es[k], k); });
 ck("every shell + tour key has a Spanish twin", () => { for (const k of Object.keys(STRINGS.en)) if (k.startsWith("shell.") || k.startsWith("tour.")) assert.ok(STRINGS.es[k], k); });
+ck("Help prompts are clear in English and Spanish", () => { for (const k of ["help.title", "help.body", "help.answers", "help.privacy"]) { assert.ok(STRINGS.en[k], k); assert.ok(STRINGS.es[k], k); } });
 ck("every find key has a Spanish twin", () => { for (const k of Object.keys(STRINGS.en)) if (k.startsWith("find.")) assert.ok(STRINGS.es[k], k); });
 ck("every home + matches + board key has a Spanish twin", () => { for (const k of Object.keys(STRINGS.en)) if (k.startsWith("home.") || k.startsWith("matches.") || k.startsWith("board.")) assert.ok(STRINGS.es[k], k); });
 ck("every family key has a Spanish twin", () => { for (const k of Object.keys(STRINGS.en)) if (k.startsWith("family.")) assert.ok(STRINGS.es[k], k); });

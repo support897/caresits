@@ -4,7 +4,7 @@
 // HUMAN CHECK RULE: keys under "checks." and "legal." carry NO
 // Arabic values here, exactly as in Spanish. They stay English
 // until a human checker approves words for this language.
-// Coverage: 639 translated app UI keys; human-check phrases remain in English by design.
+// Coverage: 670 translated app UI keys; human-check phrases remain in English by design.
 // RTL note: these are string values only; layout direction is a
 // wiring concern and is not set here.
 export const UI_AR = {
@@ -44,7 +44,7 @@ export const UI_AR = {
  "door.resetSent": "رابط إعادة التعيين في طريقه إلى بريدك الإلكتروني.",
  "door.resetFail": "لم نتمكن من إرسال ذلك الآن. حاول مرة أخرى بعد لحظة.",
  "tour.t1t": "مرحبًا، أنا أرنب Caresitters",
- "tour.t1b": "سأرشدك في الجولة. أولًا وقبل كل شيء: ما اسمك؟",
+ "tour.t1b": "ما الاسم الذي تفضلين أن أناديك به؟",
  "tour.t2t": "هذه هي قائمتك",
  "tour.t2b": "كل شيء يعيش هنا. يبقى مخفيًا حتى تنقر على القائمة، حتى تبقى شاشتك هادئة.",
  "tour.t3t": "ابحث عن الرعاية، أو ليتم العثور عليك",
@@ -640,5 +640,29 @@ export const UI_AR = {
  "homes.communicateBody": "افتحي محادثة عندما يناسبكِ. هذه المساحة للتواصل، وليست للمطابقة.",
  "homes.openConversations": "فتح المحادثات",
  "homes.noConversations": "لا توجد محادثات بعد. ستظهر رسائلكِ هنا عندما تتواصلين مع أحدهم."
+,
+ "tour.choiceTitle": "ماذا تودين أن تفعلي أولًا؟",
+ "tour.choice.family.primary": "ابحثي عن رعاية",
+ "tour.choice.family.secondary": "ألقِ نظرة",
+ "tour.choice.career.primary": "أنشئي ملفي الشخصي",
+ "tour.choice.career.secondary": "عرض الوظائف",
+ "tour.choice.communicate.primary": "استكشفي الأفكار",
+ "tour.choice.communicate.secondary": "عرض الرسائل",
+ "tour.nameSkip": "تخطي الآن",
+ "tour.continue": "احفظي وتابعي",
+ "tour.coach.home.title": "الصفحة الرئيسية هي نقطة البداية.",
+ "tour.coach.home.body": "عودي إليها لمعرفة خطواتك التالية.",
+ "tour.coach.find.title": "اعثري على الشخص المناسب.",
+ "tour.coach.find.body": "تصفحي من قد يناسب أسرتك.",
+ "tour.coach.profile.title": "اجعلي ملفك الشخصي مميزًا.",
+ "tour.coach.profile.body": "أضيفي تفاصيل تساعد الأسر على التعرّف عليك.",
+ "tour.coach.more.title": "تجدين باقي الخيارات في المزيد.",
+ "tour.coach.more.body": "الإعدادات والمساعدة وخيارات التبديل موجودة هناك.",
+ "tour.coach.ideas.title": "أفكار لليوم.",
+ "tour.coach.ideas.body": "اكتشفي أنشطة بسيطة لتشاركيها معًا.",
+ "tour.coach.messages.title": "واصلي المحادثة.",
+ "tour.coach.messages.body": "تجدين رسائلك هنا عندما تحتاجين إليها.",
+ "shell.more": "المزيد", "shell.jobs": "وظائف", "shell.messages": "الرسائل", "shell.ideas": "أفكار", "shell.navigation": "التنقل الرئيسي", "shell.help": "المساعدة",
+ "help.title": "كيف يمكننا مساعدتك؟", "help.body": "اختاري مكانًا للبدء. تبقى إجاباتك المحفوظة على هذا الجهاز.", "help.answers": "حدّثي إجاباتي", "help.privacy": "اقرئي سياسة الخصوصية",
 
 };

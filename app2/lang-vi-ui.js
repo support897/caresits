@@ -4,7 +4,7 @@
 // HUMAN CHECK RULE: keys under "checks." and "legal." carry NO
 // Vietnamese values here, exactly as in Spanish. They stay English
 // until a human checker approves words for this language.
-// Coverage: 639 translated app UI keys; human-check phrases remain in English by design.
+// Coverage: 670 translated app UI keys; human-check phrases remain in English by design.
 export const UI_VI = {
  "door.tag": "Tìm người chăm sóc. Chia sẻ mỗi ngày.",
 
@@ -42,7 +42,7 @@ export const UI_VI = {
  "door.resetSent": "Liên kết đặt lại đang trên đường đến email của bạn.",
  "door.resetFail": "Hiện chưa gửi được. Thử lại sau giây lát.",
  "tour.t1t": "Xin chào, mình là thỏ Caresitters",
- "tour.t1b": "Mình sẽ dẫn bạn đi một vòng. Việc đầu tiên: bạn tên là gì?",
+ "tour.t1b": "Mình nên gọi bạn là gì?",
  "tour.t2t": "Đây là menu của bạn",
  "tour.t2b": "Mọi thứ đều ở trong này. Menu sẽ gọn gàng ẩn đi cho đến khi bạn chạm vào, nên màn hình của bạn luôn thoáng.",
  "tour.t3t": "Tìm người chăm sóc, hoặc để được tìm thấy",
@@ -637,5 +637,29 @@ export const UI_VI = {
  "act.gardendig.t": "Đào đất trong vườn",
  "act.gardendig.n": "Chậu, đất và tìm giun",
  "act.freeplay.t": "Chơi tự do",
- "act.freeplay.n": "Lấy đồ chơi ra và bật trí tưởng tượng"
+ "act.freeplay.n": "Lấy đồ chơi ra và bật trí tưởng tượng",
+ "tour.choiceTitle": "Bạn muốn làm gì trước tiên?",
+ "tour.choice.family.primary": "Tìm người chăm sóc",
+ "tour.choice.family.secondary": "Xem thử",
+ "tour.choice.career.primary": "Tạo hồ sơ của tôi",
+ "tour.choice.career.secondary": "Xem việc làm",
+ "tour.choice.communicate.primary": "Khám phá ý tưởng",
+ "tour.choice.communicate.secondary": "Xem tin nhắn",
+ "tour.nameSkip": "Để sau",
+ "tour.continue": "Lưu và tiếp tục",
+ "tour.coach.home.title": "Trang chủ là nơi bắt đầu.",
+ "tour.coach.home.body": "Quay lại đây để xem bước tiếp theo.",
+ "tour.coach.find.title": "Tìm người phù hợp.",
+ "tour.coach.find.body": "Xem những người có thể hợp với gia đình bạn.",
+ "tour.coach.profile.title": "Hãy tạo hồ sơ của riêng bạn.",
+ "tour.coach.profile.body": "Thêm thông tin để các gia đình hiểu về bạn.",
+ "tour.coach.more.title": "Các mục khác nằm trong Thêm.",
+ "tour.coach.more.body": "Cài đặt, trợ giúp và lựa chọn vai trò ở đó.",
+ "tour.coach.ideas.title": "Ý tưởng cho hôm nay.",
+ "tour.coach.ideas.body": "Tìm hoạt động đơn giản để cùng nhau thực hiện.",
+ "tour.coach.messages.title": "Tiếp tục trò chuyện.",
+ "tour.coach.messages.body": "Tin nhắn của bạn luôn ở đây khi cần.",
+ "shell.more": "Thêm", "shell.jobs": "Việc làm", "shell.messages": "Tin nhắn", "shell.ideas": "Ý tưởng", "shell.navigation": "Điều hướng chính", "shell.help": "Trợ giúp",
+ "help.title": "Chúng tôi có thể giúp gì?", "help.body": "Chọn nơi để bắt đầu. Câu trả lời đã lưu vẫn nằm trên thiết bị này.", "help.answers": "Cập nhật câu trả lời", "help.privacy": "Đọc chính sách quyền riêng tư",
+
 };

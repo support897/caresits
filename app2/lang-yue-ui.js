@@ -4,7 +4,7 @@
 // HUMAN CHECK RULE: keys under "checks." and "legal." carry NO
 // Chinese values here, exactly as in Spanish. They stay English
 // until a human checker approves words for this language.
-// Coverage: 639 translated app UI keys; human-check phrases remain in English by design.
+// Coverage: 670 translated app UI keys; human-check phrases remain in English by design.
 export const UI_YUE = {
  "door.tag": "找到照護，分享每一天。",
 
@@ -42,7 +42,7 @@ export const UI_YUE = {
  "door.resetSent": "重設連結已經發送到您的電郵。",
  "door.resetFail": "現在無法發送。請過一會兒再試。",
  "tour.t1t": "您好，我是 Caresitters 小兔子",
- "tour.t1b": "我帶您四處看看。首先：您叫甚麼名字？",
+ "tour.t1b": "我應該點稱呼你？",
  "tour.t2t": "這是您的選單",
  "tour.t2b": "所有功能都在這裏面。在您點擊選單之前，它會一直收好，讓您的螢幕保持清爽。",
  "tour.t3t": "尋找照護，或者被找到",
@@ -637,5 +637,29 @@ export const UI_YUE = {
  "act.gardendig.t": "喺花園掘泥",
  "act.gardendig.n": "花盆、泥土同搵蚯蚓",
  "act.freeplay.t": "自由玩",
- "act.freeplay.n": "攞玩具出嚟，想像力開動"
+ "act.freeplay.n": "攞玩具出嚟，想像力開動",
+ "tour.choiceTitle": "你想先做啲咩？",
+ "tour.choice.family.primary": "搵照顧人員",
+ "tour.choice.family.secondary": "睇吓先",
+ "tour.choice.career.primary": "建立我嘅個人資料",
+ "tour.choice.career.secondary": "睇工作",
+ "tour.choice.communicate.primary": "探索活動點子",
+ "tour.choice.communicate.secondary": "睇訊息",
+ "tour.nameSkip": "暫時略過",
+ "tour.continue": "儲存並繼續",
+ "tour.coach.home.title": "首頁係你嘅起點。",
+ "tour.coach.home.body": "返嚟呢度睇下一步要做咩。",
+ "tour.coach.find.title": "搵到合適嘅人選。",
+ "tour.coach.find.body": "睇吓邊啲人可能適合你嘅家庭。",
+ "tour.coach.profile.title": "建立你自己嘅個人資料。",
+ "tour.coach.profile.body": "加入資料，等家庭更了解你。",
+ "tour.coach.more.title": "其他選項都喺「更多」入面。",
+ "tour.coach.more.body": "設定、幫助同切換身份嘅選項都喺嗰度。",
+ "tour.coach.ideas.title": "今日嘅活動點子。",
+ "tour.coach.ideas.body": "搵啲簡單活動一齊做。",
+ "tour.coach.messages.title": "繼續保持聯絡。",
+ "tour.coach.messages.body": "需要時可以喺呢度睇訊息。",
+ "shell.more": "更多", "shell.jobs": "工作", "shell.messages": "訊息", "shell.ideas": "點子", "shell.navigation": "主要導覽", "shell.help": "幫助",
+ "help.title": "我哋可以點幫你？", "help.body": "揀一個地方開始。已儲存嘅回答會留喺呢部裝置。", "help.answers": "更新我嘅回答", "help.privacy": "閱讀私隱政策",
+
 };

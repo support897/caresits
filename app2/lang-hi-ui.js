@@ -4,7 +4,7 @@
 // HUMAN CHECK RULE: keys under "checks." and "legal." carry NO
 // Hindi values here, exactly as in Spanish. They stay English
 // until a human checker approves words for this language.
-// Coverage: 639 translated app UI keys; human-check phrases remain in English by design.
+// Coverage: 670 translated app UI keys; human-check phrases remain in English by design.
 export const UI_HI = {
  "door.tag": "देखभाल ढूँढिए। दिन साझा कीजिए।",
 
@@ -42,7 +42,7 @@ export const UI_HI = {
  "door.resetSent": "नया पासवर्ड बनाने का लिंक आपके ईमेल पर आ रहा है।",
  "door.resetFail": "हम अभी वह नहीं भेज पाए। थोड़ी देर में फिर कोशिश कीजिए।",
  "tour.t1t": "नमस्ते, मैं Caresitters का खरगोश हूँ",
- "tour.t1b": "मैं आपको सब दिखाता हूँ। सबसे पहले: आपका नाम क्या है?",
+ "tour.t1b": "मैं आपको किस नाम से बुलाऊँ?",
  "tour.t2t": "यह आपका मेनू है",
  "tour.t2b": "सब कुछ इसमें रहता है। यह तब तक छिपा रहता है जब तक आप मेनू न दबाएँ, ताकि आपकी स्क्रीन शांत रहे।",
  "tour.t3t": "देखभाल ढूँढिए, या खुद को पाइए",
@@ -637,5 +637,29 @@ export const UI_HI = {
  "act.gardendig.t": "बगीचे में खुदाई",
  "act.gardendig.n": "गमले, मिट्टी और केंचुओं की खोज",
  "act.freeplay.t": "मुक्त खेल",
- "act.freeplay.n": "खिलौने निकालें और कल्पना चालू करें"
+ "act.freeplay.n": "खिलौने निकालें और कल्पना चालू करें",
+ "tour.choiceTitle": "आप सबसे पहले क्या करना चाहेंगे?",
+ "tour.choice.family.primary": "देखभाल खोजें",
+ "tour.choice.family.secondary": "एक नज़र देखें",
+ "tour.choice.career.primary": "अपनी प्रोफ़ाइल बनाएँ",
+ "tour.choice.career.secondary": "काम देखें",
+ "tour.choice.communicate.primary": "विचार देखें",
+ "tour.choice.communicate.secondary": "संदेश देखें",
+ "tour.nameSkip": "अभी छोड़ें",
+ "tour.continue": "सहेजें और आगे बढ़ें",
+ "tour.coach.home.title": "होम आपकी शुरुआत की जगह है।",
+ "tour.coach.home.body": "अगले कदम देखने के लिए यहाँ लौटें।",
+ "tour.coach.find.title": "आपके लिए सही व्यक्ति खोजें।",
+ "tour.coach.find.body": "उन लोगों को देखें जो आपके परिवार के लिए ठीक हो सकते हैं।",
+ "tour.coach.profile.title": "अपनी प्रोफ़ाइल को अपना बनाएँ।",
+ "tour.coach.profile.body": "परिवारों को आपके बारे में जानने में मदद करने वाली बातें जोड़ें।",
+ "tour.coach.more.title": "बाकी विकल्प More में मिलेंगे।",
+ "tour.coach.more.body": "सेटिंग, मदद और भूमिका बदलने के विकल्प वहाँ हैं।",
+ "tour.coach.ideas.title": "आज के लिए विचार।",
+ "tour.coach.ideas.body": "साथ में करने के लिए आसान गतिविधियाँ पाएँ।",
+ "tour.coach.messages.title": "बातचीत जारी रखें।",
+ "tour.coach.messages.body": "ज़रूरत पड़ने पर आपके संदेश यहाँ मिलेंगे।",
+ "shell.more": "और", "shell.jobs": "काम", "shell.messages": "संदेश", "shell.ideas": "विचार", "shell.navigation": "मुख्य नेविगेशन", "shell.help": "मदद",
+ "help.title": "हम आपकी मदद कैसे करें?", "help.body": "शुरू करने के लिए जगह चुनें। आपके सहेजे हुए जवाब इसी डिवाइस पर रहते हैं।", "help.answers": "मेरे जवाब अपडेट करें", "help.privacy": "गोपनीयता नीति पढ़ें",
+
 };

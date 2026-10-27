@@ -1,5 +1,5 @@
-// Caresitters app2 — short bunny tours for each sidebar side.
-// Each account remembers family, career and Communicate separately.
+// Caresitters app2 — name, first choice and three short tab coach-marks.
+// Each account remembers family, career and Stay Connected separately.
 import { t as tr } from "./lang.js";
 import { accountKey } from "./storage-keys.js";
 const LS_NAME = "caresits-name";
@@ -31,28 +31,35 @@ function currentSide() {
   if (["family", "career", "communicate"].includes(me.activeSide)) return me.activeSide;
   return me.side === "carer" ? "career" : me.side === "communicate" ? "communicate" : "family";
 }
-const SIDE_STEPS = {
+const SIDE_CHOICES = {
   family: [
-    { target: '[data-nav="home"]', title: "shell.home", body: "tour.menu.home" },
-    { target: '[data-group="finding"]', title: "shell.finding", body: "tour.menu.finding" },
-    { target: '[data-group="family"]', title: "shell.family", body: "tour.menu.family" },
-    { target: '[data-group="week"]', title: "shell.week", body: "tour.menu.week" },
-    { target: '[data-group="trust"]', title: "shell.trust", body: "tour.menu.trust" },
-    { target: '[data-nav="settings"]', title: "shell.settings", body: "tour.menu.settings" },
-    { target: "#sideSwitch", title: "shell.switchSide", body: "tour.menu.side" },
+    { label: "tour.choice.family.primary", nav: "questionnaire" },
+    { label: "tour.choice.family.secondary", nav: "home" },
   ],
   career: [
-    { target: '[data-nav="home"]', title: "shell.home", body: "tour.menu.home" },
-    { target: '[data-group="finding"]', title: "shell.finding", body: "tour.menu.finding" },
-    { target: '[data-group="trust"]', title: "shell.trust", body: "tour.menu.trust" },
-    { target: '[data-nav="settings"]', title: "shell.settings", body: "tour.menu.settings" },
-    { target: "#sideSwitch", title: "shell.switchSide", body: "tour.menu.side" },
+    { label: "tour.choice.career.primary", nav: "questionnaire" },
+    { label: "tour.choice.career.secondary", nav: "board" },
   ],
   communicate: [
-    { target: "#commMessages", title: "homes.conversations", body: "tour.menu.communicate" },
-    { target: '[data-group="trust"]', title: "shell.trust", body: "tour.menu.trust" },
-    { target: '[data-nav="settings"]', title: "shell.settings", body: "tour.menu.settings" },
-    { target: "#sideSwitch", title: "shell.switchSide", body: "tour.menu.side" },
+    { label: "tour.choice.communicate.primary", nav: "ideas" },
+    { label: "tour.choice.communicate.secondary", nav: "thread" },
+  ],
+};
+const SIDE_COACHES = {
+  family: [
+    { target: '[data-bottom-tab="family-home"]', title: "tour.coach.home.title", body: "tour.coach.home.body" },
+    { target: '[data-bottom-tab="family-find"]', title: "tour.coach.find.title", body: "tour.coach.find.body" },
+    { target: '[data-bottom-tab="family-more"]', title: "tour.coach.more.title", body: "tour.coach.more.body" },
+  ],
+  career: [
+    { target: '[data-bottom-tab="career-home"]', title: "tour.coach.home.title", body: "tour.coach.home.body" },
+    { target: '[data-bottom-tab="career-profile"]', title: "tour.coach.profile.title", body: "tour.coach.profile.body" },
+    { target: '[data-bottom-tab="career-more"]', title: "tour.coach.more.title", body: "tour.coach.more.body" },
+  ],
+  communicate: [
+    { target: '[data-bottom-tab="connect-home"]', title: "tour.coach.home.title", body: "tour.coach.home.body" },
+    { target: '[data-bottom-tab="connect-ideas"]', title: "tour.coach.ideas.title", body: "tour.coach.ideas.body" },
+    { target: '[data-bottom-tab="connect-more"]', title: "tour.coach.more.title", body: "tour.coach.more.body" },
   ],
 };
 function storedSideTours(uid = window.CARESITS_ME?.uid) {
@@ -80,12 +87,7 @@ async function markSideTourDone(side) {
 function spotlight(target) {
   document.querySelectorAll(".tourSpotlight").forEach((node) => node.classList.remove("tourSpotlight"));
   const node = target ? document.querySelector(target) : null;
-  if (!node) return;
-  if (node.matches(".navGroupHead")) {
-    document.querySelectorAll(".navGroup").forEach((group) => group.classList.remove("open"));
-    node.parentElement?.classList.add("open");
-  }
-  node.classList.add("tourSpotlight");
+  if (node && !node.hidden) node.classList.add("tourSpotlight");
 }
 function closeSideTour(wrap, side, skipped, nameWasAsked) {
   if (wrap.dataset.closed === "true") return;
@@ -94,65 +96,100 @@ function closeSideTour(wrap, side, skipped, nameWasAsked) {
   document.querySelectorAll(".tourSpotlight").forEach((node) => node.classList.remove("tourSpotlight"));
   wrap.remove();
   document.getElementById("layout")?.classList.remove("open");
-  const s = state();
-  s.done = true;
-  s.skipped = !!skipped;
-  if (nameWasAsked) s.nameAsked = true;
-  if (!myName()) s.closedUnanswered = true;
-  saveState(s);
+  const saved = state();
+  saved.done = true;
+  saved.skipped = !!skipped;
+  if (nameWasAsked) saved.nameAsked = true;
+  if (!myName()) saved.closedUnanswered = true;
+  saveState(saved);
   void markSideTourDone(side);
 }
 function runSideTour(side, replay = false) {
   const me = window.CARESITS_ME || {};
-  if (!me.uid || !SIDE_STEPS[side] || document.getElementById("tourPop")) return false;
+  if (!me.uid || !SIDE_CHOICES[side] || document.getElementById("tourPop")) return false;
   if (!replay && sideTourDone(side)) return false;
   window.CARESITS_ROLE_NAV?.(side);
   const wrap = el("div", "sheetWrap");
   wrap.id = "tourPop";
   const card = el("div", "sheetCard tourCard");
+  card.setAttribute("role", "dialog");
   const x = el("button", "closeBtn sheetX", "×");
   x.type = "button";
   const body = el("div", "tourBody");
-  const menuSteps = SIDE_STEPS[side].map((step) => ({ ...step }));
   const legacy = state();
   const asksName = !myName() && !legacy.nameAsked;
-  if (asksName) menuSteps.unshift({ title: "tour.t1t", body: "tour.t1b", name: true });
+  const steps = [];
+  if (asksName) steps.push({ kind: "name", title: "tour.t1t", body: "tour.t1b" });
+  steps.push({ kind: "choice", title: "tour.choiceTitle" });
+  for (const coach of SIDE_COACHES[side]) steps.push({ kind: "coach", ...coach });
   let i = 0;
   const render = () => {
     body.replaceChildren();
-    const step = menuSteps[i];
+    const step = steps[i];
+    const isCoach = step.kind === "coach";
+    wrap.className = isCoach ? "tourCoachWrap" : "sheetWrap";
+    card.className = isCoach ? "sheetCard tourCard tourCoachCard" : "sheetCard tourCard";
+    card.setAttribute("aria-modal", isCoach ? "false" : "true");
     x.setAttribute("aria-label", tr("tour.close"));
     const img = el("img", "bunnyBig");
     img.src = "bunny/bunny-hello.png";
     img.alt = tr("tour.bunnyAlt");
-    body.append(img, el("h3", "findName", tr(step.title)), el("p", null, tr(step.body)));
-    if (step.name && !myName()) {
+    body.append(img, el("h3", "findName", tr(step.title)));
+    if (step.body) body.append(el("p", null, tr(step.body)));
+
+    if (step.kind === "name") {
       const input = el("input", "txtIn tourName");
       input.placeholder = tr("tour.namePh");
       input.id = "tourNameIn";
+      input.setAttribute("autocomplete", "given-name");
+      input.setAttribute("aria-label", tr("tour.namePh"));
       body.append(input);
-    }
-    document.getElementById("layout")?.classList.add("open");
-    spotlight(step.target);
-    const row = el("div", "homeBtnRow tourActions");
-    const skip = el("button", "ghostBtn", tr("tour.skip"));
-    skip.type = "button";
-    skip.addEventListener("click", () => closeSideTour(wrap, side, true, asksName));
-    const next = el("button", "mainBtn", i === menuSteps.length - 1 ? tr("tour.done") : tr("tour.next"));
-    next.type = "button";
-    next.addEventListener("click", () => {
-      if (step.name) {
-        const value = document.getElementById("tourNameIn")?.value.trim();
+      const row = el("div", "homeBtnRow tourActions");
+      const skip = el("button", "ghostBtn", tr("tour.nameSkip"));
+      skip.type = "button";
+      skip.addEventListener("click", () => {
+        const saved = state(); saved.nameAsked = true; saveState(saved);
+        i += 1; render();
+      });
+      const next = el("button", "mainBtn", tr("tour.continue"));
+      next.type = "button";
+      next.addEventListener("click", () => {
+        const value = input.value.trim();
         if (value) setName(value);
-        const s = state();
-        s.nameAsked = true;
-        saveState(s);
+        const saved = state(); saved.nameAsked = true; saveState(saved);
+        i += 1; render();
+      });
+      row.append(skip, next);
+      body.append(row);
+    } else if (step.kind === "choice") {
+      const choices = el("div", "tourChoiceList");
+      for (const choice of SIDE_CHOICES[side]) {
+        const button = el("button", "tourChoiceBtn", tr(choice.label));
+        button.type = "button";
+        button.addEventListener("click", () => {
+          window.CARESITS_NAV?.(choice.nav);
+          i += 1;
+          render();
+        });
+        choices.append(button);
       }
-      if (i === menuSteps.length - 1) closeSideTour(wrap, side, false, asksName);
-      else { i += 1; render(); }
-    });
-    row.append(skip, next);
-    body.append(row, el("p", "tourCount", tr("tour.step", undefined, { a: i + 1, b: menuSteps.length })));
+      body.append(choices);
+    } else {
+      spotlight(step.target);
+      const row = el("div", "homeBtnRow tourActions");
+      const skip = el("button", "ghostBtn", tr("tour.skip"));
+      skip.type = "button";
+      skip.addEventListener("click", () => closeSideTour(wrap, side, true, asksName));
+      const next = el("button", "mainBtn", i === steps.length - 1 ? tr("tour.done") : tr("tour.next"));
+      next.type = "button";
+      next.addEventListener("click", () => {
+        if (i === steps.length - 1) closeSideTour(wrap, side, false, asksName);
+        else { i += 1; render(); }
+      });
+      row.append(skip, next);
+      body.append(row, el("p", "tourCount", tr("tour.step", undefined, { a: steps.slice(0, i + 1).filter((s) => s.kind === "coach").length, b: 3 })));
+    }
+    card.replaceChildren(x, body);
   };
   window.CARESITS_TOUR_REFRESH_LANGUAGE = () => { if (document.getElementById("tourPop")) render(); };
   x.addEventListener("click", () => {
@@ -160,18 +197,17 @@ function runSideTour(side, replay = false) {
     if (value) setName(value);
     closeSideTour(wrap, side, true, asksName);
   });
-  wrap.addEventListener("click", (event) => { if (event.target === wrap) closeSideTour(wrap, side, true, asksName); });
-  card.append(x, body);
+  wrap.addEventListener("click", (event) => { if (event.target === wrap && !event.target.classList.contains("tourCoachWrap")) closeSideTour(wrap, side, true, asksName); });
   wrap.append(card);
   document.body.append(wrap);
   render();
-  document.querySelector("#tourPop .mainBtn")?.focus();
+  document.querySelector("#tourNameIn, #tourPop .tourChoiceBtn, #tourPop .mainBtn")?.focus();
   return true;
 }
 function quietBubble() {
-  const s = state();
-  s.reoffered = true;
-  saveState(s);
+  const saved = state();
+  saved.reoffered = true;
+  saveState(saved);
   const bub = el("div", "quietBubble");
   bub.id = "nameBubble";
   const img = el("img", "bubbleBunny");
@@ -204,9 +240,10 @@ function startSideTour(side = currentSide(), replay = false) {
 function bootTourForAccount() {
   if (document.getElementById("tourPop")) return;
   const side = currentSide();
+  window.CARESITS_ROLE_NAV?.(side);
   if (sideTourDone(side)) {
-    const s = state();
-    if (!myName() && s.closedUnanswered && !s.reoffered) quietBubble();
+    const saved = state();
+    if (!myName() && saved.closedUnanswered && !saved.reoffered) quietBubble();
     return;
   }
   startSideTour(side);
