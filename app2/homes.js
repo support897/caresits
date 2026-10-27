@@ -110,7 +110,7 @@ function greeting(leadKey, leadVars) {
   const part = h < 12 ? "" : h < 17 ? "Aft" : "Eve";
   const helloKey = "homes.hello" + part + (name ? "Name" : "");
   const currentMember = me();
-  const roleHeading = { career: "homes.roleCareer", family: "homes.roleFamily", communicate: "homes.roleCommunicate" }[currentMember?.entryRole];
+  const roleHeading = { career: "homes.roleCareer", family: "homes.roleFamily", communicate: "homes.roleCommunicate" }[currentMember?.activeSide || currentMember?.entryRole];
   if (roleHeading) wrap.append(el("p", "homeRoleHeading", tr(roleHeading)));
   wrap.append(el("h1", "homeHello", tr(helloKey, undefined, name ? { name } : undefined)));
   wrap.append(el("p", "lead", tr(leadKey, undefined, leadVars)));
@@ -566,6 +566,7 @@ function daysHome(root) {
 
 function entryRole() {
   const m = me() || {};
+  if (["family", "career", "communicate"].includes(m.activeSide)) return m.activeSide;
   if (m.entryRole === "communicate" || m.side === "communicate") return "communicate";
   if (m.entryRole === "career" || m.side === "carer") return "career";
   return "family";

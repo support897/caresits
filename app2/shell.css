@@ -135,7 +135,7 @@ html[data-entry-role="communicate"] { --entry-accent: #704A83; --entry-soft: #F0
 
 .tourCard { text-align: center; }
 .tourActions { justify-content: center; }
-.tourSpotlight { position: relative; z-index: 41; background: #fff7e8 !important; box-shadow: 0 0 0 3px var(--teal), 0 0 0 6px rgba(30, 77, 68, .18); }
+.tourSpotlight { position: relative; z-index: 41; background: #fff7e8 !important; box-shadow: 0 0 0 3px var(--teal), 0 0 0 6px rgba(30, 77, 68, .18); pointer-events: none; }
 .tourCount { opacity: .7; font-size: 14px; margin-top: 12px; }
 .quietBubble { position: fixed; right: 14px; bottom: 14px; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 14px; width: 250px; z-index: 30; box-shadow: 0 8px 28px rgba(30, 77, 68, .18); }
 .bubbleBunny { width: 52px; height: auto; }

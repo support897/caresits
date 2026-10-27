@@ -73,8 +73,8 @@ async function setActiveSide(side) {
     return false;
   }
   if (status) status.textContent = "";
-  if (side === "communicate") show("thread");
-  else show("home");
+  show("home");
+  window.CARESITS_RENDER_HOME?.();
   if (typeof window.CARESITS_TOUR_START_SIDE === "function") window.CARESITS_TOUR_START_SIDE(side);
   return true;
 }

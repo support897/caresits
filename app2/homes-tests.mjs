@@ -246,15 +246,24 @@ t("carer home: profile and urgent requests replace family matching", () => {
   assert.ok(!text.includes("Let us find the right person for your family."));
   assert.ok(!text.includes("Find carers"));
 });
-t("communicate home: shows conversations without matching actions", () => {
+t("communicate home: an active-side switch shows learning setup and conversations", () => {
   globalThis.CARESITS_UID = "test-communicate";
-  globalThis.CARESITS_ME = { uid: "test-communicate", side: "communicate", entryRole: "communicate" };
+  globalThis.CARESITS_ME = { uid: "test-communicate", side: "family", entryRole: "family", activeSide: "communicate" };
   globalThis.CARESITS_RENDER_HOME();
   const text = homeText();
+  assert.ok(text.includes("Learning & play"));
   assert.ok(text.includes("Your conversations"));
   assert.ok(text.includes("No conversations yet."));
   assert.ok(!text.includes("Find carers"));
   assert.ok(!text.includes("See my matches"));
+});
+t("active Careers view: sidebar changes the home without changing the saved profile side", () => {
+  globalThis.CARESITS_UID = "test-career-view";
+  globalThis.CARESITS_ME = { uid: "test-career-view", side: "family", entryRole: "family", activeSide: "career" };
+  globalThis.CARESITS_RENDER_HOME();
+  const text = homeText();
+  assert.ok(text.includes("Your carer profile"));
+  assert.ok(!text.includes("Find carers"));
 });
 globalThis.CARESITS_UID = "test-family";
 globalThis.CARESITS_ME = { uid: "test-family", side: "family", entryRole: "family" };
