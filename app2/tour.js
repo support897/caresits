@@ -18,7 +18,12 @@ const el = (tag, cls, text) => {
 };
 const state = () => { try { const key = accountKey(LS_TOUR); return key ? JSON.parse(localStorage.getItem(key)) || {} : {}; } catch { return {}; } };
 const saveState = (s) => { const key = accountKey(LS_TOUR); if (key) localStorage.setItem(key, JSON.stringify(s)); };
-const myName = () => { const key = accountKey(LS_NAME); return key ? localStorage.getItem(key) || "" : ""; };
+const myName = () => {
+  const key = accountKey(LS_NAME);
+  const saved = key ? localStorage.getItem(key) || "" : "";
+  if (saved) return saved;
+  return String(window.CARESITS_ME?.name || window.CARESITS_TRUST?.me?.name || "");
+};
 function setName(v) {
   const key = accountKey(LS_NAME);
   if (key) localStorage.setItem(key, v);
@@ -29,21 +34,30 @@ function setName(v) {
   if (typeof window.CARESITS_RENDER_HOME === "function") window.CARESITS_RENDER_HOME();
 }
 
-const steps = () => [
-  { title: tr("tour.t1t"), body: tr("tour.t1b"), name: true },
-  { title: tr("tour.t2t"), body: tr("tour.t2b"), menu: true },
-  { title: tr("tour.t3t"), body: tr("tour.t3b") },
-  { title: tr("tour.t4t"), body: tr("tour.t4b") },
-  { title: tr("tour.t5t"), body: tr("tour.t5b"), done: true },
-];
+const steps = () => {
+  const me = window.CARESITS_ME || {};
+  const role = me.side || (me.entryRole === "career" ? "carer" : me.entryRole) || "family";
+  const fourth = role === "carer" ? [tr("tour.carer.t4t"), tr("tour.carer.t4b")]
+    : role === "communicate" ? [tr("tour.communicate.t4t"), tr("tour.communicate.t4b")]
+      : [tr("tour.t4t"), tr("tour.t4b")];
+  return [
+    { title: tr("tour.t1t"), body: tr("tour.t1b"), name: true },
+    { title: tr("tour.t2t"), body: tr("tour.t2b"), menu: true },
+    { title: tr("tour.t3t"), body: tr("tour.t3b") },
+    { title: fourth[0], body: fourth[1] },
+    { title: tr("tour.t5t"), body: tr("tour.t5b"), done: true },
+  ];
+};
 
 function closeTour(answered) {
   window.CARESITS_TOUR_REFRESH_LANGUAGE = null;
   document.getElementById("tourPop")?.remove();
   document.getElementById("layout")?.classList.remove("open");
   const s = state();
-  if (!answered && !myName()) { s.closedUnanswered = true; saveState(s); }
-  if (answered || myName()) { s.done = true; saveState(s); }
+  if (!answered && !myName()) s.closedUnanswered = true;
+  s.done = true;
+  s.skipped = !answered;
+  saveState(s);
 }
 
 function runTour() {
@@ -95,7 +109,11 @@ function runTour() {
   window.CARESITS_TOUR_REFRESH_LANGUAGE = () => {
     if (document.getElementById("tourPop")) render();
   };
-  x.addEventListener("click", () => closeTour(!!myName()));
+  x.addEventListener("click", () => {
+    const typedName = document.getElementById("tourNameIn")?.value.trim();
+    if (typedName) setName(typedName);
+    closeTour(!!typedName || !!myName());
+  });
   card.append(x, body);
   wrap.append(card);
   document.body.append(wrap);
@@ -134,13 +152,16 @@ function quietBubble() {
   document.body.append(bub);
 }
 
-function bootTour() {
-  const fresh = sessionStorage.getItem("caresits-tour") === "1";
-  const newSession = !sessionStorage.getItem("caresits-session");
-  sessionStorage.setItem("caresits-session", "1");
-  if (fresh) { sessionStorage.removeItem("caresits-tour"); runTour(); return; }
+function bootTourForAccount() {
+  try { sessionStorage.removeItem("caresits-tour"); } catch { /* session storage is optional */ }
   const s = state();
-  if (newSession && !myName() && s.closedUnanswered && !s.reoffered && !s.done) quietBubble();
+  if (!s.done) { runTour(); return; }
+  if (!myName() && s.closedUnanswered && !s.reoffered) quietBubble();
+}
+
+function bootTour() {
+  if (window.CARESITS_ACCOUNT_READY) { bootTourForAccount(); return; }
+  document.addEventListener("caresits-account-ready", bootTourForAccount, { once: true });
 }
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bootTour);
