@@ -238,6 +238,33 @@ export function normaliseLearningPlan(raw) {
 }
 export const normalizeLearningPlan = normaliseLearningPlan;
 
+export function hasLearningPlan(raw) {
+  const plan = normaliseLearningPlan(raw);
+  return plan.setupComplete || plan.children.some((child) => child.band)
+    || plan.areas.length > 0 || plan.styles.length > 0 || plan.languages.length > 0 || Boolean(plan.otherLanguage);
+}
+
+// A household plan takes the family's child ages when available and joins
+// both members' optional interests, styles, and languages without names.
+export function mergeLearningPlans(familyRaw, carerRaw) {
+  const family = hasLearningPlan(familyRaw) ? normaliseLearningPlan(familyRaw) : null;
+  const carer = hasLearningPlan(carerRaw) ? normaliseLearningPlan(carerRaw) : null;
+  if (!family && !carer) return null;
+  const familyChildren = family?.children.filter((child) => child.band) || [];
+  const carerChildren = carer?.children.filter((child) => child.band) || [];
+  const otherLanguages = [...new Set([family?.otherLanguage, carer?.otherLanguage].filter(Boolean))];
+  return normaliseLearningPlan({
+    children: familyChildren.length ? familyChildren : carerChildren,
+    areas: [...(family?.areas || []), ...(carer?.areas || [])],
+    styles: [...(family?.styles || []), ...(carer?.styles || [])],
+    languages: [...(family?.languages || []), ...(carer?.languages || [])],
+    otherLanguage: otherLanguages.join(", ").slice(0, 60),
+    setupComplete: Boolean(family?.setupComplete || carer?.setupComplete),
+    step: family?.setupComplete || carer?.setupComplete ? 2 : (family?.step ?? carer?.step ?? 0),
+    updatedAt: family?.updatedAt || carer?.updatedAt || "",
+  });
+}
+
 export function publicLearningPlan(raw) {
   const plan = normaliseLearningPlan(raw);
   return {
@@ -260,13 +287,22 @@ const learningIdea = (id, title, titleEs, howTo, howToEs, area, materialsHome, m
   languagesFriendly: true, materialsHome, minutes,
 });
 const LEARNING_SAFETY = {
-  "0-6m": "Always supervise. Use a clear floor space; keep toys and fabric away from the face and never leave baby on a raised surface.",
-  "6-12m": "Always supervise. Use large, baby-safe objects only; remove anything that can fit in the mouth.",
-  "1-2y": "Always supervise. No small parts, loose cords, or food-sized items; use only large, safe materials.",
+  "0-6m": "Always supervise. Keep small objects out of reach (choking hazard), keep toys and fabric away from the face, and never leave baby on a raised surface.",
+  "6-12m": "Always supervise. Use large, baby-safe objects only; remove anything small enough to fit in the mouth (choking hazard).",
+  "1-2y": "Always supervise. No small parts, loose cords, or food-sized items that could cause choking; use only large, safe materials.",
   "2-3y": "Always supervise. Watch closely for choking hazards; avoid small loose parts and keep water within an adult's reach.",
   "3-5y": "Always supervise. Choose child-safe supplies; an adult handles heat, sharp tools, and water.",
   "5-8y": "Always supervise. Use age-safe materials; an adult handles heat, sharp tools, and outdoor safety.",
   "8-12y": "Always supervise. Use age-safe materials; an adult handles heat, blades, and unfamiliar outdoor areas.",
+};
+const LEARNING_SAFETY_ES = {
+  "0-6m": "Supervisa siempre. Mantén los objetos pequeños fuera del alcance (riesgo de atragantamiento), aparta telas y juguetes de la cara y no dejes al bebé en lugares elevados.",
+  "6-12m": "Supervisa siempre. Usa solo objetos grandes y seguros para bebés; retira cualquier cosa que quepa en la boca (riesgo de atragantamiento).",
+  "1-2y": "Supervisa siempre. Evita piezas pequeñas, cordones sueltos y objetos del tamaño de comida que puedan causar atragantamiento.",
+  "2-3y": "Supervisa siempre. Vigila el riesgo de atragantamiento, evita piezas pequeñas y mantén el agua al alcance de una persona adulta.",
+  "3-5y": "Supervisa siempre. Elige materiales seguros para niños; una persona adulta se encarga del calor, herramientas afiladas y agua.",
+  "5-8y": "Supervisa siempre. Usa materiales adecuados para la edad; una persona adulta se encarga del calor, herramientas y seguridad al aire libre.",
+  "8-12y": "Supervisa siempre. Usa materiales adecuados para la edad; una persona adulta se encarga del calor, cuchillas y zonas exteriores desconocidas.",
 };
 const LEARNING_IDEAS = {
   "0-6m": [
@@ -412,7 +448,7 @@ const LEARNING_IDEAS = {
 };
 
 export const LEARNING_ACTIVITY_BANK = Object.freeze(Object.entries(LEARNING_IDEAS).flatMap(([band, ideas]) =>
-  ideas.map((item) => Object.freeze({ ...item, bands: [band], safety: LEARNING_SAFETY[band] }))
+  ideas.map((item) => Object.freeze({ ...item, bands: [band], safety: LEARNING_SAFETY[band], safetyEs: LEARNING_SAFETY_ES[band] }))
 ));
 export const LEARNING_ACTIVITY_BY_ID = Object.fromEntries(LEARNING_ACTIVITY_BANK.map((item) => [item.id, item]));
 
@@ -446,3 +482,26 @@ const VOCABULARY = {
   Greek: [["hello", "γεια"], ["more", "κι άλλο"], ["thank you", "ευχαριστώ"]],
 };
 export function learningVocabulary(language) { return VOCABULARY[language] ? [...VOCABULARY[language]] : []; }
+
+
+// Optional preferences add a small ranking nudge only. They never affect
+// either hard gate, so a match remains a match when nobody fills this plan.
+export function learningMatchDetails(familyRaw, carerRaw) {
+  const family = normaliseLearningPlan(familyRaw);
+  const carer = normaliseLearningPlan(carerRaw);
+  const sharedStyles = family.styles.filter((style) => style !== "no-preference" && carer.styles.includes(style));
+  const sharedAreas = family.areas.filter((area) => carer.areas.includes(area));
+  const sharedLanguages = family.languages.filter((language) => language !== "Other" && carer.languages.includes(language));
+  const familyOther = family.otherLanguage.toLocaleLowerCase();
+  const carerOther = carer.otherLanguage.toLocaleLowerCase();
+  if (family.languages.includes("Other") && carer.languages.includes("Other") && familyOther && familyOther === carerOther) {
+    sharedLanguages.push(family.otherLanguage);
+  }
+  const reasons = [
+    ...sharedLanguages.slice(0, 1).map((value) => ({ type: "language", value })),
+    ...sharedStyles.slice(0, 1).map((value) => ({ type: "style", value })),
+    ...sharedAreas.slice(0, 1).map((value) => ({ type: "area", value })),
+  ];
+  const boost = Math.min(5, sharedStyles.length * 2 + sharedLanguages.length + sharedAreas.length);
+  return { boost, sharedStyles, sharedAreas, sharedLanguages, reasons };
+}

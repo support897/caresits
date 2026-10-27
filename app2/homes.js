@@ -606,11 +606,17 @@ function initialLearningPlan() {
   const stored = readJson(learningPlanKey());
   const shared = window.CARESITS_LEARNING_PLAN || window.CARESITS_ME?.learningPlan;
   const pairPlan = (window.CARESITS_PHASE_C?.rels || []).find((rel) => ["contact", "hired"].includes(rel.state) && rel.learningPlan)?.learningPlan;
-  if (pairPlan) return normaliseLearningPlan(pairPlan);
-  if (shared) return normaliseLearningPlan(shared);
-  if (stored) return normaliseLearningPlan(stored);
-  const kids = myChildren();
-  return normaliseLearningPlan({ children: kids.map((kid) => ({ band: learningBandForAge(kid.ageYears) })) });
+  let initial;
+  if (pairPlan) initial = normaliseLearningPlan(pairPlan);
+  else if (shared) initial = normaliseLearningPlan(shared);
+  else if (stored) initial = normaliseLearningPlan(stored);
+  else {
+    const kids = myChildren();
+    initial = normaliseLearningPlan({ children: kids.map((kid) => ({ band: learningBandForAge(kid.ageYears) })) });
+  }
+  window.CARESITS_LEARNING_PLAN = initial;
+  if (window.CARESITS_ME) window.CARESITS_ME = { ...window.CARESITS_ME, learningPlan: initial };
+  return initial;
 }
 function persistLearningPlan(plan) {
   const clean = saveLearningDraft(plan);
@@ -821,7 +827,7 @@ function learningIdeasCard() {
     item.append(el("p", "findPlace", `${activity.bands.map((id) => tr(LEARNING_AGE_BANDS.find((b) => b.id === id)?.key || "")).join(", ")} · ${tr("learning.minutes", undefined, { n: activity.minutes })}`));
     item.append(el("p", "homeBody", copy.howTo));
     item.append(el("p", "findPlace", tr("learning.materials", undefined, { items: activity.materialsHome })));
-    item.append(el("p", "learningSafety", tr("learning.safety", undefined, { note: activity.safety })));
+    item.append(el("p", "learningSafety", tr("learning.safety", undefined, { note: copy.safety })));
     for (const language of plan.languages.slice(0, 3)) {
       const vocab = learningVocabulary(language);
       if (!vocab.length) continue;

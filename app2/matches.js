@@ -5,6 +5,7 @@
 // The browse gate lives in the planners: an unfinished profile
 // is walked to the questionnaire, never scolded.
 import { planContact, planTransition, planJobPost, planInterest, cleanJobListings } from "./pair-actions.js";
+import { learningMatchDetails, mergeLearningPlans } from "./activities.js";
 
 const el = (tag, cls, text) => {
   const n = document.createElement(tag);
@@ -39,6 +40,12 @@ export function renderMatches(root, viewerUid, rels, names) {
     const card = el("article", "findCard");
     card.append(el("h3", "findName", names[otherUid] || tr("find.member")));
     card.append(el("p", "findPlace", STATE_WORDS[rel.state] || rel.state));
+    for (const reason of rel.learningMatches || []) {
+      const value = reason.type === "style" ? tr("learning.style." + reason.value)
+        : reason.type === "area" ? tr("learning.area." + reason.value) : reason.value;
+      const key = reason.type === "style" ? "learning.matchStyle" : reason.type === "area" ? "learning.matchArea" : "learning.matchLanguage";
+      card.append(el("p", "learningMatchReason", tr(key, undefined, { style: value, area: value, language: value })));
+    }
     const row = el("div", "actRow");
     const addBtn = (label, to) => {
       const plan = planTransition(rel, viewerUid, to);
@@ -149,7 +156,11 @@ function bootPhaseC() {
     const me = window.CARESITS_ME || {};
     const familyUid = me.side === "family" ? me.uid : otherUid;
     const carerUid = me.side === "family" ? otherUid : me.uid;
-    const plan = planContact({ familyUid, carerUid, createdBy: me.uid, nowIso: nowIso(), createdDay: today(), profileComplete: profileDone() });
+    const familyPlan = me.side === "family" ? me.learningPlan : otherDoc?.learningPlan;
+    const carerPlan = me.side === "carer" ? me.learningPlan : otherDoc?.learningPlan;
+    const learning = learningMatchDetails(familyPlan, carerPlan);
+    const sharedPlan = mergeLearningPlans(familyPlan, carerPlan);
+    const plan = planContact({ familyUid, carerUid, createdBy: me.uid, nowIso: nowIso(), createdDay: today(), profileComplete: profileDone(), learningPlan: sharedPlan, learningMatches: learning.reasons });
     if (!plan.ok && plan.reason === "profile-incomplete") { walkToQuestions(); return; }
     if (plan.ok) { write("contact", plan); document.querySelector('[data-nav="matches"]')?.click(); }
   };

@@ -15,6 +15,15 @@ const anaDoc = { side: "carer", displayName: "Ana", postcode: "2021", card: anaC
 const meiDoc = { side: "carer", displayName: "Mei", postcode: "2021", card: { ...anaCard, availability: { Tue: ["afternoon"] } }, looking: { musts: {}, prefs: {} } };
 t("distance from hundredthed coordinates", () => { assert.ok(kmBetween(famDoc.card, anaCard) > 0 && kmBetween(famDoc.card, anaCard) < 2); assert.equal(kmBetween({}, anaCard), null); });
 t("family browse: Ana shows as a Perfect Pair in the Top 5", () => { const b = assembleBrowse(famDoc, [anaDoc, meiDoc]); assert.equal(b.top.length, 1); assert.equal(b.top[0].result.label, "Perfect Pair"); assert.equal(b.poolCount, 2); });
+t("learning preferences add a small visible score boost without changing eligibility", () => {
+  const family = { ...famDoc, learningPlan: { styles: ["montessori"], areas: ["music"], languages: ["Spanish"] } };
+  const carer = { ...anaDoc, learningPlan: { styles: ["montessori"], areas: ["music"], languages: ["Spanish"] } };
+  const base = assembleBrowse(famDoc, [anaDoc]).top[0].result;
+  const matched = assembleBrowse(family, [carer]).top[0].result;
+  assert.equal(matched.pair, Math.min(100, base.pair + 4));
+  assert.equal(matched.learningReasons.length, 3);
+  assert.equal(assembleBrowse(famDoc, [anaDoc]).top.length, 1);
+});
 t("family nearly list names Mei's failed gate in plain words", () => { const b = assembleBrowse(famDoc, [anaDoc, meiDoc]); assert.equal(b.nearly.length, 1); assert.equal(b.nearly[0].failedGate, "not free on a day you need"); });
 t("carer browse: families hunt back, and NO nearly list exists", () => { const b = assembleBrowse(anaDoc, [famDoc]); assert.equal(b.top.length, 1); assert.equal(b.nearly.length, 0); });
 t("unknown distance never blocks and is never claimed", () => { const noCoords = { ...anaDoc, card: { ...anaCard, latE2: undefined, lngE2: undefined } }; const b = assembleBrowse(famDoc, [noCoords]); assert.equal(b.top.length, 1); assert.equal(b.top[0].distanceKm, null); });

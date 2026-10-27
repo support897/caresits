@@ -228,3 +228,5 @@ html[data-theme="white"] body { background: #FFFFFF; }
 .learningSafety { color: #7b3d28; font-size: .95em; }
 .learningVocab { color: var(--entry-accent, #1e4d44); font-size: .95em; }
 .learningIdea .homeBtnRow { justify-content: flex-start; }
+
+.learningMatchReason { color: var(--entry-accent, #1e4d44); font-weight: 600; }

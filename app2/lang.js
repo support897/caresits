@@ -88,6 +88,9 @@ export const STRINGS = {
     "learning.doneToday": "Done today",
     "learning.doneSaved": "Added to Day Story",
     "learning.saveFailed": "Could not save this yet. Try again.",
+    "learning.matchStyle": "Both like {style}",
+    "learning.matchArea": "Both enjoy {area}",
+    "learning.matchLanguage": "Speaks {language} with your children",
     "learning.sayIt": "Say it in {language}",
     "learning.vocabHello": "hello",
     "learning.vocabMore": "more",
@@ -636,6 +639,9 @@ export const STRINGS = {
     "learning.doneToday": "Hecho hoy",
     "learning.doneSaved": "Añadido a la Historia del día",
     "learning.saveFailed": "No se pudo guardar todavía. Inténtalo de nuevo.",
+    "learning.matchStyle": "A ambos les gusta {style}",
+    "learning.matchArea": "A ambos les gusta {area}",
+    "learning.matchLanguage": "Habla {language} con tus hijos",
     "learning.sayIt": "Dilo en {language}",
     "learning.vocabHello": "hola",
     "learning.vocabMore": "más",
@@ -1153,8 +1159,8 @@ export function setLang(code) {
 
 export function learningActivityCopy(activity, lang = currentLang()) {
   if (!activity) return { title: "", howTo: "" };
-  if (lang === "es") return { title: activity.titleEs || activity.title || "", howTo: activity.howToEs || activity.howTo || "" };
-  return { title: activity.title || "", howTo: activity.howTo || "" };
+  if (lang === "es") return { title: activity.titleEs || activity.title || "", howTo: activity.howToEs || activity.howTo || "", safety: activity.safetyEs || activity.safety || "" };
+  return { title: activity.title || "", howTo: activity.howTo || "", safety: activity.safety || "" };
 }
 
 export function t(key, lang = currentLang(), vars = null) {

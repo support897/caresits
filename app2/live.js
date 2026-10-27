@@ -580,7 +580,7 @@ export async function bootLive() {
             ...(window.CARESITS_ME || { uid }),
             uid, side: effectiveSide, entryRole,
             activeSide: ["family", "career", "communicate"].includes(appDoc?.activeSide) ? appDoc.activeSide : entryRole,
-            learningPlan: normaliseLearningPlan(appDoc?.learningPlan || cardData?.learningPlan || {}),
+            learningPlan: appDoc?.learningPlan || cardData?.learningPlan ? normaliseLearningPlan(appDoc?.learningPlan || cardData?.learningPlan) : null,
             country: qData.country || qData.answers?.country || window.CARESITS_ME?.country || "",
           };
           window.CARESITS_LEARNING_PLAN = window.CARESITS_ME.learningPlan;

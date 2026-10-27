@@ -507,7 +507,7 @@ match /relationships/{pairId} {
   allow read: if signedIn() && request.auth.uid in resource.data.members;
   allow create: if signedIn() && !isAnon()
     && request.resource.data.keys().hasOnly(
-      ["members", "familyUid", "carerUid", "state", "createdBy", "createdAt", "createdDay", "learningPlan"])
+      ["members", "familyUid", "carerUid", "state", "createdBy", "createdAt", "createdDay", "learningPlan", "learningMatches"])
     && request.resource.data.familyUid != request.resource.data.carerUid
     && request.resource.data.members.size() == 2
     && request.resource.data.members.hasAll(
@@ -517,6 +517,8 @@ match /relationships/{pairId} {
     && request.resource.data.state == "pending"
     && (!("learningPlan" in request.resource.data)
         || request.resource.data.learningPlan is map)
+    && (!("learningMatches" in request.resource.data)
+        || (request.resource.data.learningMatches is list && request.resource.data.learningMatches.size() <= 3))
     && !("contactBy" in request.resource.data)
     && ((request.resource.data.familyUid == request.auth.uid
           && get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.side == "family")
