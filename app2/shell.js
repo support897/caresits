@@ -9,8 +9,9 @@ const TITLES = {};
 let activeNav = "home";
 
 function setBottomActive(nav = activeNav) {
+  const weekNav = ["calendar", "roster", "timesheet", "reminders"].includes(nav) ? "calendar" : nav;
   for (const button of document.querySelectorAll(".bottomTab")) {
-    const active = !button.hidden && (button.dataset.nav === nav || (nav === "more" && button.dataset.openMore === "true"));
+    const active = !button.hidden && (button.dataset.nav === weekNav || (nav === "more" && button.dataset.openMore === "true"));
     button.classList.toggle("on", active);
     if (active) button.setAttribute("aria-current", "page");
     else button.removeAttribute("aria-current");
@@ -135,13 +136,13 @@ function show(nav) {
   else if (nav === "find") $("#surface-find").hidden = false;
   else if (nav === "matches") $("#surface-matches").hidden = false;
   else if (nav === "board") $("#surface-board").hidden = false;
-  else if (nav === "calendar") $("#surface-calendar").hidden = false;
+  else if (["calendar", "roster", "timesheet", "reminders"].includes(nav)) {
+    $("#surface-calendar").hidden = false;
+    window.CARESITS_WEEK_SELECT?.(nav);
+  }
   else if (nav === "children") $("#surface-children").hidden = false;
   else if (nav === "daystory") $("#surface-daystory").hidden = false;
   else if (nav === "bin") { $("#surface-bin").hidden = false; if (typeof window.CARESITS_BIN_OPEN === "function") window.CARESITS_BIN_OPEN(); }
-  else if (nav === "roster") $("#surface-roster").hidden = false;
-  else if (nav === "timesheet") $("#surface-timesheet").hidden = false;
-  else if (nav === "reminders") $("#surface-reminders").hidden = false;
   else if (nav === "checks") $("#surface-checks").hidden = false;
   else if (nav === "reviews") $("#surface-reviews").hidden = false;
   else if (nav === "profile") $("#surface-profile").hidden = false;

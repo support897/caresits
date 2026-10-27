@@ -2,7 +2,7 @@
 <html lang="en" data-theme="brand">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Caresitters</title>
 <meta name="description" content="Caresitters. Find care. Share the day.">
 <link rel="icon" href="../icon.svg">
@@ -86,7 +86,21 @@
       <div id="boardRoot"></div>
     </section>
     <section id="surface-calendar" class="surface" hidden>
-      <div id="calendarRoot"></div>
+      <div class="weekHeader">
+        <h2 class="findTitle" data-i18n="shell.week">Week</h2>
+        <button type="button" id="weekAdd" class="mainBtn" data-i18n="week.add">Add</button>
+      </div>
+      <div id="weekAddStatus" class="formMsg" role="status" aria-live="polite"></div>
+      <div class="weekTabs" role="tablist" data-i18n-aria="week.tabs" aria-label="Week views">
+        <button type="button" class="weekTab" id="weekTabCalendar" role="tab" aria-selected="true" aria-controls="weekPanelCalendar" data-week-tab="calendar" data-i18n="week.tabCalendar">Calendar</button>
+        <button type="button" class="weekTab" id="weekTabRoster" role="tab" aria-selected="false" aria-controls="weekPanelRoster" data-week-tab="roster" tabindex="-1" data-i18n="shell.roster">Roster</button>
+        <button type="button" class="weekTab" id="weekTabTimesheet" role="tab" aria-selected="false" aria-controls="weekPanelTimesheet" data-week-tab="timesheet" tabindex="-1" data-i18n="shell.timesheet">Timesheet</button>
+        <button type="button" class="weekTab" id="weekTabReminders" role="tab" aria-selected="false" aria-controls="weekPanelReminders" data-week-tab="reminders" tabindex="-1" data-i18n="shell.reminders">Reminders</button>
+      </div>
+      <section id="weekPanelCalendar" class="weekPanel" role="tabpanel" aria-labelledby="weekTabCalendar" tabindex="0"><div id="calendarRoot"></div></section>
+      <section id="weekPanelRoster" class="weekPanel" role="tabpanel" aria-labelledby="weekTabRoster" tabindex="0" hidden><div id="rosterRoot"></div></section>
+      <section id="weekPanelTimesheet" class="weekPanel" role="tabpanel" aria-labelledby="weekTabTimesheet" tabindex="0" hidden><div id="timesheetRoot"></div></section>
+      <section id="weekPanelReminders" class="weekPanel" role="tabpanel" aria-labelledby="weekTabReminders" tabindex="0" hidden><div id="remindersRoot"></div></section>
     </section>
     <section id="surface-children" class="surface" hidden>
       <div id="childrenRoot"></div>
@@ -102,15 +116,6 @@
     </section>
     <section id="surface-emergency" class="surface" hidden>
       <div id="emergencyRoot"></div>
-    </section>
-    <section id="surface-roster" class="surface" hidden>
-      <div id="rosterRoot"></div>
-    </section>
-    <section id="surface-timesheet" class="surface" hidden>
-      <div id="timesheetRoot"></div>
-    </section>
-    <section id="surface-reminders" class="surface" hidden>
-      <div id="remindersRoot"></div>
     </section>
     <section id="surface-checks" class="surface" hidden>
       <div id="checksRoot"></div>

@@ -85,12 +85,15 @@ export function renderPairCalendar(root, viewerUid, pair) {
   const form = el("div", "findCard");
   form.append(el("h4", "calReqTitle", tr("cal.ask")));
   const kind = el("select", "txtIn");
+  kind.setAttribute("aria-label", tr("cal.kindLabel"));
+  form.classList.add("weekAddForm");
   for (const [k, w] of Object.entries(KIND_WORDS)) { const o = el("option", null, w); o.value = k; kind.append(o); }
   const day = el("select", "txtIn");
+  day.setAttribute("aria-label", tr("week.dayLabel"));
   for (const d of DAYS) { const o = el("option", null, tr("journey.day." + d)); o.value = d; day.append(o); }
-  const start = el("input", "txtIn"); start.placeholder = tr("cal.startPh");
-  const end = el("input", "txtIn"); end.placeholder = tr("cal.endPh");
-  const from = el("input", "txtIn"); from.placeholder = tr("cal.fromPh");
+  const start = el("input", "txtIn"); start.placeholder = tr("cal.startPh"); start.setAttribute("aria-label", tr("cal.startPh"));
+  const end = el("input", "txtIn"); end.placeholder = tr("cal.endPh"); end.setAttribute("aria-label", tr("cal.endPh"));
+  const from = el("input", "txtIn"); from.placeholder = tr("cal.fromPh"); from.setAttribute("aria-label", tr("cal.fromPh"));
   const send = el("button", "mainBtn", tr("cal.send"));
   send.type = "button";
   send.addEventListener("click", () => {

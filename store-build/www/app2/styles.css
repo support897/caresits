@@ -53,3 +53,23 @@ table.grid th { font-size: 13px; padding: 4px; text-transform: capitalize; }
 .bandRow label, .expRows label { display: flex; justify-content: space-between; align-items: center; gap: 10px; max-width: 340px; }
 .bandRow input, .expRows input { max-width: 110px; }
 .jNav { display: flex; justify-content: space-between; margin-top: 26px; }
+
+.reqTag { display: block; width: fit-content; background: #E9F2ED; color: var(--ink); border: 1px solid var(--teal); border-radius: 999px; padding: 3px 10px; margin: 0 0 10px; font-size: 13px; font-weight: 700; }
+.optTag { width: fit-content; background: #FBF3E4; border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; opacity: 1; }
+.answerChoices { display: grid; gap: 9px; margin: 4px 0 8px; }
+.answerCard { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 50px; padding: 11px 15px; border: 1.5px solid var(--line); border-radius: 16px; background: #fff; color: var(--ink); font: inherit; text-align: start; cursor: pointer; transition: background-color .15s ease, border-color .15s ease, transform .15s ease; }
+.answerCard:hover { border-color: var(--ink); transform: translateY(-1px); }
+.answerCard.on { background: #E9F2ED; border-color: var(--ink); box-shadow: inset 4px 0 0 var(--teal); font-weight: 700; }
+.answerCard:focus-visible, .jNav button:focus-visible, .optionPager button:focus-visible, .field input:focus-visible, .field select:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.optionPager { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 12px 0 4px; font-size: 14px; }
+.optionPager > div { display: flex; align-items: center; gap: 12px; }
+.optionPager .quietBtn { min-height: 44px; padding: 6px 10px; }
+.optionalLead { background: #FBF3E4; border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; }
+.jNav { position: sticky; bottom: 0; align-items: center; gap: 8px; padding: 12px 0 0; background: var(--card); }
+.jNav .mainBtn { flex: 1; min-height: 48px; }
+.jNav .ghostBtn, .jNav .quietBtn { min-height: 44px; }
+.gridDay select, .bandRow select, .expRows select { min-height: 44px; border: 1.5px solid var(--line); border-radius: 12px; padding: 8px 10px; color: var(--ink); background: #fff; font: inherit; }
+.gridChoices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.gridChoices .chip { min-height: 46px; border-radius: 14px; }
+@media (prefers-reduced-motion: reduce) { .answerCard, .barFill { transition: none; } .answerCard:hover { transform: none; } }
+@media (max-width: 360px) { .jNav { flex-wrap: wrap; } .jNav .mainBtn { flex-basis: 100%; order: 3; } .jNav #backBtn { order: 1; } .jNav #skipBtn { order: 2; margin-inline-start: auto; } }

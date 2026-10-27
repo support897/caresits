@@ -661,6 +661,7 @@ function learningChoiceRow(items, values, keyPrefix, onChange) {
 function learningSetupCard() {
   let plan = initialLearningPlan();
   const card = el("section", "cardIn homeCard learningCard");
+  card.id = "learningSetupCard";
   card.append(el("h2", "findTitle", tr("learning.title")));
   card.append(el("p", "homeBody", tr("learning.lead")));
   if (!plan.setupComplete) {
@@ -810,6 +811,7 @@ function saveIdeaOffset(offset) {
 function learningIdeasCard() {
   const plan = initialLearningPlan();
   const card = el("section", "cardIn homeCard learningCard");
+  card.id = "learningIdeasCard";
   card.append(el("h2", "findTitle", tr("learning.ideasTitle")));
   const ageBands = [...new Set(plan.children.map((child) => child.band).filter(Boolean))];
   if (!ageBands.length) {

@@ -47,20 +47,27 @@ export function renderTimesheet(root, entries) {
   const list = el("div", "findList");
   for (const e of entries) {
     const card = el("article", "findCard");
-    card.append(el("p", "findPlace", e.day + " · " + e.hours + " hours" + (e.withName ? " · with " + e.withName : "")));
+    card.append(el("p", "findPlace", tr("week.hoursLine", undefined, { day: tr("journey.day." + e.day), n: e.hours }) + (e.withName ? " · " + tr("week.with", undefined, { name: e.withName }) : "")));
     list.append(card);
   }
   root.append(list);
-  const form = el("div", "findCard");
+  const form = el("div", "findCard weekAddForm");
+  form.id = "weekHoursForm";
   form.append(el("h3", "findName", tr("week.addHours")));
+  const dayLabel = el("label", "fieldLabel", tr("week.dayLabel"));
+  dayLabel.htmlFor = "weekHoursDay";
   const day = el("select", "txtIn");
-  for (const d of DAYS) day.append(el("option", null, d));
+  day.id = "weekHoursDay";
+  for (const d of DAYS) { const option = el("option", null, tr("journey.day." + d)); option.value = d; day.append(option); }
+  const hoursLabel = el("label", "fieldLabel", tr("week.hoursLabel"));
+  hoursLabel.htmlFor = "weekHoursValue";
   const hours = el("input", "txtIn");
+  hours.id = "weekHoursValue";
   hours.type = "number";
   hours.min = "0";
   hours.step = "0.25";
   hours.placeholder = tr("week.hoursPh");
-  const add = el("button", "mainBtn", tr("family.add"));
+  const add = el("button", "mainBtn", tr("week.saveHours"));
   add.type = "button";
   const formMsg = el("p", "formMsg");
   add.addEventListener("click", () => {
@@ -69,7 +76,7 @@ export function renderTimesheet(root, entries) {
     write("timesheet", { day: day.value, hours: h });
     renderTimesheet(root, [...entries, { day: day.value, hours: h }]);
   });
-  form.append(day, hours, add, formMsg);
+  form.append(dayLabel, day, hoursLabel, hours, add, formMsg);
   root.append(form);
 }
 
@@ -84,12 +91,20 @@ export function renderReminders(root, reminders) {
     list.append(card);
   }
   root.append(list);
-  const form = el("div", "findCard");
+  const form = el("div", "findCard weekAddForm");
+  form.id = "weekReminderForm";
+  form.append(el("h3", "findName", tr("week.addReminder")));
+  const textLabel = el("label", "fieldLabel", tr("week.remLabel"));
+  textLabel.htmlFor = "weekReminderText";
   const text = el("input", "txtIn");
+  text.id = "weekReminderText";
   text.placeholder = tr("week.remPh");
+  const whenLabel = el("label", "fieldLabel", tr("week.whenLabel"));
+  whenLabel.htmlFor = "weekReminderWhen";
   const when = el("input", "txtIn");
+  when.id = "weekReminderWhen";
   when.placeholder = tr("week.whenPh");
-  const add = el("button", "mainBtn", tr("family.add"));
+  const add = el("button", "mainBtn", tr("week.saveReminder"));
   add.type = "button";
   const formMsg = el("p", "formMsg");
   add.addEventListener("click", () => {
@@ -97,37 +112,117 @@ export function renderReminders(root, reminders) {
     write("reminder", { text: text.value.trim(), when: when.value });
     renderReminders(root, [...reminders, { text: text.value.trim(), when: when.value }]);
   });
-  form.append(text, when, add, formMsg);
+  form.append(textLabel, text, whenLabel, when, add, formMsg);
   root.append(form);
 }
 
 export function renderEmergency(root, contacts) {
   root.replaceChildren();
   root.append(el("h2", "findTitle", tr("shell.emergency")));
-  if (!contacts.length) { emptyBox(root, tr("week.emEmpty"), tr("week.emEmptyBody")); }
+  root.append(el("p", "findPool", tr("week.emergencyLead")));
+  if (!contacts.length) emptyBox(root, tr("week.emEmpty"), tr("week.emEmptyBody"));
   const list = el("div", "findList");
-  for (const c of contacts) {
-    const card = el("article", "findCard");
-    card.append(el("h3", "findName", c.name || tr("week.contact")));
-    card.append(el("p", "findPlace", c.phone || ""));
+  for (const contact of contacts) {
+    const card = el("article", "findCard emergencyCard");
+    card.append(el("h3", "findName", contact.name || tr("week.contact")));
+    if (contact.phone) {
+      card.append(el("p", "findPlace", contact.phone));
+      const phone = String(contact.phone).replace(/[^0-9+]/g, "");
+      if (phone) {
+        const call = el("a", "mainBtn emergencyCall", tr("week.call"));
+        call.href = "tel:" + phone;
+        call.setAttribute("aria-label", tr("week.callName", undefined, { name: contact.name || tr("week.contact") }));
+        card.append(call);
+      }
+    }
     list.append(card);
   }
   root.append(list);
-  const form = el("div", "findCard");
+  const form = el("div", "findCard emergencyForm");
+  form.append(el("h3", "findName", contacts.length ? tr("week.editContact") : tr("week.addContact")));
+  const nameLabel = el("label", "fieldLabel", tr("week.nameLabel"));
+  nameLabel.htmlFor = "emergencyName";
   const name = el("input", "txtIn");
+  name.id = "emergencyName";
+  name.type = "text";
+  name.autocomplete = "name";
   name.placeholder = tr("week.namePh");
+  name.value = contacts[0]?.name || "";
+  const phoneLabel = el("label", "fieldLabel", tr("week.phoneLabel"));
+  phoneLabel.htmlFor = "emergencyPhone";
   const phone = el("input", "txtIn");
+  phone.id = "emergencyPhone";
+  phone.type = "tel";
+  phone.autocomplete = "tel";
   phone.placeholder = tr("week.phonePh");
-  const add = el("button", "mainBtn", tr("family.add"));
-  add.type = "button";
+  phone.value = contacts[0]?.phone || "";
+  const save = el("button", "mainBtn", tr("week.saveContact"));
+  save.type = "button";
   const formMsg = el("p", "formMsg");
-  add.addEventListener("click", () => {
+  formMsg.setAttribute("role", "status");
+  save.addEventListener("click", () => {
     if (!name.value.trim() || !phone.value.trim()) { formMsg.textContent = tr("form.needContact"); return; }
-    write("emergency", { name: name.value.trim(), phone: phone.value });
-    renderEmergency(root, [...contacts, { name: name.value.trim(), phone: phone.value }]);
+    const contact = { name: name.value.trim(), phone: phone.value.trim() };
+    write("emergency", contact);
+    renderEmergency(root, contacts.length ? [contact, ...contacts.slice(1)] : [contact]);
   });
-  form.append(name, phone, add, formMsg);
+  form.append(nameLabel, name, phoneLabel, phone, save, formMsg);
   root.append(form);
+}
+
+const WEEK_TABS = ["calendar", "roster", "timesheet", "reminders"];
+let weekTabsSetup = false;
+function selectWeekTab(tab) {
+  const selected = WEEK_TABS.includes(tab) ? tab : "calendar";
+  for (const name of WEEK_TABS) {
+    const button = document.querySelector(`[data-week-tab="${name}"]`);
+    const panel = document.getElementById("weekPanel" + name[0].toUpperCase() + name.slice(1));
+    if (!button || !panel) continue;
+    const on = name === selected;
+    button.setAttribute("aria-selected", String(on));
+    button.tabIndex = on ? 0 : -1;
+    panel.hidden = !on;
+  }
+  const status = document.getElementById("weekAddStatus");
+  if (status) status.textContent = "";
+}
+function setupWeekTabs() {
+  if (weekTabsSetup) return;
+  weekTabsSetup = true;
+  for (const button of document.querySelectorAll("[data-week-tab]")) {
+    button.addEventListener("click", () => selectWeekTab(button.dataset.weekTab));
+    button.addEventListener("keydown", (event) => {
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      const index = WEEK_TABS.indexOf(button.dataset.weekTab);
+      const rtl = document.documentElement.dir === "rtl";
+      const delta = (event.key === "ArrowRight" ? 1 : -1) * (rtl ? -1 : 1);
+      const next = event.key === "Home" ? 0 : event.key === "End" ? WEEK_TABS.length - 1
+        : (index + delta + WEEK_TABS.length) % WEEK_TABS.length;
+      const target = document.querySelector(`[data-week-tab="${WEEK_TABS[next]}"]`);
+      selectWeekTab(WEEK_TABS[next]);
+      target?.focus();
+    });
+  }
+  window.CARESITS_WEEK_SELECT = selectWeekTab;
+  const add = document.getElementById("weekAdd");
+  add?.addEventListener("click", () => {
+    let selected = document.querySelector('[data-week-tab][aria-selected="true"]')?.dataset.weekTab || "calendar";
+    if (selected === "roster") {
+      selected = "calendar";
+      selectWeekTab(selected);
+    }
+    const rootId = { calendar: "calendarRoot", timesheet: "timesheetRoot", reminders: "remindersRoot" }[selected];
+    const targetRoot = rootId && document.getElementById(rootId);
+    const target = targetRoot?.querySelector(".weekAddForm") || (selected === "calendar" ? targetRoot?.querySelector(".findCard") : null);
+    const status = document.getElementById("weekAddStatus");
+    if (!target) {
+      if (status) status.textContent = tr("week.addUnavailable");
+      return;
+    }
+    target.scrollIntoView({ block: "center", behavior: "smooth" });
+    target.querySelector("input, select, textarea, button")?.focus({ preventScroll: true });
+  });
 }
 
 function bootWeek() {
@@ -140,6 +235,7 @@ function bootWeek() {
   if (m) renderReminders(m, d.reminders || []);
   const em = document.getElementById("emergencyRoot");
   if (em) renderEmergency(em, d.emergency || []);
+  setupWeekTabs();
 }
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bootWeek);

@@ -1,18 +1,30 @@
 import { applyI18n, t as tr } from "./lang.js";
 applyI18n();
-// Caresitters app2 shell — her nav shape of 15 Oct 2026.
-// Menu hidden on load. Opening it gives the menu most of the
-// screen and shrinks the content to a thin sliver at the edge.
-// Tapping the sliver, or Close, returns full content. Groups:
-// one open at a time. The open state is never remembered across
-// loads: every visit starts with the full screen app.
+// Caresitters app2 shell — role-based bottom tabs, with the
+// existing grouped menu under More. Menu-open state is not saved.
 const $ = (s) => document.querySelector(s);
 const layout = $("#layout");
 const SOON = new Set([]);
 const TITLES = {};
+let activeNav = "home";
 
-function openMenu() { layout.classList.add("open"); }
-function closeMenu() { layout.classList.remove("open"); }
+function setBottomActive(nav = activeNav) {
+  const weekNav = ["calendar", "roster", "timesheet", "reminders"].includes(nav) ? "calendar" : nav;
+  for (const button of document.querySelectorAll(".bottomTab")) {
+    const active = !button.hidden && (button.dataset.nav === weekNav || (nav === "more" && button.dataset.openMore === "true"));
+    button.classList.toggle("on", active);
+    if (active) button.setAttribute("aria-current", "page");
+    else button.removeAttribute("aria-current");
+  }
+}
+function refreshHomeSwitch() {
+  const button = document.getElementById("homeSideSwitchBtn");
+  const dialog = document.getElementById("homeSideSwitchDialog");
+  if (button) button.hidden = !window.CARESITS_ME?.uid || activeNav !== "home";
+  if (dialog && !window.CARESITS_ME?.uid) dialog.hidden = true;
+}
+function openMenu() { layout.classList.add("open"); setBottomActive("more"); }
+function closeMenu() { layout.classList.remove("open"); setBottomActive(activeNav); }
 
 function setRoleNavigation(entryRole) {
   const communicate = entryRole === "communicate";
@@ -25,6 +37,8 @@ function setRoleNavigation(entryRole) {
   if (family) family.hidden = career || communicate;
   if (week) week.hidden = communicate;
   if (conversations) conversations.hidden = !communicate;
+  for (const button of document.querySelectorAll("[data-bottom-role]")) button.hidden = button.dataset.bottomRole !== entryRole;
+  setBottomActive(activeNav);
 }
 window.CARESITS_ROLE_NAV = setRoleNavigation;
 const ACTIVE_SIDES = ["family", "career", "communicate"];
@@ -38,15 +52,16 @@ function refreshSideSwitch(side = resolvedActiveSide()) {
   if (!box) return;
   const me = window.CARESITS_ME || {};
   box.hidden = !me.uid;
-  const buttons = [...box.querySelectorAll("[data-side-choice]")];
+  const buttons = [...document.querySelectorAll("[data-side-choice]")];
   for (const button of buttons) {
     const selected = button.dataset.sideChoice === side;
     button.classList.toggle("on", selected);
     button.setAttribute("aria-pressed", selected ? "true" : "false");
   }
-  const selectedButton = buttons.find((button) => button.dataset.sideChoice === side);
+  const selectedButton = [...box.querySelectorAll("[data-side-choice]")].find((button) => button.dataset.sideChoice === side);
   const name = document.getElementById("activeSideName");
   if (name) name.textContent = selectedButton?.textContent || "";
+  refreshHomeSwitch();
 }
 async function setActiveSide(side) {
   if (!ACTIVE_SIDES.includes(side)) return false;
@@ -73,6 +88,7 @@ async function setActiveSide(side) {
     return false;
   }
   if (status) status.textContent = "";
+  document.getElementById("homeSideSwitchDialog").hidden = true;
   show("home");
   window.CARESITS_RENDER_HOME?.();
   if (typeof window.CARESITS_TOUR_START_SIDE === "function") window.CARESITS_TOUR_START_SIDE(side);
@@ -80,7 +96,13 @@ async function setActiveSide(side) {
 }
 window.CARESITS_SET_ACTIVE_SIDE = setActiveSide;
 document.querySelectorAll("[data-side-choice]").forEach((button) => button.addEventListener("click", () => setActiveSide(button.dataset.sideChoice)));
-document.addEventListener("caresits-account-ready", () => refreshSideSwitch());
+document.addEventListener("caresits-account-ready", () => {
+  const side = resolvedActiveSide();
+  document.documentElement.dataset.entryRole = side;
+  setRoleNavigation(side);
+  refreshSideSwitch(side);
+});
+setRoleNavigation(resolvedActiveSide());
 refreshSideSwitch();
 
 // The Family Plus gate (payments chapter §2 + FEATURE-SPLIT): the
@@ -106,29 +128,38 @@ function show(nav) {
     closeMenu();
     return;
   }
+  activeNav = nav;
   document.querySelectorAll(".surface").forEach((s) => (s.hidden = true));
   document.querySelectorAll(".navBtn").forEach((b) => b.classList.toggle("on", b.dataset.nav === nav));
-  if (nav === "home") $("#surface-home").hidden = false;
+  const surfaceNav = nav === "ideas" ? "home" : nav;
+  if (surfaceNav === "home") $("#surface-home").hidden = false;
   else if (nav === "find") $("#surface-find").hidden = false;
   else if (nav === "matches") $("#surface-matches").hidden = false;
   else if (nav === "board") $("#surface-board").hidden = false;
-  else if (nav === "calendar") $("#surface-calendar").hidden = false;
+  else if (["calendar", "roster", "timesheet", "reminders"].includes(nav)) {
+    $("#surface-calendar").hidden = false;
+    window.CARESITS_WEEK_SELECT?.(nav);
+  }
   else if (nav === "children") $("#surface-children").hidden = false;
   else if (nav === "daystory") $("#surface-daystory").hidden = false;
   else if (nav === "bin") { $("#surface-bin").hidden = false; if (typeof window.CARESITS_BIN_OPEN === "function") window.CARESITS_BIN_OPEN(); }
-  else if (nav === "roster") $("#surface-roster").hidden = false;
-  else if (nav === "timesheet") $("#surface-timesheet").hidden = false;
-  else if (nav === "reminders") $("#surface-reminders").hidden = false;
   else if (nav === "checks") $("#surface-checks").hidden = false;
   else if (nav === "reviews") $("#surface-reviews").hidden = false;
   else if (nav === "profile") $("#surface-profile").hidden = false;
   else if (nav === "privacy") $("#surface-privacy").hidden = false;
   else if (nav === "settings") $("#surface-settings").hidden = false;
+  else if (nav === "help") $("#surface-help").hidden = false;
   else if (nav === "thread") { $("#surface-thread").hidden = false; if (typeof window.CARESITS_THREAD_OPEN === "function") window.CARESITS_THREAD_OPEN(); }
   else if (nav === "emergency") $("#surface-emergency").hidden = false;
   else if (nav === "questionnaire") $("#surface-questionnaire").hidden = false;
   else if (SOON.has(nav)) { $("#soonTitle").textContent = TITLES[nav] + " · coming with the build"; $("#surface-soon").hidden = false; }
   closeMenu();
+  setBottomActive(nav);
+  refreshHomeSwitch();
+  if (nav === "ideas") {
+    window.CARESITS_RENDER_HOME?.();
+    requestAnimationFrame(() => (document.getElementById("learningIdeasCard") || document.getElementById("learningSetupCard"))?.scrollIntoView({ block: "start", behavior: "smooth" }));
+  }
 }
 
 // The shell's show mechanism, published as a seam: surfaces
@@ -136,16 +167,27 @@ function show(nav) {
 // (HQ ruling on Leg 14). Homes' thread jump rides it.
 window.CARESITS_NAV = show;
 
-$("#menuBtn").addEventListener("click", openMenu);
 $("#closeBtn").addEventListener("click", closeMenu);
+for (const button of document.querySelectorAll("[data-open-more]")) button.addEventListener("click", openMenu);
+const sidePicker = document.getElementById("homeSideSwitchDialog");
+$("#homeSideSwitchBtn").addEventListener("click", () => { sidePicker.hidden = false; document.querySelector("#homeSideSwitchClose")?.focus(); });
+$("#homeSideSwitchClose").addEventListener("click", () => { sidePicker.hidden = true; $("#homeSideSwitchBtn").focus(); });
+sidePicker.addEventListener("click", (event) => { if (event.target === sidePicker) sidePicker.hidden = true; });
+document.addEventListener("keydown", (event) => { if (event.key === "Escape") { sidePicker.hidden = true; closeMenu(); } });
 $("#sliver").addEventListener("click", closeMenu);
 document.querySelectorAll(".navGroupHead").forEach((h) =>
   h.addEventListener("click", () => {
-    const g = h.parentElement;
-    const was = g.classList.contains("open");
-    document.querySelectorAll(".navGroup").forEach((x) => x.classList.remove("open"));
-    if (!was) g.classList.add("open");
+    const group = h.parentElement;
+    const open = !group.classList.contains("open");
+    for (const item of document.querySelectorAll(".navGroup")) {
+      const selected = item === group && open;
+      item.classList.toggle("open", selected);
+      item.querySelector(".navGroupHead")?.setAttribute("aria-expanded", String(selected));
+    }
   })
 );
 document.querySelectorAll("[data-nav]").forEach((b) => b.addEventListener("click", () => show(b.dataset.nav)));
 document.querySelectorAll("[data-goto]").forEach((b) => b.addEventListener("click", () => show(b.dataset.goto)));
+
+setBottomActive("home");
+refreshHomeSwitch();

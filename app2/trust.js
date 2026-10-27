@@ -50,10 +50,69 @@ function viewerCountryName() {
   return "";
 }
 
+function renderTrustProgress(root, me, docs, surface, options = {}) {
+  const items = [
+    ["trust.stepName", Boolean(me.name)],
+    ["trust.stepArea", Boolean(me.postcode)],
+    ["trust.stepDetails", Boolean(me.level)],
+    ["trust.stepPhoto", Boolean(me.photoUrl)],
+    ["trust.stepChecks", Array.isArray(docs) && docs.length > 0],
+  ];
+  const complete = items.filter((item) => item[1]).length;
+  const card = el("section", "cardIn trustChecklist");
+  card.setAttribute("aria-labelledby", "trustChecklistTitle-" + surface);
+  const heading = el("h3", "findName", tr("trust.checklistTitle"));
+  heading.id = "trustChecklistTitle-" + surface;
+  card.append(heading, el("p", "findPlace", tr("trust.progress", undefined, { n: complete, total: items.length })));
+  const list = el("ul", "trustChecklistItems");
+  for (const [key, done] of items) {
+    const row = el("li", "trustChecklistItem" + (done ? " isDone" : ""));
+    row.append(el("span", "trustChecklistMark", done ? tr("trust.done") : tr("trust.notYet")), el("span", null, tr(key)));
+    list.append(row);
+  }
+  const nextLabel = el("p", "fieldLabel trustNextLabel", tr("trust.nextAction"));
+  card.append(list, nextLabel);
+  const next = el("button", "mainBtn", tr("trust.nextProfile"));
+  next.type = "button";
+  let action = () => window.CARESITS_NAV?.("profile");
+  if (!me.postcode || !me.level) {
+    next.textContent = tr("trust.nextDetails");
+    action = () => window.CARESITS_NAV?.("questionnaire");
+  } else if (!me.photoUrl) {
+    next.textContent = tr("trust.nextPhoto");
+    action = options.onPhoto || (() => window.CARESITS_NAV?.("profile"));
+  } else if (!(Array.isArray(docs) && docs.length)) {
+    if (surface === "checks" && options.checkUrl) {
+      const link = el("a", "mainBtn privacyLink", tr("trust.nextOfficial"));
+      link.href = options.checkUrl;
+      link.target = "_blank";
+      link.rel = "noopener";
+      card.append(link);
+      root.append(card);
+      return;
+    }
+    next.textContent = tr("trust.nextChecks");
+    action = () => window.CARESITS_NAV?.("checks");
+  } else if ((surface === "reviews" && !(Array.isArray(options.reviews) && options.reviews.length)) || surface === "profile") {
+    const side = me.side || window.CARESITS_ME?.side || "family";
+    const nav = side === "carer" ? "board" : side === "communicate" ? "thread" : "find";
+    next.textContent = tr(side === "carer" ? "trust.nextJobs" : side === "communicate" ? "shell.messages" : "trust.nextFind");
+    action = () => window.CARESITS_NAV?.(nav);
+  }
+  next.addEventListener("click", action);
+  // The photo card already owns this action; do not repeat it in the checklist.
+  const photoActionIsAlreadyVisible = surface === "profile" && options.onPhoto && !me.photoUrl && me.postcode && me.level;
+  if (photoActionIsAlreadyVisible) nextLabel.textContent = `${tr("trust.nextAction")}: ${tr("trust.nextPhoto")}`;
+  else card.append(next);
+  root.append(card);
+}
+
 export function renderChecks(root, docs) {
   root.replaceChildren();
   root.append(el("h2", "findTitle", tr("shell.checksNav")));
   root.append(el("p", "findPool", tr("checks.lead")));
+  const trust = window.CARESITS_TRUST || {};
+  const me = trust.me || {};
   const country = viewerCountryName();
   const pack = country ? packByName(country) : null;
   if (pack) {
@@ -64,12 +123,10 @@ export function renderChecks(root, docs) {
     card.append(el("p", "findPlace", facts.name));
     card.append(el("p", null, tr(facts.register ? "country.registerLine" : "country.sightedLine")));
     card.append(el("p", "findGate", facts.costText));
-    if (facts.checkUrl) {
-      const a = el("a", "quietBtn", tr("country.officialLink"));
-      a.href = facts.checkUrl; a.target = "_blank"; a.rel = "noopener";
-      card.append(a);
-    }
     root.append(card);
+    renderTrustProgress(root, me, docs, "checks", { checkUrl: facts.checkUrl });
+  } else {
+    renderTrustProgress(root, me, docs, "checks");
   }
   if (!docs.length) { emptyBox(root, tr("checks.emptyTitle"), tr("checks.emptyBody")); return; }
   const list = el("div", "findList");
@@ -86,6 +143,9 @@ export function renderChecks(root, docs) {
 export function renderReviews(root, reviews) {
   root.replaceChildren();
   root.append(el("h2", "findTitle", tr("shell.reviews")));
+  root.append(el("p", "findPool", tr("trust.reviewsLead")));
+  const trust = window.CARESITS_TRUST || {};
+  renderTrustProgress(root, trust.me || {}, trust.docs || [], "reviews", { reviews });
   if (!reviews.length) { emptyBox(root, tr("trust.reviewsEmpty"), tr("trust.reviewsEmptyBody")); return; }
   const list = el("div", "findList");
   for (const r of reviews) {
@@ -101,6 +161,7 @@ export function renderReviews(root, reviews) {
 export function renderProfile(root, me) {
   root.replaceChildren();
   root.append(el("h2", "findTitle", tr("shell.profile")));
+  root.append(el("p", "findPool", tr("trust.profileLead")));
   const card = el("div", "findCard");
   card.append(el("h3", "findName", me.name || tr("trust.nameWaits")));
   card.append(el("p", "findPlace", (me.side === "carer" ? tr("trust.sideCarer") : me.side === "communicate" ? tr("trust.sideCommunicate") : tr("trust.sideFamily")) + (me.postcode ? " · " + tr("find.postcode", undefined, { n: me.postcode }) : "")));
@@ -109,7 +170,7 @@ export function renderProfile(root, me) {
     card.append(el("p", null, tr("level." + me.level)));
   }
   card.append(el("p", null, tr("trust.profileBody")));
-  const go = el("button", "mainBtn", tr("trust.seeQ"));
+  const go = el("button", "ghostBtn", tr("trust.seeQ"));
   go.type = "button";
   go.addEventListener("click", () => document.querySelector('[data-nav="questionnaire"]')?.click());
   card.append(go);
@@ -164,6 +225,8 @@ export function renderProfile(root, me) {
   }
   pcard.append(pick, pfile);
   root.append(pcard);
+  const trust = window.CARESITS_TRUST || {};
+  renderTrustProgress(root, me, trust.docs || [], "profile", { onPhoto: () => pick.click() });
   if (me.side === "carer") {
     // F14: up to four more photos. The saved list rides the
     // card (card.gallery, slot order) and every change writes
@@ -335,6 +398,20 @@ export function applyBackground(choice, dataUrl) {
 export function renderSettings(root) {
   root.replaceChildren();
   root.append(el("h2", "findTitle", tr("shell.settings")));
+  const makeGroup = (key) => {
+    const group = el("section", "settingsGroup");
+    group.setAttribute("aria-labelledby", "settingsGroup-" + key);
+    const heading = el("h3", "settingsGroupTitle", tr("settings.group." + key));
+    heading.id = "settingsGroup-" + key;
+    group.append(heading);
+    root.append(group);
+    return group;
+  };
+  const languageGroup = makeGroup("language");
+  const lookGroup = makeGroup("look");
+  const notificationsGroup = makeGroup("notifications");
+  const dataGroup = makeGroup("data");
+  const accountGroup = makeGroup("account");
   const tourCard = el("div", "findCard");
   tourCard.append(el("h3", "findName", tr("tour.settingsTitle")));
   tourCard.append(el("p", null, tr("tour.settingsBody")));
@@ -342,7 +419,7 @@ export function renderSettings(root) {
   replay.type = "button";
   replay.addEventListener("click", () => window.CARESITS_REPLAY_SIDE_TOUR?.());
   tourCard.append(replay);
-  root.append(tourCard);
+  lookGroup.append(tourCard);
   const card = el("div", "findCard");
   card.append(el("h3", "findName", tr("trust.background")));
   card.append(el("p", null, tr("trust.backgroundBody")));
@@ -401,7 +478,7 @@ export function renderSettings(root) {
     });
     card.append(rm);
   }
-  root.append(card);
+  lookGroup.append(card);
   const langCard = el("div", "findCard");
   langCard.append(el("h3", "findName", tr("common.language")));
   const langRow = el("div", "chipRow");
@@ -432,7 +509,7 @@ export function renderSettings(root) {
     langRow.append(b);
   }
   langCard.append(langRow);
-  root.append(langCard);
+  languageGroup.append(langCard);
   // Plans entry (payments chapter): families only. A carer account
   // never sees a purchase surface (carers have no tiers, ever), so
   // the card stands unless the viewer is known to be a carer. The
@@ -446,7 +523,7 @@ export function renderSettings(root) {
     plansBtn.id = "plansBtn";
     plansBtn.addEventListener("click", () => { if (typeof window.CARESITS_OPEN_PLANS === "function") window.CARESITS_OPEN_PLANS(); });
     plansCard.append(plansBtn);
-    root.append(plansCard);
+    accountGroup.append(plansCard);
   }
   // Push switches stand only when the native seam is live on
   // this device (Security fence: no controls that cannot
@@ -469,7 +546,7 @@ export function renderSettings(root) {
       pushCard.append(row);
     }
     pushCard.append(el("p", "findGate", tr("push.note")));
-    root.append(pushCard);
+    notificationsGroup.append(pushCard);
     registerPush().catch(() => {});
   }
   const dataCard = el("div", "findCard");
@@ -484,14 +561,14 @@ export function renderSettings(root) {
     dataCard.append(note);
   });
   dataCard.append(dl);
-  root.append(dataCard);
+  dataGroup.append(dataCard);
   const acct = el("div", "findCard");
   acct.append(el("h3", "findName", tr("trust.account")));
   acct.append(el("p", null, tr("trust.accountBody")));
   const link = el("a", "mainBtn privacyLink", tr("trust.openAccount"));
   link.href = "../accounts/account.html";
   acct.append(link);
-  root.append(acct);
+  accountGroup.append(acct);
 }
 
 function bootTrust() {

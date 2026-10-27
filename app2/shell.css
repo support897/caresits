@@ -356,3 +356,48 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .filterSheetCard { width: 100%; max-height: 86dvh; border-radius: 22px 22px 0 0; padding-inline: 16px; }
   .findFilterGrid { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Clear, calm controls for the family and trust flows. */
+button, a, input, select, textarea, summary { min-height: 44px; }
+input, select, textarea { max-width: 100%; font: inherit; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible, [role="tab"]:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+}
+.fieldLabel { display: block; margin: 12px 0 5px; font-weight: 700; color: var(--ink); text-align: start; }
+.fieldHint { color: var(--ink); font-size: .95rem; line-height: 1.45; }
+.flowProgress { display: block; width: 100%; height: 12px; margin: 10px 0 4px; accent-color: var(--ink); }
+.flowStepText { margin: 4px 0 14px; font-weight: 700; color: var(--ink); }
+.urgentChoiceList { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.urgentChoice { min-height: 52px; padding: 12px 14px; border: 2px solid var(--line); border-radius: 16px; background: var(--card); color: var(--ink); font: inherit; font-weight: 700; text-align: start; cursor: pointer; }
+.urgentChoice.on { border-color: var(--ink); background: #e8f2ed; box-shadow: inset 0 0 0 1px var(--ink); }
+.urgentStepActions { justify-content: flex-end; align-items: center; margin-top: 14px; }
+.urgentStepActions > button { min-width: 44px; }
+.urgentStepContent .txtIn { width: 100%; box-sizing: border-box; }
+.childSheetCard { max-height: 90vh; max-height: 90dvh; overflow-y: auto; text-align: start; }
+.childSheetCard .sheetX { float: inline-end; }
+.childLoveChoices { margin: 6px 0; }
+.childMoreBtn { margin-block: 4px 10px; }
+.childSheetActions { margin-top: 12px; }
+.settingsGroup { margin: 18px 0 24px; }
+.settingsGroupTitle { margin: 0 0 10px; color: var(--ink); font-family: "Newsreader", Georgia, serif; font-size: 1.35rem; text-align: start; }
+.settingsGroup > .findCard, .settingsGroup > .cardIn { margin-block: 10px; }
+.trustChecklist { margin-block: 18px; text-align: start; }
+.trustChecklistItems { list-style: none; margin: 10px 0 14px; padding: 0; }
+.trustChecklistItem { display: grid; grid-template-columns: minmax(68px, auto) 1fr; gap: 10px; align-items: start; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.trustChecklistMark { color: var(--ink); font-weight: 700; }
+.trustNextLabel { margin-top: 12px; }
+.weekHeader { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.weekHeader .findTitle { margin-block: 4px; }
+.weekTabs { display: flex; gap: 6px; overflow-x: auto; overscroll-behavior-inline: contain; margin: 10px -4px 18px; padding: 4px; }
+.weekTab { flex: 0 0 auto; min-width: 78px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); color: var(--ink); font: inherit; font-weight: 700; white-space: nowrap; cursor: pointer; }
+.weekTab[aria-selected="true"] { border-color: var(--ink); background: var(--ink); color: #fff; }
+.weekPanel { min-width: 0; }
+.emergencyCall { display: inline-flex; align-items: center; justify-content: center; min-height: 52px; min-width: 132px; margin-top: 6px; text-align: center; text-decoration: none; }
+.emergencyCard { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+[dir="rtl"] .trustChecklistItem { direction: rtl; }
+@media (max-width: 380px) {
+  .urgentChoiceList { grid-template-columns: 1fr; }
+  .weekTab { min-width: 72px; padding-inline: 10px; }
+  .childSheetCard { padding: 18px; }
+}

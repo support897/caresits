@@ -59,12 +59,11 @@ export function renderChildren(root, rawChildren, editingId = null) {
     const card = el("article", "findCard kidCard");
     card.style.borderTop = "6px solid " + theme[2];
     card.append(el("h3", "findName", kid.name));
-    card.append(el("p", "findPlace", tr("family.themeWord", undefined, { t: themeName(theme[0], theme[1]) })));
     if (kid.ageYears != null) card.append(el("p", "findPlace", ageText(kid.ageYears)));
     if (kid.loves.length) card.append(el("p", "findPlace", tr("family.kidLovesLine", undefined, { list: kid.loves.map((id) => tr("homes.love." + id)).join(", ") })));
     const edit = el("button", "quietBtn", tr("family.editChild"));
     edit.type = "button";
-    edit.addEventListener("click", () => renderChildren(root, children, kid.id));
+    edit.addEventListener("click", () => openChildSheet(kid, edit));
     const rm = el("button", "quietBtn", tr("family.remove"));
     rm.type = "button";
     rm.addEventListener("click", () => confirmRemove(kid, card));
@@ -72,63 +71,121 @@ export function renderChildren(root, rawChildren, editingId = null) {
     list.append(card);
   }
   root.append(list);
-  const editingKid = editingId ? children.find((kid) => kid.id === editingId) : null;
-  const form = el("div", "findCard");
-  form.append(el("h3", "findName", tr(editingKid ? "family.editChild" : "family.addChild")));
-  const name = el("input", "txtIn");
-  name.placeholder = tr("family.namePh");
-  name.id = "kName";
-  if (editingKid) name.value = editingKid.name;
-  const themeSel = el("select", "txtIn");
-  themeSel.id = "kTheme";
-  for (const [id, label] of THEMES) { const o = el("option", null, themeName(id, label)); o.value = id; themeSel.append(o); }
-  if (editingKid) themeSel.value = editingKid.theme;
-  const ageSel = el("select", "txtIn");
-  ageSel.id = "kAge";
-  ageSel.setAttribute("aria-label", tr("family.agePick"));
-  const ageBlank = el("option", null, tr("family.agePick"));
-  ageBlank.value = "";
-  ageSel.append(ageBlank);
-  for (let a = 0; a <= 12; a += 1) { const o = el("option", null, ageText(a)); o.value = String(a); ageSel.append(o); }
-  if (editingKid && editingKid.ageYears != null) ageSel.value = String(editingKid.ageYears);
-  const loveLabel = el("p", "findPlace", tr("family.lovesLabel"));
-  const loveRow = el("div", "chipRow");
-  loveRow.id = "kLoves";
-  const pickedLoves = new Set(editingKid?.loves || []);
-  for (const love of INTERESTS) {
-    const c = el("button", "chipBtn" + (pickedLoves.has(love.id) ? " on" : ""), tr(love.key));
-    c.type = "button";
-    c.dataset.love = love.id;
-    c.addEventListener("click", () => {
-      if (pickedLoves.has(love.id)) pickedLoves.delete(love.id); else pickedLoves.add(love.id);
-      c.classList.toggle("on", pickedLoves.has(love.id));
-    });
-    loveRow.append(c);
-  }
-  const add = el("button", "mainBtn", tr(editingKid ? "family.saveChild" : "family.add"));
+  const add = el("button", "mainBtn", tr("family.addChild"));
   add.type = "button";
-  add.id = "kAdd";
-  const formMsg = el("p", "formMsg");
-  add.addEventListener("click", () => {
-    const n = name.value.trim();
-    if (!n) { formMsg.textContent = tr("form.needChild"); return; }
-    const ageYears = ageSel.value === "" ? null : Number(ageSel.value);
-    const loves = INTERESTS.map((l) => l.id).filter((id) => pickedLoves.has(id));
-    // The kid is minted first and the write carries its id:
-    // the server record stands under this same id (id unity,
-    // QA b104 Leg 7), so remove, bin and restore all find it.
-    const kid = { ...(editingKid || {}), id: editingKid?.id || "local-" + Date.now(), name: n, theme: themeSel.value, ageYears, loves };
-    write("child-add", { id: kid.id, name: n, theme: themeSel.value, ageYears, loves });
-    renderChildren(root, editingKid ? children.map((oldKid) => oldKid.id === kid.id ? kid : oldKid) : [...children, kid]);
-  });
-  form.append(name, themeSel, ageSel, loveLabel, loveRow, add, formMsg);
-  if (editingKid) {
-    const cancel = el("button", "closeBtn", tr("family.cancel"));
-    cancel.type = "button";
-    cancel.addEventListener("click", () => renderChildren(root, children));
-    form.append(cancel);
+  add.id = "kAddOpen";
+  add.addEventListener("click", () => openChildSheet(null, add));
+  root.append(add);
+
+  function openChildSheet(editingKid, returnFocus) {
+    document.getElementById("childSheet")?.remove();
+    const wrap = el("div", "sheetWrap");
+    wrap.id = "childSheet";
+    const sheet = el("section", "sheetCard childSheetCard");
+    sheet.setAttribute("role", "dialog");
+    sheet.setAttribute("aria-modal", "true");
+    sheet.setAttribute("aria-labelledby", "childSheetTitle");
+    const title = el("h3", "findName", tr(editingKid ? "family.editChild" : "family.addChild"));
+    title.id = "childSheetTitle";
+    const close = el("button", "closeBtn sheetX", tr("family.cancel"));
+    close.type = "button";
+    const closeSheet = () => { wrap.remove(); returnFocus?.focus(); };
+    close.addEventListener("click", closeSheet);
+    sheet.append(close, title);
+
+    const nameLabel = el("label", "fieldLabel", tr("family.childName"));
+    nameLabel.htmlFor = "kName";
+    const name = el("input", "txtIn");
+    name.id = "kName";
+    name.type = "text";
+    name.autocomplete = "given-name";
+    name.placeholder = tr("family.namePh");
+    if (editingKid) name.value = editingKid.name;
+
+    const ageLabel = el("label", "fieldLabel", tr("family.agePick"));
+    ageLabel.htmlFor = "kAge";
+    const ageSel = el("select", "txtIn");
+    ageSel.id = "kAge";
+    const ageBlank = el("option", null, tr("family.agePick"));
+    ageBlank.value = "";
+    ageSel.append(ageBlank);
+    for (let age = 0; age <= 12; age += 1) {
+      const option = el("option", null, ageText(age));
+      option.value = String(age);
+      ageSel.append(option);
+    }
+    if (editingKid && editingKid.ageYears != null) ageSel.value = String(editingKid.ageYears);
+
+    const loveLabel = el("p", "fieldLabel", tr("family.lovesLabel"));
+    const loveRow = el("div", "chipRow childLoveChoices");
+    loveRow.id = "kLoves";
+    loveRow.setAttribute("role", "group");
+    loveRow.setAttribute("aria-label", tr("family.lovesLabel"));
+    const pickedLoves = new Set(editingKid?.loves || []);
+    const shownCount = 4;
+    let moreOpen = (editingKid?.loves || []).some((id) => INTERESTS.findIndex((item) => item.id === id) >= shownCount);
+    const more = el("button", "quietBtn childMoreBtn", tr(moreOpen ? "family.fewerInterests" : "family.moreInterests"));
+    more.type = "button";
+    more.setAttribute("aria-expanded", String(moreOpen));
+    const renderLoveChoices = () => {
+      loveRow.replaceChildren();
+      INTERESTS.forEach((love, index) => {
+        if (index >= shownCount && !moreOpen) return;
+        const choice = el("button", "chipBtn" + (pickedLoves.has(love.id) ? " on" : ""), tr(love.key));
+        choice.type = "button";
+        choice.dataset.love = love.id;
+        choice.setAttribute("aria-pressed", String(pickedLoves.has(love.id)));
+        choice.addEventListener("click", () => {
+          if (pickedLoves.has(love.id)) pickedLoves.delete(love.id);
+          else pickedLoves.add(love.id);
+          choice.classList.toggle("on", pickedLoves.has(love.id));
+          choice.setAttribute("aria-pressed", String(pickedLoves.has(love.id)));
+        });
+        loveRow.append(choice);
+      });
+      more.hidden = INTERESTS.length <= shownCount;
+      more.textContent = tr(moreOpen ? "family.fewerInterests" : "family.moreInterests");
+      more.setAttribute("aria-expanded", String(moreOpen));
+    };
+    more.addEventListener("click", () => { moreOpen = !moreOpen; renderLoveChoices(); });
+    renderLoveChoices();
+
+    const save = el("button", "mainBtn", tr(editingKid ? "family.saveChild" : "family.addChild"));
+    save.type = "button";
+    save.id = "kAdd";
+    const formMsg = el("p", "formMsg");
+    formMsg.setAttribute("role", "status");
+    save.addEventListener("click", () => {
+      const childName = name.value.trim();
+      if (!childName) {
+        formMsg.textContent = tr("form.needChild");
+        name.focus();
+        return;
+      }
+      const ageYears = ageSel.value === "" ? null : Number(ageSel.value);
+      const loves = INTERESTS.map((item) => item.id).filter((id) => pickedLoves.has(id));
+      // Keep the existing per-member write and record ID shape.
+      const kid = { ...(editingKid || {}), id: editingKid?.id || "local-" + Date.now(), name: childName, theme: editingKid?.theme || THEMES[0][0], ageYears, loves };
+      write("child-add", { id: kid.id, name: childName, theme: kid.theme, ageYears, loves });
+      wrap.remove();
+      renderChildren(root, editingKid ? children.map((oldKid) => oldKid.id === kid.id ? kid : oldKid) : [...children, kid]);
+      document.getElementById("kAddOpen")?.focus();
+    });
+    const actions = el("div", "homeBtnRow childSheetActions");
+    actions.append(save);
+    if (editingKid) {
+      const cancel = el("button", "ghostBtn", tr("family.cancel"));
+      cancel.type = "button";
+      cancel.addEventListener("click", closeSheet);
+      actions.append(cancel);
+    }
+    sheet.append(nameLabel, name, ageLabel, ageSel, loveLabel, loveRow, more, actions, formMsg);
+    wrap.append(sheet);
+    wrap.addEventListener("click", (event) => { if (event.target === wrap) closeSheet(); });
+    wrap.addEventListener("keydown", (event) => { if (event.key === "Escape") closeSheet(); });
+    document.body.append(wrap);
+    name.focus();
   }
-  root.append(form);
 }
 
 function confirmRemove(kid, card) {
