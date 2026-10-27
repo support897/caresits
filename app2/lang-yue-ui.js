@@ -4,7 +4,7 @@
 // HUMAN CHECK RULE: keys under "checks." and "legal." carry NO
 // Chinese values here, exactly as in Spanish. They stay English
 // until a human checker approves words for this language.
-// Coverage: 670 translated app UI keys; human-check phrases remain in English by design.
+// Coverage: 683 translated app UI keys; human-check phrases remain in English by design.
 export const UI_YUE = {
  "door.tag": "找到照護，分享每一天。",
 
@@ -109,9 +109,9 @@ export const UI_YUE = {
  "journey.yes": "是",
  "journey.no": "否",
  "journey.back": "返回",
- "journey.next": "繼續",
+ "journey.next": "儲存並繼續",
  "journey.finish": "完成",
- "journey.page": "第 {a} 頁，共 {b} 頁",
+ "journey.page": "問題 {a} / {b}",
  "journey.optional": "選填 · 回答得越多，我們匹配得越準",
  "journey.from": "從",
  "journey.to": "到",
@@ -141,7 +141,7 @@ export const UI_YUE = {
  "journey.smokerOk": "可以接受吸煙的家庭",
  "journey.nonSmokerHome": "我需要無煙的家庭環境",
  "journey.wTitle": "讓我們為您找到最合適的匹配",
- "journey.wLead": "一些問題，一次一頁。全部回答大約需要 10 分鐘，您也可以用大約一半的時間先在快速連接處停下，之後再繼續。",
+ "journey.wLead": "回答幾條問題，幫我哋搵到更合適嘅人選。回答會一路儲存，你亦可以遲啲再加資料。",
  "journey.wOpt": "選填的問題會標明。回答得越多，我們匹配得越準。",
  "journey.wFamily": "我在尋找照護",
  "journey.wCarer": "我提供照護",
@@ -661,5 +661,17 @@ export const UI_YUE = {
  "tour.coach.messages.body": "需要時可以喺呢度睇訊息。",
  "shell.more": "更多", "shell.jobs": "工作", "shell.messages": "訊息", "shell.ideas": "點子", "shell.navigation": "主要導覽", "shell.help": "幫助",
  "help.title": "我哋可以點幫你？", "help.body": "揀一個地方開始。已儲存嘅回答會留喺呢部裝置。", "help.answers": "更新我嘅回答", "help.privacy": "閱讀私隱政策",
-
+ "journey.required": "必填",
+ "journey.whoTitle": "邊個需要照顧？",
+ "journey.locationTitle": "你住喺邊度，願意去幾遠？",
+ "journey.essentialsTitle": "而家已經可以睇配對結果",
+ "journey.essentialsBody": "你嘅基本回答已經儲存。可以而家查看，或者再加幾項資料，搵到更合適嘅人選。",
+ "journey.seeMatches": "睇我嘅配對",
+ "journey.makeMatchesBetter": "令配對更合適",
+ "journey.reviewAnswers": "查看我嘅回答",
+ "journey.optionalLead": "呢啲問題都係選填，依家可以略過任何一題。",
+ "journey.noPreference": "冇偏好",
+ "journey.optionCount": "選項 {a}–{b}，共 {c} 個",
+ "journey.optionMore": "更多選項",
+ "journey.optionPrevious": "上一組選項",
 };

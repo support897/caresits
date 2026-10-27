@@ -4,7 +4,7 @@
 // HUMAN CHECK RULE: keys under "checks." and "legal." carry NO
 // Hindi values here, exactly as in Spanish. They stay English
 // until a human checker approves words for this language.
-// Coverage: 670 translated app UI keys; human-check phrases remain in English by design.
+// Coverage: 683 translated app UI keys; human-check phrases remain in English by design.
 export const UI_HI = {
  "door.tag": "देखभाल ढूँढिए। दिन साझा कीजिए।",
 
@@ -109,9 +109,9 @@ export const UI_HI = {
  "journey.yes": "हाँ",
  "journey.no": "नहीं",
  "journey.back": "पीछे",
- "journey.next": "आगे बढ़िए",
+ "journey.next": "सहेजें और आगे बढ़ें",
  "journey.finish": "खत्म कीजिए",
- "journey.page": "पृष्ठ {a} का {b}",
+ "journey.page": "सवाल {a} में से {b}",
  "journey.optional": "चाहें तो भरें · जितना ज़्यादा जवाब देंगे, उतना अच्छा मेल हम कराएँगे",
  "journey.from": "से",
  "journey.to": "तक",
@@ -141,7 +141,7 @@ export const UI_HI = {
  "journey.smokerOk": "धूम्रपान वाले घर से ठीक है",
  "journey.nonSmokerHome": "मुझे बिना धूम्रपान वाला घर चाहिए",
  "journey.wTitle": "आइए आपका सबसे अच्छा मेल ढूँढते हैं",
- "journey.wLead": "कुछ सवाल, एक बार में एक पृष्ठ। सब कुछ के लिए लगभग 10 मिनट, और आप आधे समय में झटपट जुड़ने पर रुक सकते हैं और बाद में खत्म कर सकते हैं।",
+ "journey.wLead": "कुछ सवाल हमें बेहतर मेल खोजने में मदद करते हैं। आपके जवाब आगे बढ़ते ही सहेजते हैं; आप बाद में और जानकारी जोड़ सकते हैं।",
  "journey.wOpt": "चाहें तो भरने वाले सवाल ऐसा कहते हैं। जितना ज़्यादा जवाब देंगे, उतना अच्छा मेल हम कराएँगे।",
  "journey.wFamily": "मैं देखभाल ढूँढ रहा हूँ",
  "journey.wCarer": "मैं देखभाल करता हूँ",
@@ -661,5 +661,17 @@ export const UI_HI = {
  "tour.coach.messages.body": "ज़रूरत पड़ने पर आपके संदेश यहाँ मिलेंगे।",
  "shell.more": "और", "shell.jobs": "काम", "shell.messages": "संदेश", "shell.ideas": "विचार", "shell.navigation": "मुख्य नेविगेशन", "shell.help": "मदद",
  "help.title": "हम आपकी मदद कैसे करें?", "help.body": "शुरू करने के लिए जगह चुनें। आपके सहेजे हुए जवाब इसी डिवाइस पर रहते हैं।", "help.answers": "मेरे जवाब अपडेट करें", "help.privacy": "गोपनीयता नीति पढ़ें",
-
+ "journey.required": "ज़रूरी",
+ "journey.whoTitle": "देखभाल की ज़रूरत किसे है?",
+ "journey.locationTitle": "आप कहाँ रहते हैं और कितनी दूर तक यात्रा करेंगे?",
+ "journey.essentialsTitle": "अब आप मेल देख सकते हैं",
+ "journey.essentialsBody": "आपके शुरुआती जवाब सहेज दिए गए हैं। अभी देखें या बेहतर मेल पाने के लिए कुछ बातें और जोड़ें।",
+ "journey.seeMatches": "मेरे मेल देखें",
+ "journey.makeMatchesBetter": "मेरे मेल बेहतर करें",
+ "journey.reviewAnswers": "मेरे जवाब देखें",
+ "journey.optionalLead": "ये सवाल वैकल्पिक हैं। चाहें तो अभी छोड़ दें।",
+ "journey.noPreference": "कोई पसंद नहीं",
+ "journey.optionCount": "विकल्प {a}–{b} / {c}",
+ "journey.optionMore": "और विकल्प",
+ "journey.optionPrevious": "पिछले विकल्प",
 };

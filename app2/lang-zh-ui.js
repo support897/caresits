@@ -4,7 +4,7 @@
 // HUMAN CHECK RULE: keys under "checks." and "legal." carry NO
 // Chinese values here, exactly as in Spanish. They stay English
 // until a human checker approves words for this language.
-// Coverage: 670 translated app UI keys; human-check phrases remain in English by design.
+// Coverage: 683 translated app UI keys; human-check phrases remain in English by design.
 export const UI_ZH = {
  "door.tag": "找到照护，分享每一天。",
 
@@ -109,9 +109,9 @@ export const UI_ZH = {
  "journey.yes": "是",
  "journey.no": "否",
  "journey.back": "返回",
- "journey.next": "继续",
+ "journey.next": "保存并继续",
  "journey.finish": "完成",
- "journey.page": "第 {a} 页，共 {b} 页",
+ "journey.page": "问题 {a} / {b}",
  "journey.optional": "选填 · 回答得越多，我们匹配得越准",
  "journey.from": "从",
  "journey.to": "到",
@@ -141,7 +141,7 @@ export const UI_ZH = {
  "journey.smokerOk": "可以接受吸烟的家庭",
  "journey.nonSmokerHome": "我需要无烟的家庭环境",
  "journey.wTitle": "让我们为您找到最合适的匹配",
- "journey.wLead": "一些问题，一次一页。全部回答大约需要 10 分钟，您也可以用大约一半的时间先在快速连接处停下，之后再继续。",
+ "journey.wLead": "回答几个问题，帮助我们找到更合适的人选。回答会随时保存，你也可以稍后补充更多信息。",
  "journey.wOpt": "选填的问题会标明。回答得越多，我们匹配得越准。",
  "journey.wFamily": "我在寻找照护",
  "journey.wCarer": "我提供照护",
@@ -661,5 +661,17 @@ export const UI_ZH = {
  "tour.coach.messages.body": "需要时可以在这里查看消息。",
  "shell.more": "更多", "shell.jobs": "工作", "shell.messages": "消息", "shell.ideas": "点子", "shell.navigation": "主导航", "shell.help": "帮助",
  "help.title": "需要什么帮助？", "help.body": "选择一个开始的地方。已保存的回答会留在此设备上。", "help.answers": "更新我的回答", "help.privacy": "阅读隐私政策",
-
+ "journey.required": "必填",
+ "journey.whoTitle": "谁需要照护？",
+ "journey.locationTitle": "你住在哪里，愿意出行多远？",
+ "journey.essentialsTitle": "现在就可以查看匹配结果",
+ "journey.essentialsBody": "你的基本回答已保存。现在查看，或再添加一些信息来找到更合适的人选。",
+ "journey.seeMatches": "查看我的匹配",
+ "journey.makeMatchesBetter": "让匹配更合适",
+ "journey.reviewAnswers": "查看我的回答",
+ "journey.optionalLead": "这些问题为选填。现在可以跳过任何一题。",
+ "journey.noPreference": "没有偏好",
+ "journey.optionCount": "选项 {a}–{b}，共 {c} 个",
+ "journey.optionMore": "更多选项",
+ "journey.optionPrevious": "上一组选项",
 };

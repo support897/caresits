@@ -4,7 +4,7 @@
 // HUMAN CHECK RULE: keys under "checks." and "legal." carry NO
 // Arabic values here, exactly as in Spanish. They stay English
 // until a human checker approves words for this language.
-// Coverage: 670 translated app UI keys; human-check phrases remain in English by design.
+// Coverage: 683 translated app UI keys; human-check phrases remain in English by design.
 // RTL note: these are string values only; layout direction is a
 // wiring concern and is not set here.
 export const UI_AR = {
@@ -95,9 +95,9 @@ export const UI_AR = {
  "journey.yes": "نعم",
  "journey.no": "لا",
  "journey.back": "رجوع",
- "journey.next": "تابع",
+ "journey.next": "احفظي وتابعي",
  "journey.finish": "إنهاء",
- "journey.page": "الصفحة {a} من {b}",
+ "journey.page": "السؤال {a} من {b}",
  "journey.optional": "اختياري · كلما أجبت أكثر، كانت مطابقتنا لك أفضل",
  "journey.from": "من",
  "journey.to": "إلى",
@@ -127,7 +127,7 @@ export const UI_AR = {
  "journey.smokerOk": "لا يمانع منزلًا فيه تدخين",
  "journey.nonSmokerHome": "أحتاج إلى منزل خالٍ من التدخين",
  "journey.wTitle": "دعنا نجد لك المطابقة المثالية",
- "journey.wLead": "بعض الأسئلة، صفحة واحدة في كل مرة. حوالي 10 دقائق لكل شيء، ويمكنك التوقف عند الاتصال السريع في حوالي نصف هذا الوقت وإنهاؤه لاحقًا.",
+ "journey.wLead": "بعض الأسئلة تساعدنا في إيجاد الخيار الأنسب. تُحفظ إجاباتك أثناء التقدم، ويمكنك إضافة تفاصيل لاحقًا.",
  "journey.wOpt": "الأسئلة الاختيارية تقول ذلك. كلما أجبت أكثر، كانت مطابقتنا لك أفضل.",
  "journey.wFamily": "أبحث عن رعاية",
  "journey.wCarer": "أقدم الرعاية",
@@ -664,5 +664,17 @@ export const UI_AR = {
  "tour.coach.messages.body": "تجدين رسائلك هنا عندما تحتاجين إليها.",
  "shell.more": "المزيد", "shell.jobs": "وظائف", "shell.messages": "الرسائل", "shell.ideas": "أفكار", "shell.navigation": "التنقل الرئيسي", "shell.help": "المساعدة",
  "help.title": "كيف يمكننا مساعدتك؟", "help.body": "اختاري مكانًا للبدء. تبقى إجاباتك المحفوظة على هذا الجهاز.", "help.answers": "حدّثي إجاباتي", "help.privacy": "اقرئي سياسة الخصوصية",
-
+ "journey.required": "مطلوب",
+ "journey.whoTitle": "من يحتاج إلى الرعاية؟",
+ "journey.locationTitle": "أين تعيشين وإلى أي مسافة ستسافرين؟",
+ "journey.essentialsTitle": "يمكنك الآن رؤية نتائج المطابقة",
+ "journey.essentialsBody": "حُفظت إجاباتك الأولى. ألقِ نظرة الآن أو أضيفي بعض التفاصيل للحصول على تطابق أقرب.",
+ "journey.seeMatches": "شاهدي نتائجي",
+ "journey.makeMatchesBetter": "حسّني نتائجي",
+ "journey.reviewAnswers": "راجعي إجاباتي",
+ "journey.optionalLead": "هذه الأسئلة اختيارية. يمكنك تخطي أي منها الآن.",
+ "journey.noPreference": "لا تفضيل",
+ "journey.optionCount": "الخيارات {a}–{b} من {c}",
+ "journey.optionMore": "خيارات أخرى",
+ "journey.optionPrevious": "الخيارات السابقة",
 };

@@ -8,9 +8,10 @@ import { t as tr, applyI18n } from "./lang.js";
 import { slugify } from "../next-phase/engine/engine.mjs";
 import { COUNTRY_NAMES, packByName } from "./countries.js";
 import { accountKey, draftKey, doneKey } from "./storage-keys.js";
-import { levelOf, levelRank } from "./levels.js";
+import { levelOf } from "./levels.js";
 import { withTimeout } from "../accounts/account.js";
 import { warmSave, drainOutbox } from "./account-save.js";
+import { EXPANSION } from "./questions2.js";
 // VALUE CODING at the bundle boundary: any string that IS one of
 // the questionnaire's answer words is stored as its stable slug,
 // so matching compares codes in every language. Prose (the write
@@ -30,10 +31,9 @@ const codeOf = (f) => f.pair || f.id;
 const keyFor = (f) => { const c = codeOf(f); const qk = "q." + state.side + "." + c; return tr(qk) === qk ? "q." + c : qk; };
 const L = (f) => { const k = keyFor(f); const v = tr(k); return v === k ? f.label : v; };
 const O = (f, o, i) => { const k = keyFor(f) + ".o" + i; const v = tr(k); return v === k ? o : v; };
-import { EXPANSION } from "./questions2.js";
 
 const $ = (s) => document.querySelector(s);
-const state = { side: null, page: 0, answers: {}, strengths: {}, resumeFeed: [], countryStep: null, target: "quick", beyond: false };
+const state = { side: null, page: 0, answers: {}, strengths: {}, resumeFeed: [], countryStep: null, target: "quick", beyond: false, stage: "essentials", choicePages: {}, gridDays: {} };
 // F16: the draft lives under the key the shared helper resolves
 // for whoever is signed in on this device (see storage-keys.js).
 // The journey session works in ONE slot: the slot is resolved at
@@ -64,6 +64,8 @@ function startForEntryRole() {
   if (!side) return false;
   state.side = side;
   state.page = 0;
+  state.stage = "essentials";
+  if (side === "carer" && !state.answers.displayName) state.answers.displayName = shellMember()?.name || "";
   state.countryStep = !storedCountry();
   $("#welcome").hidden = true;
   $("#journey").hidden = false;
@@ -71,26 +73,55 @@ function startForEntryRole() {
   return true;
 }
 
-const pages = () => {
-  if (state.countryStep === null) state.countryStep = !storedCountry();
+function allFields() {
   const base = state.side === "family" ? FAMILY_PAGES : CARER_PAGES;
   const xp = state.side === "family" ? EXPANSION.family : EXPANSION.carer;
-  const tag = (p, k) => { p._tk = k; return p; };
-  const list = base.map((p, i) => tag(p, `page.${state.side}.${i}`)).concat(xp.map((p, i) => tag(p, `page.${state.side}x.${i}`)));
-  if (state.countryStep) list.unshift(COUNTRY_PAGE);
-  return list;
-};
+  return base.flatMap((p) => p.fields).concat(xp.flatMap((p) => p.fields));
+}
+function availableField(f) {
+  if (!f.whenRole) return true;
+  const roles = (shellMember()?.roles || []).map((r) => String(r).toLowerCase().replace(/[^a-z]/g, ""));
+  return !roles.length || f.whenRole.some((w) => roles.some((r) => r.includes(w)));
+}
+function questionPage(fields, titleKey = null, bunny = "point-guide", country = false) {
+  return { title: "", _tk: titleKey, bunny, fields, _country: country };
+}
+function essentials() {
+  if (state.countryStep === null) state.countryStep = !storedCountry();
+  const byId = new Map(allFields().map((f) => [f.id, f]));
+  // Keep the essential path short and make every stop one clear
+  // question. A family can refine travel distance later; a carer's
+  // travel range is needed to make their profile useful.
+  const ids = state.side === "family"
+    ? ["postcode", "role", "childrenBands", "startWhen", "scheduleNeed", "languages", "mustLanguages", "nonSmoker"]
+    : ["postcode", "maxDistanceKm", "experience", "agesAccepted", "availability", "languages", "checksLevel", "payFloor"];
+  const out = ids.map((id) => {
+    const f = byId.get(id);
+    if (!f) return null;
+    return questionPage([{ ...f, required: true, ...(id === "mustLanguages" ? { noPreference: true } : {}) }], null, "point-guide");
+  }).filter(Boolean);
+  if (state.countryStep) out.unshift(questionPage(COUNTRY_PAGE.fields, COUNTRY_PAGE._tk, COUNTRY_PAGE.bunny, true));
+  return out;
+}
+function optionalPages() {
+  const needed = new Set(essentials().flatMap((p) => p.fields.map((f) => f.id)));
+  return allFields().filter((f) => !needed.has(f.id) && availableField(f) && !(f.id === "displayName" && state.answers.displayName))
+    .map((f) => questionPage([f], null, "encourage"));
+}
+function pages(stage = state.stage) {
+  return stage === "optional" ? optionalPages() : essentials();
+}
 
 function writeDraft() {
   if (!activeDraftKey) return;
-  try { localStorage.setItem(activeDraftKey, JSON.stringify({ side: state.side, page: state.page, answers: state.answers, strengths: state.strengths, resumeFeed: state.resumeFeed, countryStep: state.countryStep, target: state.target, beyond: state.beyond })); } catch { /* storage off */ }
+  try { localStorage.setItem(activeDraftKey, JSON.stringify({ side: state.side, page: state.page, answers: state.answers, strengths: state.strengths, resumeFeed: state.resumeFeed, countryStep: state.countryStep, target: state.target, beyond: state.beyond, stage: state.stage, choicePages: state.choicePages, gridDays: state.gridDays })); } catch { /* storage off */ }
 }
 function persistDraft() {
   interacted = true;
   writeDraft();
 }
 function resetJourneyState() {
-  state.side = null; state.page = 0; state.answers = {}; state.strengths = {}; state.resumeFeed = []; state.countryStep = null; state.target = "quick"; state.beyond = false;
+  state.side = null; state.page = 0; state.answers = {}; state.strengths = {}; state.resumeFeed = []; state.countryStep = null; state.target = "quick"; state.beyond = false; state.stage = "essentials"; state.choicePages = {}; state.gridDays = {};
 }
 function loadDraft() {
   if (!activeDraftKey) return false;
@@ -98,7 +129,7 @@ function loadDraft() {
     const d = JSON.parse(localStorage.getItem(activeDraftKey) || "null");
     if (d?.target) state.target = d.target;
     if (d?.beyond) state.beyond = true;
-    if (d?.side) { state.side = d.side; state.page = d.page || 0; state.answers = d.answers || {}; state.strengths = d.strengths || {}; state.resumeFeed = d.resumeFeed || []; state.countryStep = d.countryStep === undefined ? null : d.countryStep; return true; }
+    if (d?.side) { state.side = d.side; state.page = d.stage ? (d.page || 0) : 0; state.stage = d.stage || "essentials"; state.answers = d.answers || {}; state.strengths = d.strengths || {}; state.resumeFeed = d.resumeFeed || []; state.countryStep = d.countryStep === undefined ? null : d.countryStep; state.choicePages = d.choicePages || {}; state.gridDays = d.gridDays || {}; return true; }
   } catch { /* fresh start */ }
   return false;
 }
@@ -124,21 +155,40 @@ function payHelp(f) {
   return `<p class="fine payHelp">${txt}</p>`;
 }
 
-function fieldHtml(f) {
-  if (f.whenRole) {
-    const roles = (window.CARESITS_ME?.roles || []).map((r) => String(r).toLowerCase().replace(/[^a-z]/g, ""));
-    if (roles.length && !f.whenRole.some((w) => roles.some((r) => r.includes(w)))) return "";
-  }
+const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[ch]));
+function choiceCards(f, options, selected, multi = false) {
+  const pageSize = f.noPreference && multi ? 4 : 5;
+  const pageCount = Math.max(1, Math.ceil(options.length / pageSize));
+  const page = Math.min(state.choicePages[f.id] || 0, pageCount - 1);
+  const from = page * pageSize;
+  const shown = options.slice(from, from + pageSize);
+  const cards = shown.map((option, offset) => {
+    const index = from + offset;
+    const active = multi ? (selected || []).includes(option) : selected === option;
+    return `<button type="button" class="answerCard ${active ? "on" : ""}" data-chip="${escapeHtml(f.id)}" data-value="${escapeHtml(option)}" aria-pressed="${active}">${escapeHtml(O(f, option, index))}</button>`;
+  }).join("");
+  const noPreference = f.noPreference && multi
+    ? `<button type="button" class="answerCard ${Array.isArray(selected) && selected.length === 0 && Object.prototype.hasOwnProperty.call(state.answers, f.id) ? "on" : ""}" data-no-preference="${escapeHtml(f.id)}" aria-pressed="${Array.isArray(selected) && selected.length === 0 && Object.prototype.hasOwnProperty.call(state.answers, f.id)}">${escapeHtml(tr("journey.noPreference"))}</button>`
+    : "";
+  const pager = pageCount > 1 ? `<div class="optionPager"><span>${escapeHtml(tr("journey.optionCount", undefined, { a: from + 1, b: Math.min(from + pageSize, options.length), c: options.length }))}</span><div>${page > 0 ? `<button type="button" class="quietBtn" data-choice-page="${escapeHtml(f.id)}" data-page="${page - 1}">${escapeHtml(tr("journey.optionPrevious"))}</button>` : ""}${page < pageCount - 1 ? `<button type="button" class="quietBtn" data-choice-page="${escapeHtml(f.id)}" data-page="${page + 1}">${escapeHtml(tr("journey.optionMore"))}</button>` : ""}</div></div>` : "";
+  return `<div class="answerChoices" role="group" aria-label="${escapeHtml(L(f))}">${cards}${noPreference}</div>${pager}`;
+}
+function fieldHtml(f, showLabel = false) {
   const v = state.answers[f.id];
-  const opt = f.optional ? `<span class="optTag">${tr("journey.optional")}</span>` : "";
+  const optional = state.stage === "optional" || !f.required;
+  const optionalLabel = tr("journey.optional").split("·")[0].trim();
+  const tag = optional ? `<span class="optTag">${escapeHtml(optionalLabel)}</span>` : `<span class="reqTag">${escapeHtml(tr("journey.required"))}</span>`;
+  const label = showLabel ? `<p class="qLabel">${L(f)}</p>` : "";
+  const aria = escapeHtml(L(f));
   let body = "";
-  if (f.type === "text") body = `<input type="text" data-field="${f.id}" value="${v ?? ""}" autocomplete="off">`;
-  if (f.type === "number") body = `<input type="number" data-field="${f.id}" value="${v ?? ""}" min="0" inputmode="numeric">`;
-  if (f.type === "select") body = `<div class="chips">${f.options.map((o, oi) => `<button type="button" class="chip ${v === o ? "on" : ""}" data-chip="${f.id}" data-value="${o}">${O(f, o, oi)}</button>`).join("")}</div>`;
-  if (f.type === "chips") body = `<div class="chips">${f.options.map((o, oi) => `<button type="button" class="chip ${(v || []).includes(o) ? "on" : ""}" data-chip="${f.id}" data-value="${o}">${O(f, o, oi)}</button>`).join("")}</div>`;
-  if (f.type === "yesno") body = `<div class="chips"><button type="button" class="chip ${v === true ? "on" : ""}" data-yesno="${f.id}" data-value="yes">${tr("journey.yes")}</button><button type="button" class="chip ${v === false ? "on" : ""}" data-yesno="${f.id}" data-value="no">${tr("journey.no")}</button></div>`;
+  if (f.type === "text") body = `<input type="text" data-field="${escapeHtml(f.id)}" aria-label="${aria}" value="${escapeHtml(v ?? "")}" autocomplete="off">`;
+  if (f.type === "number") body = `<input type="number" data-field="${escapeHtml(f.id)}" aria-label="${aria}" value="${escapeHtml(v ?? "")}" min="0" inputmode="numeric">`;
+  if (f.type === "select") body = choiceCards(f, f.options, v, false);
+  if (f.type === "chips") body = choiceCards(f, f.options, v, true);
+  if (f.type === "yesno") body = `<div class="answerChoices" role="group" aria-label="${aria}"><button type="button" class="answerCard ${v === true ? "on" : ""}" data-yesno="${escapeHtml(f.id)}" data-value="yes" aria-pressed="${v === true}">${escapeHtml(tr("journey.yes"))}</button><button type="button" class="answerCard ${v === false ? "on" : ""}" data-yesno="${escapeHtml(f.id)}" data-value="no" aria-pressed="${v === false}">${escapeHtml(tr("journey.no"))}</button></div>`;
   if (f.type === "grid") {
-    body = `<div class="gridWrap"><table class="grid"><thead><tr><th></th>${PARTS.map((p) => `<th>${tr("journey.part." + p)}</th>`).join("")}</tr></thead><tbody>${DAYS.map((d) => `<tr><th>${tr("journey.day." + d)}</th>${PARTS.map((p) => `<td><button type="button" class="cell ${((v || {})[d] || []).includes(p) ? "on" : ""}" data-grid="${f.id}" data-day="${d}" data-part="${p}" aria-label="${d} ${p}"></button></td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+    const day = state.gridDays[f.id] || DAYS[0];
+    body = `<div class="gridDay"><label>${tr("journey.dayLabel")} <select data-grid-day="${f.id}" aria-label="${tr("journey.dayLabel")}">${DAYS.map((d) => `<option value="${d}" ${day === d ? "selected" : ""}>${tr("journey.day." + d)}</option>`).join("")}</select></label></div><div class="gridChoices" role="group" aria-label="${aria}">${PARTS.map((part) => `<button type="button" class="chip ${(v?.[day] || []).includes(part) ? "on" : ""}" data-grid="${f.id}" data-day="${day}" data-part="${part}" aria-pressed="${(v?.[day] || []).includes(part)}">${tr("journey.part." + part)}</button>`).join("")}</div>`;
   }
   if (f.type === "band") body = `<div class="bandRow"><label>${tr("journey.from")} <select data-band="${f.id}" data-end="min">${AGES.map((a) => `<option value="${a}" ${String(v?.[0] ?? "") === a ? "selected" : ""}>${a}</option>`).join("")}</select></label><label>${tr("journey.to")} <select data-band="${f.id}" data-end="max">${AGES.map((a) => `<option value="${a}" ${String(v?.[1] ?? "") === a ? "selected" : ""}>${a}</option>`).join("")}</select></label></div>`;
   if (f.type === "experience") body = `<div class="expRows">${BANDS.map((b) => `<label>${tr("journey.ages", undefined, { b })} <select data-exp="${f.id}" data-bandname="${b}">${EXPERIENCE_YEAR_CHOICES.map((y) => `<option value="${y}" ${String((v || {})[b] ?? "") === y ? "selected" : ""}>${y === "" ? tr("journey.pick") : y + (y === "20" ? "+" : "")}</option>`).join("")}</select></label>`).join("")}</div>`;
@@ -146,15 +196,15 @@ function fieldHtml(f) {
   if (f.type === "homefacts") body = `<div class="chips"><button type="button" class="chip ${v?.petsOk ? "on" : ""}" data-home="${f.id}" data-key="petsOk">${tr("journey.petsOk")}</button><button type="button" class="chip ${v?.smokerOk ? "on" : ""}" data-home="${f.id}" data-key="smokerOk">${tr("journey.smokerOk")}</button><button type="button" class="chip ${v?.nonSmokerHousehold ? "on" : ""}" data-home="${f.id}" data-key="nonSmokerHousehold">${tr("journey.nonSmokerHome")}</button></div>`;
   if (f.companionText) body += `<input type="text" data-field="${f.id}Note" value="${state.answers[f.id + "Note"] ?? ""}" placeholder="${tr("journey.addNote")}" autocomplete="off">`;
   const strength = f.strength
-    ? `<div class="strength" role="group" aria-label="${tr("journey.strengthAria")}"><span>${tr("journey.strengthPre")}</span>${["Must have", "I prefer", "Either way"].map((s) => `<button type="button" class="chip sm ${(state.strengths[f.id] || "Either way") === s ? "on" : ""}" data-strength="${f.id}" data-value="${s}">${tr({ "Must have": "journey.must", "I prefer": "journey.prefer", "Either way": "journey.either" }[s])}</button>`).join("")}</div>`
+    ? `<div class="strength" role="group" aria-label="${tr("journey.strengthAria")}"><span>${tr("journey.strengthPre")}</span>${["Must have", "I prefer", "Either way"].map((x) => `<button type="button" class="chip sm ${(state.strengths[f.id] || "Either way") === x ? "on" : ""}" data-strength="${f.id}" data-value="${x}">${tr({ "Must have": "journey.must", "I prefer": "journey.prefer", "Either way": "journey.either" }[x])}</button>`).join("")}</div>`
     : "";
-  return `<div class="field"><p class="qLabel">${L(f)}</p>${opt}${body}${payHelp(f)}${strength}</div>`;
+  return `<div class="field">${label}${tag}${body}${payHelp(f)}${strength}</div>`;
 }
 
 function answered(f) {
   const v = state.answers[f.id];
   if (v === undefined || v === null || v === "") return false;
-  if (Array.isArray(v)) return v.length > 0;
+  if (Array.isArray(v)) return v.length > 0 || (f.noPreference && Object.prototype.hasOwnProperty.call(state.answers, f.id));
   if (f.type === "grid") return Object.values(v).some((a) => a.length);
   if (f.type === "band") return Array.isArray(v) && v[0] != null && v[1] != null;
   if (f.type === "experience") return experienceComplete(v);
@@ -164,21 +214,44 @@ function answered(f) {
 }
 
 function render() {
+  const ready = state.stage === "ready";
+  $("#welcome").hidden = true;
+  $("#essentialsDone").hidden = !ready;
+  $("#journey").hidden = ready;
+  if (ready) {
+    $("#readyBarFill").style.width = "100%";
+    document.title = `Caresitters · ${tr("journey.essentialsTitle")}`;
+    return;
+  }
   const list = pages();
+  if (state.page >= list.length) state.page = Math.max(0, list.length - 1);
   const p = list[state.page];
-  const total = list.reduce((s, x) => s + x.fields.length, 0);
+  if (!p) return;
+  const total = list.length;
+  const questionNumber = state.page + 1;
+  const first = p.fields[0];
+  const titleKey = p._tk;
+  const title = p._country && titleKey ? tr(titleKey) : p.fields.length === 1 ? L(first) : (titleKey && tr(titleKey) !== titleKey ? tr(titleKey) : p.title);
   $("#bunnyImg").src = `bunny/bunny-${p.bunny}.png`;
-  const tk = p._tk; const tv = tk ? tr(tk) : p.title; $("#pageTitle").textContent = tv === tk ? p.title : tv;
-  $("#pageCount").textContent = tr("journey.page", undefined, { a: state.page + 1, b: list.length });
-  $("#barFill").style.width = `${Math.round((state.page / list.length) * 100)}%`;
-  $("#fields").innerHTML = p.fields.map(fieldHtml).join("");
-  $("#backBtn").textContent = tr("journey.back"); $("#backBtn").style.visibility = state.page === 0 ? "hidden" : "visible";
-  $("#nextBtn").textContent = state.page === list.length - 1 ? tr("journey.finish") : tr("journey.next");
-  document.title = `Caresitters · ${$("#pageTitle").textContent}`;
+  $("#pageTitle").textContent = title;
+  $("#pageCount").textContent = tr("journey.page", undefined, { a: questionNumber, b: total });
+  $("#barFill").style.width = `${Math.round((questionNumber / Math.max(total, 1)) * 100)}%`;
+  $("#optionalLead").hidden = state.stage !== "optional";
+  $("#fields").innerHTML = p.fields.map((f) => fieldHtml(f, true)).join("");
+  $("#backBtn").textContent = tr("journey.back");
+  $("#backBtn").style.visibility = state.page === 0 && state.stage === "essentials" ? "hidden" : "visible";
+  $("#skipBtn").textContent = tr("tour.nameSkip");
+  $("#skipBtn").hidden = state.stage !== "optional";
+  $("#nextBtn").textContent = state.stage === "optional" && state.page === list.length - 1 ? tr("journey.finish") : tr("journey.next");
+  document.title = `Caresitters · ${title}`;
 }
 
 function wire() {
   $("#fields").addEventListener("click", (e) => {
+    const choicePage = e.target.closest("[data-choice-page]");
+    if (choicePage) { state.choicePages[choicePage.dataset.choicePage] = Number(choicePage.dataset.page) || 0; render(); return; }
+    const noPreference = e.target.closest("[data-no-preference]");
+    if (noPreference) { state.answers[noPreference.dataset.noPreference] = []; persistDraft(); render(); return; }
     const chip = e.target.closest("[data-chip]");
     if (chip) {
       const f = pages()[state.page].fields.find((x) => x.id === chip.dataset.chip);
@@ -212,6 +285,7 @@ function wire() {
   $("#fields").addEventListener("input", onFieldInput);
   function onFieldInput(e) {
     const inp = e.target;
+    if (inp.dataset.gridDay) { state.gridDays[inp.dataset.gridDay] = inp.value; persistDraft(); render(); return; }
     if (inp.dataset.field) state.answers[inp.dataset.field] = inp.type === "number" ? (inp.value === "" ? "" : Number(inp.value)) : inp.value;
     if (inp.dataset.band) {
       const cur = [...(state.answers[inp.dataset.band] || [null, null])];
@@ -230,69 +304,50 @@ function wire() {
     }
     persistDraft();
   }
+  const advancePage = () => {
+    const list = pages();
+    if (state.page < list.length - 1) { state.page += 1; persistDraft(); render(); window.scrollTo(0, 0); return; }
+    if (state.stage === "essentials") {
+      state.stage = "ready"; state.page = 0; persistDraft(); render(); void savePreview(); window.scrollTo(0, 0); return;
+    }
+    finish();
+  };
   $("#nextBtn").addEventListener("click", () => {
     const p = pages()[state.page];
-    const missing = p.fields.filter((f) => f.required && !answered(f));
+    const missing = state.stage === "essentials" ? p.fields.filter((f) => f.required && !answered(f)) : [];
     if (missing.length) {
       $("#notice").textContent = tr("journey.notice", undefined, { q: L(missing[0]).replace(/\?$/, "") });
       $("#bunnyImg").src = "bunny/bunny-oops.png";
       return;
     }
     $("#notice").textContent = "";
-    const advance = () => {
-      if (state.page < pages().length - 1) { state.page += 1; persistDraft(); render(); window.scrollTo(0, 0); }
-      else finish();
-    };
-    // The level boundary: the welcome picker set how far the
-    // member wants to go today. The level is COMPUTED from the
-    // answers (levels.js), never counted in pages: the first
-    // Next that reaches the picked level offers the stop, once.
-    if (!state.beyond && state.target !== "full" && state.target !== "explore") {
-      const lvl = levelOf(state.side, state.answers);
-      if (levelRank(lvl) >= levelRank(state.target)) { showStop(lvl, advance); return; }
-    }
-    advance();
+    advancePage();
   });
-  $("#backBtn").addEventListener("click", () => { if (state.page > 0) { state.page -= 1; persistDraft(); render(); } });
+  $("#skipBtn").addEventListener("click", advancePage);
+  $("#backBtn").addEventListener("click", () => {
+    if (state.stage === "optional" && state.page === 0) { state.stage = "ready"; state.page = 0; persistDraft(); render(); return; }
+    if (state.page > 0) { state.page -= 1; persistDraft(); render(); }
+  });
   document.querySelectorAll("[data-side]").forEach((b) => b.addEventListener("click", () => {
-    state.side = b.dataset.side; state.page = 0; persistDraft();
+    state.side = b.dataset.side; state.page = 0; state.stage = "essentials";
+    if (state.side === "carer" && !state.answers.displayName) state.answers.displayName = shellMember()?.name || "";
+    persistDraft();
     $("#welcome").hidden = true; $("#journey").hidden = false; render();
   }));
-  // The welcome level picker: Explore leaves to browse the app;
-  // the other three set how far today's walk aims to go. The
-  // pick is a target only — the level itself is always computed
-  // from the answers, never claimed by the pick.
-  document.querySelectorAll("[data-level]").forEach((b) => b.addEventListener("click", () => {
-    const v = b.dataset.level;
-    if (v === "explore") {
-      // Explore is a deliberate signed out entry: it carries the
-      // session marker the shell's signed out gate exempts.
-      try { sessionStorage.setItem("caresits-demo", "1"); } catch { /* storage off */ }
-      location.href = "index.html";
-      return;
-    }
-    state.target = v;
-    document.querySelectorAll("[data-level]").forEach((x) => x.classList.toggle("on", x === b));
-    persistDraft();
-  }));
-  $("#stopBtn")?.addEventListener("click", () => { $("#stopPanel").hidden = true; finish(); });
-  $("#keepBtn")?.addEventListener("click", () => {
-    state.beyond = true; persistDraft();
-    $("#stopPanel").hidden = true; $("#journey").hidden = false;
-    if (pendingAdvance) { const go = pendingAdvance; pendingAdvance = null; go(); }
+  $("#seeMatchesBtn").addEventListener("click", async () => {
+    await savePreview();
+    try {
+      const host = window.parent;
+      if (typeof host.CARESITS_NAV === "function") { host.CARESITS_NAV("find"); return; }
+    } catch { /* standalone questionnaire */ }
+    location.href = "index.html";
   });
-}
-
-let pendingAdvance = null;
-function showStop(lvl, advance) {
-  pendingAdvance = advance;
-  $("#stopTitle").textContent = tr("level.at", undefined, { a: tr("level.n" + lvl[0].toUpperCase() + lvl.slice(1)) });
-  $("#journey").hidden = true;
-  $("#stopPanel").hidden = false;
-  window.scrollTo(0, 0);
-}
-function syncLevelPick() {
-  document.querySelectorAll("[data-level]").forEach((x) => x.classList.toggle("on", x.dataset.level === state.target));
+  $("#betterMatchesBtn").addEventListener("click", () => {
+    state.stage = "optional"; state.page = 0; persistDraft(); render(); window.scrollTo(0, 0);
+  });
+  $("#reviewAnswersBtn").addEventListener("click", () => {
+    state.stage = "essentials"; state.page = 0; persistDraft(); render(); window.scrollTo(0, 0);
+  });
 }
 
 function deepSets() {
@@ -383,6 +438,19 @@ export function buildBundle() {
   return { side: "carer", answers: a, strengths: s, country: a.country || "", card: codeWalk({ ...card, looking }) };
 }
 
+let previewSaving = null;
+async function savePreview() {
+  persistDraft();
+  if (previewSaving) return previewSaving;
+  const bundle = buildBundle();
+  previewSaving = (async () => {
+    if (typeof window.CARESITS_SAVE !== "function") return { saved: "local" };
+    try { return await withTimeout(window.CARESITS_SAVE(bundle), 15000, "questionnaire preview save"); }
+    catch { return { saved: "local" }; }
+  })();
+  try { return await previewSaving; } finally { previewSaving = null; }
+}
+
 let finishing = false;
 async function finish() {
   // One finish at a time: a second tap while the save is
@@ -456,8 +524,8 @@ export function bootJourney() {
   activeDraftKey = draftKey();
   loadDraft();
   consumeResumeHandoff();
-  syncLevelPick();
-  if (state.side) { $("#welcome").hidden = true; $("#journey").hidden = false; render(); }
+  if (state.side === "carer" && !state.answers.displayName) state.answers.displayName = shellMember()?.name || "";
+  if (state.side) { $("#welcome").hidden = true; render(); }
   else if (window.parent?.CARESITS_ACCOUNT_READY) startForEntryRole();
   try { window.parent.document.addEventListener("caresits-account-ready", startForEntryRole); } catch { /* standalone journey */ }
   // The uid seam can land a beat after this frame boots (the
@@ -476,8 +544,8 @@ export function bootJourney() {
     resetJourneyState();
     loadDraft();
     consumeResumeHandoff();
-    syncLevelPick();
-    if (state.side) { $("#welcome").hidden = true; $("#journey").hidden = false; render(); }
-    else if (!startForEntryRole()) { $("#welcome").hidden = false; $("#journey").hidden = true; }
+    if (state.side === "carer" && !state.answers.displayName) state.answers.displayName = shellMember()?.name || "";
+    if (state.side) { $("#welcome").hidden = true; render(); }
+    else if (!startForEntryRole()) { $("#welcome").hidden = false; $("#journey").hidden = true; $("#essentialsDone").hidden = true; }
   }, 250);
 }

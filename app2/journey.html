@@ -13,15 +13,8 @@
   <section id="welcome" class="card welcome">
     <img class="bunnyBig" src="bunny/bunny-hello.png" alt="The Caresitters bunny waving hello">
     <h1 data-i18n="journey.wTitle">Let us find your perfect match</h1>
-    <p class="lead" data-i18n="journey.wLead">A few questions, one page at a time. About 10 minutes for everything, and you can stop at Quick Connect in about half that and finish later.</p>
+    <p class="lead" data-i18n="journey.wLead">A few questions help us find a better fit. Your answers save as you go, and you can add more details later.</p>
     <p data-i18n="journey.wOpt">Optional questions say so. The more you answer, the better we match you.</p>
-    <p class="lead" data-i18n="level.pickTitle">How far do you want to go today?</p>
-    <div class="levelBtns">
-      <button type="button" class="levelBtn" data-level="explore"><strong data-i18n="level.nExplore">Explore</strong><span data-i18n="level.explore">Exploring: answer the first questions to connect</span></button>
-      <button type="button" class="levelBtn on" data-level="quick"><strong data-i18n="level.nQuick">Quick Connect</strong><span data-i18n="level.quick">Quick Connect: you can message and post; matches are rough while answers are light</span></button>
-      <button type="button" class="levelBtn" data-level="better"><strong data-i18n="level.nBetter">Better Match</strong><span data-i18n="level.better">Better Match: your matches carry reasons; finish the deep questions for the closest fits</span></button>
-      <button type="button" class="levelBtn" data-level="full"><strong data-i18n="level.nFull">Full Match</strong><span data-i18n="level.full">Full Match: every match question answered; your pairs can reach Perfect Pair</span></button>
-    </div>
     <div class="sideBtns">
       <button type="button" class="sideBtn" data-side="family" data-i18n="journey.wFamily">I am looking for care</button>
       <button type="button" class="sideBtn alt" data-side="carer" data-i18n="journey.wCarer">I give care</button>
@@ -39,20 +32,24 @@
     </div>
     <div class="bar"><div id="barFill" class="barFill"></div></div>
     <p id="notice" class="notice" role="status"></p>
+    <p id="optionalLead" class="optionalLead" data-i18n="journey.optionalLead" hidden>These questions are optional. Skip any for now.</p>
     <div id="fields"></div>
     <div class="jNav">
       <button type="button" id="backBtn" class="ghostBtn">Back</button>
-      <button type="button" id="nextBtn" class="mainBtn">Keep going</button>
+      <button type="button" id="skipBtn" class="quietBtn" hidden>Skip for now</button>
+      <button type="button" id="nextBtn" class="mainBtn">Save and continue</button>
     </div>
   </section>
 
-  <section id="stopPanel" class="card welcome" hidden>
-    <img class="bunnyBig" src="bunny/bunny-hello.png" alt="The Caresitters bunny waving hello">
-    <h1 id="stopTitle">You are at Quick Connect</h1>
-    <p class="lead" data-i18n="level.stopBody">You can stop here, and finish later any time. Or keep going now for closer matches.</p>
-    <div class="sideBtns">
-      <button type="button" class="sideBtn" id="stopBtn" data-i18n="level.stopHere">Stop here for now</button>
-      <button type="button" class="sideBtn alt" id="keepBtn" data-i18n="level.keepGoing">Keep going</button>
+  <section id="essentialsDone" class="card welcome essentialsDone" hidden>
+    <img class="bunnyBig" src="bunny/bunny-celebrate.png" alt="The Caresitters bunny celebrating">
+    <h1 data-i18n="journey.essentialsTitle">You can already see matches</h1>
+    <p class="lead" data-i18n="journey.essentialsBody">Your first answers are saved. Take a look now, or add a few details to find a closer fit.</p>
+    <div class="bar"><div id="readyBarFill" class="barFill"></div></div>
+    <div class="readyActions">
+      <button type="button" id="seeMatchesBtn" class="sideBtn" data-i18n="journey.seeMatches">See my matches</button>
+      <button type="button" id="betterMatchesBtn" class="sideBtn alt" data-i18n="journey.makeMatchesBetter">Make my matches better</button>
+      <button type="button" id="reviewAnswersBtn" class="quietBtn" data-i18n="journey.reviewAnswers">Review my answers</button>
     </div>
   </section>
 

@@ -4,7 +4,7 @@
 // HUMAN CHECK RULE: keys under "checks." and "legal." carry NO
 // Vietnamese values here, exactly as in Spanish. They stay English
 // until a human checker approves words for this language.
-// Coverage: 670 translated app UI keys; human-check phrases remain in English by design.
+// Coverage: 683 translated app UI keys; human-check phrases remain in English by design.
 export const UI_VI = {
  "door.tag": "Tìm người chăm sóc. Chia sẻ mỗi ngày.",
 
@@ -109,9 +109,9 @@ export const UI_VI = {
  "journey.yes": "Có",
  "journey.no": "Không",
  "journey.back": "Quay lại",
- "journey.next": "Tiếp tục",
+ "journey.next": "Lưu và tiếp tục",
  "journey.finish": "Hoàn tất",
- "journey.page": "Trang {a} trên {b}",
+ "journey.page": "Câu hỏi {a} trên {b}",
  "journey.optional": "Không bắt buộc · bạn trả lời càng nhiều, chúng tôi ghép đôi càng chính xác",
  "journey.from": "Từ",
  "journey.to": "Đến",
@@ -141,7 +141,7 @@ export const UI_VI = {
  "journey.smokerOk": "Ổn với nhà có người hút thuốc",
  "journey.nonSmokerHome": "Tôi cần nhà không có khói thuốc",
  "journey.wTitle": "Hãy cùng tìm người phù hợp nhất cho bạn",
- "journey.wLead": "Vài câu hỏi, mỗi lần một trang. Khoảng 10 phút cho tất cả, và bạn có thể dừng ở Kết nối nhanh trong khoảng nửa thời gian đó rồi hoàn thành sau.",
+ "journey.wLead": "Vài câu hỏi giúp tìm người phù hợp hơn. Câu trả lời được lưu khi bạn tiếp tục; bạn có thể thêm chi tiết sau.",
  "journey.wOpt": "Câu hỏi không bắt buộc sẽ ghi rõ. Bạn trả lời càng nhiều, chúng tôi ghép đôi càng chính xác.",
  "journey.wFamily": "Tôi đang tìm người chăm sóc",
  "journey.wCarer": "Tôi là người chăm sóc",
@@ -661,5 +661,17 @@ export const UI_VI = {
  "tour.coach.messages.body": "Tin nhắn của bạn luôn ở đây khi cần.",
  "shell.more": "Thêm", "shell.jobs": "Việc làm", "shell.messages": "Tin nhắn", "shell.ideas": "Ý tưởng", "shell.navigation": "Điều hướng chính", "shell.help": "Trợ giúp",
  "help.title": "Chúng tôi có thể giúp gì?", "help.body": "Chọn nơi để bắt đầu. Câu trả lời đã lưu vẫn nằm trên thiết bị này.", "help.answers": "Cập nhật câu trả lời", "help.privacy": "Đọc chính sách quyền riêng tư",
-
+ "journey.required": "Bắt buộc",
+ "journey.whoTitle": "Ai cần được chăm sóc?",
+ "journey.locationTitle": "Bạn sống ở đâu và sẽ đi xa đến mức nào?",
+ "journey.essentialsTitle": "Bạn đã có thể xem kết quả phù hợp",
+ "journey.essentialsBody": "Câu trả lời đầu tiên đã được lưu. Xem ngay hoặc thêm vài chi tiết để tìm người phù hợp hơn.",
+ "journey.seeMatches": "Xem kết quả phù hợp",
+ "journey.makeMatchesBetter": "Cải thiện kết quả phù hợp",
+ "journey.reviewAnswers": "Xem lại câu trả lời",
+ "journey.optionalLead": "Các câu hỏi này không bắt buộc. Bạn có thể bỏ qua lúc này.",
+ "journey.noPreference": "Không có ưu tiên",
+ "journey.optionCount": "Lựa chọn {a}–{b} trong {c}",
+ "journey.optionMore": "Thêm lựa chọn",
+ "journey.optionPrevious": "Lựa chọn trước",
 };
