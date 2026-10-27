@@ -50,6 +50,14 @@ h1, h2 { font-family: "Newsreader", Georgia, serif; font-weight: 600; line-heigh
 .navGroupBody { display: none; padding-left: 12px; }
 .navGroup.open .navGroupBody { display: block; }
 .navBtn.top { font-weight: 700; }
+.sideSwitch { margin: 8px 0 12px; padding: 12px; border: 1px solid var(--line); border-radius: 16px; background: rgba(255, 255, 255, .72); }
+.sideSwitch h2 { font-family: "Atkinson Hyperlegible", system-ui, sans-serif; font-size: 17px; margin: 0 0 4px; }
+.sideActiveLine { margin: 0 0 8px; font-size: 14px; }
+.sideSwitchChoices { display: grid; gap: 6px; }
+.sideSwitchChoices button { min-height: 42px; width: 100%; border: 1.5px solid var(--line); border-radius: 12px; background: var(--card); color: var(--ink); font: inherit; text-align: start; padding: 8px 11px; cursor: pointer; }
+.sideSwitchChoices button[aria-pressed="true"] { background: var(--teal); border-color: var(--ink); font-weight: 700; }
+.sideSwitchChoices button:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.sideSwitchStatus { margin: 6px 0 0; font-size: 13px; }
 
 .topBar { display: flex; align-items: center; gap: 12px; padding: 12px 16px; padding-top: calc(12px + env(safe-area-inset-top, 0px)); border-bottom: 1px solid var(--line); background: var(--card); position: sticky; top: 0; }
 .brandHeart { width: 22px; height: 22px; vertical-align: -4px; }
@@ -100,6 +108,9 @@ html[data-entry-role="communicate"] { --entry-accent: #704A83; --entry-soft: #F0
 .quietBtn { background: none; border: none; font: inherit; font-size: 15px; color: var(--ink); opacity: .75; cursor: pointer; padding: 4px 2px; text-decoration: underline; }
 .sheetWrap { position: fixed; inset: 0; background: rgba(30, 77, 68, .45); display: grid; place-items: center; padding: 18px; padding-top: calc(18px + env(safe-area-inset-top, 0px)); z-index: 40; }
 .sheetCard { background: var(--card); border-radius: 22px; padding: 22px; max-width: 430px; width: 100%; box-sizing: border-box; }
+.connectedPromptCard { text-align: start; }
+.connectedPromptCard .homeBtnRow { margin-top: 18px; }
+.connectedPromptCard .homeBtnRow button { min-height: 46px; }
 .plansSheet { position: relative; padding-top: 58px; max-height: calc(100vh - 36px); max-height: calc(100dvh - 36px); overflow-y: auto; }
 .plansCloseTop { position: absolute; top: 12px; right: 14px; }
 .sheetX { float: right; }
@@ -123,6 +134,8 @@ html[data-entry-role="communicate"] { --entry-accent: #704A83; --entry-soft: #F0
 .clash { color: #8A4B0F; }
 
 .tourCard { text-align: center; }
+.tourActions { justify-content: center; }
+.tourSpotlight { position: relative; z-index: 41; background: #fff7e8 !important; box-shadow: 0 0 0 3px var(--teal), 0 0 0 6px rgba(30, 77, 68, .18); pointer-events: none; }
 .tourCount { opacity: .7; font-size: 14px; margin-top: 12px; }
 .quietBubble { position: fixed; right: 14px; bottom: 14px; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 14px; width: 250px; z-index: 30; box-shadow: 0 8px 28px rgba(30, 77, 68, .18); }
 .bubbleBunny { width: 52px; height: auto; }
@@ -209,3 +222,24 @@ html[data-theme="white"] body { background: #FFFFFF; }
 .homeMatchName { font-weight: 800; }
 .homeMatchMeta { display: inline-flex; gap: 8px; align-items: center; }
 .homeMatchWhy { color: var(--soft); font-size: 14px; }
+
+.learningCard { display: grid; gap: 12px; }
+.learningStep { margin: 4px 0 0; color: var(--entry-accent, #1e4d44); font-weight: 700; }
+.learningSubhead { margin: 6px 0 0; font-weight: 700; }
+.learningChoices { margin-block: 6px; }
+.learningAgeList { display: grid; gap: 10px; }
+.learningAgeRow { display: grid; grid-template-columns: minmax(72px, 1fr) minmax(150px, 2fr) auto; align-items: center; gap: 8px; }
+.learningChildLabel { font-weight: 600; }
+.learningAgeRow select, .learningCard input { min-width: 0; }
+.learningAdd { justify-self: start; min-height: 44px; }
+.learningActions { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 420px) { .learningAgeRow { grid-template-columns: 1fr; } }
+
+.learningIdeaList { display: grid; gap: 12px; }
+.learningIdea { display: grid; gap: 8px; }
+.learningIdea .homeBody, .learningSafety, .learningVocab { margin: 0; line-height: 1.45; }
+.learningSafety { color: #7b3d28; font-size: .95em; }
+.learningVocab { color: var(--entry-accent, #1e4d44); font-size: .95em; }
+.learningIdea .homeBtnRow { justify-content: flex-start; }
+
+.learningMatchReason { color: var(--entry-accent, #1e4d44); font-weight: 600; }

@@ -223,8 +223,12 @@ export async function saveBundle(bundle, firebaseConfig) {
   }
   const alreadyActivated = profSnap.exists() && "activatedAt" in profSnap.data();
   const cardSnap = await fsMod.getDoc(fsMod.doc(db, "profiles", user.uid)).catch(() => null);
-  const keptPhoto = cardSnap && cardSnap.exists() ? (cardSnap.data().photoUrl || "") : "";
-  const keptGallery = cardSnap && cardSnap.exists() ? ((cardSnap.data().card || {}).gallery || []) : [];
+  const appSnap = await fsMod.getDoc(fsMod.doc(db, "users", user.uid, "meta", "app")).catch(() => null);
+  const cardData = cardSnap && cardSnap.exists() ? cardSnap.data() : {};
+  const appData = appSnap && appSnap.exists() ? appSnap.data() : {};
+  const keptPhoto = cardData.photoUrl || "";
+  const keptGallery = (cardData.card || {}).gallery || [];
+  const keptLearningPlan = cardData.learningPlan || appData.learningPlan || null;
   const plan = planSave(bundle, {
     uid: user.uid,
     displayName: profSnap.exists() ? (profSnap.data().displayName || "") : "",
@@ -233,6 +237,7 @@ export async function saveBundle(bundle, firebaseConfig) {
     gallery: keptGallery,
     nowIso: new Date().toISOString(),
   });
+  if (keptLearningPlan) plan.card.data.learningPlan = keptLearningPlan;
   const batch = fsMod.writeBatch(db);
   if (plan.profileSide) {
     batch.set(fsMod.doc(db, ...plan.profileSide.path.split("/")), plan.profileSide.data, { merge: true });

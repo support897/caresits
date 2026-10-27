@@ -9,6 +9,7 @@ body { margin: 0; background: var(--ground); color: var(--ink); font-family: "At
 .doorWord { font-family: "Newsreader", Georgia, serif; font-size: 44px; margin: 10px 0 2px; }
 .doorTag { margin: 0 0 26px; font-size: 18px; }
 .roleChooser { margin: 24px 0; }
+.roleHelp { color: var(--muted, #5f6a66); line-height: 1.45; margin: 8px 0 18px; text-align: center; }
 .roleQuestion { font: 600 25px/1.2 "Newsreader", Georgia, serif; margin: 0 0 14px; }
 .roleChoices { display: grid; gap: 10px; }
 .roleOption { display: flex; flex-direction: column; gap: 4px; width: 100%; padding: 14px 16px; border: 1.5px solid var(--role-accent); border-radius: 16px; background: var(--role-soft); color: var(--ink); text-align: left; font: inherit; cursor: pointer; }

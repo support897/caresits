@@ -1,3 +1,4 @@
+import { hasLearningPlan, mergeLearningPlans, publicLearningPlan } from "./activities.js";
 // Caresitters app2 — the connect link planners (the two homes
 // build; shapes from Security's ruling, 17 Oct 2026).
 // A family makes a short code. The invite doc at invites/{code}
@@ -31,20 +32,21 @@ export function makeCode(rand = Math.random) {
   return out;
 }
 
-export function planInviteCreate({ familyUid, code, label, nowIso }) {
+export function planInviteCreate({ familyUid, code, label, nowIso, learningPlan = null }) {
   if (!familyUid) return { ok: false, reason: "signed-out" };
   if (!isCode(code)) return { ok: false, reason: "bad-code" };
   const c = cleanCode(code);
+  const plan = hasLearningPlan(learningPlan) ? publicLearningPlan(learningPlan) : null;
   return {
     ok: true,
     kind: "invite-create",
     code: c,
     path: `invites/${c}`,
-    data: { familyUid, label: String(label || "").slice(0, 60), createdAt: nowIso, usedBy: null },
+    data: { familyUid, label: String(label || "").slice(0, 60), createdAt: nowIso, usedBy: null, ...(plan ? { learningPlan: plan } : {}) },
   };
 }
 
-export function planInviteAccept({ code, invite, accepterUid, nowIso }) {
+export function planInviteAccept({ code, invite, accepterUid, nowIso, learningPlan = null }) {
   if (!isCode(code)) return { ok: false, reason: "bad-code" };
   if (!invite || !invite.familyUid) return { ok: false, reason: "not-found" };
   if (!accepterUid) return { ok: false, reason: "signed-out" };
@@ -53,6 +55,7 @@ export function planInviteAccept({ code, invite, accepterUid, nowIso }) {
   const familyUid = invite.familyUid;
   const carerUid = accepterUid;
   const pairId = pairIdFor(familyUid, carerUid);
+  const pairPlan = mergeLearningPlans(invite.learningPlan, learningPlan);
   return {
     ok: true,
     kind: "invite-accept",
@@ -66,6 +69,7 @@ export function planInviteAccept({ code, invite, accepterUid, nowIso }) {
       createdBy: accepterUid,
       createdAt: nowIso,
       createdDay: String(nowIso || "").slice(0, 10),
+      ...(pairPlan ? { learningPlan: publicLearningPlan(pairPlan) } : {}),
     },
     invitePath: `invites/${cleanCode(code)}`,
     stamp: { usedBy: accepterUid },

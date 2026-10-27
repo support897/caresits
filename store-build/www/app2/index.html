@@ -17,6 +17,16 @@
       <button type="button" id="closeBtn" class="closeBtn" data-i18n-aria="shell.closeMenu" aria-label="Close menu" data-i18n="shell.close">Close</button>
     </div>
     <button type="button" class="navBtn top" data-nav="home" data-i18n="shell.home">Home</button>
+    <section id="sideSwitch" class="sideSwitch" data-i18n-aria="shell.switchSide" aria-label="Switch side" hidden>
+      <h2 data-i18n="shell.switchSide">Switch side</h2>
+      <p class="sideActiveLine"><span data-i18n="shell.activeSide">Active side:</span> <strong id="activeSideName"></strong></p>
+      <div class="sideSwitchChoices">
+        <button type="button" data-side-choice="family" data-i18n="shell.sideFinding">Finding care</button>
+        <button type="button" data-side-choice="career" data-i18n="shell.sideCareer">Careers</button>
+        <button type="button" data-side-choice="communicate" data-i18n="shell.sideCommunicate">Stay connected</button>
+      </div>
+      <p id="sideSwitchStatus" class="sideSwitchStatus" role="status" aria-live="polite"></p>
+    </section>
     <button type="button" id="commMessages" class="navBtn top" data-nav="thread" data-i18n="homes.conversations" hidden>Conversations</button>
     <div class="navGroup">
       <button type="button" class="navGroupHead" data-group="finding" data-i18n="shell.finding">Finding care</button>

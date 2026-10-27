@@ -13,6 +13,14 @@ const labelText = (s) => tr({ "Perfect Pair": "find.label.perfect", "Strong Fit"
 const qualText = (s) => (s === "Quick profile, rough match" ? tr("find.qualifier") : s);
 const reasonText = (result, r, i) => { const code = result.reasonCodes?.[i]; return code ? tr("reason." + code) : r; };
 const gateText = (item) => (item.failedGateCode ? tr("gate." + item.failedGateCode) : item.failedGate);
+const learningReasonText = (reason) => {
+  if (!reason) return "";
+  const value = reason.type === "style" ? tr("learning.style." + reason.value)
+    : reason.type === "area" ? tr("learning.area." + reason.value) : reason.value;
+  return reason.type === "style" ? tr("learning.matchStyle", undefined, { style: value })
+    : reason.type === "area" ? tr("learning.matchArea", undefined, { area: value })
+      : tr("learning.matchLanguage", undefined, { language: value });
+};
 
 const el = (tag, cls, text) => {
   const n = document.createElement(tag);
@@ -62,6 +70,7 @@ function cardFor(entry) {
   }
   const ul = el("ul", "findReasons");
   (result.reasons || []).slice(0, 3).forEach((r, i) => ul.append(el("li", null, reasonText(result, r, i))));
+  (result.learningReasons || []).forEach((reason) => ul.append(el("li", "learningMatchReason", learningReasonText(reason))));
   card.append(ul);
   if (result.qualifier) card.append(el("p", "qualLine", qualText(result.qualifier)));
   const btn = el("button", "mainBtn findMsg", tr("find.message"));
@@ -99,6 +108,7 @@ function mapCardFor(doc, entry, viewerLevel, distanceKm) {
   card.append(pct);
   const ul = el("ul", "findReasons");
   (entry.result.reasons || []).slice(0, 3).forEach((r, i) => ul.append(el("li", null, reasonText(entry.result, r, i))));
+  (entry.result.learningReasons || []).forEach((reason) => ul.append(el("li", "learningMatchReason", learningReasonText(reason))));
   card.append(ul);
   if (entry.result.qualifier) card.append(el("p", "qualLine", qualText(entry.result.qualifier)));
   return card;

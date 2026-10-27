@@ -8,7 +8,8 @@
 // Distance comes from the cards' hundredthed coordinates; when
 // either side has none, distance is unknown: it never blocks a
 // gate and no distance is ever claimed on the card.
-import { matchPair, rank, topFive, viewMore } from "../next-phase/engine/engine.mjs";
+import { matchPair, rank, topFive, viewMore, labelFor } from "../next-phase/engine/engine.mjs";
+import { learningMatchDetails } from "./activities.js";
 
 export function kmBetween(a, b) {
   if (a?.latE2 == null || a?.lngE2 == null || b?.latE2 == null || b?.lngE2 == null) return null;
@@ -91,6 +92,14 @@ export function assembleBrowse(viewerDoc, candidateDocs) {
     // level is still explore) sees no personal score at all.
     result.qualifier = (familyDoc.level === "quick" || carerDoc.level === "quick") ? "Quick profile, rough match" : null;
     result.personal = viewerDoc.level !== "explore";
+    if (result.shown) {
+      const learning = learningMatchDetails(familyDoc.learningPlan || familyDoc.card?.learningPlan, carerDoc.learningPlan || carerDoc.card?.learningPlan);
+      result.pair = Math.min(100, result.pair + learning.boost);
+      result.label = labelFor(result.pair, result.familyScore, result.carerScore);
+      if (result.qualifier && result.label === "Perfect Pair") result.label = "Strong Fit";
+      result.learningReasons = learning.reasons;
+      result.learningMatches = learning.reasons;
+    }
     if (result.shown) {
       entries.push({ doc, result, distanceKm: km, family: engineFamily(familyDoc), carer: engineCarer(carerDoc) });
     } else if (viewerIsFamily && viewerDoc.level !== "explore") {
