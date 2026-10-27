@@ -5,6 +5,8 @@
 // DORMANT while firebase-config.js is empty: connects to nothing,
 // changes nothing, and the certified app runs as it does today.
 
+import { clearSessionMarkers } from "../app2/storage-keys.js";
+
 // ---------- Pure plan logic (unit tested in accounts/tests.mjs) ----------
 
 export const PLANS = {
@@ -372,7 +374,9 @@ export async function signOutUser() {
   // hygiene never blocks a sign out.
   await deactivateOwnDevice();
   const m = await import(`${SDK}/firebase-auth.js`);
-  return m.signOut(_auth);
+  const result = await m.signOut(_auth);
+  clearSessionMarkers();
+  return result;
 }
 
 // The device id key is owned by app2/push.js

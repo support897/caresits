@@ -90,7 +90,9 @@ button.dangerBtn { background:#A33B2E; border-color:#A33B2E; color:#fff; }
 <script type="module">
 import { firebaseConfig, FIREBASE_ON } from "./firebase-config.js";
 import { t as tr, applyI18n } from "../app2/lang.js";
+import { accountKey } from "../app2/storage-keys.js";
 import { priceFor, localiseSentence } from "../app2/prices.js";
+let viewerUid = null;
 applyI18n();
 // The plan price lines speak the viewer's own currency
 // (app2/prices.js): this device's saved questionnaire country,
@@ -98,9 +100,11 @@ applyI18n();
 // stays behind the Paid Apps lock, and nothing here sells.
 const viewerCountry = () => {
   try {
-    const q = JSON.parse(localStorage.getItem("caresits-app2-questionnaire") || "null");
+    const qKey = accountKey("caresits-app2-questionnaire", viewerUid);
+    const q = qKey ? JSON.parse(localStorage.getItem(qKey) || "null") : null;
     if (q && (q.country || (q.answers && q.answers.country))) return q.country || q.answers.country;
-    const d = JSON.parse(localStorage.getItem("caresits-app2-draft") || "null");
+    const dKey = accountKey("caresits-app2-draft", viewerUid);
+    const d = dKey ? JSON.parse(localStorage.getItem(dKey) || "null") : null;
     if (d && d.answers && d.answers.country) return d.answers.country;
   } catch { /* no local copy */ }
   return "Australia";
@@ -127,6 +131,8 @@ if (!FIREBASE_ON) {
   let currentUser = null;
   await initAccounts(firebaseConfig, (u) => {
     currentUser = u;
+    viewerUid = u && !u.isAnonymous ? u.uid : null;
+    fillPlanPrices();
     document.getElementById("planCard").hidden = !u;
     document.getElementById("doorsCard").hidden = !!u;
     if (u) {

@@ -88,7 +88,7 @@ function myChildren() {
   const fam = window.CARESITS_FAMILY || {};
   return (fam.children || []).map(repairChild);
 }
-function readJson(key) { try { return JSON.parse(localStorage.getItem(key) || "null"); } catch { return null; } }
+function readJson(key) { if (!key) return null; try { return JSON.parse(localStorage.getItem(key) || "null"); } catch { return null; } }
 
 const state = { posture: null, shopItems: null, decided: new Set(), linkMsg: "", openMsg: "" };
 

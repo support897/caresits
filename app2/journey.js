@@ -65,6 +65,7 @@ const pages = () => {
 };
 
 function writeDraft() {
+  if (!activeDraftKey) return;
   try { localStorage.setItem(activeDraftKey, JSON.stringify({ side: state.side, page: state.page, answers: state.answers, strengths: state.strengths, resumeFeed: state.resumeFeed, countryStep: state.countryStep, target: state.target, beyond: state.beyond })); } catch { /* storage off */ }
 }
 function persistDraft() {
@@ -75,6 +76,7 @@ function resetJourneyState() {
   state.side = null; state.page = 0; state.answers = {}; state.strengths = {}; state.resumeFeed = []; state.countryStep = null; state.target = "quick"; state.beyond = false;
 }
 function loadDraft() {
+  if (!activeDraftKey) return false;
   try {
     const d = JSON.parse(localStorage.getItem(activeDraftKey) || "null");
     if (d?.target) state.target = d.target;
@@ -376,7 +378,7 @@ async function finish() {
   // key, and only this journey's own draft slot is retired
   // (completion, never sign out, clears it: the bundle is the
   // draft, kept whole, under the account's key).
-  try { localStorage.setItem(doneKey(), JSON.stringify(bundle)); localStorage.removeItem(activeDraftKey); } catch { /* storage off */ }
+  try { const key = doneKey(); if (key) localStorage.setItem(key, JSON.stringify(bundle)); if (activeDraftKey) localStorage.removeItem(activeDraftKey); } catch { /* storage off */ }
   $("#journey").hidden = true;
   $("#done").hidden = false;
   const dl = $("#doneLevel");

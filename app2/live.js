@@ -7,7 +7,7 @@
 // carries ?twin=1; every other visit uses the production
 // config beside this file.
 import { levelOf, mergeDeepAnswers } from "./levels.js";
-import { accountKey } from "./storage-keys.js";
+import { accountKey, clearSessionMarkers } from "./storage-keys.js";
 import { applyI18n } from "./lang.js";
 import { resolvePlan, entitlementFromRecord, plusExtrasOpen, withTimeout } from "../accounts/account.js";
 
@@ -131,6 +131,28 @@ let lastTrustInputs = null;
 // here and applied at every publication until the documents
 // themselves carry it.
 let pendingTrustName = "";
+
+function resetMemberSeams(uid) {
+  pendingTrustName = "";
+  lastTrustInputs = null;
+  if (typeof window === "undefined") return;
+  window.CARESITS_ME = { uid, side: "", name: "", entryRole: "" };
+  window.CARESITS_TRUST = { me: { uid, side: "", name: "" }, checks: [], reviews: [] };
+  window.CARESITS_QUESTIONS = null;
+  window.CARESITS_PROFILE_COMPLETE = false;
+  window.CARESITS_PLAN = null;
+  window.CARESITS_FAMILY = { children: [], entries: [], side: "" };
+  window.CARESITS_BIN = [];
+  window.CARESITS_WEEK = { timesheets: [], reminder: null, emergency: null };
+  window.CARESITS_PHASE_C = { viewer: { uid, side: "" }, rels: [], jobs: [], names: {} };
+  window.CARESITS_THREAD = null;
+  window.CARESITS_FIND_DATA = null;
+  window.CARESITS_EXPORT_DATA = null;
+  window.CARESITS_CALENDAR = null;
+  for (const name of ["CARESITS_RENDER_HOME", "CARESITS_FAMILY_RENDER", "CARESITS_PHASE_C_RENDER", "CARESITS_THREAD_RENDER", "CARESITS_TRUST_RENDER", "CARESITS_WEEK_RENDER", "CARESITS_BIN_RENDER", "CARESITS_FIND_RENDER"]) {
+    try { window[name]?.(); } catch { /* an empty seam remains safe */ }
+  }
+}
 
 export function publishTrust(profile, card, questionnaire) {
   if (pendingTrustName) profile = { ...(profile || {}), displayName: pendingTrustName };
@@ -354,16 +376,34 @@ export async function bootLive() {
   return new Promise((resolve) => {
     authMod.onAuthStateChanged(auth, async (u) => {
       if (!u || u.isAnonymous) {
-        // The uid seam is a pointer, not data: clearing it on
-        // sign out deletes nothing, it only stops the device
-        // keys resolving to the previous account (F16).
-        if (typeof window !== "undefined") { window.CARESITS_UID = null; delete document.documentElement.dataset.entryRole; }
+        const previousUid = typeof window !== "undefined" ? window.CARESITS_UID : null;
+        // The uid seam is a pointer, not data. Dropping it switches
+        // all subsequent reads away from that member without deleting
+        // any of their uid-scoped records.
+        if (typeof window !== "undefined") {
+          window.CARESITS_UID = null;
+          window.CARESITS_AUTH_STATE = "signed-out";
+          window.CARESITS_ACCOUNT_READY = false;
+          delete document.documentElement.dataset.entryRole;
+          if (previousUid) { clearSessionMarkers(); resetMemberSeams(null); }
+        }
         gateSignedOut();
         resolve({ on: true, signedIn: false });
         return;
       }
       const uid = u.uid;
-      if (typeof window !== "undefined") window.CARESITS_UID = uid;
+      const previousUid = typeof window !== "undefined" ? window.CARESITS_UID : null;
+      if (typeof window !== "undefined") {
+        window.CARESITS_UID = uid;
+        window.CARESITS_AUTH_STATE = "signed-in";
+        if (previousUid !== uid) {
+          window.CARESITS_ACCOUNT_READY = false;
+          // Keep the newly chosen door role until it is saved; clear
+          // only stale session flags and the prior account's locale.
+          clearSessionMarkers({ preserveEntryRole: true, preserveLanguage: false });
+          resetMemberSeams(uid);
+        }
+      }
       const docAt = (path) => fs.doc(db, ...path.split("/"));
       const colAt = (path) => fs.collection(db, ...path.split("/"));
       window.CARESITS_WRITE = makeWriter(fs, db, uid);
@@ -629,5 +669,7 @@ function gateSignedOut() {
 }
 
 if (typeof document !== "undefined" && !window.CARESITS_LIVE_OFF) {
+  if (!window.CARESITS_AUTH_STATE) window.CARESITS_AUTH_STATE = "loading";
+  window.CARESITS_ACCOUNT_READY = false;
   bootLive().catch(() => {});
 }

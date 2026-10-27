@@ -164,7 +164,9 @@ export function warmSave() {
 // moment, at any pace, after any teardown (QA b108).
 export async function drainOutbox(save) {
   let raw = null;
-  try { raw = localStorage.getItem(doneKey()); } catch { return false; }
+  const key = doneKey();
+  if (!key) return false;
+  try { raw = localStorage.getItem(key); } catch { return false; }
   if (!raw) return false;
   let bundle = null;
   try { bundle = JSON.parse(raw); } catch { return false; }
@@ -173,7 +175,7 @@ export async function drainOutbox(save) {
   try {
     const r = await saver(bundle);
     if (r && r.saved === "account") {
-      try { localStorage.removeItem(doneKey()); } catch { /* storage off */ }
+      try { localStorage.removeItem(key); } catch { /* storage off */ }
       return true;
     }
   } catch { /* the envelope stands for the next drain */ }

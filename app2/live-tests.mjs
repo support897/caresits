@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { routeWrite, trustSeamFrom, publishTrust, refreshTrustName, writeDataFor, makeWriter, phaseCNameTargets, phaseCSeam, fetchPhaseC, activityStampPath, weekSeamFrom, threadSeamFrom } from "./live.js";
-import { accountKey } from "./storage-keys.js";
+import { accountKey, draftKey, doneKey, clearSessionMarkers } from "./storage-keys.js";
 import { frameUser, FRAME_WAIT, planSave, publishSavedProfile, drainOutbox } from "./account-save.js";
 let n = 0; const t = (name, fn) => { fn(); n += 1; console.log("ok -", name); };
 const ta = async (name, fn) => { await fn(); n += 1; console.log("ok -", name); };
@@ -466,5 +466,27 @@ t("profile completeness (b107 Legs 9+10): judged from the seam's saved facts at 
 });
 t("activity stamp: a carer stamps at the root seat", () => { assert.equal(activityStampPath("u1", "carer"), "_activity/u1"); });
 t("activity stamp: families never stamp, and no uid no stamp", () => { assert.equal(activityStampPath("u1", "family"), null); assert.equal(activityStampPath("", "carer"), null); assert.equal(activityStampPath(null, "carer"), null); });
+
+t("browser storage: user keys are uid-scoped and no legacy key is read while auth loads", () => {
+  const oldWindow = globalThis.window, oldSession = globalThis.sessionStorage;
+  const session = new Map();
+  globalThis.sessionStorage = { getItem: (k) => session.get(k) ?? null, setItem: (k, v) => session.set(k, String(v)), removeItem: (k) => session.delete(k) };
+  globalThis.window = { CARESITS_AUTH_STATE: "loading", CARESITS_UID: null };
+  assert.equal(draftKey(), null);
+  assert.equal(doneKey(), null);
+  window.CARESITS_UID = "family-a";
+  assert.equal(draftKey(), "caresits-app2-draft-family-a");
+  assert.equal(doneKey(), "caresits-app2-questionnaire-family-a");
+  window.CARESITS_UID = "carer-b";
+  assert.equal(draftKey(), "caresits-app2-draft-carer-b");
+  window.CARESITS_UID = null;
+  window.CARESITS_AUTH_STATE = "signed-out";
+  session.set("caresits-demo", "1");
+  assert.equal(draftKey(), "caresits-app2-draft-demo");
+  clearSessionMarkers();
+  assert.equal(session.has("caresits-demo"), false);
+  globalThis.window = oldWindow;
+  if (oldSession === undefined) delete globalThis.sessionStorage; else globalThis.sessionStorage = oldSession;
+});
 
 console.log(`\nALL ${n} live-router checks passed`);

@@ -40,9 +40,11 @@ function viewerCountryName() {
   if ((window.CARESITS_ME || {}).country) return window.CARESITS_ME.country;
   if (me.country) return me.country;
   try {
-    const q = JSON.parse(localStorage.getItem(doneKey()) || "null");
+    const qKey = doneKey();
+    const q = qKey ? JSON.parse(localStorage.getItem(qKey) || "null") : null;
     if (q && (q.country || (q.answers && q.answers.country))) return q.country || q.answers.country;
-    const d = JSON.parse(localStorage.getItem(draftKey()) || "null");
+    const dKey = draftKey();
+    const d = dKey ? JSON.parse(localStorage.getItem(dKey) || "null") : null;
     if (d && d.answers && d.answers.country) return d.answers.country;
   } catch { /* no local copy */ }
   return "";
