@@ -550,9 +550,26 @@ export async function fetchFindData(fsMod, db, uid) {
     return doc;
   };
   const viewer = await withAnswers(uid, mine.data());
-  const snap = await fsMod.getDocs(fsMod.query(fsMod.collection(db, "profiles"), fsMod.limit(100)));
-  const candidates = [];
-  for (const d of snap.docs) { if (d.id !== uid) candidates.push(await withAnswers(d.id, d.data())); }
+  // Scale: ask only for people in the same region (first two digits of the
+  // postcode), the other side, 40 at most. Few people yet? widen to anyone.
+  const mineData = mine.data();
+  const pc = String(mineData.postcode || (mineData.card && mineData.card.postcode) || "").replace(/\D/g, "");
+  const wantSide = mineData.side === "family" ? "carer" : "family";
+  const ok = (d) => d.id !== uid && (d.data().side || wantSide) !== mineData.side;
+  let docs = [];
+  if (pc.length >= 2) {
+    const lo = pc.slice(0, 2);
+    try {
+      const q = await fsMod.getDocs(fsMod.query(fsMod.collection(db, "profiles"), fsMod.where("postcode", ">=", lo), fsMod.where("postcode", "<", lo + "\uffff"), fsMod.limit(120)));
+      docs = q.docs.filter(ok);
+    } catch { docs = []; }
+  }
+  if (docs.length < 5) {
+    const all = await fsMod.getDocs(fsMod.query(fsMod.collection(db, "profiles"), fsMod.limit(100)));
+    docs = all.docs.filter(ok);
+  }
+  docs = docs.slice(0, 40);
+  const candidates = await Promise.all(docs.map((d) => withAnswers(d.id, d.data())));
   return { viewer, candidates };
 }
 

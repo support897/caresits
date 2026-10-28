@@ -727,3 +727,20 @@ async function addMeAdmin() {
   window.CARESITS_ME_OPEN = () => { prev(); addMeVerify(); addMeAdmin(); };
 }
 document.addEventListener("caresits-account-ready", () => setTimeout(loadVerified, 1200));
+
+// ---- invite a friend (growth: more people nearby = better matches) ----
+{
+  const prev = window.CARESITS_ME_OPEN;
+  window.CARESITS_ME_OPEN = () => {
+    prev();
+    const root = document.getElementById("meRoot");
+    if (!root || root.querySelector(".v2InviteRow")) return;
+    const row = btn("v2Row v2InviteRow", "Invite a friend to Caresitters", async () => {
+      const text = "Find trusted nannies, babysitters and au pairs near you on Caresitters: https://apps.apple.com/app/id6823577907";
+      try { if (navigator.share) { await navigator.share({ text }); return; } } catch { return; }
+      try { await navigator.clipboard.writeText(text); row.textContent = "Link copied"; } catch { /* ignore */ }
+    });
+    const list = root.querySelector(".v2List");
+    (list || root).prepend(row);
+  };
+}
