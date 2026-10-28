@@ -1563,7 +1563,12 @@ Object.assign(STRINGS.vi, Q_VI);
 Object.assign(STRINGS.yue, Q_YUE);
 Object.assign(STRINGS.hi, Q_HI);
 
+// English only for now: the other language tables are partly translated.
+// Set to false to bring back device-language detection and the picker.
+export const ENGLISH_ONLY = !(typeof process !== "undefined" && process.env && process.env.CARESITS_ALL_LANGS === "1"); // tests set CARESITS_ALL_LANGS=1
+
 export function currentLang() {
+  if (ENGLISH_ONLY) return "en";
   try {
     const key = accountKey("caresits-lang");
     const pick = key ? localStorage.getItem(key) : null;

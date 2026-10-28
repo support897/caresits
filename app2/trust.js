@@ -1,4 +1,4 @@
-import { t as tr, currentLang, setLang } from "./lang.js";
+import { t as tr, currentLang, setLang, ENGLISH_ONLY } from "./lang.js";
 import { accountKey, doneKey, draftKey } from "./storage-keys.js";
 import { downloadExport } from "./export.js";
 import { pushAvailable, getPushState, registerPush, togglePushKind } from "./push.js";
@@ -509,7 +509,7 @@ export function renderSettings(root) {
     langRow.append(b);
   }
   langCard.append(langRow);
-  languageGroup.append(langCard);
+  if (ENGLISH_ONLY) languageGroup.remove(); else languageGroup.append(langCard);
   // Plans entry (payments chapter): families only. A carer account
   // never sees a purchase surface (carers have no tiers, ever), so
   // the card stands unless the viewer is known to be a carer. The
