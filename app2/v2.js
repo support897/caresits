@@ -240,7 +240,7 @@ function pickPair(root, rerender) {
   if (!activePair || !pairs.find((p) => p.id === activePair)) activePair = pairs[0].id;
   if (pairs.length > 1) {
     const row = el("div", "v2ChipRow");
-    for (const p of pairs) row.append(btn("chipBtn" + (p.id === activePair ? " on" : ""), p.name, () => { activePair = p.id; rerender(); }));
+    for (const p of pairs) row.append(btn("chipBtn" + (p.id === activePair ? " on" : ""), (unreadSet.has(p.id) && p.id !== activePair ? "\u25cf " : "") + p.name, () => { activePair = p.id; rerender(); }));
     root.append(row);
   }
   return pairs.find((p) => p.id === activePair);
@@ -325,6 +325,7 @@ export function openMessages() {
   });
   root.append(head, revHost, list, el("div", "v2Compose").appendChild(input) && input, send, note);
   unsubChat = sub(pair.id, (msgs) => {
+    if (msgs && msgs.length) { markSeen(pair.id, Math.max(...msgs.map(ms))); paintUnread(); }
     if (msgs == null) { list.replaceChildren(el("p", "v2Sub", "Messages could not load. Check your connection.")); return; }
     latest = msgs;
     list.replaceChildren();
@@ -744,3 +745,35 @@ document.addEventListener("caresits-account-ready", () => setTimeout(loadVerifie
     (list || root).prepend(row);
   };
 }
+
+// ---- unread dots (Messages tab + chat chips) ----
+const unreadSet = new Set();
+let pendingIn = 0;
+const seenKey = (id) => `caresits-seen-${me().uid}-${id}`;
+function markSeen(id, t) { try { localStorage.setItem(seenKey(id), String(t || Date.now())); unreadSet.delete(id); } catch { /* ignore */ } }
+function paintUnread() {
+  const on = unreadSet.size > 0 || pendingIn > 0;
+  document.querySelectorAll("#bottomNav button").forEach((b) => {
+    if (/messages/i.test(b.textContent) || b.dataset.nav === "thread") b.classList.toggle("hasDot", on);
+  });
+}
+async function checkUnread() {
+  const dbx = window.CARESITS_DB; const uid = me().uid;
+  if (!dbx || !uid || document.visibilityState === "hidden") return;
+  const pc = window.CARESITS_PHASE_C || {};
+  pendingIn = (pc.rels || []).filter((r) => r.state === "waiting" && r.askedBy && r.askedBy !== uid).length;
+  for (const p of livePairs()) {
+    try {
+      const snap = await dbx.fs.getDocs(dbx.fs.query(dbx.fs.collection(dbx.db, "relationships", p.id, "messages"), dbx.fs.orderBy("at", "desc"), dbx.fs.limit(1)));
+      const last = snap.docs[0] && snap.docs[0].data();
+      if (!last || last.from === uid || !last.at || !last.at.toMillis) { unreadSet.delete(p.id); continue; }
+      const seen = Number(localStorage.getItem(seenKey(p.id)) || 0);
+      if (last.at.toMillis() > seen) unreadSet.add(p.id); else unreadSet.delete(p.id);
+    } catch { /* try next time */ }
+  }
+  paintUnread();
+}
+document.addEventListener("caresits-account-ready", () => setTimeout(checkUnread, 3500));
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkUnread(); });
+setInterval(checkUnread, 90000);
+window.CARESITS_CHECK_UNREAD = checkUnread;

@@ -524,3 +524,5 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .v2ReviewForm{margin:8px 0}.v2AuPair{margin:12px 0;padding:10px;border:1px solid #cfe0db;border-radius:12px}
 .v2AuPair summary{font-weight:700;cursor:pointer}.v2Field{display:block;margin:8px 0}.v2Check{display:block;margin:8px 0}
 .v2RefBlock{margin-bottom:12px}.v2ChatHead{display:flex;align-items:center;gap:8px}.v2RevBtn{margin-left:auto}
+
+#bottomNav button.hasDot{position:relative}#bottomNav button.hasDot::after{content:"";position:absolute;top:8px;right:calc(50% - 22px);width:10px;height:10px;border-radius:50%;background:#e5484d;border:2px solid #fff}
