@@ -82,6 +82,20 @@ async function markSideTourDone(side, uid) {
 function visibleInMenu(node) {
   return !!node && !node.hidden && !node.closest("[hidden]");
 }
+const TAB_TEXT = {
+  "family-find": "Find: say what you need, then see carers on a map.",
+  "family-week": "Calendar: mark the days you need help.",
+  "family-urgent": "Urgent: need help fast? Post it here in a few taps.",
+  "family-messages": "Messages: chat with your carer.",
+  "career-find": "Jobs: see families near you on a map.",
+  "career-week": "Calendar: mark the days you are free.",
+  "career-urgent": "Urgent: families who need help right now.",
+  "career-messages": "Messages: chat with families.",
+  "connect-home": "Today: fun activities picked for your kids.",
+  "connect-week": "Calendar: one shared week for you both.",
+  "connect-photos": "Photos: photo updates from your carer.",
+  "connect-messages": "Messages: chat together.",
+};
 function sideTabs(side) {
   return [...document.querySelectorAll(`#bottomNav [data-bottom-role="${side}"]`)]
     .filter((button) => !button.hidden)
@@ -97,10 +111,11 @@ function sideTabs(side) {
                     : tab.endsWith("-ideas") ? "ideas"
                       : tab.endsWith("-story") ? "story"
                         : tab.endsWith("-more") ? "more" : "home";
-      return { kind: "tab", target: `[data-bottom-tab="${tab}"]`, text: `guide.tab.${name}`, nav: button.dataset.nav || "more" };
+      return { kind: "tab", target: `[data-bottom-tab="${tab}"]`, text: `guide.tab.${name}`, raw: TAB_TEXT[tab] || "", nav: button.dataset.nav || "more" };
     });
 }
 function sideMenuItems() {
+  return [];
   const menu = document.getElementById("menu");
   if (!menu) return [];
   const steps = [];
@@ -134,6 +149,7 @@ function buildSteps(side, askName) {
   ];
   if (askName) steps.push({ kind: "name", text: "guide.name" });
   steps.push(...sideTabs(side), ...sideMenuItems());
+  steps.push({ kind: "me", target: "#meBtn", raw: "Me: your profile, settings and app mode. Switch between finding a carer, finding families and staying connected here." });
   return steps;
 }
 function spotlight(target, wrap) {
@@ -229,7 +245,7 @@ function runSideTour(side, replay = false) {
   const render = () => {
     if (currentUid() !== uid) { removeGuide(wrap); return; }
     const step = steps[index];
-    words.textContent = tr(step.text);
+    words.textContent = step.raw || tr(step.text);
     nameInput.hidden = step.kind !== "name";
     actions.classList.toggle("nameActions", step.kind === "name");
     wrap.dataset.stepKind = step.kind;

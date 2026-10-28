@@ -248,14 +248,15 @@ t("carer home: profile, urgent requests and an invite-accept path replace family
   assert.ok(!text.includes("Let us find the right person for your family."));
   assert.ok(!text.includes("Find carers"));
 });
-t("communicate home: an active-side switch shows learning setup and conversations", () => {
+t("communicate home: an active-side switch shows the pitch, learning setup and ideas", () => {
   globalThis.CARESITS_UID = "test-communicate";
   globalThis.CARESITS_ME = { uid: "test-communicate", side: "family", entryRole: "family", activeSide: "communicate" };
   globalThis.CARESITS_RENDER_HOME();
   const text = homeText();
   assert.ok(text.includes("Learning & play"));
-  assert.ok(text.includes("Your conversations"));
-  assert.ok(text.includes("No conversations yet."));
+  assert.ok(text.includes("Shared calendar"));
+  assert.ok(text.includes("Daily activities"));
+  assert.ok(text.includes("Photo updates"));
   assert.ok(!text.includes("Find carers"));
   assert.ok(!text.includes("See my matches"));
 });

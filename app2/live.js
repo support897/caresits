@@ -71,6 +71,8 @@ export function routeWrite(kind, payload, uid) {
       const field = { family: "tourFamilyDone", career: "tourCareerDone", communicate: "tourCommunicateDone" }[payload.side];
       return field ? { ok: true, op: "merge", path: `users/${uid}/meta/app`, data: { [field]: true } } : { ok: false, reason: "invalid-side" };
     }
+    case "need": return { ok: true, op: "merge", path: `users/${uid}/meta/need`, data: { text: String(payload.text || "").slice(0, 300), kinds: (payload.kinds || []).slice(0, 8).map(String), days: (payload.days || []).slice(0, 7).map(String), parts: (payload.parts || []).slice(0, 3).map(String) } };
+    case "about": return { ok: true, op: "merge", path: `profiles/${uid}`, data: { about: String(payload.about || "").slice(0, 300) } };
     case "learning-plan": {
       const plan = publicLearningPlan(normaliseLearningPlan(payload.plan));
       return { ok: true, op: "learningPlan", path: `users/${uid}/meta/app`, profilePath: `profiles/${uid}`, data: { learningPlan: plan }, profileData: { learningPlan: plan }, pairPath: typeof payload.pairId === "string" && payload.pairId ? `relationships/${payload.pairId}` : "", pairData: { learningPlan: plan } };
@@ -391,8 +393,10 @@ export async function bootLive() {
   // so a named app here would never see the signed-in user (the build
   // 103 R1 fault). Every shell module resolves the default app only.
   const app = appMod.getApps().find((a) => a.name === "[DEFAULT]") || appMod.initializeApp(cfg);
-  const auth = authMod.getAuth(app);
+  const { sharedAuth } = await import("./auth-shared.js");
+  const auth = sharedAuth(authMod, app);
   const db = fs.getFirestore(app);
+  window.CARESITS_DB = { fs, db };
   return new Promise((resolve) => {
     authMod.onAuthStateChanged(auth, async (u) => {
       if (!u || u.isAnonymous) {

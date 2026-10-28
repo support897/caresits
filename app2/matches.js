@@ -335,8 +335,22 @@ export function renderBoard(root, viewer, jobs) {
   }
   const list = el("div", "findList");
   for (const job of visibleJobs) {
-    const card = el("article", "findCard");
-    card.append(el("h3", "findName", job.postcode ? tr("find.postcode", undefined, { n: job.postcode }) : tr("board.nearby")));
+    const card = el("article", "findCard v2Job");
+    const jobHead = el("div", "findHead v2JobHead");
+    const jobWho = el("div", "findWho");
+    const famName = (window.CARESITS_PHASE_C?.names || {})[job.familyUid] || "";
+    const jobTitle = el("h3", "findName", famName || (job.postcode ? tr("find.postcode", undefined, { n: job.postcode }) : tr("board.nearby")));
+    jobWho.append(jobTitle);
+    if (job.postcode) jobWho.append(el("p", "findPlace", tr("find.postcode", undefined, { n: job.postcode })));
+    const jobAv = window.CARESITS_V2 ? window.CARESITS_V2.avatar(famName, "", "v2Avatar big") : el("div", "findInitial", "?");
+    jobHead.append(jobAv, jobWho);
+    card.append(jobHead);
+    if (window.CARESITS_V2 && job.familyUid) window.CARESITS_V2.profileOf(job.familyUid).then((p) => {
+      if (!p) return;
+      if (p.photoUrl) jobHead.replaceChild(window.CARESITS_V2.avatar(p.displayName, p.photoUrl, "v2Avatar big"), jobHead.firstChild);
+      if (p.displayName && !famName) jobTitle.textContent = p.displayName;
+      if (p.about) jobWho.append(el("p", "v2About", p.about));
+    });
     const whenKey = { Today: "board.today", Tomorrow: "board.tomorrow", "This weekend": "board.weekend" }[job.when];
     card.append(el("p", "findPlace", (whenKey ? tr(whenKey) : job.when || tr("board.soon")) + (job.note ? " · " + job.note : "")));
     if (viewer?.side === "carer") {

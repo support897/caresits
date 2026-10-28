@@ -407,6 +407,7 @@ export function renderSettings(root) {
     root.append(group);
     return group;
   };
+  if (window.CARESITS_V2) window.CARESITS_V2.modeCards(root);
   const languageGroup = makeGroup("language");
   const lookGroup = makeGroup("look");
   const notificationsGroup = makeGroup("notifications");

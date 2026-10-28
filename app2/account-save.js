@@ -147,7 +147,8 @@ export function warmSave() {
         const appMod = await import(`${SDK}/firebase-app.js`);
         const authMod = await import(`${SDK}/firebase-auth.js`);
         const app = appMod.getApps().find((a) => a.name === "[DEFAULT]") || appMod.initializeApp(firebaseConfig);
-        const auth = authMod.getAuth(app);
+        const { sharedAuth } = await import("./auth-shared.js");
+        const auth = sharedAuth(authMod, app);
         if (auth && typeof auth.authStateReady === "function") await auth.authStateReady();
         return auth;
       } catch { return null; }
@@ -189,7 +190,8 @@ export async function saveBundle(bundle, firebaseConfig) {
   // The DEFAULT app only, shared with the door: a named app carries its
   // own auth session and would never see the signed-in user (R1).
   const app = appMod.getApps().find((a) => a.name === "[DEFAULT]") || appMod.initializeApp(firebaseConfig);
-  const auth = authMod.getAuth(app);
+  const { sharedAuth } = await import("./auth-shared.js");
+  const auth = sharedAuth(authMod, app);
   const user = await frameUser(auth);
   if (!user || user.isAnonymous) return { saved: "local", reason: "signed-out" };
   // The restored session's user can stand before its token
