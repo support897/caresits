@@ -17,7 +17,7 @@ await new Promise((r) => server.listen(8933, r));
 
 const { chromium } = await import("playwright-core");
 const browser = await chromium.launch({
-  executablePath: "/home/hatch/.cache/ms-playwright/chromium-1187/chrome-linux/chrome",
+  executablePath: process.env.CHROME_PATH || "/home/hatch/.cache/ms-playwright/chromium-1187/chrome-linux/chrome",
   args: ["--no-sandbox", "--disable-dev-shm-usage"],
 });
 const page = await browser.newPage();

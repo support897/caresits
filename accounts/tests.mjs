@@ -230,7 +230,7 @@ const server = http.createServer((req, res) => {
 await new Promise((r) => server.listen(8931, r));
 try {
   const { chromium } = await import("playwright-core");
-  const b = await chromium.launch({ executablePath: "/home/hatch/.cache/ms-playwright/chromium-1187/chrome-linux/chrome", args: ["--no-sandbox", "--disable-dev-shm-usage"] });
+  const b = await chromium.launch({ executablePath: process.env.CHROME_PATH || "/home/hatch/.cache/ms-playwright/chromium-1187/chrome-linux/chrome", args: ["--no-sandbox", "--disable-dev-shm-usage"] });
   const p = await b.newPage();
   const errs = [];
   p.on("pageerror", (e) => errs.push(String(e)));
