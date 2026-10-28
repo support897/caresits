@@ -212,6 +212,8 @@ function openFilterSheet(root, viewerDoc, candidates, opener) {
 function trustChips(doc) {
   const card = doc.card || {};
   const chips = [];
+  const vf = window.CARESITS_VERIFIED && window.CARESITS_VERIFIED[doc.uid];
+  if (vf && (!vf.expiry || vf.expiry >= new Date().toISOString().slice(0, 10))) chips.push("\u2713 Verified: Blue Card");
   const ap = card.auPair;
   if (ap && ap.on) {
     chips.push("Au pair");
@@ -226,7 +228,7 @@ function trustChips(doc) {
   if (languages.length) chips.push(tr("find.trustLanguages", undefined, { n: languages.join(", ") }));
   const reply = doc.responseTime || card.responseTime || doc.replyTime || card.replyTime;
   if (reply) chips.push(tr("find.trustResponse", undefined, { n: reply }));
-  return chips.slice(0, 3);
+  return chips.slice(0, 4);
 }
 
 function detailLines(doc) {

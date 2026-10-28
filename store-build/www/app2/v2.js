@@ -657,3 +657,73 @@ Object.assign(window.CARESITS_V2, { loadReviews, reviewsInto, reviewForm, auPair
   const baseMe = renderMe;
   window.CARESITS_ME_OPEN = () => { baseMe(); addMeReferences(); };
 }
+
+// ---- free manual verification (Blue Card, checked by hand) ----
+window.CARESITS_VERIFIED = window.CARESITS_VERIFIED || {};
+async function loadVerified() {
+  const dbx = window.CARESITS_DB; if (!dbx) return;
+  try {
+    const snap = await dbx.fs.getDocs(dbx.fs.collection(dbx.db, "verified"));
+    const m = {}; snap.docs.forEach((d) => { m[d.id] = d.data(); });
+    window.CARESITS_VERIFIED = m;
+    window.CARESITS_FIND_REFRESH && window.CARESITS_FIND_REFRESH();
+  } catch { /* badge just does not show */ }
+}
+function addMeVerify() {
+  const root = document.getElementById("meRoot");
+  if (!root || root.querySelector(".v2VerBlock")) return;
+  const dbx = window.CARESITS_DB; const uid = me().uid;
+  const box = el("section", "v2Card v2VerBlock");
+  box.append(el("h3", "v2Title", "Get verified (free)"));
+  const body = el("div", null); box.append(body);
+  root.insertBefore(box, root.children[2] || null);
+  const paint = async () => {
+    body.replaceChildren();
+    let ver = null, req = null;
+    try { const v = await dbx.fs.getDoc(dbx.fs.doc(dbx.db, "verified", uid)); ver = v.exists() ? v.data() : null; } catch { /* none */ }
+    if (ver) { body.append(el("p", "v2RevSum", "\u2713 Verified: Blue Card checked by Caresitters")); return; }
+    try { const r = await dbx.fs.getDoc(dbx.fs.doc(dbx.db, "verifyRequests", uid)); req = r.exists() ? r.data() : null; } catch { /* none */ }
+    if (req) { body.append(el("p", "v2Sub", "We got your request. We check it by hand against the free Queensland Blue Card checker. This can take a few days.")); body.append(btn("ghostBtn", "Cancel request", async () => { try { await dbx.fs.deleteDoc(dbx.fs.doc(dbx.db, "verifyRequests", uid)); } catch { /* ignore */ } paint(); })); return; }
+    body.append(el("p", "v2Sub", "Add your Queensland Blue Card (working with children card). We check it is valid, then show a Verified badge on your profile."));
+    const nm = el("input", "txtIn"); nm.placeholder = "Full name on the card"; nm.maxLength = 60; nm.value = me().name || "";
+    const no = el("input", "txtIn"); no.placeholder = "Blue Card number"; no.maxLength = 30;
+    const ex = el("input", "txtIn"); ex.type = "date"; ex.setAttribute("aria-label", "Card expiry date");
+    const msg = el("p", "formMsg"); msg.setAttribute("role", "status");
+    const go = btn("mainBtn", "Ask to be verified", async () => {
+      if (!nm.value.trim() || !no.value.trim() || !ex.value) { msg.textContent = "Fill in all three boxes."; return; }
+      go.disabled = true;
+      try {
+        await dbx.fs.setDoc(dbx.fs.doc(dbx.db, "verifyRequests", uid), { kind: "bluecard", number: no.value.trim(), expiry: ex.value, name: nm.value.trim(), state: "pending", at: dbx.fs.serverTimestamp() });
+        paint();
+      } catch { go.disabled = false; msg.textContent = "Could not send. Try again."; }
+    });
+    body.append(nm, no, el("p", "v2Label", "Card expiry date"), ex, msg, go, el("p", "v2Sub", "Only you and the Caresitters team can see these details."));
+  };
+  paint();
+}
+async function addMeAdmin() {
+  const root = document.getElementById("meRoot"); const dbx = window.CARESITS_DB;
+  if (!root || !dbx || root.querySelector(".v2AdminBlock")) return;
+  let docs;
+  try { docs = (await dbx.fs.getDocs(dbx.fs.collection(dbx.db, "verifyRequests"))).docs; } catch { return; } // only the admin can list
+  if (root.querySelector(".v2AdminBlock")) return;
+  const box = el("section", "v2Card v2AdminBlock");
+  box.append(el("h3", "v2Title", `Verify requests (${docs.length})`));
+  if (!docs.length) box.append(el("p", "v2Sub", "None waiting."));
+  for (const d of docs) {
+    const r = d.data(); const row = el("div", "v2Rev");
+    row.append(el("p", "v2RevText", `${r.name} \u00b7 card ${r.number} \u00b7 expires ${r.expiry}`));
+    row.append(el("p", "v2RevBy", "Check it at bluecard.qld.gov.au, then Approve."));
+    row.append(btn("mainBtn", "Approve", async () => {
+      await dbx.fs.setDoc(dbx.fs.doc(dbx.db, "verified", d.id), { level: "bluecard", expiry: r.expiry, at: dbx.fs.serverTimestamp() });
+      await dbx.fs.deleteDoc(dbx.fs.doc(dbx.db, "verifyRequests", d.id)); row.remove(); loadVerified();
+    }), btn("ghostBtn", "Reject", async () => { await dbx.fs.deleteDoc(dbx.fs.doc(dbx.db, "verifyRequests", d.id)); row.remove(); }));
+    box.append(row);
+  }
+  root.insertBefore(box, root.children[2] || null);
+}
+{
+  const prev = window.CARESITS_ME_OPEN;
+  window.CARESITS_ME_OPEN = () => { prev(); addMeVerify(); addMeAdmin(); };
+}
+document.addEventListener("caresits-account-ready", () => setTimeout(loadVerified, 1200));
