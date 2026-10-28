@@ -30,12 +30,12 @@ const el = (tag, cls, text) => {
   return n;
 };
 
-const FILTER_DEFAULTS = { distanceKm: "", language: "", ageBand: "", day: "", verifiedOnly: false, experienceYears: "", maxPay: "", transport: "", pets: "" };
+const FILTER_DEFAULTS = { distanceKm: "", language: "", ageBand: "", day: "", verifiedOnly: false, auPairOnly: false, auPairInfant: false, auPairEnglish: "", auPairArrive: "", experienceYears: "", maxPay: "", transport: "", pets: "" };
 let filterState = { ...FILTER_DEFAULTS };
 let filterOwner = null;
 let moreFiltersOpen = false;
 const norm = (value) => String(value ?? "").trim().toLowerCase();
-const activeFilterCount = () => Object.entries(filterState).filter(([k, v]) => k === "verifiedOnly" ? v : v !== "").length;
+const activeFilterCount = () => Object.entries(filterState).filter(([k, v]) => v !== "" && v !== false).length;
 const listValue = (value) => Array.isArray(value) ? value : value == null || value === "" ? [] : [value];
 
 function dayAvailable(card, day, viewerSide) {
@@ -69,6 +69,13 @@ function filterCandidates(viewerDoc, candidateDocs) {
     if (filterState.verifiedOnly) {
       const checks = norm(card.checksLevel || doc.checksLevel);
       if (!(["register", "sighted", "verified", "register verified", "document sighted"].includes(checks))) return false;
+    }
+    if (familyViewer && (filterState.auPairOnly || filterState.auPairInfant || filterState.auPairEnglish || filterState.auPairArrive)) {
+      const ap = card.auPair || {};
+      if (!ap.on) return false;
+      if (filterState.auPairInfant && !ap.infant) return false;
+      if (filterState.auPairEnglish && ["Basic", "Good", "Fluent"].indexOf(ap.english) < ["Basic", "Good", "Fluent"].indexOf(filterState.auPairEnglish)) return false;
+      if (filterState.auPairArrive && (!ap.arrival || ap.arrival > filterState.auPairArrive)) return false;
     }
     if (filterState.experienceYears) {
       const years = Object.values(card.experience || {}).map(Number).filter(Number.isFinite);
@@ -149,6 +156,10 @@ function openFilterSheet(root, viewerDoc, candidates, opener) {
   const extra = el("div", "findFilterGrid findExtraFilters");
   extra.hidden = !moreFiltersOpen;
   if (viewerDoc.side === "family") {
+    filterCheck(extra, controls, "auPairOnly", "Au pairs only", filterState.auPairOnly);
+    filterCheck(extra, controls, "auPairInfant", "Au pair: can care for babies", filterState.auPairInfant);
+    filterSelect(extra, controls, "auPairEnglish", "Au pair: English at least", [...any, ["Basic", "Basic"], ["Good", "Good"], ["Fluent", "Fluent"]], filterState.auPairEnglish);
+    filterSelect(extra, controls, "auPairArrive", "Au pair: can arrive by", [...any, ...Array.from({ length: 12 }, (_, i) => { const d = new Date(new Date().getFullYear(), new Date().getMonth() + i, 1); return [d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"), d.toLocaleString("en", { month: "short", year: "numeric" })]; })], filterState.auPairArrive);
     filterSelect(extra, controls, "experienceYears", tr("find.filterExperience"), [...any, ...[1, 3, 5, 10].map((n) => [String(n), n === 1 ? tr("find.filterOneYear") : tr("find.filterYears", undefined, { n })])], filterState.experienceYears);
     filterSelect(extra, controls, "maxPay", tr("find.filterMaxPay"), [...any, ...[20, 25, 30, 40, 50].map((n) => [String(n), tr("find.filterCurrency", undefined, { n })])], filterState.maxPay);
     filterSelect(extra, controls, "transport", tr("find.filterTransport"), [...any, ["drive", tr("find.filterDrive")], ["ownCar", tr("find.filterOwnCar")]], filterState.transport);
@@ -201,6 +212,13 @@ function openFilterSheet(root, viewerDoc, candidates, opener) {
 function trustChips(doc) {
   const card = doc.card || {};
   const chips = [];
+  const ap = card.auPair;
+  if (ap && ap.on) {
+    chips.push("Au pair");
+    if (ap.homeCountry) chips.push("From " + ap.homeCountry);
+    if (ap.arrival) { const [y, m] = ap.arrival.split("-"); chips.push("Arrives " + new Date(+y, +m - 1, 1).toLocaleString("en", { month: "short", year: "numeric" })); }
+    if (ap.infant) chips.push("Baby qualified");
+  }
   const checks = norm(card.checksLevel || doc.checksLevel);
   if (["register", "verified", "register verified"].includes(checks)) chips.push(tr("find.trustRegister"));
   else if (["sighted", "document sighted"].includes(checks)) chips.push(tr("find.trustSighted"));
@@ -285,6 +303,8 @@ function cardFor(entry) {
   const lines = detailLines(doc);
   if (lines.length) for (const line of lines) details.append(el("p", "findDetailLine", line));
   else details.append(el("p", "findDetailLine", tr("find.detailEmpty")));
+  const revBox = el("div", "v2RevList");
+  details.append(revBox);
   card.append(details);
   const actions = el("div", "findActions");
   const detailsButton = el("button", "ghostBtn findDetailsBtn", tr("find.details"));
@@ -292,6 +312,7 @@ function cardFor(entry) {
   detailsButton.setAttribute("aria-expanded", "false");
   detailsButton.addEventListener("click", () => {
     details.hidden = !details.hidden;
+    if (!details.hidden && !revBox.dataset.l && window.CARESITS_V2 && window.CARESITS_V2.reviewsInto) { revBox.dataset.l = "1"; window.CARESITS_V2.reviewsInto(revBox, doc.uid); }
     detailsButton.setAttribute("aria-expanded", String(!details.hidden));
     detailsButton.textContent = tr(details.hidden ? "find.details" : "find.hideDetails");
   });

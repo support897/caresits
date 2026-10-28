@@ -1,0 +1,879 @@
+rules_version = '2';
+// F17 AMENDMENT (18 Oct 2026): assembled on the deployed v2 fold (685 lines,
+// captures sha256 prod fba8c271 / twin 0935d88d, chapters token identical).
+// Blocks: A answers value branches (write-ins 2000 on F33/F49/C54/C56, F8 list 12,
+// flat map branch, nested experienceChecks branch) + the profiles gallery clause;
+// B counter value reads re-based on each counter doc's own getAfter state;
+// B v3 (19 Oct 2026): signup + safety counters split one field per document
+// per Security's re-arm spec (2c267c79); people/main keeps activated + returning.
+// Design: Security 3284c975 + diff read 3dc25c9f + riders 2d8ad27b. Nothing else moves.
+// FOLD-IN CANDIDATE v5 (matching + Amendment 5 + Amendment 4
+// safety): the sealed
+// fold plus the cleared matching delta and the cleared calendar
+// delta, helpers as real functions. Publishes to
+// the TEST TWIN first under Security's S3.8 sequence; it becomes
+// the fold of record only when the twin battery seals.
+// CARESITS FOLD — canonical accounts rules v2.2 + the CEO people
+// counter delta (paired writes, modelled on the Needs Me delta
+// Security reviewed 15 Oct 2026). Header notes for v2.2 below stand.
+// Caresits activation (pattern R1, defined in writing): the stamp
+// activatedAt lands when a family finishes the questionnaire or a
+// carer finishes their profile — the app's one core action.
+// This fold is written and unit-checked at the desk; it publishes
+// when the Caresits Firebase project exists and Security's live
+// battery (TW-1..TW-4, OA-1..OA-5) has run against it.
+
+// Canonical accounts-phase Security Rules v2.2 (identical for
+// every app project + test twin). The rule IS the wall:
+// - a signed-in user touches only their own users/{uid} folder
+// - NO client ever writes a plan-shaped key (plan, planSource,
+//   comp, role, owner): the user record carries no raisable
+//   plan state; entitlement resolves from _comp (TW-3)
+// - _owner/config + _comp/{uid} + _demo/config are desk/console
+//   records: clients can neither read nor write them; the rules
+//   read them via get() (owner-of-record + comp + demo hash)
+// - _entitlements/{uid} is the payments chapter record (Finance
+//   §3): written ONLY by the payment path on the admin plane. A
+//   client may read its OWN record and can never write it. It sits
+//   at the root on the _comp precedent, outside the users/{uid}
+//   catch-all, whose plan-key ban could not fence its field names.
+// - _activity/{uid} is the photo lifecycle stamp (Ilse's ruling
+//   + HQ spec, 19 Oct 2026): the carer's lastActiveAt, refreshed
+//   when the signed-in app opens. It sits at the root for the
+//   same reason (the catch-all would let any value land), and
+//   its write arm admits ONE key whose value must equal the
+//   server's own clock, so a stamp can never be forged or
+//   backdated. Clients never read it; the sweeper reads it on
+//   the admin plane. Amendment v5 adds this arm alone to the
+//   sealed v4 text; its case is RULES-AMENDMENT-LIFECYCLE.md.
+// - the OWNER HAS NO READ PATH INTO USER FOLDERS (HQ ruling
+//   15 Oct, the Fit shape): dashboards read PRECOMPUTED
+//   AGGREGATES at _owner/aggregates only — numbers, never
+//   people (TW-4 / NS-1). Aggregates writers land with the
+//   dashboard builds; the surface never counts live records.
+// - demo sessions (SPARK): an anonymous session may store
+//   data ONLY after a valid unlock — the unlock record at
+//   _unlocks/{uid} can be created solely by presenting the
+//   access code's SHA-256, checked here via get() against
+//   _demo/config (DS-2, rules-side). Connection paths, when
+//   they land (P4), deny the anonymous provider claim by the
+//   same pattern (DS-4, rules-side).
+// - the write verbs are split (Security FAIL 1, 15 Oct):
+//   create/update keep the plan-key condition; delete takes
+//   the path-owner condition alone (request.resource is
+//   absent on deletes).
+// - everything else is denied by default (no match = no access)
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isOwner() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/_owner/config)
+        && request.auth.uid in
+           get(/databases/$(database)/documents/_owner/config).data.uids;
+    }
+    function isAnon() {
+      return signedIn()
+        && request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+    function demoUnlocked() {
+      return exists(/databases/$(database)/documents/_unlocks/$(request.auth.uid))
+        && exists(/databases/$(database)/documents/_demo/config)
+        && get(/databases/$(database)/documents/_unlocks/$(request.auth.uid)).data.codeHash
+           == get(/databases/$(database)/documents/_demo/config).data.codeHash;
+    }
+
+
+    function aggPairedSignup() {
+      return signedIn() && !isAnon()
+        && !exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && existsAfter(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+    function aggPairedActivation() {
+      return signedIn() && !isAnon()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && !('activatedAt' in
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data)
+        && 'activatedAt' in
+           getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    function aggPairedReturn() {
+      return signedIn() && !isAnon()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid))
+             .data.get('return7dCounted', false) == false
+        && getAfter(/databases/$(database)/documents/users/$(request.auth.uid))
+             .data.get('return7dCounted', false) == true;
+    }
+    function aggPlusOne(field) {
+      // F17 Block B: a transform's value is unreadable in
+      // request.resource; the counter doc's own getAfter state
+      // is where transforms resolve, so the +1 is judged there.
+      return !(field in
+               request.resource.data.diff(resource.data).affectedKeys())
+        || getAfter(/databases/$(database)/documents/_owner/aggregates/people/main)
+             .data.get(field, 0) == resource.data.get(field, 0) + 1;
+    }
+
+
+    // Matching chapter helpers (fold-in of the cleared matching
+    // delta). The grant targets are enumerated as three explicit
+    // matches below — identical semantics to the delta's tail
+    // pattern, with no new wildcards.
+    function relId(a, b) { return a < b ? a + "_" + b : b + "_" + a; }
+    function relData(a, b) {
+      return get(/databases/$(database)/documents/relationships/$(relId(a, b))).data;
+    }
+    function relActive(a, b) {
+      return exists(/databases/$(database)/documents/relationships/$(relId(a, b)))
+        && relData(a, b).state in ["contact", "hired"]
+        && !blockedEitherWay(a, b);
+    }
+
+
+    // Calendar helpers (Amendment 5 delta, cleared v3).
+    // blockedEitherWay is realised here from Security's safety
+    // ruling ahead of the safety delta's own pass; its text is
+    // flagged for that read.
+    function blockedEitherWay(a, b) {
+      return exists(/databases/$(database)/documents/users/$(a)/blocks/$(b))
+          || exists(/databases/$(database)/documents/users/$(b)/blocks/$(a));
+    }
+    function pairDoc(pairId) {
+      return get(/databases/$(database)/documents/relationships/$(pairId));
+    }
+    function pairRel(pairId) {
+      return exists(/databases/$(database)/documents/relationships/$(pairId))
+        ? pairDoc(pairId).data : null;
+    }
+    function pairOpen(pairId) {
+      return signedIn() && !isAnon()
+        && pairRel(pairId) != null
+        && pairRel(pairId).state in ["contact", "hired"]
+        && request.auth.uid in pairRel(pairId).members
+        && !blockedEitherWay(pairRel(pairId).familyUid, pairRel(pairId).carerUid);
+    }
+    function pairMember(pairId) {
+      return signedIn() && pairRel(pairId) != null
+        && request.auth.uid in pairRel(pairId).members;
+    }
+    function pairSevered(pairId) {
+      return pairRel(pairId) != null
+        && (pairRel(pairId).state == "ended"
+            || blockedEitherWay(pairRel(pairId).familyUid, pairRel(pairId).carerUid));
+    }
+
+    match /users/{uid}/{document=**} {
+      allow read: if signedIn() && request.auth.uid == uid
+        && (!isAnon() || demoUnlocked());
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && (!isAnon() || demoUnlocked())
+        && !request.resource.data.keys()
+             .hasAny(['plan', 'planSource', 'comp', 'role', 'owner']);
+      allow delete: if signedIn() && request.auth.uid == uid
+        && (!isAnon() || demoUnlocked());
+    }
+
+
+    // Relationship grants: enumerated, direction checked. These
+    // matches only ever ADD a read for the relationship partner;
+    // writes stay with the wall above.
+    match /users/{uid}/children/{childId} {
+      allow read: if signedIn() && !isAnon()
+        && relActive(request.auth.uid, uid)
+        && relData(request.auth.uid, uid).carerUid == request.auth.uid
+        && relData(request.auth.uid, uid).familyUid == uid;
+    }
+    match /users/{uid}/dayStory/{entryId} {
+      allow read: if signedIn() && !isAnon()
+        && relActive(request.auth.uid, uid)
+        && relData(request.auth.uid, uid).carerUid == request.auth.uid
+        && relData(request.auth.uid, uid).familyUid == uid
+        && resource.data.day >= relData(request.auth.uid, uid).createdDay;
+    }
+    match /users/{uid}/documents/{docId} {
+      allow read: if signedIn() && !isAnon()
+        && relActive(request.auth.uid, uid)
+        && relData(request.auth.uid, uid).familyUid == request.auth.uid
+        && relData(request.auth.uid, uid).carerUid == uid;
+    }
+
+    // Fold (17 Oct, twin): the Recently Deleted bin, named in its own right.
+    // Source: firestore.rules.recently-deleted.foldin.txt (owner-only; adds no new reach).
+    match /users/{uid}/recentlyDeleted/{binId} {
+      allow read: if signedIn() && request.auth.uid == uid && (!isAnon() || demoUnlocked());
+      allow create, update: if signedIn() && request.auth.uid == uid && (!isAnon() || demoUnlocked()) && !request.resource.data.keys().hasAny(['plan', 'planSource', 'comp', 'role', 'owner']);
+      allow delete: if signedIn() && request.auth.uid == uid && (!isAnon() || demoUnlocked());
+    }
+
+
+    // The demo unlock: creatable ONLY with the code's hash,
+    // checked against the desk-held record; never editable.
+    match /_unlocks/{uid} {
+      allow create: if signedIn() && request.auth.uid == uid && isAnon()
+        && exists(/databases/$(database)/documents/_demo/config)
+        && request.resource.data.codeHash ==
+           get(/databases/$(database)/documents/_demo/config).data.codeHash;
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow update, delete: if false;
+    }
+
+
+    // CEO people counters: paired writes only (see header).
+    // F17 Block B v3 (Security re-arm spec, 2026-10-19): the
+    // signup counts (total + weekly) move to one-field docs
+    // below (peopleTotal, peopleWeekly); this doc keeps only
+    // activatedWithin7d + returning7d under their existing
+    // arms (sole-transform writes, proven). Its total and
+    // weekly fields are retired: no client writes them. Every
+    // other aggregates document stays client-unwritable: money is
+    // written by the payment path alone, the rest by desk feeds.
+    match /_owner/aggregates/people/main {
+      allow read: if isOwner();
+      allow create: if
+        (aggPairedActivation()
+          && request.resource.data.keys()
+               .hasOnly(['activatedWithin7d'])
+          && getAfter(/databases/$(database)/documents/_owner/aggregates/people/main)
+               .data.get('activatedWithin7d', 0) == 1)
+        || (aggPairedReturn()
+          && request.resource.data.keys()
+               .hasOnly(['returning7d'])
+          && getAfter(/databases/$(database)/documents/_owner/aggregates/people/main)
+               .data.get('returning7d', 0) == 1);
+      allow update: if
+        (aggPairedActivation()
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['activatedWithin7d'])
+          && aggPlusOne('activatedWithin7d'))
+        || (aggPairedReturn()
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['returning7d'])
+          && aggPlusOne('returning7d'));
+      allow delete: if false;
+    }
+
+
+    match /_owner/aggregates/peopleTotal/main {
+      allow read: if isOwner();
+      allow create: if aggPairedSignup()
+        && request.resource.data.keys().hasOnly(['total'])
+        && getAfter(/databases/$(database)/documents/_owner/aggregates/peopleTotal/main)
+             .data.get('total', 0) == 1;
+      allow update: if aggPairedSignup()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['total'])
+        && getAfter(/databases/$(database)/documents/_owner/aggregates/peopleTotal/main)
+             .data.get('total', 0) == resource.data.get('total', 0) + 1;
+      allow delete: if false;
+    }
+    match /_owner/aggregates/peopleWeekly/{wk} {
+      allow read: if isOwner();
+      allow create: if aggPairedSignup()
+        && wk.matches('^\\d{4}-W\\d{2}$')
+        && request.resource.data.keys().hasOnly(['count'])
+        && getAfter(/databases/$(database)/documents/_owner/aggregates/peopleWeekly/$(wk))
+             .data.get('count', 0) == 1;
+      allow update: if aggPairedSignup()
+        && wk.matches('^\\d{4}-W\\d{2}$')
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['count'])
+        && getAfter(/databases/$(database)/documents/_owner/aggregates/peopleWeekly/$(wk))
+             .data.get('count', 0) == resource.data.get('count', 0) + 1;
+      allow delete: if false;
+    }
+
+
+    // The safety counts: numbers only, never content. Filed
+    // rises with a filing; open rises with it and drains by
+    // exactly one on the operator's closure move. (Fold-in note
+    // for Security's item 5 read: the drain arm is owner-only
+    // and exactly minus one; the same-batch pairing with the
+    // disposition write is the app layer's obligation, verified
+    // behaviourally in the safety battery, because a rules
+    // expression cannot name the report being closed.)
+    match /_owner/aggregates/safetyFiled/main {
+      allow read: if isOwner();
+      allow create: if signedIn() && !isAnon()
+        && request.resource.data.keys().hasOnly(["filed"])
+        && getAfter(/databases/$(database)/documents/_owner/aggregates/safetyFiled/main)
+             .data.get("filed", 0) == 1;
+      allow update: if signedIn() && !isAnon()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(["filed"])
+        && getAfter(/databases/$(database)/documents/_owner/aggregates/safetyFiled/main)
+             .data.get("filed", 0) == resource.data.get("filed", 0) + 1;
+      allow delete: if false;
+    }
+    match /_owner/aggregates/safetyOpen/main {
+      allow read: if isOwner();
+      allow create: if signedIn() && !isAnon()
+        && request.resource.data.keys().hasOnly(["open"])
+        && getAfter(/databases/$(database)/documents/_owner/aggregates/safetyOpen/main)
+             .data.get("open", 0) == 1;
+      allow update: if
+        (signedIn() && !isAnon()
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(["open"])
+          && getAfter(/databases/$(database)/documents/_owner/aggregates/safetyOpen/main)
+               .data.get("open", 0) == resource.data.get("open", 0) + 1)
+        || (isOwner()
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(["open"])
+          && getAfter(/databases/$(database)/documents/_owner/aggregates/safetyOpen/main)
+               .data.get("open", 0) == resource.data.get("open", 0) - 1
+          && getAfter(/databases/$(database)/documents/_owner/aggregates/safetyOpen/main)
+               .data.get("open", 0) >= 0);
+      allow delete: if false;
+    }
+
+    // Dashboards read aggregates here and nowhere else.
+    match /_owner/aggregates/{document=**} {
+      allow read: if isOwner();
+      allow write: if false;
+    }
+
+// ---- The matching card (matching delta, cleared) ----
+// ---- The deep answers (longer questionnaire delta, as
+// rebuilt by Security's ruling of 16 Oct 2026): answers live as
+// per-answer documents under profiles/{uid}/answers/{code}.
+// The v4 enumeration retired: it compiled, but a deep write's
+// evaluation walks past Firestore's 1000 expression runtime
+// budget (Playground-proven, error verbatim on file). A code
+// membership list test plus one closed fence per document has
+// no ceiling at any questionnaire size. Named limitation
+// (Security, in the safety counter class): a list value's
+// elements cannot be type checked per element in rules; the
+// fence bounds the count (10), not each element.
+
+match /profiles/{uid} {
+  allow read: if signedIn() && (!isAnon() || demoUnlocked());
+  allow create, update: if signedIn() && !isAnon()
+    && request.auth.uid == uid
+    && request.resource.data.keys().hasOnly(
+      ["side", "displayName", "postcode", "photoUrl", "card", "looking", "updatedAt", "level", "learningPlan", "about"])
+    && (!("about" in request.resource.data)
+        || (request.resource.data.about is string && request.resource.data.about.size() <= 300))
+    && (!("level" in request.resource.data)
+        || request.resource.data.level in ["explore", "quick", "better", "full"])
+    && (!("learningPlan" in request.resource.data)
+        || (request.resource.data.learningPlan is map
+            && request.resource.data.learningPlan.keys().hasOnly(["children", "areas", "styles", "languages", "otherLanguage", "step", "setupComplete", "updatedAt"])
+            && request.resource.data.learningPlan.children is list
+            && request.resource.data.learningPlan.children.size() <= 20
+            && request.resource.data.learningPlan.areas is list
+            && request.resource.data.learningPlan.areas.size() <= 10
+            && request.resource.data.learningPlan.styles is list
+            && request.resource.data.learningPlan.styles.size() <= 10
+            && request.resource.data.learningPlan.languages is list
+            && request.resource.data.learningPlan.languages.size() <= 20
+            && request.resource.data.learningPlan.otherLanguage is string
+            && request.resource.data.learningPlan.otherLanguage.size() <= 60))
+    && request.resource.data.card.keys().hasOnly(
+      ["childrenBands", "languages", "pets", "smokerHousehold", "scheduleNeed",
+       "payOffered", "age", "nationality", "cultureOffer", "smoker", "experience", "checksLevel",
+       "availability", "drives", "ownCar", "cooking", "tasks", "tasksRefused",
+       "activities", "personality", "routineStyle", "agesAccepted",
+       "agesPreferred", "petsOk", "smokerHouseholdOk", "nonSmokerHousehold",
+       "specialNeeds", "payFloor", "maxDistanceKm", "latE2", "lngE2", "gallery", "auPair"])
+    && (!("auPair" in request.resource.data.card)
+        || (request.resource.data.card.auPair is map
+            && request.resource.data.card.auPair.keys().hasOnly(["on", "arrival", "homeCountry", "english", "infant", "drives", "swim"])))
+    && request.resource.data.looking.keys().hasOnly(["musts", "prefs"])
+    && request.resource.data.looking.musts.keys().hasOnly(
+      ["languages", "checksLevel", "experience", "ageBand", "nationality",
+       "nonSmoker", "drives", "ownCar", "cooking", "tasks", "specialNeeds",
+       "petsOk", "maxDistanceKm"])
+    && request.resource.data.looking.prefs.keys().hasOnly(
+      ["personality", "activities", "routineStyle", "nationality", "tasks", "cooking"])
+    && (!("gallery" in request.resource.data.card)
+        || (request.resource.data.card.gallery is list
+            && request.resource.data.card.gallery.size() <= 4))
+    && (!("latE2" in request.resource.data.card)
+        || request.resource.data.card.latE2 is int)
+    && (!("lngE2" in request.resource.data.card)
+        || request.resource.data.card.lngE2 is int)
+    && (!("scheduleNeed" in request.resource.data.card)
+        || request.resource.data.card.scheduleNeed.keys().hasOnly(
+          ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]))
+    && (!("availability" in request.resource.data.card)
+        || request.resource.data.card.availability.keys().hasOnly(
+          ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]))
+    && (!("experience" in request.resource.data.card)
+        || request.resource.data.card.experience.keys().hasOnly(
+          ["0-1", "1-3", "3-5", "5-12", "12+"]));
+  allow delete: if signedIn() && request.auth.uid == uid;
+}
+
+
+// ---- Relationships: the grant's single source ----
+// Amended at Security's static review (CONDITIONAL PASS, 15 Oct
+// 2026): G — the member list is bound to the pair exactly, and a
+// self pair is refused. A — "hired" can no longer be declared
+// by its beneficiary: the contact step records contactBy (the
+// one field admitted beside state, on that step only), and the
+// hired step belongs to the family member alone. (Security's
+// own correction at the diff: barring contactBy as well would
+// deadlock the carer created flow, where the family IS
+// contactBy; the state machine carries the protection.)
+// C2 — the creator's claimed role must match their published
+// card's side.
+match /profiles/{uid}/answers/{code} {
+  // Per-answer construction (Security ruling, 16 Oct 2026): one
+  // document per questionnaire answer. Code membership is one
+  // list test against the approved codes; each document carries
+  // the value discipline as its own closed fence plus
+  // its bucket. Reads ride the card's read; writes owner alone.
+  allow read: if signedIn() && (!isAnon() || demoUnlocked());
+  allow create, update: if signedIn() && !isAnon()
+    && request.auth.uid == uid
+    && code in ["F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12", "F13", "F14", "F15", "F16", "F17", "F18", "F19", "F20", "F21", "F22", "F23", "F24", "F25", "F26", "F27", "F28", "F29", "F30", "F31", "F32", "F33", "F34", "F35", "F36", "F37", "F38", "F39", "F40", "F41", "F42", "F43", "F44", "F45", "F46", "F47", "F48", "F49", "F50", "F51", "F52", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10", "C11", "C12", "C13", "C14", "C15", "C16", "C17", "C18", "C19", "C20", "C21", "C22", "C23", "C24", "C25", "C26", "C27", "C28", "C29", "C30", "C31", "C32", "C33", "C34", "C35", "C36", "C37", "C38", "C39", "C40", "C41", "C42", "C43", "C44", "C45", "C46", "C47", "C48", "C49", "C50", "C51", "C52", "C53", "C54", "C55", "C56", "C57", "C58", "C59", "C60"]
+    && request.resource.data.keys().hasOnly(["bucket", "v", "s", "feed"])
+    && request.resource.data.bucket in ["musts", "prefs"]
+    && (!("s" in request.resource.data)
+        || request.resource.data.s in ["must", "pref", "either"])
+    && (!("feed" in request.resource.data)
+        || request.resource.data.feed in ["approach", "trust", "experience", "schedule", "language", "tasks", "distance"])
+    && (!("v" in request.resource.data)
+        || (request.resource.data.v is string && request.resource.data.v.size() <= 120)
+        || (request.resource.data.v is string
+            && code in ["F33", "F49", "C54", "C56"]
+            && request.resource.data.v.size() <= 2000)
+        || request.resource.data.v is bool
+        || request.resource.data.v is number
+        || (request.resource.data.v is list && request.resource.data.v.size() <= 10)
+        || (request.resource.data.v is list && code == "F8"
+            && request.resource.data.v.size() <= 12)
+        || (request.resource.data.v is map
+            && request.resource.data.v.size() <= 16
+            && request.resource.data.v.keys().hasOnly(
+              ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun",
+               "0-1", "1-3", "3-5", "5-12", "12+",
+               "petsOk", "smokerOk", "nonSmokerHousehold"]))
+        || (request.resource.data.v is map
+            && "checks" in request.resource.data.v
+            && "years" in request.resource.data.v
+            && request.resource.data.v.keys().hasOnly(["checks", "years"])
+            && request.resource.data.v.checks is string
+            && request.resource.data.v.years is map
+            && request.resource.data.v.years.size() <= 4
+            && request.resource.data.v.years.keys().hasOnly(
+              ["0-1", "1-3", "3-5", "5-12"])));
+  allow delete: if signedIn() && !isAnon()
+    && request.auth.uid == uid;
+}
+
+    // Fold (17 Oct, twin): push notification device docs, owner only, the only door.
+    // Source: firestore.rules.push.foldin.txt (Security design read PASS 17 Oct).
+    match /profiles/{uid}/devices/{deviceId} {
+      allow read: if signedIn() && request.auth.uid == uid && (!isAnon() || demoUnlocked());
+      allow create, update: if signedIn() && !isAnon()
+        && request.auth.uid == uid
+        && !request.resource.data.keys().hasAny(['plan', 'planSource', 'comp', 'role', 'owner'])
+        && request.resource.data.keys().hasOnly(['token', 'platform', 'active', 'kinds', 'createdAt', 'lastSeenAt', 'updatedAt'])
+        && request.resource.data.token is string
+        && request.resource.data.token.size() <= 4096
+        && request.resource.data.platform in ['ios', 'android', 'web']
+        && request.resource.data.active is bool
+        && request.resource.data.kinds.keys().hasOnly(['message', 'reminder'])
+        && (!('message' in request.resource.data.kinds) || request.resource.data.kinds.message is bool)
+        && (!('reminder' in request.resource.data.kinds) || request.resource.data.kinds.reminder is bool);
+      allow delete: if signedIn() && request.auth.uid == uid && (!isAnon() || demoUnlocked());
+    }
+
+    // Fold (17 Oct, twin): connect link invites; the code is the secret.
+    // Source: firestore.rules.invites.foldin.txt (Security diff CLEARED 17 Oct).
+    match /invites/{code} {
+      allow get: if signedIn() && !isAnon()
+        && code.matches("^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{8}$");
+      allow list: if signedIn() && !isAnon()
+        && request.auth.uid == resource.data.familyUid;
+      allow create: if signedIn() && !isAnon()
+        && code.matches("^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{8}$")
+        && request.resource.data.keys().hasAll(['familyUid', 'label', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['familyUid', 'label', 'createdAt', 'usedBy', 'learningPlan'])
+        && (!("learningPlan" in request.resource.data)
+            || (request.resource.data.learningPlan is map
+              && request.resource.data.learningPlan.keys().hasOnly(["children", "areas", "styles", "languages", "otherLanguage", "step", "setupComplete", "updatedAt"])))
+        && request.resource.data.familyUid == request.auth.uid
+        && request.resource.data.label is string
+        && request.resource.data.label.size() <= 60
+        && request.resource.data.createdAt is timestamp
+        && (!('usedBy' in request.resource.data) || request.resource.data.usedBy == null)
+        && !request.resource.data.keys().hasAny(['plan', 'planSource', 'comp', 'role', 'owner']);
+      allow update: if signedIn() && !isAnon()
+        && request.auth.uid != resource.data.familyUid
+        && (!('usedBy' in resource.data) || resource.data.usedBy == null)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usedBy'])
+        && request.resource.data.usedBy == request.auth.uid;
+      allow delete: if signedIn() && !isAnon()
+        && request.auth.uid == resource.data.familyUid;
+    }
+
+match /relationships/{pairId} {
+  allow read: if signedIn() && request.auth.uid in resource.data.members;
+  allow create: if signedIn() && !isAnon()
+    && request.resource.data.keys().hasOnly(
+      ["members", "familyUid", "carerUid", "state", "createdBy", "createdAt", "createdDay", "learningPlan", "learningMatches"])
+    && request.resource.data.familyUid != request.resource.data.carerUid
+    && request.resource.data.members.size() == 2
+    && request.resource.data.members.hasAll(
+      [request.resource.data.familyUid, request.resource.data.carerUid])
+    && request.auth.uid in request.resource.data.members
+    && request.resource.data.createdBy == request.auth.uid
+    && request.resource.data.state == "pending"
+    && (!("learningPlan" in request.resource.data)
+        || request.resource.data.learningPlan is map)
+    && (!("learningMatches" in request.resource.data)
+        || (request.resource.data.learningMatches is list && request.resource.data.learningMatches.size() <= 3))
+    && !("contactBy" in request.resource.data)
+    && ((request.resource.data.familyUid == request.auth.uid
+          && get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.side == "family")
+        || (request.resource.data.carerUid == request.auth.uid
+          && get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.side == "carer"))
+    && pairId == (request.resource.data.familyUid < request.resource.data.carerUid
+        ? request.resource.data.familyUid + "_" + request.resource.data.carerUid
+        : request.resource.data.carerUid + "_" + request.resource.data.familyUid);
+  allow update: if signedIn()
+    && request.auth.uid in resource.data.members
+    && !blockedEitherWay(resource.data.familyUid, resource.data.carerUid)
+    && (
+      // Learning preferences belong to this pair and are editable only by
+      // either member after contact is accepted. OWNER MUST DEPLOY this rules text.
+      (resource.data.state in ["contact", "hired"]
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["learningPlan"])
+        && request.resource.data.learningPlan is map
+        && request.resource.data.learningPlan.keys().hasOnly(["children", "areas", "styles", "languages", "otherLanguage", "step", "setupComplete", "updatedAt"]))
+      // Ending is unilateral, from any state; state only.
+      || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(["state"])
+        && request.resource.data.state == "ended")
+      // The contact step: the member who did not create accepts,
+      // and is recorded as contactBy in the same write.
+      || (resource.data.state == "pending"
+          && request.resource.data.state == "contact"
+          && request.auth.uid != resource.data.createdBy
+          && request.resource.data.diff(resource.data).affectedKeys().hasAll(["state", "contactBy"])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["state", "contactBy"])
+          && request.resource.data.contactBy == request.auth.uid)
+      // The hired step: the family's own act. (Corrected at
+      // Security's diff: an earlier shape also barred contactBy,
+      // which deadlocked the carer created flow forever — the
+      // family confirms contact there, becoming contactBy, and
+      // was then barred from hiring. The protection lives in
+      // the state machine: contact is a separate earlier write
+      // by the non-creator; the hire is the family's alone.)
+      || (resource.data.state == "contact"
+          && request.resource.data.state == "hired"
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["state"])
+          && request.auth.uid == resource.data.familyUid)
+    );
+  allow delete: if false;
+}
+
+    // Fold (17 Oct, twin): the shared shopping list, one pinned doc per pair.
+    // Source: firestore.rules.shopping.foldin.txt (Security diff CLEARED 17 Oct).
+    match /relationships/{pairId}/lists/shoppingList {
+      allow read: if pairOpen(pairId);
+      allow create, update: if pairOpen(pairId)
+        && request.resource.data.keys().hasAll(['items', 'updatedAt', 'updatedBy'])
+        && request.resource.data.keys().hasOnly(['items', 'updatedAt', 'updatedBy'])
+        && request.resource.data.items is list
+        && request.resource.data.items.size() <= 200
+        && request.resource.data.updatedAt is timestamp
+        && request.resource.data.updatedBy == request.auth.uid;
+      allow delete: if false;
+    }
+
+
+    // Two way messages and photo updates (28 Oct 2026). One doc per
+    // message under the pair. Only the two members read; a member
+    // writes as themselves; photos are small pictures kept inline.
+    match /relationships/{pairId}/messages/{msgId} {
+      allow read: if pairOpen(pairId);
+      allow create: if pairOpen(pairId)
+        && request.resource.data.keys().hasOnly(['from', 'kind', 'text', 'img', 'at'])
+        && request.resource.data.keys().hasAll(['from', 'kind', 'text', 'at'])
+        && request.resource.data.from == request.auth.uid
+        && request.resource.data.kind in ['text', 'photo', 'photoAsk']
+        && request.resource.data.text is string
+        && request.resource.data.text.size() <= 1000
+        && request.resource.data.at == request.time
+        && (!('img' in request.resource.data)
+            || (request.resource.data.img is string && request.resource.data.img.size() <= 400000));
+      allow update, delete: if false;
+    }
+
+    // Reviews and references (28 Oct 2026). A review lives under the
+    // person it is about. kind "app": written by a member who has an
+    // open pair with them (doc id = the writer's uid, so one each).
+    // kind "link": written through a one-time link the person made
+    // (doc id = the link token; the invite must exist; one use only
+    // because a second write on the same id would be an update).
+    match /profiles/{uid}/refInvites/{token} {
+      allow read, delete: if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn() && !isAnon() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['at'])
+        && request.resource.data.at == request.time;
+      allow update: if false;
+    }
+    match /profiles/{uid}/reviews/{rid} {
+      allow read: if signedIn() && !isAnon();
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['from', 'kind', 'stars', 'text', 'at', 'name', 'relation'])
+        && request.resource.data.keys().hasAll(['from', 'kind', 'stars', 'text', 'at'])
+        && request.resource.data.from == request.auth.uid
+        && request.resource.data.stars is int
+        && request.resource.data.stars >= 1 && request.resource.data.stars <= 5
+        && request.resource.data.text is string
+        && request.resource.data.text.size() <= 500
+        && request.resource.data.at == request.time
+        && (!('name' in request.resource.data)
+            || (request.resource.data.name is string && request.resource.data.name.size() <= 40))
+        && (!('relation' in request.resource.data)
+            || (request.resource.data.relation is string && request.resource.data.relation.size() <= 40))
+        && (
+          (request.resource.data.kind == 'app'
+            && !isAnon()
+            && rid == request.auth.uid
+            && uid != request.auth.uid
+            && pairOpen(request.auth.uid < uid
+                 ? request.auth.uid + '_' + uid
+                 : uid + '_' + request.auth.uid))
+          ||
+          (request.resource.data.kind == 'link'
+            && exists(/databases/$(database)/documents/profiles/$(uid)/refInvites/$(rid)))
+        );
+      allow update: if false;
+      allow delete: if signedIn() && !isAnon()
+        && resource.data.from == request.auth.uid;
+    }
+
+// ---- The urgent board ----
+match /jobs/{jobId} {
+  allow read: if signedIn() && (!isAnon() || demoUnlocked())
+    && (resource.data.state == "open"
+        || request.auth.uid == resource.data.familyUid
+        || request.auth.uid == resource.data.get("carerUid", ""));
+  allow create: if signedIn() && !isAnon()
+    && request.resource.data.familyUid == request.auth.uid
+    && request.resource.data.state == "open"
+    && request.resource.data.keys().hasOnly(
+      ["familyUid", "when", "dayParts", "postcode", "bands", "note",
+       "state", "createdAt", "latE2", "lngE2"])
+    && (!("latE2" in request.resource.data)
+        || request.resource.data.latE2 is int)
+    && (!("lngE2" in request.resource.data)
+        || request.resource.data.lngE2 is int);
+  allow update: if signedIn()
+    && request.auth.uid == resource.data.familyUid
+    && request.resource.data.diff(resource.data).affectedKeys()
+      .hasOnly(["state", "carerUid", "note"]);
+  allow delete: if false;
+
+  match /interest/{carerUid} {
+    allow read: if signedIn()
+      && (request.auth.uid == carerUid
+          || request.auth.uid
+             == get(/databases/$(database)/documents/jobs/$(jobId)).data.familyUid);
+    allow create: if signedIn() && !isAnon()
+      && request.auth.uid == carerUid
+      && get(/databases/$(database)/documents/jobs/$(jobId)).data.state == "open"
+      && request.resource.data.keys().hasOnly(["note", "createdAt"]);
+    allow update: if false;
+    allow delete: if signedIn() && request.auth.uid == carerUid;
+  }
+}
+
+
+// ---- The pair calendar (Amendment 5 delta, cleared v3) ----
+match /schedule/{pairId} {
+  allow read, write: if false;  // the pair doc itself carries nothing
+
+  // BLOCK VOCABULARY (a fence, read as one):
+  //   kind:  "extra"    a one time added session
+  //          "off"      a skipped session or day marker
+  //          "moved"    a session held at a new time, one time
+  //   state: "live" — blocks are never edited and never deleted.
+  // "day" is an ISO date (YYYY-MM-DD). The regular week's shape
+  // does NOT live here; it lives in the week versions below.
+  match /blocks/{blockId} {
+    allow read: if pairOpen(pairId);
+    allow create: if pairOpen(pairId)
+      && request.resource.data.keys().hasOnly(
+        ["day", "start", "end", "kind", "withUid", "state", "sourceRequest", "createdBy", "createdAt"])
+      && request.resource.data.kind in ["extra", "off", "moved"]
+      && request.resource.data.state == "live"
+      && request.resource.data.createdBy == request.auth.uid
+      && request.resource.data.withUid in pairDoc(pairId).data.members
+      && request.resource.data.withUid != request.auth.uid
+      // An acceptance landing: the named request stands
+      // accepted, was decided by THIS writer, and the block
+      // EQUALS the proposal: the kind maps (extra to extra,
+      // off to off, move to moved), the day is the request's
+      // day or one of its listed days, and start and end match.
+      && get(/databases/$(database)/documents/schedule/$(pairId)/requests/$(request.resource.data.sourceRequest)).data.state == "accepted"
+      && get(/databases/$(database)/documents/schedule/$(pairId)/requests/$(request.resource.data.sourceRequest)).data.decidedBy == request.auth.uid
+      && ((get(/databases/$(database)/documents/schedule/$(pairId)/requests/$(request.resource.data.sourceRequest)).data.kind == "extra" && request.resource.data.kind == "extra")
+          || (get(/databases/$(database)/documents/schedule/$(pairId)/requests/$(request.resource.data.sourceRequest)).data.kind == "off" && request.resource.data.kind == "off")
+          || (get(/databases/$(database)/documents/schedule/$(pairId)/requests/$(request.resource.data.sourceRequest)).data.kind == "move" && request.resource.data.kind == "moved"))
+      && (request.resource.data.day == get(/databases/$(database)/documents/schedule/$(pairId)/requests/$(request.resource.data.sourceRequest)).data.day
+          || ("days" in get(/databases/$(database)/documents/schedule/$(pairId)/requests/$(request.resource.data.sourceRequest)).data
+              && request.resource.data.day in get(/databases/$(database)/documents/schedule/$(pairId)/requests/$(request.resource.data.sourceRequest)).data.days))
+      && request.resource.data.get("start", "") == get(/databases/$(database)/documents/schedule/$(pairId)/requests/$(request.resource.data.sourceRequest)).data.get("start", "")
+      && request.resource.data.get("end", "") == get(/databases/$(database)/documents/schedule/$(pairId)/requests/$(request.resource.data.sourceRequest)).data.get("end", "");
+    allow update: if false;
+    allow delete: if false;
+  }
+
+  // Requests: proposals only. A request doc can change its own
+  // state (and its decider stamp) and nothing else, ever.
+  // Kinds: "extra" · "off" · "move" · "week-change".
+  // A "week-change" request also carries proposedVersionId and
+  // effectiveFrom; no other kind may carry them.
+  match /requests/{reqId} {
+    allow read: if pairOpen(pairId);
+    allow create: if pairOpen(pairId)
+      && request.resource.data.keys().hasOnly(
+        ["kind", "askedBy", "day", "days", "start", "end", "state", "decidedBy",
+         "proposedVersionId", "effectiveFrom", "closeReason", "closedBy", "closedAt", "createdAt"])
+      && request.resource.data.kind in ["extra", "off", "move", "week-change"]
+      && request.resource.data.askedBy == request.auth.uid
+      && request.resource.data.state == "waiting"
+      && !("decidedBy" in request.resource.data)
+      && !("closeReason" in request.resource.data)
+      && !("closedBy" in request.resource.data)
+      && !("closedAt" in request.resource.data)
+      && (("proposedVersionId" in request.resource.data)
+            == (request.resource.data.kind == "week-change"))
+      && (("effectiveFrom" in request.resource.data)
+            == (request.resource.data.kind == "week-change"));
+    allow update: if
+      // The living pair: decide or withdraw. The two arms
+      // carry different fences: a withdrawal may not stamp
+      // decidedBy; only a decision carries it.
+      (pairOpen(pairId)
+        && resource.data.state == "waiting"
+        && (
+          (request.resource.data.state in ["accepted", "declined"]
+            && request.auth.uid != resource.data.askedBy
+            && request.resource.data.decidedBy == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasAll(["state", "decidedBy"])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["state", "decidedBy"]))
+          || (request.resource.data.state == "withdrawn"
+            && request.auth.uid == resource.data.askedBy
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["state"]))))
+      ||
+      // PIN A: the severed pair's records act. From "waiting"
+      // only, exactly once, fenced to the stamp fields.
+      (pairMember(pairId) && pairSevered(pairId)
+        && resource.data.state == "waiting"
+        && request.resource.data.state == "closed"
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(["state", "closeReason", "closedBy", "closedAt"])
+        && request.resource.data.closedBy == request.auth.uid
+        && ((request.resource.data.closeReason == "ended"
+             && pairRel(pairId).state == "ended")
+            || (request.resource.data.closeReason == "blocked"
+             && blockedEitherWay(pairRel(pairId).familyUid, pairRel(pairId).carerUid))));
+    allow delete: if false;
+  }
+
+  // Week versions: write once proposals. The pattern is child
+  // bare: a list of entries, each only a weekday code, a day
+  // part, a start and an end. Never updated, never deleted.
+  match /weekVersions/{versionId} {
+    allow read: if pairOpen(pairId);
+    allow create: if pairOpen(pairId)
+      && request.resource.data.keys().hasOnly(
+        ["pattern", "effectiveFrom", "proposedBy", "sourceRequest", "createdAt"])
+      && request.resource.data.proposedBy == request.auth.uid
+      && request.resource.data.pattern is list
+      && (!("sourceRequest" in request.resource.data)
+          || (get(/databases/$(database)/documents/schedule/$(pairId)/requests/$(request.resource.data.sourceRequest)).data.kind == "week-change"
+              && get(/databases/$(database)/documents/schedule/$(pairId)/requests/$(request.resource.data.sourceRequest)).data.askedBy == request.auth.uid));
+    allow update: if false;
+    allow delete: if false;
+  }
+
+  // The week pointer: which version is the agreed week, and
+  // from when. Created at formation; after that it moves only
+  // on the accepted week-change binding.
+  match /weekCurrent/{doc} {
+    allow read: if pairOpen(pairId);
+    allow create: if pairOpen(pairId) && doc == "main"
+      && request.resource.data.keys().hasOnly(
+        ["versionId", "effectiveFrom", "updatedBy", "updatedAt"])
+      && request.resource.data.updatedBy == request.auth.uid
+      && get(/databases/$(database)/documents/schedule/$(pairId)/weekVersions/$(request.resource.data.versionId)).data.proposedBy == request.auth.uid
+      && get(/databases/$(database)/documents/schedule/$(pairId)/weekVersions/$(request.resource.data.versionId)).data.effectiveFrom == request.resource.data.effectiveFrom;
+    // Every later move rides one accepted week-change request,
+    // named on the pointer itself in boundRequest, and the
+    // pointer's new values must EQUAL that request's proposal.
+    allow update: if pairOpen(pairId) && doc == "main"
+      && request.resource.data.diff(resource.data).affectedKeys()
+           .hasOnly(["versionId", "effectiveFrom", "updatedBy", "updatedAt", "boundRequest"])
+      && request.resource.data.updatedBy == request.auth.uid
+      && ("boundRequest" in request.resource.data)
+      && get(/databases/$(database)/documents/schedule/$(pairId)/requests/$(request.resource.data.boundRequest)).data.kind == "week-change"
+      && get(/databases/$(database)/documents/schedule/$(pairId)/requests/$(request.resource.data.boundRequest)).data.state == "accepted"
+      && get(/databases/$(database)/documents/schedule/$(pairId)/requests/$(request.resource.data.boundRequest)).data.decidedBy == request.auth.uid
+      && get(/databases/$(database)/documents/schedule/$(pairId)/requests/$(request.resource.data.boundRequest)).data.askedBy != request.auth.uid
+      && get(/databases/$(database)/documents/schedule/$(pairId)/requests/$(request.resource.data.boundRequest)).data.proposedVersionId == request.resource.data.versionId
+      && get(/databases/$(database)/documents/schedule/$(pairId)/requests/$(request.resource.data.boundRequest)).data.effectiveFrom == request.resource.data.effectiveFrom;
+    allow delete: if false;
+  }
+}
+
+
+// ---- The safety queue (Amendment 4 safety delta, cleared) ----
+match /safetyReports/{reportId} {
+  allow read: if isOwner();
+  allow create: if signedIn() && !isAnon()
+    && request.resource.data.keys().hasOnly(
+      ["reporterUid", "reportedUid", "surface", "category", "reporterWords",
+       "snapshot", "state", "createdAt"])
+    && request.resource.data.reporterUid == request.auth.uid
+    && request.resource.data.reportedUid != request.auth.uid
+    && request.resource.data.surface in ["message", "card", "job", "profile"]
+    && request.resource.data.category in
+      ["spam_scam", "rude_abusive", "fake_profile", "child_safety", "inappropriate", "other"]
+    && request.resource.data.reporterWords is string
+    && request.resource.data.reporterWords.size() <= 1000
+    && request.resource.data.snapshot is map
+    && request.resource.data.snapshot.keys().hasOnly(["items", "text", "title"])
+    && request.resource.data.snapshot.get("items", []) is list
+    && request.resource.data.snapshot.get("items", []).size() <= 10
+    && request.resource.data.snapshot.get("text", "") is string
+    && request.resource.data.snapshot.get("text", "").size() <= 4000
+    && request.resource.data.snapshot.get("title", "") is string
+    && request.resource.data.snapshot.get("title", "").size() <= 120
+    && request.resource.data.state == "open";
+  // The operator's hand only. Two arms: the closing move (from
+  // open, one way, the only moment the snapshot may be cleared)
+  // and disposition corrections on a closed case (snapshot
+  // excluded). When disposedBy is written, it is the writer.
+  allow update: if isOwner()
+    && (!("disposedBy" in request.resource.data.diff(resource.data).affectedKeys())
+        || request.resource.data.disposedBy == request.auth.uid)
+    && (
+      (resource.data.state == "open"
+        && request.resource.data.state in ["actioned", "dismissed"]
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["state", "disposition", "disposedAt", "disposedBy", "snapshot"]))
+      || (resource.data.state in ["actioned", "dismissed"]
+        && request.resource.data.state == resource.data.state
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["disposition", "disposedAt", "disposedBy"]))
+    );
+  allow delete: if false;
+}
+
+    match /_owner/{document=**} { allow read, write: if false; }
+    match /_comp/{document=**} { allow read, write: if false; }
+    match /_entitlements/{uid} { allow read: if signedIn() && request.auth.uid == uid && !isAnon(); allow create, update: if false; allow delete: if signedIn() && request.auth.uid == uid && !isAnon(); }
+    match /_entitlementEvents/{document=**} { allow read, write: if false; }
+    match /_activity/{uid} { allow read: if false; allow create, update: if signedIn() && request.auth.uid == uid && !isAnon() && request.resource.data.keys().hasOnly(["lastActiveAt"]) && request.resource.data.lastActiveAt == request.time; allow delete: if signedIn() && request.auth.uid == uid && !isAnon(); }
+    match /_demo/{document=**} { allow read, write: if false; }
+  }
+}

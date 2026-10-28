@@ -74,7 +74,7 @@ export function composer(root, viewerDoc) {
   const isFam = r !== "career";
   const saved = lsGet("need") || {};
   const text0 = saved.text != null ? saved.text : (viewerDoc && viewerDoc.about) || "";
-  const state = { name: saved.name != null ? saved.name : ((viewerDoc && viewerDoc.displayName) || ""), text: text0, kinds: saved.kinds || [], days: saved.days || [], parts: saved.parts || [] };
+  const state = { name: saved.name != null ? saved.name : ((viewerDoc && viewerDoc.displayName) || ""), text: text0, kinds: saved.kinds || [], days: saved.days || [], parts: saved.parts || [], aupair: saved.aupair || {} };
   const card = el("section", "v2Card v2Composer");
   const done = () => state.text.trim().length > 0;
   const render = (editing) => {
@@ -130,6 +130,7 @@ export function composer(root, viewerDoc) {
       parts.append(b);
     }
     card.append(parts);
+    if (!isFam) card.append(auPairFields(state));
     const msg = el("p", "formMsg"); msg.setAttribute("role", "status");
     const save = btn("mainBtn", "Save", async () => {
       if (!state.text.trim()) { msg.textContent = "Write a few words first."; return; }
@@ -138,6 +139,7 @@ export function composer(root, viewerDoc) {
       lsSet("need", payload);
       const a = await write("need", payload);
       const b = await write("about", { about: payload.text, name: payload.name });
+      if (!isFam) { payload.aupair = cleanAuPair(state.aupair, state.kinds.includes("Au pair")); lsSet("need", payload); await write("aupair", { auPair: payload.aupair }); }
       save.disabled = false;
       if (!a || !a.ok) { msg.textContent = "Saved on this phone. Could not reach your account, try again later."; return; }
       if (!b || !b.ok) { msg.textContent = "Saved to your account. Others cannot see it yet."; }
@@ -304,6 +306,8 @@ export function openMessages() {
   const head = el("div", "v2ChatHead");
   head.append(avatar(pair.name, null), el("strong", null, pair.name));
   profileOf(pair.other).then((p) => { if (p && p.photoUrl) { head.replaceChildren(avatar(pair.name, p.photoUrl), el("strong", null, pair.name)); } });
+  const revHost = el("div", "v2RevHost");
+  head.append(btn("ghostBtn v2RevBtn", "Review", () => { if (!revHost.firstChild) revHost.append(reviewForm(pair.other, pair.name, () => {})); }));
   const list = el("div", "v2Chat");
   const note = el("p", "formMsg"); note.setAttribute("role", "status");
   const input = el("textarea", "txtIn"); input.rows = 2; input.placeholder = "Write a message";
@@ -319,7 +323,7 @@ export function openMessages() {
     if (res.ok) { input.value = ""; note.textContent = ""; }
     else note.textContent = "Could not send. Check your connection and try again.";
   });
-  root.append(head, list, el("div", "v2Compose").appendChild(input) && input, send, note);
+  root.append(head, revHost, list, el("div", "v2Compose").appendChild(input) && input, send, note);
   unsubChat = sub(pair.id, (msgs) => {
     if (msgs == null) { list.replaceChildren(el("p", "v2Sub", "Messages could not load. Check your connection.")); return; }
     latest = msgs;
@@ -521,3 +525,135 @@ export function heartButton(uid) {
   return b;
 }
 Object.assign(window.CARESITS_V2, { favs, toggleFav, heartButton });
+
+// ---- reviews and references ----
+const SITE_BASE = "https://support897.github.io/caresits/";
+const starText = (n) => "\u2605".repeat(n) + "\u2606".repeat(5 - n);
+function tsMs(t) { return t && t.toMillis ? t.toMillis() : 0; }
+
+export async function loadReviews(uid) {
+  const dbx = window.CARESITS_DB;
+  if (!dbx || !uid) return [];
+  try {
+    const snap = await dbx.fs.getDocs(dbx.fs.collection(dbx.db, "profiles", uid, "reviews"));
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => tsMs(b.at) - tsMs(a.at));
+  } catch { return []; }
+}
+
+export async function reviewsInto(box, uid) {
+  box.replaceChildren(el("p", "v2Sub", "Loading reviews..."));
+  const list = await loadReviews(uid);
+  box.replaceChildren();
+  if (!list.length) { box.append(el("p", "v2Sub", "No reviews yet.")); return; }
+  const avg = list.reduce((s, r) => s + (r.stars || 0), 0) / list.length;
+  box.append(el("p", "v2RevSum", `${starText(Math.round(avg))}  ${avg.toFixed(1)} (${list.length})`));
+  for (const r of list.slice(0, 6)) {
+    const row = el("div", "v2Rev");
+    row.append(el("p", "v2RevStars", starText(r.stars || 0)));
+    if (r.text) row.append(el("p", "v2RevText", r.text));
+    const by = r.kind === "link"
+      ? `${r.name || "Someone"}${r.relation ? ", " + r.relation : ""} \u00b7 reference from a link (not checked by Caresitters)`
+      : "A Caresitters member they connected with";
+    row.append(el("p", "v2RevBy", by));
+    box.append(row);
+  }
+}
+
+export function reviewForm(otherUid, otherName, onDone) {
+  const card = el("section", "v2Card v2ReviewForm");
+  card.append(el("h3", "v2Title", `Review ${otherName || "them"}`));
+  let stars = 0;
+  const row = el("div", "v2StarRow");
+  for (let i = 1; i <= 5; i++) {
+    const b = btn("v2StarBtn", "\u2605", () => { stars = i; [...row.children].forEach((c, k) => c.classList.toggle("on", k < i)); });
+    b.setAttribute("aria-label", `${i} star${i > 1 ? "s" : ""}`);
+    row.append(b);
+  }
+  const ta = el("textarea", "txtIn"); ta.rows = 3; ta.maxLength = 500; ta.placeholder = "A few honest words. Be kind and fair.";
+  const msg = el("p", "formMsg"); msg.setAttribute("role", "status");
+  const send = btn("mainBtn", "Post review", async () => {
+    if (!stars) { msg.textContent = "Tap the stars first."; return; }
+    const text = ta.value.trim();
+    if (text.length < 5) { msg.textContent = "Please write a few words."; return; }
+    send.disabled = true;
+    const { fs, db } = window.CARESITS_DB;
+    try {
+      const ref = fs.doc(db, "profiles", otherUid, "reviews", me().uid);
+      try { await fs.deleteDoc(ref); } catch { /* none yet */ }
+      await fs.setDoc(ref, { from: me().uid, kind: "app", stars, text, at: fs.serverTimestamp() });
+      card.replaceChildren(el("p", "v2Sub", "Thank you. Your review is posted."));
+      onDone && onDone();
+    } catch { send.disabled = false; msg.textContent = "Could not post. Try again."; }
+  });
+  card.append(row, ta, msg, send, btn("ghostBtn", "Cancel", () => card.remove()));
+  return card;
+}
+
+async function askReference(note) {
+  const dbx = window.CARESITS_DB;
+  if (!dbx || !me().uid) return;
+  const alpha = "abcdefghijkmnpqrstuvwxyz23456789";
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  const token = [...bytes].map((b) => alpha[b % alpha.length]).join("");
+  try {
+    await dbx.fs.setDoc(dbx.fs.doc(dbx.db, "profiles", me().uid, "refInvites", token), { at: dbx.fs.serverTimestamp() });
+  } catch { note.textContent = "Could not make a link. Finish your profile first, then try again."; return; }
+  const link = `${SITE_BASE}app2/reference.html?c=${encodeURIComponent(me().uid)}&t=${token}&n=${encodeURIComponent(me().name || "")}`;
+  const text = `Hi! Could you write a short reference for me on Caresitters? It takes one minute, no account needed: ${link}`;
+  try {
+    if (navigator.share) { await navigator.share({ text }); note.textContent = "Link shared. It works once."; return; }
+  } catch { /* user closed the sheet; fall through to copy */ }
+  try { await navigator.clipboard.writeText(text); note.textContent = "Link copied. Paste it in a message. It works once."; }
+  catch { note.textContent = link; }
+}
+
+function addMeReferences() {
+  const root = document.getElementById("meRoot");
+  if (!root || root.querySelector(".v2RefBlock")) return;
+  const box = el("section", "v2Card v2RefBlock");
+  box.append(el("h3", "v2Title", "Reviews and references"));
+  box.append(el("p", "v2Sub", "Ask someone you worked for before to write a short reference. They get a link. No app needed."));
+  const note = el("p", "formMsg"); note.setAttribute("role", "status");
+  box.append(btn("mainBtn", "Send a reference link", () => askReference(note)), note);
+  const mine = el("div", "v2RevList");
+  box.append(mine);
+  root.prepend(box);
+  root.insertBefore(box, root.children[2] || null);
+  reviewsInto(mine, me().uid);
+}
+
+// ---- au pair details (carer) and chips ----
+export const AUPAIR_ENGLISH = ["Basic", "Good", "Fluent"];
+export function auPairFields(state, card) {
+  const wrap = el("details", "v2AuPair");
+  wrap.append(el("summary", null, "Au pair details (optional)"));
+  const a = state.aupair;
+  const months = [];
+  const d0 = new Date();
+  for (let i = 0; i < 12; i++) { const d = new Date(d0.getFullYear(), d0.getMonth() + i, 1); months.push([`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, d.toLocaleString("en", { month: "short", year: "numeric" })]); }
+  const sel = (label, opts, key) => {
+    const l = el("label", "v2Field"); l.append(el("span", "v2Label", label));
+    const s = el("select", "txtIn");
+    for (const [v, t] of [["", "Choose"], ...opts]) { const o = el("option", null, t); o.value = v; s.append(o); }
+    s.value = a[key] || ""; s.addEventListener("change", () => { a[key] = s.value; });
+    l.append(s); return l;
+  };
+  const country = el("input", "txtIn"); country.maxLength = 40; country.placeholder = "Home country"; country.value = a.homeCountry || "";
+  country.addEventListener("input", () => { a.homeCountry = country.value; });
+  const cl = el("label", "v2Field"); cl.append(el("span", "v2Label", "Home country"), country);
+  const chk = (label, key) => {
+    const l = el("label", "v2Check"); const c = el("input"); c.type = "checkbox"; c.checked = !!a[key];
+    c.addEventListener("change", () => { a[key] = c.checked; });
+    l.append(c, document.createTextNode(" " + label)); return l;
+  };
+  wrap.append(sel("Can arrive from", months, "arrival"), cl, sel("English level", AUPAIR_ENGLISH.map((x) => [x, x]), "english"), chk("Qualified to care for babies", "infant"), chk("Drives", "drives"), chk("Swims", "swim"));
+  return wrap;
+}
+export function cleanAuPair(a, on) {
+  return { on: !!on, arrival: String(a.arrival || "").slice(0, 7), homeCountry: String(a.homeCountry || "").trim().slice(0, 40), english: AUPAIR_ENGLISH.includes(a.english) ? a.english : "", infant: !!a.infant, drives: !!a.drives, swim: !!a.swim };
+}
+Object.assign(window.CARESITS_V2, { loadReviews, reviewsInto, reviewForm, auPairFields, cleanAuPair, AUPAIR_ENGLISH });
+{
+  const baseMe = renderMe;
+  window.CARESITS_ME_OPEN = () => { baseMe(); addMeReferences(); };
+}
