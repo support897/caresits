@@ -491,3 +491,33 @@ if (meBtn) meBtn.addEventListener("click", () => nav("me"));
   const r = document.getElementById("findRoot");
   if (r && !r.children.length) { const p = document.createElement("p"); p.className = "v2Loading"; p.textContent = "Loading your space…"; r.append(p); }
 }
+
+
+// ---- saved people (hearts) ----
+let favSet = null;
+function favKey() { return me().uid ? `caresits-v2-favs-${me().uid}` : null; }
+export function favs() {
+  if (favSet) return favSet;
+  let arr = [];
+  try { const k = favKey(); arr = k ? JSON.parse(localStorage.getItem(k) || "[]") : []; } catch { arr = []; }
+  favSet = new Set(arr);
+  const dbx = window.CARESITS_DB;
+  if (dbx && me().uid) dbx.fs.getDoc(dbx.fs.doc(dbx.db, "users", me().uid, "meta", "favs")).then((s) => { if (s.exists() && Array.isArray(s.data().uids)) { for (const u of s.data().uids) favSet.add(u); try { localStorage.setItem(favKey(), JSON.stringify([...favSet])); } catch { /* full */ } } }).catch(() => {});
+  return favSet;
+}
+export function toggleFav(uid) {
+  const f = favs();
+  if (f.has(uid)) f.delete(uid); else f.add(uid);
+  try { localStorage.setItem(favKey(), JSON.stringify([...f])); } catch { /* full */ }
+  write("favs", { uids: [...f] });
+  return f.has(uid);
+}
+export function heartButton(uid) {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "v2Heart";
+  const paint = (on) => { b.textContent = on ? "\u2665" : "\u2661"; b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)); b.setAttribute("aria-label", on ? "Remove from saved" : "Save for later"); };
+  paint(favs().has(uid));
+  b.addEventListener("click", (e) => { e.stopPropagation(); paint(toggleFav(uid)); });
+  return b;
+}
+Object.assign(window.CARESITS_V2, { favs, toggleFav, heartButton });

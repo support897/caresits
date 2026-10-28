@@ -379,7 +379,7 @@ export const STRINGS = {
     "find.filterYears": "At least {n} years", "find.filterOneYear": "At least one year", "find.filterMaxPay": "Maximum hourly pay", "find.filterMinPay": "Minimum hourly pay",
     "find.filterCurrency": "${n} per hour", "find.filterTransport": "Travel", "find.filterDrive": "Can drive", "find.filterOwnCar": "Has own car",
     "find.applyFilters": "Show results", "find.clearFilters": "Clear filters", "find.details": "See details", "find.hideDetails": "Hide details",
-    "find.whyMatch": "Why this match", "find.trustRegister": "Checks verified", "find.trustSighted": "Checks sighted",
+    "find.whyMatch": "Why this match", "find.trustRegister": "Says: checks done (ask for proof)", "find.trustSighted": "Says: documents seen (ask for proof)",
     "find.trustLanguages": "Speaks {n}", "find.trustResponse": "Replies in {n}",
     "find.detailRoles": "Care roles: {n}", "find.detailLanguages": "Languages: {n}", "find.detailAges": "Cares for ages: {n}",
     "find.detailChecks": "Checks: {n}", "find.detailAvailability": "Available: {n}", "find.detailAge": "Age: {n}",

@@ -512,3 +512,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .v2Requests{margin-bottom:14px}
 .v2ReqRow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 0}
 .v2ReqText{flex:1;min-width:140px;margin:0;font-weight:600}
+
+.v2Heart{margin-left:auto;background:none;border:0;font-size:28px;line-height:1;color:#c9778f;cursor:pointer;padding:6px 8px}
+.v2Heart.on{color:#d6335f}
+.v2SavedBtn.on{background:#fbe3ea;border-color:#d6335f}
+.findHead{display:flex;align-items:center;gap:12px}

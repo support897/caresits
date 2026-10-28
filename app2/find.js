@@ -244,6 +244,7 @@ function cardFor(entry) {
   const place = [doc.postcode ? tr("find.postcode", undefined, { n: doc.postcode }) : null, distanceKm != null ? tr("find.away", undefined, { n: distanceKm }) : null].filter(Boolean).join(" · ");
   who.append(el("p", "findPlace", place));
   head.append(who);
+  if (window.CARESITS_V2 && window.CARESITS_V2.heartButton && doc.uid) head.append(window.CARESITS_V2.heartButton(doc.uid));
   card.append(head);
   if (doc.about) card.append(el("p", "v2About", doc.about));
   const trust = trustChips(doc);
@@ -377,6 +378,7 @@ function mapSection(viewerDoc, candidateDocs, browse) {
 }
 
 const excludedUids = new Set();
+let showSaved = false;
 let lastRender = null;
 export function renderFind(root, viewerDoc, candidateDocs) {
   lastRender = { root, viewerDoc, candidateDocs };
@@ -386,7 +388,8 @@ export function renderFind(root, viewerDoc, candidateDocs) {
     filterState = { ...FILTER_DEFAULTS };
     moreFiltersOpen = false;
   }
-  const visibleCandidates = candidateDocs.filter((d) => !excludedUids.has(d.uid || d.displayName));
+  const favNow = window.CARESITS_V2 && window.CARESITS_V2.favs ? window.CARESITS_V2.favs() : new Set();
+  const visibleCandidates = candidateDocs.filter((d) => !excludedUids.has(d.uid || d.displayName) && (!showSaved || favNow.has(d.uid)));
   root.replaceChildren();
   const isCarerView = (viewerDoc && viewerDoc.side === "carer") || (!viewerDoc && window.CARESITS_V2 && window.CARESITS_V2.role() === "career");
   root.append(el("h2", "findTitle", isCarerView ? "Jobs" : tr("shell.find")));
@@ -419,7 +422,10 @@ export function renderFind(root, viewerDoc, candidateDocs) {
   filterButton.type = "button";
   filterButton.setAttribute("aria-haspopup", "dialog");
   filterButton.addEventListener("click", () => openFilterSheet(root, viewerDoc, visibleCandidates, filterButton));
-  toolbar.append(filterButton);
+  const savedBtn = el("button", "ghostBtn v2SavedBtn" + (showSaved ? " on" : ""), showSaved ? "\u2665 Saved (on)" : "\u2661 Saved");
+  savedBtn.type = "button";
+  savedBtn.addEventListener("click", () => { showSaved = !showSaved; renderFind(root, viewerDoc, candidateDocs); });
+  toolbar.append(savedBtn, filterButton);
   root.append(toolbar);
   const toggle = el("div", "viewToggle");
   const listBtn = el("button", "chip on", tr("find.list"));
