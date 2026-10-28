@@ -388,20 +388,21 @@ export function renderFind(root, viewerDoc, candidateDocs) {
   }
   const visibleCandidates = candidateDocs.filter((d) => !excludedUids.has(d.uid || d.displayName));
   root.replaceChildren();
-  root.append(el("h2", "findTitle", viewerDoc && viewerDoc.side === "carer" ? "Jobs" : tr("shell.find")));
+  const isCarerView = (viewerDoc && viewerDoc.side === "carer") || (!viewerDoc && window.CARESITS_V2 && window.CARESITS_V2.role() === "career");
+  root.append(el("h2", "findTitle", isCarerView ? "Jobs" : tr("shell.find")));
   if (window.CARESITS_V2) window.CARESITS_V2.composer(root, viewerDoc || null);
   if (!viewerDoc) {
     const box = el("div", "cardIn");
     const img = el("img", "bunnyBig");
     img.src = "bunny/bunny-rest-calm.png";
     img.alt = tr("find.bunnyRest");
-    box.append(img, el("h3", null, tr("find.waitTitle")), el("p", null, tr("find.waitBody")));
+    box.append(img, el("h3", null, isCarerView ? "Finish your profile to see families" : tr("find.waitTitle")), el("p", null, isCarerView ? "Answer a few questions and we line up families who need what you offer. Looking around costs nothing, always." : tr("find.waitBody")));
     const go = el("button", "mainBtn", tr("find.startQ"));
     go.type = "button";
     go.addEventListener("click", () => document.querySelector('[data-nav="questionnaire"]')?.click());
     box.append(go);
     root.append(box);
-    root.append(el("h3", "findNearlyTitle", tr("find.nearYou")));
+    root.append(el("h3", "findNearlyTitle", isCarerView ? "Families near you" : tr("find.nearYou")));
     root.append(mapSection(null, visibleCandidates, null));
     return;
   }

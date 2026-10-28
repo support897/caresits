@@ -490,7 +490,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .v2BtnRow { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
 .v2PhotoGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .v2Photo { margin: 0; }
-.v2Photo img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 14px; display: block; }
+.v2Photo img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 14px; display: block; }
 .v2Photo figcaption { font-size: 13px; color: #4a6b63; padding-top: 3px; }
 .v2Empty { text-align: center; }
 .v2ModeBtn { display: flex; flex-direction: column; gap: 4px; width: 100%; text-align: left; margin: 8px 0; padding: 14px; border-radius: 16px; border: 2px solid var(--line); background: #fff; color: var(--ink); font: inherit; cursor: pointer; min-height: 56px; }
@@ -504,3 +504,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .v2PitchRow { display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left; background: #F7EFE3; border: 0; border-radius: 14px; padding: 12px 14px; margin: 8px 0; font: inherit; color: var(--ink); min-height: 56px; cursor: pointer; }
 .v2PitchRow span { font-size: 15px; color: #4a6b63; }
 .bottomTab span { font-size: 12px; }
+
+.v2Toast{position:fixed;left:16px;right:16px;bottom:88px;max-width:520px;margin:0 auto;background:#1f4f45;color:#fff;padding:14px 16px;border-radius:14px;font-weight:600;z-index:9999;box-shadow:0 6px 20px rgba(0,0,0,.2)}
+.v2Name{margin-bottom:10px;width:100%;box-sizing:border-box}
+.v2Loading{padding:32px 16px;text-align:center;color:#4a6b63}
+
+.v2Requests{margin-bottom:14px}
+.v2ReqRow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 0}
+.v2ReqText{flex:1;min-width:140px;margin:0;font-weight:600}

@@ -17,7 +17,23 @@ const el = (tag, cls, text) => {
 const nowIso = () => new Date().toISOString();
 const today = () => nowIso().slice(0, 10);
 const write = (kind, payload) => { if (typeof window.CARESITS_WRITE === "function") return window.CARESITS_WRITE(kind, payload); return null; };
-const walkToQuestions = () => document.querySelector('[data-nav="questionnaire"]')?.click();
+function softToast(text) {
+  const t = document.createElement("div");
+  t.className = "v2Toast"; t.setAttribute("role", "status"); t.textContent = text;
+  document.body.append(t);
+  setTimeout(() => t.remove(), 4500);
+}
+const walkToQuestions = () => {
+  const me = window.CARESITS_ME || {};
+  if (!me.name) {
+    // The one thing missing is usually a first name: ask for that, not the whole questionnaire.
+    window.CARESITS_NAV && window.CARESITS_NAV("find");
+    softToast("Add your first name first. Then you can message.");
+    setTimeout(() => window.scrollTo(0, 0), 50);
+    return;
+  }
+  document.querySelector('[data-nav="questionnaire"]')?.click();
+};
 const profileDone = () => window.CARESITS_PROFILE_COMPLETE === true;
 const connectionPromptMemory = new Set();
 function connectionPromptKey(uid) { return accountKey("caresits-connected-prompts", uid); }
@@ -403,8 +419,8 @@ function bootPhaseC() {
     if (plan.ok) {
       const result = await write("contact", plan);
       if (result?.ok) {
-        document.querySelector('[data-nav="matches"]')?.click();
-        showConnectedPrompt(plan.pairId);
+        softToast("Request sent. You can chat as soon as they say yes.");
+        window.CARESITS_NAV && window.CARESITS_NAV("thread");
       }
     }
   };

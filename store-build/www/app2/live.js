@@ -72,7 +72,7 @@ export function routeWrite(kind, payload, uid) {
       return field ? { ok: true, op: "merge", path: `users/${uid}/meta/app`, data: { [field]: true } } : { ok: false, reason: "invalid-side" };
     }
     case "need": return { ok: true, op: "merge", path: `users/${uid}/meta/need`, data: { text: String(payload.text || "").slice(0, 300), kinds: (payload.kinds || []).slice(0, 8).map(String), days: (payload.days || []).slice(0, 7).map(String), parts: (payload.parts || []).slice(0, 3).map(String) } };
-    case "about": return { ok: true, op: "merge", path: `profiles/${uid}`, data: { about: String(payload.about || "").slice(0, 300) } };
+    case "about": return { ok: true, op: "merge", path: `profiles/${uid}`, data: { about: String(payload.about || "").slice(0, 300), ...(payload.name ? { displayName: String(payload.name).trim().slice(0, 40) } : {}) } };
     case "learning-plan": {
       const plan = publicLearningPlan(normaliseLearningPlan(payload.plan));
       return { ok: true, op: "learningPlan", path: `users/${uid}/meta/app`, profilePath: `profiles/${uid}`, data: { learningPlan: plan }, profileData: { learningPlan: plan }, pairPath: typeof payload.pairId === "string" && payload.pairId ? `relationships/${payload.pairId}` : "", pairData: { learningPlan: plan } };

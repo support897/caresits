@@ -41,7 +41,7 @@ export function livePairs() {
   const uid = me().uid;
   return (pc.rels || []).filter((r) => ["contact", "hired"].includes(r.state)).map((r) => {
     const other = (r.members || []).find((m) => m !== uid) || "";
-    return { id: r.id, other, name: (pc.names || {})[other] || "Your match", familyUid: r.familyUid, carerUid: r.carerUid };
+    return { id: r.id, other, name: (pc.names || {})[other] || (other === r.familyUid ? "Family" : "Carer"), familyUid: r.familyUid, carerUid: r.carerUid };
   });
 }
 
@@ -74,7 +74,7 @@ export function composer(root, viewerDoc) {
   const isFam = r !== "career";
   const saved = lsGet("need") || {};
   const text0 = saved.text != null ? saved.text : (viewerDoc && viewerDoc.about) || "";
-  const state = { text: text0, kinds: saved.kinds || [], days: saved.days || [], parts: saved.parts || [] };
+  const state = { name: saved.name != null ? saved.name : ((viewerDoc && viewerDoc.displayName) || ""), text: text0, kinds: saved.kinds || [], days: saved.days || [], parts: saved.parts || [] };
   const card = el("section", "v2Card v2Composer");
   const done = () => state.text.trim().length > 0;
   const render = (editing) => {
@@ -90,6 +90,10 @@ export function composer(root, viewerDoc) {
     }
     card.append(el("h2", "v2Title", isFam ? "What do you need?" : "Tell families about you"));
     card.append(el("p", "v2Sub", isFam ? "A few words is enough. Carers nearby will see it." : "A few words is enough. Families nearby will see it."));
+    const nm = el("input", "txtIn v2Name"); nm.type = "text"; nm.maxLength = 40; nm.placeholder = "Your first name"; nm.value = state.name;
+    nm.setAttribute("aria-label", "Your first name");
+    nm.addEventListener("input", () => { state.name = nm.value; });
+    card.append(nm);
     const ta = el("textarea", "txtIn v2Text");
     ta.rows = 3; ta.maxLength = 300;
     ta.placeholder = isFam ? "Example: Babysitter for my 2 kids (3 and 5), Tuesday and Thursday after school." : "Example: Friendly babysitter, 4 years of experience, first aid trained, free after 3pm.";
@@ -130,10 +134,10 @@ export function composer(root, viewerDoc) {
     const save = btn("mainBtn", "Save", async () => {
       if (!state.text.trim()) { msg.textContent = "Write a few words first."; return; }
       save.disabled = true;
-      const payload = { text: state.text.trim(), kinds: state.kinds, days: state.days, parts: state.parts };
+      const payload = { name: (state.name || "").trim(), text: state.text.trim(), kinds: state.kinds, days: state.days, parts: state.parts };
       lsSet("need", payload);
       const a = await write("need", payload);
-      const b = await write("about", { about: payload.text });
+      const b = await write("about", { about: payload.text, name: payload.name });
       save.disabled = false;
       if (!a || !a.ok) { msg.textContent = "Saved on this phone. Could not reach your account, try again later."; return; }
       if (!b || !b.ok) { msg.textContent = "Saved to your account. Others cannot see it yet."; }
@@ -143,8 +147,8 @@ export function composer(root, viewerDoc) {
     });
     card.append(msg, save);
   };
-  if (viewerDoc && done() && viewerDoc.about !== state.text.trim()) write("about", { about: state.text.trim() });
-  render(!done());
+  if (viewerDoc && done() && (viewerDoc.about !== state.text.trim() || (state.name && viewerDoc.displayName !== state.name.trim()))) write("about", { about: state.text.trim(), name: (state.name || "").trim() });
+  render(!done() || !state.name);
   root.append(card);
 }
 
@@ -240,15 +244,59 @@ function pickPair(root, rerender) {
   return pairs.find((p) => p.id === activePair);
 }
 
+async function refreshRels() {
+  try {
+    const dbx = window.CARESITS_DB; const uid = me().uid; const pc = window.CARESITS_PHASE_C;
+    if (!dbx || !uid || !pc) return;
+    const { fs, db } = dbx;
+    const snap = await fs.getDocs(fs.query(fs.collection(db, "relationships"), fs.where("members", "array-contains", uid)));
+    pc.rels = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    pc.names = pc.names || {};
+    for (const r of pc.rels) {
+      const other = (r.members || []).find((m) => m !== uid);
+      if (other && !pc.names[other]) { const p = await profileOf(other); if (p && p.displayName) pc.names[other] = p.displayName; }
+    }
+  } catch { /* keep what we have */ }
+}
+
+function pendingRequests(root) {
+  const pc = window.CARESITS_PHASE_C || {};
+  const uid = me().uid;
+  const rows = (pc.rels || []).filter((r) => r.state === "pending");
+  if (!rows.length) return;
+  const box = el("section", "v2Card v2Requests");
+  box.append(el("h3", "v2Title", "Requests"));
+  for (const r of rows) {
+    const other = (r.members || []).find((m) => m !== uid) || "";
+    const name = (pc.names || {})[other] || "Someone nearby";
+    const mine = r.createdBy === uid;
+    const row = el("div", "v2ReqRow");
+    row.append(avatar(name, null), el("p", "v2ReqText", mine ? `Waiting for ${name} to reply` : `${name} wants to connect`));
+    profileOf(other).then((p) => { if (p && p.photoUrl) row.firstChild.replaceWith(avatar(name, p.photoUrl)); });
+    if (!mine) {
+      row.append(btn("mainBtn", "Accept", async () => {
+        const res = await write("transition", { pairId: r.id, patch: { state: "contact", contactBy: uid } });
+        if (res && res.ok) { lastRelRefresh = 0; setTimeout(openMessages, 300); }
+      }));
+      row.append(btn("ghostBtn", "Not now", async () => { await write("transition", { pairId: r.id, patch: { state: "ended" } }); lastRelRefresh = 0; setTimeout(openMessages, 300); }));
+    }
+    box.append(row);
+  }
+  root.prepend(box);
+}
+
+let lastRelRefresh = 0;
 export function openMessages() {
   const root = document.getElementById("threadRoot");
   if (!root) return;
+  if (Date.now() - lastRelRefresh > 4000) { lastRelRefresh = Date.now(); refreshRels().then(() => { const s = document.getElementById("surface-thread"); if (s && !s.hidden) openMessages(); }); }
   if (unsubChat) { unsubChat(); unsubChat = null; }
   root.replaceChildren();
   const pairs = livePairs();
   if (!me().uid || !pairs.length) {
     const r = role();
     emptyState(root, "No messages yet", r === "communicate" ? "Messages open when you and your carer or family are connected." : (r === "career" ? "Message a family from the Jobs tab. Your chats show up here." : "Message a carer from the Find tab. Your chats show up here."), role() === "communicate" ? null : "Find people", "find");
+    pendingRequests(root);
     return;
   }
   root.append(el("h2", "findTitle", "Messages"));
@@ -415,6 +463,31 @@ window.CARESITS_THREAD_OPEN = openMessages;
 window.CARESITS_THREAD_RENDER = () => { const s = document.getElementById("surface-thread"); if (s && !s.hidden) openMessages(); };
 window.CARESITS_PHOTOS_OPEN = openPhotos;
 window.CARESITS_ME_OPEN = renderMe;
-document.addEventListener("caresits-account-ready", () => { renderMyDays(); });
+async function resaveProfileIfMissing() {
+  // The questionnaire keeps answers on the phone if the first save fails.
+  // On every sign in, if the account has no profile yet, save them again.
+  try {
+    const uid = window.CARESITS_UID; const dbx = window.CARESITS_DB;
+    if (!uid || !dbx) return;
+    const snap = await dbx.fs.getDoc(dbx.fs.doc(dbx.db, "profiles", uid));
+    if (snap.exists()) return;
+    let b = null;
+    for (const base of ["caresits-app2-questionnaire", "caresits-app2-draft"]) {
+      try { const raw = localStorage.getItem(`${base}-${uid}`); const j = raw && JSON.parse(raw); if (j && j.answers && j.answers.postcode && j.side) { b = j; break; } } catch { /* skip */ }
+    }
+    if (b && typeof window.CARESITS_SAVE === "function") { await window.CARESITS_SAVE(b); window.CARESITS_FIND_REFRESH && window.CARESITS_FIND_REFRESH(); }
+  } catch { /* try again next time */ }
+}
+document.addEventListener("caresits-account-ready", () => {
+  renderMyDays();
+  window.CARESITS_FIND_REFRESH && setTimeout(() => window.CARESITS_FIND_REFRESH(), 400);
+  setTimeout(resaveProfileIfMissing, 2500);
+});
 const meBtn = document.getElementById("meBtn");
 if (meBtn) meBtn.addEventListener("click", () => nav("me"));
+
+// A calm word while the account loads, instead of a blank page.
+{
+  const r = document.getElementById("findRoot");
+  if (r && !r.children.length) { const p = document.createElement("p"); p.className = "v2Loading"; p.textContent = "Loading your space…"; r.append(p); }
+}
