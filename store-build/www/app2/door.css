@@ -33,7 +33,6 @@ body { margin: 0; background: var(--ground); color: var(--ink); font-family: "At
 .doorJoin { width: 100%; margin-top: 14px; }
 .doorForgot { margin: 12px 0 0; }
 .doorMsg { font-weight: 700; min-height: 24px; margin: 16px 0 0; }
-.doorDemo { margin-top: 26px; opacity: .8; }
 #authDoor[hidden], #entryRoleHeading[hidden] { display: none; }
 
 html[dir="rtl"] .roleOption,

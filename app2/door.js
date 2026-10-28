@@ -150,10 +150,3 @@ $("#forgotBtn").addEventListener("click", async () => {
     msg(tr("door.resetSent"));
   } catch { msg(tr("door.resetFail")); }
 });
-$("#demoBtn").addEventListener("click", () => {
-  try { sessionStorage.removeItem(ENTRY_ROLE_SESSION_KEY); } catch { /* session storage off */ }
-  // The demo entry is deliberate: it carries the session marker
-  // the shell's signed out gate exempts (browsing was never gated).
-  try { sessionStorage.setItem("caresits-demo", "1"); } catch { /* storage off */ }
-  location.href = "index.html";
-});
