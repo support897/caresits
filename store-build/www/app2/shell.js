@@ -39,6 +39,10 @@ function setRoleNavigation(entryRole) {
   if (conversations) conversations.hidden = !communicate;
   for (const button of document.querySelectorAll("[data-bottom-role]")) button.hidden = button.dataset.bottomRole !== entryRole;
   setBottomActive(activeNav);
+  setTimeout(() => {
+    if (entryRole !== "communicate" && activeNav === "home") show("find");
+    else if (entryRole === "communicate" && activeNav === "find") show("home");
+  }, 0);
 }
 window.CARESITS_ROLE_NAV = setRoleNavigation;
 const ACTIVE_SIDES = ["family", "career", "communicate"];
@@ -123,6 +127,7 @@ function plusLocked(nav) {
 }
 
 function show(nav) {
+  if (nav === "home" && resolvedActiveSide() !== "communicate") nav = "find";
   if (plusLocked(nav)) {
     if (typeof window.CARESITS_OPEN_PLANS === "function") window.CARESITS_OPEN_PLANS("plus");
     closeMenu();
@@ -139,6 +144,7 @@ function show(nav) {
   else if (["calendar", "roster", "timesheet", "reminders"].includes(nav)) {
     $("#surface-calendar").hidden = false;
     window.CARESITS_WEEK_SELECT?.(nav);
+    window.CARESITS_V2?.renderMyDays();
   }
   else if (nav === "children") $("#surface-children").hidden = false;
   else if (nav === "daystory") $("#surface-daystory").hidden = false;
@@ -147,6 +153,8 @@ function show(nav) {
   else if (nav === "reviews") $("#surface-reviews").hidden = false;
   else if (nav === "profile") $("#surface-profile").hidden = false;
   else if (nav === "privacy") $("#surface-privacy").hidden = false;
+  else if (nav === "photos") { $("#surface-photos").hidden = false; window.CARESITS_PHOTOS_OPEN?.(); }
+  else if (nav === "me") { $("#surface-me").hidden = false; window.CARESITS_ME_OPEN?.(); }
   else if (nav === "settings") $("#surface-settings").hidden = false;
   else if (nav === "help") $("#surface-help").hidden = false;
   else if (nav === "thread") { $("#surface-thread").hidden = false; if (typeof window.CARESITS_THREAD_OPEN === "function") window.CARESITS_THREAD_OPEN(); }
@@ -156,6 +164,7 @@ function show(nav) {
   closeMenu();
   setBottomActive(nav);
   refreshHomeSwitch();
+  if (nav === "home") window.CARESITS_RENDER_HOME?.();
   if (nav === "ideas") {
     window.CARESITS_RENDER_HOME?.();
     requestAnimationFrame(() => (document.getElementById("learningIdeasCard") || document.getElementById("learningSetupCard"))?.scrollIntoView({ block: "start", behavior: "smooth" }));

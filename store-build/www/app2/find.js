@@ -245,6 +245,7 @@ function cardFor(entry) {
   who.append(el("p", "findPlace", place));
   head.append(who);
   card.append(head);
+  if (doc.about) card.append(el("p", "v2About", doc.about));
   const trust = trustChips(doc);
   if (trust.length) {
     const row = el("div", "trustRow");
@@ -343,6 +344,18 @@ function mapSection(viewerDoc, candidateDocs, browse) {
   const entries = candidateDocs.filter((d) => d.side !== (viewerDoc?.side || "family")).map((doc) => ({ doc, result: null }));
   const pins = pinLayout(viewerDoc?.card || null, entries);
   const slot = el("div", "mapSlot");
+  const V2 = window.CARESITS_V2;
+  const pts = entries.map((e) => e.doc).filter((d) => d.card && d.card.latE2 != null && d.card.lngE2 != null)
+    .map((d) => ({ uid: d.uid || d.displayName, name: d.displayName || "Member", lat: d.card.latE2 / 100, lng: d.card.lngE2 / 100, doc: d }));
+  if (V2 && V2.leafletMap && window.L && pts.length) {
+    const vc = viewerDoc && viewerDoc.card && viewerDoc.card.latE2 != null ? { lat: viewerDoc.card.latE2 / 100, lng: viewerDoc.card.lngE2 / 100 } : null;
+    const ok = V2.leafletMap(panel, pts, vc, (p) => {
+      const entry = byUid.get(p.uid) || null;
+      const km = viewerDoc ? kmBetween(viewerDoc.card || {}, p.doc.card || {}) : null;
+      slot.replaceChildren(mapCardFor(p.doc, entry, viewerDoc?.level, km));
+    });
+    if (ok) { panel.classList.add("v2Real"); wrap.append(panel, slot); return wrap; }
+  }
   for (const p of pins) {
     const doc = entries.find((e) => (e.doc.uid || e.doc.displayName) === p.uid).doc;
     const pin = el("button", "mapPin", (doc.displayName || "?").slice(0, 1));
@@ -375,7 +388,8 @@ export function renderFind(root, viewerDoc, candidateDocs) {
   }
   const visibleCandidates = candidateDocs.filter((d) => !excludedUids.has(d.uid || d.displayName));
   root.replaceChildren();
-  root.append(el("h2", "findTitle", tr("shell.find")));
+  root.append(el("h2", "findTitle", viewerDoc && viewerDoc.side === "carer" ? "Jobs" : tr("shell.find")));
+  if (window.CARESITS_V2) window.CARESITS_V2.composer(root, viewerDoc || null);
   if (!viewerDoc) {
     const box = el("div", "cardIn");
     const img = el("img", "bunnyBig");
@@ -530,7 +544,7 @@ async function bootFind() {
     // The same frame rule as the journey save (QA b104 ROOT A):
     // judge the user after the session restore settles, never
     // on a synchronous read in a still-restoring frame.
-    const user = await frameUser(authMod.getAuth(app));
+    const user = await frameUser((await import("./auth-shared.js")).sharedAuth(authMod, app));
     if (!user || user.isAnonymous) { renderFind(root, null, []); return; }
     const db = fsMod.getFirestore(app);
     const fd = await fetchFindData(fsMod, db, user.uid);

@@ -907,25 +907,18 @@ function learningIdeasCard() {
 
 function communicateHome(root) {
   root.append(greeting("homes.communicateLead"));
+  const pitch = el("section", "v2Card v2Pitch");
+  pitch.append(el("h2", "v2Title", "Stay connected"));
+  for (const [t, b, go] of [["Shared calendar", "One week for you both. See who is coming and when.", "calendar"], ["Daily activities", "Fun ideas picked for your kids' ages and interests, every day.", null], ["Photo updates", "Your carer sends photos of the day. Ask for one any time.", "photos"]]) {
+    const row = el("button", "v2PitchRow");
+    row.type = "button";
+    row.append(el("strong", null, t), el("span", null, b));
+    row.addEventListener("click", () => { if (go) navTo(go); else document.getElementById("learningIdeasCard")?.scrollIntoView({ behavior: "smooth" }); });
+    pitch.append(row);
+  }
+  root.append(pitch);
   root.append(learningSetupCard());
   if (initialLearningPlan().setupComplete) root.append(learningIdeasCard());
-  const card = el("section", "cardIn homeCard");
-  card.append(el("h2", "findTitle", tr("homes.conversations")));
-  card.append(el("p", "homeBody", tr("homes.communicateBody")));
-  const thread = window.CARESITS_THREAD;
-  if (thread && thread.pairId) {
-    card.append(el("h3", "findName", thread.otherName || tr("thread.title")));
-  } else {
-    const img = el("img", "bunnyBig");
-    img.src = "bunny/bunny-rest-calm.png";
-    img.alt = "";
-    card.append(img, el("p", "homeBody", tr("homes.noConversations")));
-  }
-  const open = el("button", "mainBtn", tr("homes.openConversations"));
-  open.type = "button";
-  open.addEventListener("click", () => navTo("thread"));
-  card.append(open);
-  root.append(card);
 }
 
 function renderHome() {

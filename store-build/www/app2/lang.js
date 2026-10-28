@@ -107,7 +107,7 @@ export const STRINGS = {
     "door.roleFamily": "Family",
     "door.roleFamilyBody": "I need care for my family",
     "door.roleCommunicate": "Already have a family?",
-    "door.roleCommunicateBody": "Stay connected: share the day with your carer or family",
+    "door.roleCommunicateBody": "Stay connected: a shared calendar, daily activities for your kids, and photo updates",
     "door.roleCareerHeading": "A career in care",
     "door.roleFamilyHeading": "Care for your family",
     "door.roleCommunicateHeading": "Already have a family?",
