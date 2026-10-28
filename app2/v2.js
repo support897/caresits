@@ -143,6 +143,7 @@ export function composer(root, viewerDoc) {
     });
     card.append(msg, save);
   };
+  if (viewerDoc && done() && viewerDoc.about !== state.text.trim()) write("about", { about: state.text.trim() });
   render(!done());
   root.append(card);
 }

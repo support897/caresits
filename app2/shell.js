@@ -39,8 +39,10 @@ function setRoleNavigation(entryRole) {
   if (conversations) conversations.hidden = !communicate;
   for (const button of document.querySelectorAll("[data-bottom-role]")) button.hidden = button.dataset.bottomRole !== entryRole;
   setBottomActive(activeNav);
-  if (entryRole !== "communicate" && activeNav === "home") show("find");
-  else if (entryRole === "communicate" && activeNav === "find") show("home");
+  setTimeout(() => {
+    if (entryRole !== "communicate" && activeNav === "home") show("find");
+    else if (entryRole === "communicate" && activeNav === "find") show("home");
+  }, 0);
 }
 window.CARESITS_ROLE_NAV = setRoleNavigation;
 const ACTIVE_SIDES = ["family", "career", "communicate"];
@@ -162,6 +164,7 @@ function show(nav) {
   closeMenu();
   setBottomActive(nav);
   refreshHomeSwitch();
+  if (nav === "home") window.CARESITS_RENDER_HOME?.();
   if (nav === "ideas") {
     window.CARESITS_RENDER_HOME?.();
     requestAnimationFrame(() => (document.getElementById("learningIdeasCard") || document.getElementById("learningSetupCard"))?.scrollIntoView({ block: "start", behavior: "smooth" }));

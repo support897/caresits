@@ -389,7 +389,7 @@ export function renderFind(root, viewerDoc, candidateDocs) {
   const visibleCandidates = candidateDocs.filter((d) => !excludedUids.has(d.uid || d.displayName));
   root.replaceChildren();
   root.append(el("h2", "findTitle", viewerDoc && viewerDoc.side === "carer" ? "Jobs" : tr("shell.find")));
-  if (viewerDoc && window.CARESITS_V2) window.CARESITS_V2.composer(root, viewerDoc);
+  if (window.CARESITS_V2) window.CARESITS_V2.composer(root, viewerDoc || null);
   if (!viewerDoc) {
     const box = el("div", "cardIn");
     const img = el("img", "bunnyBig");
