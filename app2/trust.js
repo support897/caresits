@@ -5,6 +5,7 @@ import { pushAvailable, getPushState, registerPush, togglePushKind } from "./pus
 import { uploadProfilePhoto, uploadGalleryPhoto, deleteFromStorage, planPathFromUrl, removeProfilePhoto } from "./photo.js";
 import { draftFromText, buildHandoff } from "./resume.js";
 import { extractPdfText } from "./pdf-text.js";
+import { paintFileImg } from "./files.js";
 import { LANGS, NATIONALITIES } from "./questions.js";
 import { packById, packByName, checkFor } from "./countries.js";
 // Caresitters app2 — Phase D trust surfaces: Checks, Reviews,
@@ -178,7 +179,7 @@ export function renderProfile(root, me) {
   const pcard = el("div", "cardIn");
   pcard.append(el("h3", null, tr("photo.title")), el("p", null, tr("photo.body")));
   let photoImg = null;
-  if (me.photoUrl) { photoImg = el("img", "profilePhoto"); photoImg.src = me.photoUrl; photoImg.alt = ""; pcard.append(photoImg); }
+  if (me.photoUrl) { photoImg = el("img", "profilePhoto"); paintFileImg(photoImg, me.photoUrl); photoImg.alt = ""; pcard.append(photoImg); }
   const pfile = el("input");
   pfile.type = "file";
   pfile.accept = "image/*";
@@ -248,7 +249,7 @@ export function renderProfile(root, me) {
       gallery.forEach((url, i) => {
         const slot = el("div", "gallerySlot");
         const im = el("img", "galleryThumb");
-        im.src = url;
+        paintFileImg(im, url);
         im.alt = "";
         const rm = el("button", "quietBtn galleryRemove", tr("gallery.remove"));
         rm.type = "button";
@@ -408,6 +409,26 @@ export function renderSettings(root) {
     return group;
   };
   if (window.CARESITS_V2) window.CARESITS_V2.modeCards(root);
+  // The whole view switch (Ilse's ruling, 28 Oct 2026)
+  // stands in Settings too: the same switch as the side bar
+  // menu, riding the shell's own seam, so both places always
+  // agree. Finding shows the Finding home and the Finding
+  // surfaces; Connected changes the whole app to the pair's
+  // daily world.
+  const viewCard = el("div", "findCard");
+  viewCard.append(el("h3", "findName", tr("mode.title")));
+  viewCard.append(el("p", null, tr("mode.sell")));
+  const viewRow = el("div", "chipRow");
+  const viewNow = (typeof window !== "undefined" && window.CARESITS_MODE_STATE && window.CARESITS_MODE_STATE.mode) || "finding";
+  for (const [key, label] of [["finding", tr("shell.finding")], ["connected", tr("shell.connected")]]) {
+    const b = el("button", "chipBtn" + (viewNow === key ? " on" : ""), label);
+    b.type = "button";
+    b.dataset.modePick = key;
+    b.addEventListener("click", () => { if (typeof window.CARESITS_SET_MODE === "function") window.CARESITS_SET_MODE(key); renderSettings(root); });
+    viewRow.append(b);
+  }
+  viewCard.append(viewRow);
+  root.append(viewCard);
   const languageGroup = makeGroup("language");
   const lookGroup = makeGroup("look");
   const notificationsGroup = makeGroup("notifications");

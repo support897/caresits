@@ -116,6 +116,15 @@ export function renderChildren(root, rawChildren, editingId = null) {
     }
     if (editingKid && editingKid.ageYears != null) ageSel.value = String(editingKid.ageYears);
 
+    // The card theme picker rides the sheet too: a theme the
+    // family can never pick is a colour they never chose.
+    const themeLabel = el("label", "fieldLabel", tr("family.themeLabel"));
+    themeLabel.htmlFor = "kTheme";
+    const themeSel = el("select", "txtIn");
+    themeSel.id = "kTheme";
+    for (const [id, label] of THEMES) { const o = el("option", null, themeName(id, label)); o.value = id; themeSel.append(o); }
+    themeSel.value = editingKid?.theme || THEMES[0][0];
+
     const loveLabel = el("p", "fieldLabel", tr("family.lovesLabel"));
     const loveRow = el("div", "chipRow childLoveChoices");
     loveRow.id = "kLoves";
@@ -165,7 +174,7 @@ export function renderChildren(root, rawChildren, editingId = null) {
       const ageYears = ageSel.value === "" ? null : Number(ageSel.value);
       const loves = INTERESTS.map((item) => item.id).filter((id) => pickedLoves.has(id));
       // Keep the existing per-member write and record ID shape.
-      const kid = { ...(editingKid || {}), id: editingKid?.id || "local-" + Date.now(), name: childName, theme: editingKid?.theme || THEMES[0][0], ageYears, loves };
+      const kid = { ...(editingKid || {}), id: editingKid?.id || "local-" + Date.now(), name: childName, theme: themeSel.value || editingKid?.theme || THEMES[0][0], ageYears, loves };
       write("child-add", { id: kid.id, name: childName, theme: kid.theme, ageYears, loves });
       wrap.remove();
       renderChildren(root, editingKid ? children.map((oldKid) => oldKid.id === kid.id ? kid : oldKid) : [...children, kid]);
@@ -179,7 +188,7 @@ export function renderChildren(root, rawChildren, editingId = null) {
       cancel.addEventListener("click", closeSheet);
       actions.append(cancel);
     }
-    sheet.append(nameLabel, name, ageLabel, ageSel, loveLabel, loveRow, more, actions, formMsg);
+    sheet.append(nameLabel, name, ageLabel, ageSel, themeLabel, themeSel, loveLabel, loveRow, more, actions, formMsg);
     wrap.append(sheet);
     wrap.addEventListener("click", (event) => { if (event.target === wrap) closeSheet(); });
     wrap.addEventListener("keydown", (event) => { if (event.key === "Escape") closeSheet(); });

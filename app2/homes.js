@@ -1,16 +1,23 @@
 // Caresitters app2 — the two homes (Ilse's commission,
 // 17 Oct 2026, from her approved visuals at
-// next-phase/homes/). Home carries two postures behind one
-// small switch: Finding care (find, finish the questions, top
-// matches, urgent) and Our days (the kids, a day planned from
-// what they love, the family connect link, the shared
-// shopping list, requests). The pick is remembered on the
-// device; the first posture is Our days when the viewer
-// already has a live pair, Finding care otherwise. Every plan
-// is made by the pure planners (activities, invites,
-// shopping, calendar-actions); this file only renders and
-// wires the writes the live layer already routes.
+// next-phase/homes/). Home carries two postures: Finding
+// care (find, finish the questions, top matches, urgent)
+// and Our days (the kids, a day planned from what they
+// love, the family connect link, the shared shopping list,
+// requests). The posture is the app's whole view mode
+// (Ilse's ruling, 28 Oct 2026): it is switched from the
+// side bar menu or Settings, never from a switch on the
+// home page, and it is saved on the account. This file
+// reads the shell's published mode; before the shell's
+// seam stands, a legacy device posture pick still means
+// what it meant, and the first posture is Connected when
+// the viewer already has a live pair, Finding care
+// otherwise. Every plan is made by the pure planners
+// (activities, invites, shopping, calendar-actions); this
+// file only renders and wires the writes the live layer
+// already routes.
 import { t as tr, learningActivityCopy } from "./lang.js";
+import { modeFromLegacyPosture } from "./mode.js";
 import { accountKey, doneKey, draftKey } from "./storage-keys.js";
 import { planDay, planWeek, mondayOfISO, INTERESTS, LEARNING_AGE_BANDS, LEARNING_AREAS, LEARNING_STYLES, normaliseLearningPlan, learningBandForAge, LEARNING_ACTIVITY_BANK, suggestLearningActivities, learningVocabulary } from "./activities.js";
 import { LANGS } from "./questions.js";
@@ -91,11 +98,21 @@ function myChildren() {
 }
 function readJson(key) { if (!key) return null; try { return JSON.parse(localStorage.getItem(key) || "null"); } catch { return null; } }
 
-const state = { posture: null, shopItems: null, decided: new Set(), linkMsg: "", openMsg: "", uid: null };
+const state = { shopItems: null, decided: new Set(), linkMsg: "", openMsg: "", uid: null };
 
-function defaultPosture() {
-  try { const key = accountKey(POSTURE_KEY); const saved = key ? localStorage.getItem(key) : null; if (saved === "finding" || saved === "days") return saved; } catch { /* storage off */ }
-  return hasLivePair() ? "days" : "finding";
+// The whole view mode (Ilse's ruling, 28 Oct 2026): the
+// shell owns the pick and publishes it on its seam (the
+// account choice, read back at boot). Before the seam
+// stands, a legacy device posture pick still means what it
+// meant ("days" was the daily home), and before any pick
+// the standing default stands: Connected when a live pair
+// exists, else Finding. The pair judgement is this file's
+// own hasLivePair, over the boot's Phase C seam.
+function currentMode() {
+  const seam = (typeof window !== "undefined" && window.CARESITS_MODE_STATE) || null;
+  if (seam && (seam.mode === "finding" || seam.mode === "connected")) return seam.mode;
+  try { const key = accountKey(POSTURE_KEY); const legacy = modeFromLegacyPosture(key ? localStorage.getItem(key) : null); if (legacy) return legacy; } catch { /* storage off */ }
+  return hasLivePair() ? "connected" : "finding";
 }
 
 // ---------- shared bits ----------
@@ -130,28 +147,12 @@ function guideLine(key) {
   row.append(img, el("p", "guideText", tr(key)));
   return row;
 }
-function postureSwitch(current) {
-  const row = el("div", "postureRow");
-  const mk = (id, key) => {
-    const b = el("button", "postureBtn" + (current === id ? " on" : ""), tr(key));
-    b.type = "button";
-    b.addEventListener("click", () => {
-      state.posture = id;
-      try { const key = accountKey(POSTURE_KEY); if (key) localStorage.setItem(key, id); } catch { /* storage off */ }
-      renderHome();
-    });
-    return b;
-  };
-  row.append(mk("finding", "shell.finding"), mk("days", "homes.daysTab"));
-  return row;
-}
 
 // ---------- FINDING HOME ----------
 function findingHome(root) {
   const m = me();
   const firstPair = pairs()[0];
   root.append(greeting("homes.findingLead"));
-  root.append(postureSwitch("finding"));
 
   // Find card: the postcode on file, then the two doors.
   const draft = readJson(draftKey());
@@ -560,7 +561,6 @@ function shoppingCard() {
 function daysHome(root) {
   const firstPair = pairs()[0];
   root.append(greeting(firstPair && firstPair.otherName ? "homes.daysLeadName" : "homes.daysLead", firstPair && firstPair.otherName ? { name: firstPair.otherName } : undefined));
-  root.append(postureSwitch("days"));
   root.append(kidsCard());
   root.append(todayCard());
   root.append(weekCard());
@@ -925,13 +925,13 @@ function renderHome() {
   const root = document.getElementById("homeRoot");
   if (!root) return;
   const uid = (me() || {}).uid || null;
-  if (state.uid !== uid) { state.uid = uid; state.posture = null; }
+  if (state.uid !== uid) state.uid = uid;
   root.replaceChildren();
   const role = entryRole();
   if (role === "career") { careerHome(root); return; }
   if (role === "communicate") { communicateHome(root); return; }
-  if (!state.posture) state.posture = defaultPosture();
-  if (state.posture === "days") daysHome(root); else findingHome(root);
+  if (currentMode() === "connected") { daysHome(root); return; }
+  findingHome(root);
 }
 
 if (document.getElementById("homeRoot")) renderHome();

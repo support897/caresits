@@ -5,7 +5,12 @@ import { readFileSync } from "node:fs";
 const MIME = { ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css", ".html": "text/html", ".png": "image/png", ".svg": "image/svg+xml", ".ttf": "font/ttf" };
 const server = http.createServer((req, res) => {
   const url = req.url.split("?")[0];
-  const path = url === "/" ? "../app2/index.html" : url.startsWith("/fonts/") || url.startsWith("/next-phase/") || url.startsWith("/accounts/") ? ".." + url : "../app2" + url;
+  // Repo faithful layout: /app2/ is a repo root prefix too.
+  // accounts/account.js imports ../app2/storage-keys.js, which
+  // against the page URL is /app2/storage-keys.js; without this
+  // branch the toy server looked for app2/app2/ and the accounts
+  // module (and with it live.js) never loaded in the walk.
+  const path = url === "/" ? "../app2/index.html" : url.startsWith("/fonts/") || url.startsWith("/next-phase/") || url.startsWith("/accounts/") || url.startsWith("/app2/") ? ".." + url : "../app2" + url;
   try {
     const body = readFileSync(new URL(path, import.meta.url));
     const ext = path.slice(path.lastIndexOf("."));
@@ -24,9 +29,13 @@ const page = await browser.newPage({ viewport: { width: 390, height: 844 }, acce
 const errs = [];
 page.on("pageerror", (e) => errs.push(String(e)));
 await page.addInitScript(() => {
-  // The shell's signed out gate (Leg 19 FAIL 1 ruling): this
-  // walk enters as an explorer; its signed in seams ride below.
-  try { sessionStorage.setItem("caresits-demo", "1"); } catch { /* storage off */ }
+  // Fleet rule (29 Oct 2026): no demo entry exists. This walk
+  // enters through the shell's own signed in seams (the uid
+  // and auth state the live bridge itself publishes), with
+  // the live boot held off so no network account is needed.
+  window.CARESITS_LIVE_OFF = true;
+  window.CARESITS_UID = "f1";
+  window.CARESITS_AUTH_STATE = "signed-in";
   window.CARESITS_ME = { uid: "f1", side: "family", name: "Sam", plusExtras: true };
   window.CARESITS_TRUST = { docs: [], reviews: [], me: { name: "Sam", side: "family", postcode: "2021" } };
   window.CARESITS_FAMILY = {
@@ -34,7 +43,7 @@ await page.addInitScript(() => {
     entries: [{ day: "2026-10-16", tile: "Meal", note: "Ate all the pasta", at: "2026-10-16T03:00:00.000Z" }],
     side: "family",
   };
-  localStorage.setItem("caresits-app2-questionnaire", JSON.stringify({ side: "family", answers: { postcode: "2021", role: "Nanny" }, strengths: {}, card: {} }));
+  localStorage.setItem("caresits-app2-questionnaire-f1", JSON.stringify({ side: "family", answers: { postcode: "2021", role: "Nanny" }, strengths: {}, card: {} }));
 });
 await page.goto("http://localhost:8936/index.html", { waitUntil: "networkidle" });
 
@@ -73,9 +82,13 @@ async function exportFrom(p) {
 const newPage = async (seed) => {
   const p = await browser.newPage({ viewport: { width: 390, height: 844 }, acceptDownloads: true });
   p.on("pageerror", (e) => errs.push(String(e)));
-  // The shell's signed out gate (Leg 19 FAIL 1 ruling): every
-  // walk page enters as an explorer.
-  await p.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch { /* storage off */ } });
+  // Fleet rule (29 Oct 2026): every walk page enters through
+  // the signed in seams, never a demo marker.
+  await p.addInitScript(() => {
+    window.CARESITS_LIVE_OFF = true;
+    window.CARESITS_UID = "f1";
+    window.CARESITS_AUTH_STATE = "signed-in";
+  });
   await p.addInitScript(seed);
   await p.goto("http://localhost:8936/index.html", { waitUntil: "networkidle" });
   return p;
@@ -89,6 +102,8 @@ const newPage = async (seed) => {
   });
   await dp.evaluate(() => document.querySelector('[data-nav="children"]').click());
   await dp.waitForTimeout(250);
+  await dp.evaluate(() => document.getElementById("kAddOpen").click()); // the add form stands in its sheet now
+  await dp.waitForTimeout(150);
   await dp.fill("#kName", "Nia");
   await dp.evaluate(() => document.getElementById("kAdd").click());
   await dp.waitForTimeout(150);
@@ -117,6 +132,8 @@ const newPage = async (seed) => {
   });
   await bp.evaluate(() => document.querySelector('[data-nav="children"]').click());
   await bp.waitForTimeout(250);
+  await bp.evaluate(() => document.getElementById("kAddOpen").click()); // the add form stands in its sheet now
+  await bp.waitForTimeout(150);
   await bp.fill("#kName", "Leo");
   await bp.evaluate(() => document.getElementById("kAdd").click());
   await bp.waitForTimeout(150);
@@ -137,7 +154,7 @@ const newPage = async (seed) => {
   const cp = await newPage(() => {
     window.CARESITS_ME = { uid: "f1", side: "family", name: "Sam", plusExtras: true };
     window.CARESITS_TRUST = { docs: [], reviews: [], me: { name: "Sam", side: "family", postcode: "2021" } };
-    localStorage.setItem("caresits-app2-draft", JSON.stringify({ side: "family", page: 19, answers: { postcode: "2021", childrenBands: ["1-3"] }, strengths: {} }));
+    localStorage.setItem("caresits-app2-draft-f1", JSON.stringify({ side: "family", page: 19, answers: { postcode: "2021", childrenBands: ["1-3"] }, strengths: {} }));
   });
   const data = await exportFrom(cp);
   t("F10 draft: with no finished questionnaire, the draft answers ride in the copy", data.answers && data.answers.postcode === "2021" && Array.isArray(data.answers.childrenBands) && data.answers.childrenBands[0] === "1-3");
@@ -149,8 +166,8 @@ const newPage = async (seed) => {
   const pp = await newPage(() => {
     window.CARESITS_ME = { uid: "f1", side: "family", name: "Sam", plusExtras: true };
     window.CARESITS_TRUST = { docs: [], reviews: [], me: { name: "Sam", side: "family", postcode: "2021" } };
-    localStorage.setItem("caresits-app2-questionnaire", JSON.stringify({ side: "family", answers: { postcode: "2021" }, strengths: {}, card: {} }));
-    localStorage.setItem("caresits-app2-draft", JSON.stringify({ side: "family", page: 19, answers: { postcode: "9999" }, strengths: {} }));
+    localStorage.setItem("caresits-app2-questionnaire-f1", JSON.stringify({ side: "family", answers: { postcode: "2021" }, strengths: {}, card: {} }));
+    localStorage.setItem("caresits-app2-draft-f1", JSON.stringify({ side: "family", page: 19, answers: { postcode: "9999" }, strengths: {} }));
   });
   const data = await exportFrom(pp);
   t("F10 draft: a finished bundle wins over the draft", data.answers && data.answers.postcode === "2021");
@@ -190,7 +207,7 @@ const newPage = async (seed) => {
   // Bin the child through the real Remove + confirm sheet.
   await rp.evaluate(() => document.querySelector('[data-nav="children"]').click());
   await rp.waitForTimeout(250);
-  await rp.evaluate(() => document.querySelector("#childrenRoot .kidCard .quietBtn").click());
+  await rp.evaluate(() => document.querySelectorAll("#childrenRoot .kidCard .quietBtn")[1].click()); // Edit stands first on the card; Remove is second
   await rp.waitForTimeout(150);
   await rp.evaluate(() => document.querySelector("#safetySheet .mainBtn").click());
   await rp.waitForTimeout(150);

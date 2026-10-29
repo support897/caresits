@@ -22,15 +22,27 @@ export function accountKey(base, uid = currentUid()) {
   return uid ? `${base}-${uid}` : null;
 }
 
+function authState() {
+  // The journey runs inside the app shell's frame; the live
+  // bridge publishes the auth state on the shell window, the
+  // same seam currentUid reads for the uid. Without this, the
+  // framed journey never saw "signed-out" and an explorer's
+  // draft and finished bundle silently never saved.
+  try { if (typeof window !== "undefined" && window.CARESITS_AUTH_STATE) return window.CARESITS_AUTH_STATE; } catch { /* no window */ }
+  try {
+    if (typeof window !== "undefined" && window.parent && window.parent !== window) return window.parent.CARESITS_AUTH_STATE || null;
+  } catch { /* top level or cross origin */ }
+  return null;
+}
+
 function localDataKey(base) {
   const uid = currentUid();
   if (uid) return `${base}-${uid}`;
   // Keep pure Node tests and non-browser callers compatible; a
-  // browser never falls back to an unowned, shared key.
+  // browser never falls back to an unowned, shared key. Signed
+  // out is signed out (fleet rule, Ilse 29 Oct 2026): there
+  // is no demo slot and no shared key, ever.
   if (typeof window === "undefined") return base;
-  try {
-    if (window.CARESITS_AUTH_STATE === "signed-out" && sessionStorage.getItem("caresits-demo") === "1") return `${base}-demo`;
-  } catch { /* storage is unavailable: do not expose shared data */ }
   return null;
 }
 
@@ -40,6 +52,18 @@ export function draftKey() {
 
 export function doneKey() {
   return localDataKey("caresits-app2-questionnaire");
+}
+
+// The device copy of the member's Finding / Connected view
+// pick (the whole view mode, Ilse's ruling of 28 Oct 2026),
+// beside the account copy on the meta/app doc: the account
+// copy is the truth, the device copy lets the shell stand in
+// the right view as soon as this account is known on this
+// device. Keyed like every other account key here, through
+// the one resolver: the signed in member's own slot, and no
+// key at all while the uid is unknown.
+export function modeKey() {
+  return localDataKey("caresits-app2-mode");
 }
 
 // Session markers are not account data, but they can steer a later

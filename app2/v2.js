@@ -2,6 +2,8 @@
 // Describe box, real map, real two-way messages, photo updates,
 // the Me hub and the mode switch. Plain DOM, no framework.
 import { canSendMessage } from "../accounts/account.js";
+import { paintFileImg } from "./files.js";
+import { t as tr } from "./lang.js";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const PARTS = [["morning", "Morning"], ["afternoon", "Afternoon"], ["evening", "Evening"]];
@@ -63,7 +65,7 @@ export function profileOf(uid) {
 }
 export function avatar(name, url, cls = "v2Avatar") {
   const box = el("span", cls);
-  if (url) { const img = el("img"); img.src = url; img.alt = ""; box.append(img); }
+  if (url) { const img = el("img"); paintFileImg(img, url); img.alt = ""; box.append(img); }
   else box.textContent = (name || "?").trim().slice(0, 1).toUpperCase();
   return box;
 }
@@ -74,7 +76,7 @@ export function composer(root, viewerDoc) {
   const isFam = r !== "career";
   const saved = lsGet("need") || {};
   const text0 = saved.text != null ? saved.text : (viewerDoc && viewerDoc.about) || "";
-  const state = { name: saved.name != null ? saved.name : ((viewerDoc && viewerDoc.displayName) || ""), text: text0, kinds: saved.kinds || [], days: saved.days || [], parts: saved.parts || [], aupair: saved.aupair || {} };
+  const state = { name: saved.name != null ? saved.name : ((viewerDoc && viewerDoc.displayName) || ""), text: text0, kinds: saved.kinds || [], days: saved.days || [], parts: saved.parts || [], aupair: saved.aupair || {}, postcode: saved.postcode || (viewerDoc && viewerDoc.postcode) || "", dates: Array.isArray(saved.dates) ? saved.dates : [] };
   const card = el("section", "v2Card v2Composer");
   const done = () => state.text.trim().length > 0;
   const render = (editing) => {
@@ -85,6 +87,8 @@ export function composer(root, viewerDoc) {
       const chips = el("div", "v2ChipRow");
       for (const k of state.kinds) chips.append(el("span", "v2Tag", k));
       if (state.days.length) chips.append(el("span", "v2Tag", state.days.join(" ")));
+      if (isFam && state.postcode) chips.append(el("span", "v2Tag", "Postcode " + state.postcode));
+      if (isFam) for (const d of state.dates) chips.append(el("span", "v2Tag", d));
       card.append(chips, btn("ghostBtn", "Edit", () => render(true)));
       return;
     }
@@ -93,7 +97,6 @@ export function composer(root, viewerDoc) {
     const nm = el("input", "txtIn v2Name"); nm.type = "text"; nm.maxLength = 40; nm.placeholder = "Your first name"; nm.value = state.name;
     nm.setAttribute("aria-label", "Your first name");
     nm.addEventListener("input", () => { state.name = nm.value; });
-    card.append(nm);
     const ta = el("textarea", "txtIn v2Text");
     ta.rows = 3; ta.maxLength = 300;
     ta.placeholder = isFam ? "Example: Babysitter for my 2 kids (3 and 5), Tuesday and Thursday after school." : "Example: Friendly babysitter, 4 years of experience, first aid trained, free after 3pm.";
@@ -130,12 +133,36 @@ export function composer(root, viewerDoc) {
       parts.append(b);
     }
     card.append(parts);
+    if (isFam) {
+      card.append(el("p", "v2Label", "Your postcode"));
+      const pc = el("input", "txtIn v2Postcode"); pc.type = "text"; pc.inputMode = "numeric"; pc.maxLength = 4; pc.placeholder = "2031"; pc.value = state.postcode;
+      pc.setAttribute("aria-label", "Your postcode");
+      pc.addEventListener("input", () => { state.postcode = pc.value.replace(/\D/g, "").slice(0, 4); pc.value = state.postcode; });
+      card.append(pc);
+      card.append(el("p", "v2Label", "Specific dates (optional)"));
+      const dateRow = el("div", "v2ChipRow");
+      const renderDates = () => {
+        dateRow.replaceChildren();
+        for (const d of state.dates) {
+          const chip = el("span", "v2Tag", d + "  ");
+          const x = btn("chipX", "×", () => { state.dates = state.dates.filter((y) => y !== d); renderDates(); });
+          x.setAttribute("aria-label", "Remove " + d);
+          chip.append(x);
+          dateRow.append(chip);
+        }
+      };
+      renderDates();
+      const din = el("input", "txtIn v2Date"); din.type = "date"; din.setAttribute("aria-label", "Add a date");
+      const dadd = btn("ghostBtn", "Add date", () => { const v = din.value; if (/^\d{4}-\d{2}-\d{2}$/.test(v) && !state.dates.includes(v) && state.dates.length < 14) { state.dates = [...state.dates, v].sort(); renderDates(); } din.value = ""; });
+      card.append(din, dadd, dateRow);
+    }
+    card.append(nm);
     if (!isFam) card.append(auPairFields(state));
     const msg = el("p", "formMsg"); msg.setAttribute("role", "status");
     const save = btn("mainBtn", "Save", async () => {
       if (!state.text.trim()) { msg.textContent = "Write a few words first."; return; }
       save.disabled = true;
-      const payload = { name: (state.name || "").trim(), text: state.text.trim(), kinds: state.kinds, days: state.days, parts: state.parts };
+      const payload = { name: (state.name || "").trim(), text: state.text.trim(), kinds: state.kinds, days: state.days, parts: state.parts, postcode: isFam ? state.postcode : "", dates: isFam ? state.dates : [] };
       lsSet("need", payload);
       const a = await write("need", payload);
       const b = await write("about", { about: payload.text, name: payload.name });
@@ -648,6 +675,7 @@ export function auPairFields(state, card) {
     l.append(c, document.createTextNode(" " + label)); return l;
   };
   wrap.append(sel("Can arrive from", months, "arrival"), cl, sel("English level", AUPAIR_ENGLISH.map((x) => [x, x]), "english"), chk("Qualified to care for babies", "infant"), chk("Drives", "drives"), chk("Swims", "swim"));
+  wrap.append(el("p", "v2Sub", tr("find.auPairNote")));
   return wrap;
 }
 export function cleanAuPair(a, on) {

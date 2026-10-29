@@ -220,7 +220,7 @@ function choiceCards(f, options, selected, multi = false) {
 function fieldHtml(f, showLabel = false) {
   const v = state.answers[f.id];
   const optional = state.stage === "optional" || !f.required;
-  const optionalLabel = tr("journey.optional").split("·")[0].trim();
+  const optionalLabel = tr("journey.optional");
   const tag = optional ? `<span class="optTag">${escapeHtml(optionalLabel)}</span>` : `<span class="reqTag">${escapeHtml(tr("journey.required"))}</span>`;
   const label = showLabel ? `<p class="qLabel">${L(f)}</p>` : "";
   const aria = escapeHtml(L(f));

@@ -80,20 +80,10 @@ export function entitlementActive(customerInfo, plan) {
 
 const myUid = () => (typeof window !== "undefined" && window.CARESITS_ME && window.CARESITS_ME.uid) || "";
 
-// The demo fence (account mandatory settlement, HQ 21 Oct
-// 2026): the demo is a fenced look in, and its money roads
-// stop at the door of the purchase machinery, speaking the
-// demo line. The signal is the shell gate's own marker.
-export function isDemoSession() {
-  try { return typeof sessionStorage !== "undefined" && sessionStorage.getItem("caresits-demo") === "1"; }
-  catch { return false; }
-}
-
 // buyPlan(plan) -> { ok, reason?, customerInfo? }
 // reason "cancelled" is the user's own change of mind:
 // the sheet simply re-enables, no error words.
 export async function buyPlan(plan) {
-  if (isDemoSession()) return { ok: false, reason: "demo" };
   const plugin = purchasesPlugin();
   if (!plugin || !PACKAGES[plan]) return { ok: false, reason: "unavailable" };
   if (!(await configurePurchases(myUid()))) return { ok: false, reason: "unavailable" };
@@ -113,7 +103,6 @@ export async function buyPlan(plan) {
 }
 
 export async function restorePurchases() {
-  if (isDemoSession()) return { ok: false, reason: "demo" };
   const plugin = purchasesPlugin();
   if (!plugin) return { ok: false, reason: "unavailable" };
   if (!(await configurePurchases(myUid()))) return { ok: false, reason: "unavailable" };

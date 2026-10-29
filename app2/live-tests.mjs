@@ -33,6 +33,14 @@ t("side tours: completion is remembered in that account without sharing other si
   assert.deepEqual(routeWrite("side-tour", { side: "career" }, "member-b").data, { tourCareerDone: true });
   assert.equal(routeWrite("side-tour", { side: "admin" }, "member-a").ok, false);
 });
+t("router: the view mode rides meta/app, and only the two modes stand", () => {
+  const r = routeWrite("mode", { mode: "connected" }, "member-a");
+  assert.deepEqual(r, { ok: true, op: "merge", path: "users/member-a/meta/app", data: { mode: "connected" } });
+  assert.equal(routeWrite("mode", { mode: "finding" }, "member-b").path, "users/member-b/meta/app");
+  assert.equal(routeWrite("mode", { mode: "days" }, "member-a").ok, false);
+  assert.equal(routeWrite("mode", {}, "member-a").ok, false);
+  assert.equal(routeWrite("mode", { mode: "connected" }, "").ok, false);
+});
 t("router: the two homes kinds land on their ruled shapes", () => {
   const inv = routeWrite("invite-create", { path: "invites/K7P2Q9AB", data: { familyUid: "a", label: "", createdAt: "x", usedBy: null } }, "a");
   assert.equal(inv.op, "set"); assert.equal(inv.path, "invites/K7P2Q9AB");
@@ -376,7 +384,8 @@ await ta("phase C fetch (F19): a member with nothing yet gets the empty seam, so
 });
 
 
-t("router: a fresh photo clears the lifecycle's swept stamp; a manual remove leaves it alone", () => { const r = routeWrite("photo", { photoUrl: "https://x/new.jpg" }, "a"); assert.equal(r.data.photoClearedAt, null); assert.equal(r.data.photoUrl, "https://x/new.jpg"); const c = routeWrite("photo", { photoUrl: "" }, "a"); assert.ok(!("photoClearedAt" in c.data)); });
+t("router: the need route carries a four digit postcode and capped sorted ISO dates (plan item D)", () => { const r = routeWrite("need", { text: "Help Tuesdays", kinds: ["Babysitter"], days: ["Tue"], parts: [], postcode: "2031", dates: ["2026-11-03", "2026-11-03", "2026-10-30", "junk", "2026-1-3"] }, "a"); assert.equal(r.data.postcode, "2031"); assert.deepEqual(r.data.dates, ["2026-10-30", "2026-11-03"]); const bad = routeWrite("need", { text: "x", postcode: "203" }, "a"); assert.equal(bad.data.postcode, ""); assert.deepEqual(bad.data.dates, []); const many = routeWrite("need", { text: "x", dates: Array.from({ length: 20 }, (_, i) => "2026-11-" + String(i + 1).padStart(2, "0")) }, "a"); assert.equal(many.data.dates.length, 14); });
+t("router: the photo route writes photoUrl alone (the sealed fence admits no second field; the pair answered 403 on the twin)", () => { const r = routeWrite("photo", { photoUrl: "https://x/new.jpg" }, "a"); assert.deepEqual(r.data, { photoUrl: "https://x/new.jpg" }); const c = routeWrite("photo", { photoUrl: "" }, "a"); assert.deepEqual(c.data, { photoUrl: "" }); });
 t("week seam (b104 ROOT B): the meta documents become the lists the week surfaces render", () => {
   const w = weekSeamFrom({ timesheets: [{ day: "Mon", hours: 3 }], reminderDoc: { text: "Ring Ana", when: "Tue" }, emergencyDoc: { name: "Gran", phone: "0400" } });
   assert.deepEqual(w.entries, [{ day: "Mon", hours: 3 }]);
@@ -506,8 +515,13 @@ t("browser storage: user keys are uid-scoped and no legacy key is read while aut
   assert.equal(draftKey(), "caresits-app2-draft-carer-b");
   window.CARESITS_UID = null;
   window.CARESITS_AUTH_STATE = "signed-out";
+  // Fleet rule (29 Oct 2026): no demo slot exists. A stale
+  // marker from an old install buys nothing: signed out
+  // still reads no key. Sign out hygiene still strips the
+  // stale marker itself.
   session.set("caresits-demo", "1");
-  assert.equal(draftKey(), "caresits-app2-draft-demo");
+  assert.equal(draftKey(), null);
+  assert.equal(doneKey(), null);
   clearSessionMarkers();
   assert.equal(session.has("caresits-demo"), false);
   globalThis.window = oldWindow;

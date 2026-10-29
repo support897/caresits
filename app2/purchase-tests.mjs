@@ -103,24 +103,27 @@ await t("the maps hold Finance's identifiers exactly", () => {
   assert.deepEqual(P.ENTITLEMENTS, { finding: "finding", "family-plus": "family_plus", "search-pass": "search_pass" });
 });
 
-await t("fence: a demo session's buy stops at the door of the machinery, speaking the demo reason", async () => {
+// Fleet rule (Ilse, 29 Oct 2026): there is no demo session.
+// A legacy demo marker in session storage must change
+// NOTHING: the money roads judge the session exactly as
+// they judge any other, and no "demo" reason exists.
+await t("fence: a legacy demo marker changes nothing on the buy road", async () => {
   globalThis.sessionStorage = { getItem: () => "1" };
   const before = calls.length;
   const res = await P.buyPlan("finding");
-  assert.equal(res.ok, false); assert.equal(res.reason, "demo");
-  assert.equal(calls.length, before);
+  assert.equal(res.ok, true);
+  assert.ok(calls.length > before);
 });
-await t("fence: a demo session's restore stops the same way", async () => {
-  const before = calls.length;
+await t("fence: a legacy demo marker changes nothing on the restore road", async () => {
   const res = await P.restorePurchases();
-  assert.equal(res.ok, false); assert.equal(res.reason, "demo");
-  assert.equal(calls.length, before);
+  assert.equal(res.ok, true);
   globalThis.sessionStorage = { getItem: () => null };
 });
-await t("fence: the plans sheet speaks the demo line for both money roads", () => {
+await t("fence: no demo branch stands in the purchase machinery or the plans sheet", () => {
+  const psrc = readFileSync(new URL("./purchase.js", import.meta.url), "utf8");
+  assert.ok(!psrc.includes("isDemoSession") && !psrc.includes('reason: "demo"') && !psrc.includes("caresits-demo"));
   const src = readFileSync(new URL("./plans.js", import.meta.url), "utf8");
-  assert.ok(src.includes('res.reason === "demo" ? tr("plans.demoLine")'));
-  assert.ok(src.includes('tr("plans.demoLine")'));
+  assert.ok(!src.includes('"demo"') && !src.includes("plans.demoLine"));
 });
 
 console.log(`\n${n - bad}/${n} purchase legs pass`);

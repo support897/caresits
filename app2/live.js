@@ -7,11 +7,13 @@
 // carries ?twin=1; every other visit uses the production
 // config beside this file.
 import { levelOf, mergeDeepAnswers } from "./levels.js";
+import { cleanMode, modeFromAppDoc } from "./mode.js";
 import { accountKey, clearSessionMarkers } from "./storage-keys.js";
 import { cleanJobListings } from "./pair-actions.js";
 import { normaliseLearningPlan, publicLearningPlan } from "./activities.js";
 import { applyI18n } from "./lang.js";
 import { resolvePlan, entitlementFromRecord, plusExtrasOpen, withTimeout } from "../accounts/account.js";
+import { installFileRoads } from "./files.js";
 
 // The photo lifecycle stamp path (HQ spec, 19 Oct 2026):
 // carers only, at the root, beside _comp and _entitlements.
@@ -51,7 +53,14 @@ export function routeWrite(kind, payload, uid) {
     // (Ilse's ruling, 19 Oct 2026): the carer returns, adds a
     // photo, and the profile is back in family search. A
     // manual remove leaves the stamp as it stands.
-    case "photo": return { ok: true, op: "merge", path: `profiles/${uid}`, data: payload.photoUrl ? { photoUrl: payload.photoUrl, photoClearedAt: null } : { photoUrl: payload.photoUrl } };
+    // The profiles fence admits photoUrl alone: an earlier
+    // shape rode photoClearedAt beside it, a field no sealed
+    // rules text admits, and Firestore refused every photo
+    // save for it (proven on the twin, 29 Oct 2026: the pair
+    // answers 403, photoUrl alone 200). The tombstone's
+    // reader in browse.js simply never sees the field now,
+    // which is the same world as when the write never landed.
+    case "photo": return { ok: true, op: "merge", path: `profiles/${uid}`, data: { photoUrl: payload.photoUrl } };
     case "gallery": return { ok: true, op: "merge", path: `profiles/${uid}`, data: { card: { gallery: (Array.isArray(payload.gallery) ? payload.gallery : []).filter((u) => typeof u === "string" && u).slice(0, 4) } } };
     // The resume file record names a TEMPORARY object only
     // (Ilse's resume model, 19 Oct 2026): an uploaded resume is
@@ -71,7 +80,14 @@ export function routeWrite(kind, payload, uid) {
       const field = { family: "tourFamilyDone", career: "tourCareerDone", communicate: "tourCommunicateDone" }[payload.side];
       return field ? { ok: true, op: "merge", path: `users/${uid}/meta/app`, data: { [field]: true } } : { ok: false, reason: "invalid-side" };
     }
-    case "need": return { ok: true, op: "merge", path: `users/${uid}/meta/need`, data: { text: String(payload.text || "").slice(0, 300), kinds: (payload.kinds || []).slice(0, 8).map(String), days: (payload.days || []).slice(0, 7).map(String), parts: (payload.parts || []).slice(0, 3).map(String) } };
+    // Postcode and specific dates ride the need from
+    // 29 Oct 2026 (plan item D): the postcode is four
+    // digits or empty, the dates are ISO day strings,
+    // deduped, sorted, capped at 14, closed shape like
+    // the kinds and days beside them. The meta fence is
+    // owner free form (banned keys only), so no rules
+    // change rides with this.
+    case "need": return { ok: true, op: "merge", path: `users/${uid}/meta/need`, data: { text: String(payload.text || "").slice(0, 300), kinds: (payload.kinds || []).slice(0, 8).map(String), days: (payload.days || []).slice(0, 7).map(String), parts: (payload.parts || []).slice(0, 3).map(String), postcode: /^\d{4}$/.test(String(payload.postcode || "")) ? String(payload.postcode) : "", dates: [...new Set((Array.isArray(payload.dates) ? payload.dates : []).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(String(d))).map(String))].sort().slice(0, 14) } };
     case "favs": return { ok: true, op: "merge", path: `users/${uid}/meta/favs`, data: { uids: (Array.isArray(payload.uids) ? payload.uids : []).filter((u) => typeof u === "string").slice(0, 60) } };
     case "aupair": return { ok: true, op: "merge", path: `profiles/${uid}`, data: { card: { auPair: payload.auPair } } };
     case "about": return { ok: true, op: "merge", path: `profiles/${uid}`, data: { about: String(payload.about || "").slice(0, 300), ...(payload.name ? { displayName: String(payload.name).trim().slice(0, 40) } : {}) } };
@@ -80,6 +96,12 @@ export function routeWrite(kind, payload, uid) {
       return { ok: true, op: "learningPlan", path: `users/${uid}/meta/app`, profilePath: `profiles/${uid}`, data: { learningPlan: plan }, profileData: { learningPlan: plan }, pairPath: typeof payload.pairId === "string" && payload.pairId ? `relationships/${payload.pairId}` : "", pairData: { learningPlan: plan } };
     }
     case "language": return { ok: true, op: "merge", path: `users/${uid}/meta/app`, data: { language: payload.code } };
+    // The Finding / Connected view pick (Ilse's ruling,
+    // 28 Oct 2026) rides the same meta/app doc as language
+    // and appearance, so it follows the member across
+    // devices. Closed like its neighbours: only the two
+    // modes stand, anything else is refused.
+    case "mode": { const m = cleanMode(payload && payload.mode); return m ? { ok: true, op: "merge", path: `users/${uid}/meta/app`, data: { mode: m } } : { ok: false, reason: "invalid-mode" }; }
     case "name": return { ok: true, op: "merge", path: `users/${uid}`, data: { displayName: payload.displayName } };
     case "message": return { ok: true, op: "add", path: `users/${uid}/messages`, data: { pairId: payload.pairId, text: payload.text, at: payload.at, mine: true } };
     case "request": return { ok: true, op: "add", path: payload.path, data: payload.data };
@@ -350,6 +372,13 @@ export function threadSeamFrom({ rels, names, msgs, uid }) {
   return { pairId: rel.id, otherName: (names || {})[other] || "", messages, plan: null, tasteUsedToday };
 }
 
+// The live pairs of a Phase C seam: the relationships the
+// pair spaces open for — contact or hired, the same gate
+// threadSeamFrom judges by just above.
+export function liveRelsOf(rels) {
+  return (rels || []).filter((r) => r.state === "contact" || r.state === "hired");
+}
+
 // The live Phase C fetch: the viewer's pairs (the members
 // array-contains query is the read fence's provable shape),
 // the open board plus the viewer's own jobs merged by id, and
@@ -530,6 +559,7 @@ export async function bootLive() {
         if (stampPath) await fs.setDoc(docAt(stampPath), { lastActiveAt: fs.serverTimestamp() }, { merge: true });
       } catch { /* the stamp waits for its rules arm */ }
       let bootMsgs = [];
+      let bootAppDoc = null;
       try {
         const grab = async (path) => {
           const snap = await fs.getDocs(colAt(path));
@@ -565,6 +595,7 @@ export async function bootLive() {
           const reminderDoc = await docOr(`users/${uid}/meta/reminders`);
           const emergencyDoc = await docOr(`users/${uid}/meta/emergency`);
           const appDoc = await docOr(`users/${uid}/meta/app`);
+          bootAppDoc = appDoc;
           let pendingRole = "";
           try { pendingRole = sessionStorage.getItem("caresits-entry-role") || ""; } catch { /* session storage off */ }
           const savedRole = ENTRY_ROLES.includes(appDoc && appDoc.entryRole) ? appDoc.entryRole : "";
@@ -703,6 +734,13 @@ export async function bootLive() {
         // here, where the session and the documents stand,
         // and let Find re-render from it.
         try { await publishFind(); } catch { /* Find stands on its own fetch */ }
+        // The view mode decision (Ilse's ruling, 28 Oct
+        // 2026) lands here, when the boot knows both the
+        // account's saved pick (the meta/app doc read above)
+        // and whether a live pair stands (this seam's rels,
+        // judged by the boot's own live pair gate). The
+        // shell applies it across the whole app.
+        if (typeof window.CARESITS_MODE_BOOT === "function") window.CARESITS_MODE_BOOT({ accountMode: modeFromAppDoc(bootAppDoc), hasLivePair: liveRelsOf(seam.rels).length > 0 });
       } catch { /* matches and the board stand in their empty states */ }
       resolve({ on: true, signedIn: true, uid });
     });
@@ -710,16 +748,15 @@ export async function bootLive() {
 }
 
 // The signed out gate (HQ ruling on the remainder round's
-// Leg 19): a signed out entry into the shell routes back to
-// the door; the full shell never stands open signed out. A
-// deliberate Explore entry (the door's demo button, the
-// journey's Explore pick) carries the session demo marker
-// and is exempt: browsing was never gated. Only the shell
-// page carries the layout element, so only it can bounce.
+// Leg 19; fleet rule, Ilse 29 Oct 2026): a signed out entry
+// into the shell routes back to the door; the full shell
+// never stands open signed out. There is no demo or guest
+// way in: the door is sign up or sign in, always, and no
+// session marker exempts anyone. Only the shell page
+// carries the layout element, so only it can bounce.
 function gateSignedOut() {
   try {
     if (typeof document === "undefined" || !document.getElementById("layout")) return;
-    if (sessionStorage.getItem("caresits-demo") === "1") return;
   } catch { return; }
   location.href = "door.html";
 }
@@ -727,5 +764,8 @@ function gateSignedOut() {
 if (typeof document !== "undefined" && !window.CARESITS_LIVE_OFF) {
   if (!window.CARESITS_AUTH_STATE) window.CARESITS_AUTH_STATE = "loading";
   window.CARESITS_ACCOUNT_READY = false;
+  // The files road (design of record): photo.js's upload
+  // and delete seams ride the gatekeeper from here.
+  try { installFileRoads(); } catch { /* photo.js fails soft */ }
   bootLive().catch(() => {});
 }

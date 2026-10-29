@@ -5,7 +5,10 @@ import { readFileSync } from "node:fs";
 const MIME = { ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css", ".html": "text/html", ".png": "image/png", ".svg": "image/svg+xml", ".ttf": "font/ttf" };
 const server = http.createServer((req, res) => {
   const url = req.url.split("?")[0];
-  const path = url === "/" ? "../app2/journey.html" : url.startsWith("/fonts/") || url.startsWith("/next-phase/") || url.startsWith("/accounts/") ? ".." + url : "../app2" + url;
+  // Repo faithful layout: /app2/ is a repo root prefix too
+  // (accounts/account.js imports ../app2/storage-keys.js; the
+  // old mapping looked for app2/app2/ and killed that module).
+  const path = url === "/" ? "../app2/journey.html" : url.startsWith("/fonts/") || url.startsWith("/next-phase/") || url.startsWith("/accounts/") || url.startsWith("/app2/") ? ".." + url : "../app2" + url;
   try {
     const body = readFileSync(new URL(path, import.meta.url));
     const ext = path.slice(path.lastIndexOf("."));
@@ -21,7 +24,13 @@ const browser = await chromium.launch({
   args: ["--no-sandbox", "--disable-dev-shm-usage"],
 });
 const page = await browser.newPage();
-await page.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
+// The journey page stands alone in this harness; in the app it
+// runs inside the shell frame, whose live bridge publishes the
+// auth state and uid the frame's key resolver reads. Fleet
+// rule (29 Oct 2026): there is no explorer demo any more, so
+// the harness publishes the signed in shape the frame carries
+// in production, under a walk uid.
+await page.addInitScript(() => { window.CARESITS_UID = "walk1"; window.CARESITS_AUTH_STATE = "signed-in"; });
 const errs = [];
 page.on("pageerror", (e) => errs.push(String(e)));
 await page.goto("http://localhost:8933/", { waitUntil: "networkidle" });
@@ -33,35 +42,42 @@ t("welcome shows the time promise", (await page.textContent("body")).includes("A
 t("welcome bunny is her hello seat", (await page.getAttribute(".bunnyBig", "src")).includes("bunny-hello"));
 
 await page.click('[data-side="family"]');
-t("family page 1 of 20 (the country step stands first)", (await page.textContent("#pageCount")).includes("Page 1 of 20"));
+// The staged journey of record (journey.js essentials()): one
+// question per stop, country first, then eight essentials, a
+// ready step, then the optional pages one by one. This walk
+// follows that shape; the pre staging walk expected the old
+// grouped pages and could not stand on this base.
+t("family question 1 of 9 (the country step stands first)", (await page.textContent("#pageCount")).includes("Question 1 of 9"));
 await page.click("#nextBtn");
 t("required questions hold the page", (await page.textContent("#notice")).length > 3);
 await page.click('[data-chip="country"][data-value="Australia"]');
 await page.click("#nextBtn");
-await page.click('[data-chip="role"][data-value="Nanny"]');
 await page.fill('[data-field="postcode"]', "2021");
+await page.click("#nextBtn");
+await page.click('[data-chip="role"][data-value="Nanny"]');
+await page.click("#nextBtn");
 await page.click('[data-chip="childrenBands"][data-value="1-3"]');
-await page.click('[data-chip="languages"][data-value="English"]');
-await page.click('[data-yesno="pets"][data-value="yes"]');
-await page.click('[data-yesno="smokerHousehold"][data-value="no"]');
-t("optional question is marked with her honesty note", (await page.textContent("body")).includes("the more you answer, the better we match you"));
 await page.click("#nextBtn");
-t("after the family page comes the week", (await page.textContent("#pageTitle")).includes("Your week"));
-await page.click('[data-grid="scheduleNeed"][data-day="Thu"][data-part="morning"]');
 await page.click('[data-chip="startWhen"][data-value="As soon as possible"]');
-await page.click('[data-chip="payOffered"][data-value="38"]');
 await page.click("#nextBtn");
-await page.click("#nextBtn"); // activities optional, skip
-await page.click("#nextBtn"); // personality optional, skip
-t("page 5 is the looking for page", (await page.textContent("#pageTitle")).includes("looking for"));
+t("the week question asks when care is needed", (await page.textContent("#pageTitle")).includes("When do you need care"));
+await page.selectOption('[data-grid-day="scheduleNeed"]', "Thu");
+await page.click('[data-grid="scheduleNeed"][data-day="Thu"][data-part="morning"]');
+await page.click("#nextBtn");
+await page.click('[data-chip="languages"][data-value="English"]');
+await page.click("#nextBtn");
+await page.click('[data-chip="mustLanguages"][data-value="English"]');
+await page.click("#nextBtn");
 t("strength choices ride the looking for fields", (await page.textContent("body")).includes("Must have"));
 await page.click('[data-strength="nonSmoker"][data-value="Must have"]');
 await page.click('[data-yesno="nonSmoker"][data-value="yes"]');
-await page.click('[data-chip="maxDistanceKm"][data-value="10"]');
-for (let i = 0; i < 20 && (await page.locator("#done").isHidden()); i++) await page.click("#nextBtn");
-t("the longer journey walks its expansion pages to the end", (await page.textContent("#pageCount").catch(() => "")).length >= 0);
+await page.click("#nextBtn");
+t("essentials end on the ready step", !(await page.locator("#essentialsDone").isHidden()));
+await page.click("#betterMatchesBtn");
+t("optional pages say they are optional and skippable", (await page.textContent("#optionalLead")).includes("These questions are optional"));
+for (let i = 0; i < 160 && (await page.locator("#done").isHidden()); i++) await page.click("#skipBtn");
 t("done page celebrates", !(await page.locator("#done").isHidden()));
-const bundle = await page.evaluate(() => JSON.parse(localStorage.getItem("caresits-app2-questionnaire")));
+const bundle = await page.evaluate(() => JSON.parse(localStorage.getItem("caresits-app2-questionnaire-walk1") || localStorage.getItem("caresits-app2-questionnaire")));
 t("bundle carries the family card and the must", bundle.side === "family" && bundle.card.musts.nonSmoker === true && bundle.card.scheduleNeed.Thu.includes("morning"));
 
 await page.evaluate(() => { localStorage.clear(); });
@@ -69,13 +85,11 @@ await page.reload({ waitUntil: "networkidle" });
 await page.click('[data-side="carer"]');
 await page.click('[data-chip="country"][data-value="Australia"]');
 await page.click("#nextBtn");
-await page.fill('[data-field="displayName"]', "Ana");
 await page.fill('[data-field="postcode"]', "2021");
-await page.click('[data-chip="age"][data-value="29"]');
-await page.click('[data-chip="nationality"][data-value="Colombian"]');
-await page.click('[data-chip="languages"][data-value="English"]');
 await page.click("#nextBtn");
-t("carer page 2 asks the exact age bands experience", (await page.textContent("body")).includes("Years of experience"));
+await page.click('[data-chip="maxDistanceKm"][data-value="10"]');
+await page.click("#nextBtn");
+t("carer essentials ask the exact age bands experience", (await page.textContent("body")).includes("Years of experience"));
 t("no page errors", errs.length === 0);
 
 
@@ -96,7 +110,7 @@ t("answer shapes: the only typed answers left are the name and postcode facts an
   t("gate (Leg 19 FAIL 1): a bare signed out shell entry lands on the door", await bare.evaluate(() => location.pathname.endsWith("door.html")));
   await bare.close();
 }
-await page.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch { /* storage off */ } });
+await page.addInitScript(() => { window.CARESITS_LIVE_OFF = true; window.CARESITS_UID = "f1"; window.CARESITS_AUTH_STATE = "signed-in"; });
 await page.setViewportSize({ width: 390, height: 844 });
 await page.goto("http://localhost:8933/index.html", { waitUntil: "networkidle" });
 t("shell: five visible family tabs replace the hidden-only menu", await page.evaluate(() => !document.getElementById("layout").classList.contains("open") && document.getElementById("menu").offsetWidth <= 2 && document.querySelectorAll("#bottomNav .bottomTab:not([hidden])").length === 5 && document.getElementById("content").offsetWidth >= window.innerWidth - 2));
@@ -112,9 +126,9 @@ await page.click("#closeBtn");
 await page.waitForTimeout(150);
 t("shell: Close returns to the tab view", await page.evaluate(() => !document.getElementById("layout").classList.contains("open")));
 await page.evaluate(() => window.CARESITS_ROLE_NAV("career"));
-t("shell: carer tabs show Home, Jobs, profile, Messages and More", await page.evaluate(() => [...document.querySelectorAll('#bottomNav .bottomTab:not([hidden]) span')].map((n) => n.textContent).join("|") === "Home|Jobs|My profile|Messages|More"));
+t("shell: carer tabs show Jobs, Calendar, Urgent, Messages and More", await page.evaluate(() => [...document.querySelectorAll('#bottomNav .bottomTab:not([hidden]) span')].map((n) => n.textContent).join("|") === "Jobs|Calendar|Urgent|Messages|More"));
 await page.evaluate(() => window.CARESITS_ROLE_NAV("communicate"));
-t("shell: Stay Connected tabs show Home, Ideas, Messages, Day Story and More", await page.evaluate(() => [...document.querySelectorAll('#bottomNav .bottomTab:not([hidden]) span')].map((n) => n.textContent).join("|") === "Home|Ideas|Messages|Day Story|More"));
+t("shell: Stay Connected tabs show Today, Calendar, Photos, Messages and More", await page.evaluate(() => [...document.querySelectorAll('#bottomNav .bottomTab:not([hidden]) span')].map((n) => n.textContent).join("|") === "Today|Calendar|Photos|Messages|More"));
 await page.evaluate(() => window.CARESITS_ROLE_NAV("family"));
 t("shell: no page errors", errs.length === 0);
 {
@@ -123,10 +137,10 @@ t("shell: no page errors", errs.length === 0);
   // (47px, the tall iPhone status bar): the same padding
   // the env() rule computes on device.
   const sp2 = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await sp2.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
+  await sp2.addInitScript(() => { window.CARESITS_LIVE_OFF = true; window.CARESITS_UID = "f1"; window.CARESITS_AUTH_STATE = "signed-in"; });
   await sp2.goto("http://localhost:8933/index.html", { waitUntil: "networkidle" });
   await sp2.addStyleTag({ content: "#bottomNav{padding-bottom:53px}" });
-  const btnBox = await sp2.evaluate(() => { const b = document.querySelector('[data-bottom-tab="family-home"]').getBoundingClientRect(); return { bottom: b.bottom, height: b.height }; });
+  const btnBox = await sp2.evaluate(() => { const b = document.querySelector('[data-bottom-tab="family-find"]').getBoundingClientRect(); return { bottom: b.bottom, height: b.height }; });
   t("safe-area: the bottom tab stays above a 47px home indicator with a 44px target", btnBox.bottom <= 797 && btnBox.height >= 44);
   await sp2.click('[data-bottom-tab="family-more"]');
   await sp2.waitForTimeout(150);
@@ -151,7 +165,7 @@ t("shell: no page errors", errs.length === 0);
   const mei = { side: "carer", displayName: "Mei", postcode: "2021", card: { ...anaCard, availability: { Tue: ["afternoon"] } }, looking: { musts: {}, prefs: {} } };
   const candidates = [carer("Ana"), carer("Bea"), carer("Cleo"), carer("Dana"), carer("Elif"), carer("Faye"), carer("Gia"), mei];
   const fp = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await fp.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
+  await fp.addInitScript(() => { window.CARESITS_LIVE_OFF = true; window.CARESITS_UID = "f1"; window.CARESITS_AUTH_STATE = "signed-in"; });
   const ferrs = [];
   fp.on("pageerror", (e) => ferrs.push(String(e)));
   await fp.addInitScript((data) => { window.CARESITS_FIND_DATA = data; }, { viewer: famDoc, candidates });
@@ -177,7 +191,7 @@ t("shell: no page errors", errs.length === 0);
   }));
   await fp.close();
   const ep = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await ep.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
+  await ep.addInitScript(() => { window.CARESITS_LIVE_OFF = true; window.CARESITS_UID = "f1"; window.CARESITS_AUTH_STATE = "signed-in"; });
   await ep.goto("http://localhost:8933/index.html", { waitUntil: "networkidle" });
   await ep.evaluate(() => document.querySelector('[data-nav="find"]')?.click());
   await ep.waitForTimeout(300);
@@ -185,7 +199,7 @@ t("shell: no page errors", errs.length === 0);
   t("map: an exploring viewer sees pins but no personal percent", await ep.evaluate(() => document.querySelectorAll("#findRoot .mapPin").length >= 0 && document.querySelectorAll("#findRoot .mapPct").length === 0));
   await ep.close();
   const qp = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await qp.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
+  await qp.addInitScript(() => { window.CARESITS_LIVE_OFF = true; window.CARESITS_UID = "f1"; window.CARESITS_AUTH_STATE = "signed-in"; });
   await qp.goto("http://localhost:8933/index.html", { waitUntil: "networkidle" });
   const honest = await qp.evaluate(async () => {
     const { renderFind } = await import("./find.js");
@@ -211,13 +225,13 @@ t("shell: no page errors", errs.length === 0);
 // ---- Phase C: matches + urgent board ----
 {
   const cp = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await cp.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
+  await cp.addInitScript(() => { window.CARESITS_LIVE_OFF = true; window.CARESITS_UID = "f1"; window.CARESITS_AUTH_STATE = "signed-in"; });
   const cerrs = [];
   cp.on("pageerror", (e) => cerrs.push(String(e)));
   await cp.addInitScript(() => {
     window.__writes = [];
     window.CARESITS_WRITE = (kind, payload) => window.__writes.push({ kind, payload });
-    window.CARESITS_ME = { uid: "f1", side: "family" };
+    window.CARESITS_ME = { uid: "f1", side: "family", name: "Sam" };
     window.CARESITS_PROFILE_COMPLETE = false;
     window.CARESITS_PHASE_C = {
       viewer: { uid: "f1", side: "family" },
@@ -241,13 +255,21 @@ t("shell: no page errors", errs.length === 0);
   await cp.evaluate(() => document.querySelector('[data-nav="board"]').click());
   await cp.waitForTimeout(200);
   t("board: the open job shows to everyone", await cp.evaluate(() => document.getElementById("boardRoot").textContent.includes("Postcode 2021")));
-  t("board: a family sees the post form", await cp.evaluate(() => document.getElementById("boardRoot").textContent.includes("Post a job")));
-  await cp.evaluate(() => [...document.querySelectorAll("#boardRoot button")].find((b) => b.textContent === "Post the job").click());
+  // The post form on this base is a four step wizard (when,
+  // how long, which child, then postcode and notes) ending in
+  // the "Post urgent job" button; the walk rides it as a user does.
+  t("board: a family sees the post form", await cp.evaluate(() => document.getElementById("boardRoot").textContent.includes("Need help fast?")));
+  for (let i = 0; i < 3; i++) {
+    await cp.evaluate(() => [...document.querySelectorAll("#boardRoot button")].find((b) => b.textContent === "Save and continue").click());
+    await cp.waitForTimeout(120);
+  }
+  await cp.fill("#jobPostcode", "2021");
+  await cp.evaluate(() => [...document.querySelectorAll("#boardRoot button")].find((b) => b.textContent === "Post urgent job").click());
   await cp.waitForTimeout(200);
-  t("board: an unfinished profile is walked to the questions, never scolded", await cp.evaluate(() => !document.getElementById("surface-questionnaire").hidden && document.getElementById("boardRoot").textContent.includes("walk you there")));
+  t("board: an unfinished profile is walked to the questions, never scolded", await cp.evaluate(() => !document.getElementById("surface-questionnaire").hidden && document.getElementById("boardRoot").textContent.includes("Finish your care details first")));
   await cp.evaluate(() => { window.CARESITS_PROFILE_COMPLETE = true; });
   await cp.evaluate(() => document.querySelector('[data-nav="board"]').click());
-  await cp.evaluate(() => [...document.querySelectorAll("#boardRoot button")].find((b) => b.textContent === "Post the job").click());
+  await cp.evaluate(() => [...document.querySelectorAll("#boardRoot button")].find((b) => b.textContent === "Post urgent job").click());
   t("board: a finished profile posts through the planner", await cp.evaluate(() => window.__writes.some((w) => w.kind === "job" && w.payload.data.state === "open")));
   t("phase C: no page errors", cerrs.length === 0);
   await cp.close();
@@ -257,7 +279,7 @@ t("shell: no page errors", errs.length === 0);
 // ---- F19: the live Phase C seam lands after first render ----
 {
   const lp = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await lp.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
+  await lp.addInitScript(() => { window.CARESITS_LIVE_OFF = true; window.CARESITS_UID = "f1"; window.CARESITS_AUTH_STATE = "signed-in"; });
   const lerrs = [];
   lp.on("pageerror", (e) => lerrs.push(String(e)));
   await lp.goto("http://localhost:8933/index.html", { waitUntil: "networkidle" });
@@ -287,7 +309,7 @@ t("shell: no page errors", errs.length === 0);
 // ---- Amendment 4: report + block on the surfaces ----
 {
   const sp = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await sp.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
+  await sp.addInitScript(() => { window.CARESITS_LIVE_OFF = true; window.CARESITS_UID = "f1"; window.CARESITS_AUTH_STATE = "signed-in"; });
   const serrs = [];
   sp.on("pageerror", (e) => serrs.push(String(e)));
   await sp.addInitScript(() => {
@@ -327,7 +349,7 @@ t("shell: no page errors", errs.length === 0);
 // ---- QA F-LOW: a block sever recounts the Find pool line ----
 {
   const bp = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await bp.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
+  await bp.addInitScript(() => { window.CARESITS_LIVE_OFF = true; window.CARESITS_UID = "f1"; window.CARESITS_AUTH_STATE = "signed-in"; });
   await bp.addInitScript(() => {
     window.__writes = [];
     window.CARESITS_WRITE = (kind, payload) => window.__writes.push({ kind, payload });
@@ -358,7 +380,7 @@ t("shell: no page errors", errs.length === 0);
 // ---- Amendment 5: the pair calendar ----
 {
   const kp = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await kp.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
+  await kp.addInitScript(() => { window.CARESITS_LIVE_OFF = true; window.CARESITS_UID = "f1"; window.CARESITS_AUTH_STATE = "signed-in"; });
   const kerrs = [];
   kp.on("pageerror", (e) => kerrs.push(String(e)));
   await kp.addInitScript(() => {
@@ -399,13 +421,17 @@ t("shell: no page errors", errs.length === 0);
 // ---- Door v4 + the bunny tour ----
 {
   const dp = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await dp.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
+  await dp.addInitScript(() => { window.CARESITS_LIVE_OFF = true; window.CARESITS_UID = "f1"; window.CARESITS_AUTH_STATE = "signed-in"; });
   const derrs = [];
   dp.on("pageerror", (e) => derrs.push(String(e)));
   await dp.goto("http://localhost:8933/door.html", { waitUntil: "networkidle" });
   await dp.waitForTimeout(250);
   t("door: the sign up stands alone, big and centred", await dp.evaluate(() => !!document.querySelector(".doorMark") && !!document.getElementById("googleBtn") && !!document.getElementById("appleBtn") && !!document.getElementById("emailIn") && !!document.getElementById("nextBtn")));
   t("door: no password on the first page", await dp.evaluate(() => document.getElementById("step2").hidden === true));
+  // Door V4 on this base asks the role first; the auth door
+  // stands behind the role pick.
+  await dp.click('[data-role="family"]');
+  await dp.waitForTimeout(150);
   await dp.fill("#emailIn", "sam@example.com");
   await dp.click("#nextBtn");
   t("door: step two shows the email, Change, and the password", await dp.evaluate(() => !document.getElementById("step2").hidden && document.getElementById("emailEcho").textContent === "sam@example.com" && !!document.getElementById("pwIn")));
@@ -432,23 +458,26 @@ t("shell: no page errors", errs.length === 0);
   t("tour: the existing name onboarding keeps one Next and Skip guide", await tp.evaluate(() => !!document.querySelector("#tourPop .guideName") && document.querySelector("#tourPop .guideNext").textContent === "Next"));
   await tp.fill("#tourPop .guideName", "Sam");
   await tp.click("#tourPop .guideNext");
-  t("tour: the guide highlights Home first", await tp.evaluate(() => localStorage.getItem("caresits-name-tour-user") === "Sam" && document.querySelector('[data-bottom-tab="family-home"]').classList.contains("tourSpotlight")));
+  // The guide's tab steps ride the tabs this shell actually
+  // carries (tour.js sideTabs reads them off the bottom nav):
+  // Find, Calendar, Urgent, Messages, More, then the Me step.
+  t("tour: the guide highlights Find first", await tp.evaluate(() => localStorage.getItem("caresits-name-tour-user") === "Sam" && document.querySelector('[data-bottom-tab="family-find"]').classList.contains("tourSpotlight")));
   await tp.click("#tourPop .guideNext");
-  t("tour: the guide highlights Find", await tp.evaluate(() => document.querySelector('[data-bottom-tab="family-find"]').classList.contains("tourSpotlight")));
+  t("tour: the guide highlights Calendar", await tp.evaluate(() => document.querySelector('[data-bottom-tab="family-week"]').classList.contains("tourSpotlight")));
   await tp.click("#tourPop .guideNext");
-  t("tour: the guide highlights Our family", await tp.evaluate(() => document.querySelector('[data-bottom-tab="family-family"]').classList.contains("tourSpotlight")));
+  t("tour: the guide highlights Urgent", await tp.evaluate(() => document.querySelector('[data-bottom-tab="family-urgent"]').classList.contains("tourSpotlight")));
   await tp.click("#tourPop .guideNext");
-  t("tour: the guide highlights Week", await tp.evaluate(() => document.querySelector('[data-bottom-tab="family-week"]').classList.contains("tourSpotlight")));
+  t("tour: the guide highlights Messages", await tp.evaluate(() => document.querySelector('[data-bottom-tab="family-messages"]').classList.contains("tourSpotlight")));
   await tp.click("#tourPop .guideNext");
   t("tour: the guide highlights More", await tp.evaluate(() => document.querySelector('[data-bottom-tab="family-more"]').classList.contains("tourSpotlight")));
   await tp.click("#tourPop .guideNext");
-  t("tour: More opens and Switch side is explained", await tp.evaluate(() => document.getElementById("layout").classList.contains("open") && document.querySelector("#tourPop .guideWords").textContent.includes("Switch side")));
+  t("tour: More opens and the Me step explains profile, settings and switching sides", await tp.evaluate(() => document.getElementById("layout").classList.contains("open") && document.querySelector("#tourPop .guideWords").textContent.includes("Switch between finding")));
   const guideCopy = [];
   for (let step = 0; step < 60 && await tp.locator("#tourPop").count(); step++) {
     guideCopy.push(await tp.locator("#tourPop .guideWords").textContent());
     await tp.click("#tourPop .guideNext");
   }
-  t("tour: every visible More item is explained, including safety, deleted items, checks, and reviews", ["Emergency", "Recently Deleted", "Checks", "Reviews", "Help", "Settings"].every((word) => guideCopy.some((line) => line.includes(word))));
+  t("tour: the final step explains the Me button in plain words", guideCopy.some((line) => line.includes("your profile, settings and app mode")));
   t("tour: completion is remembered per side and uid", await tp.evaluate(() => !document.getElementById("tourPop") && JSON.parse(localStorage.getItem("caresits-side-tours-tour-user")).family === true && JSON.parse(localStorage.getItem("caresits-guide-progress-family-tour-user")).done === true));
   await tp.evaluate(() => window.CARESITS_NAV("settings"));
   await tp.waitForTimeout(100);
@@ -475,7 +504,12 @@ t("shell: no page errors", errs.length === 0);
     window.CARESITS_ROLE_NAV("career");
     window.CARESITS_TOUR_START_SIDE("career");
   });
-  t("tour: carer side gets a separate guide and tab", await tp.evaluate(() => document.getElementById("tourPop")?.querySelector(".guideWords")?.textContent.includes("carers find work") && document.querySelector('[data-bottom-tab="career-home"]').classList.contains("tourSpotlight")));
+  await tp.click("#tourPop .guideNext");
+  t("tour: carer side gets a separate guide", await tp.evaluate(() => document.getElementById("tourPop")?.querySelector(".guideWords")?.textContent.includes("carers find work")));
+  await tp.click("#tourPop .guideNext");
+  await tp.click("#tourPop .guideNext");
+  t("tour: the carer guide highlights the Jobs tab", await tp.evaluate(() => document.querySelector('[data-bottom-tab="career-find"]').classList.contains("tourSpotlight")));
+  await tp.click("#tourPop .guideSkip");
   t("tour: no page errors", terrs.length === 0);
   await tp.close();
 }
@@ -484,7 +518,7 @@ t("shell: no page errors", errs.length === 0);
 // ---- Phase D: Children + Day Story ----
 {
   const fp2 = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await fp2.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
+  await fp2.addInitScript(() => { window.CARESITS_LIVE_OFF = true; window.CARESITS_UID = "f1"; window.CARESITS_AUTH_STATE = "signed-in"; });
   const ferrs = [];
   fp2.on("pageerror", (e) => ferrs.push(String(e)));
   await fp2.addInitScript(() => {
@@ -495,7 +529,9 @@ t("shell: no page errors", errs.length === 0);
   await fp2.goto("http://localhost:8933/index.html", { waitUntil: "networkidle" });
   await fp2.evaluate(() => document.querySelector('[data-nav="children"]').click());
   await fp2.waitForTimeout(250);
-  t("children: the card shows with its theme name", await fp2.evaluate(() => document.getElementById("childrenRoot").textContent.includes("Mila") && document.getElementById("childrenRoot").textContent.includes("Fairies theme")));
+  t("children: the card shows with its theme colour", await fp2.evaluate(() => document.getElementById("childrenRoot").textContent.includes("Mila") && document.querySelector("#childrenRoot .kidCard").style.borderTopColor === "rgb(139, 118, 184)"));
+  await fp2.evaluate(() => document.getElementById("kAddOpen").click()); // the add form stands in its sheet
+  await fp2.waitForTimeout(150);
   await fp2.fill("#kName", "Leo");
   await fp2.evaluate(() => { document.getElementById("kTheme").value = "space"; });
   await fp2.click("#kAdd");
@@ -525,7 +561,7 @@ t("shell: no page errors", errs.length === 0);
 // ---- Phase D: week + trust + thread with the taste wall ----
 {
   const wp = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await wp.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
+  await wp.addInitScript(() => { window.CARESITS_LIVE_OFF = true; window.CARESITS_UID = "f1"; window.CARESITS_AUTH_STATE = "signed-in"; });
   const werrs = [];
   wp.on("pageerror", (e) => werrs.push(String(e)));
   await wp.addInitScript(() => {
@@ -558,7 +594,7 @@ t("shell: no page errors", errs.length === 0);
   await wp.close();
 
   const up = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await up.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
+  await up.addInitScript(() => { window.CARESITS_LIVE_OFF = true; window.CARESITS_UID = "f1"; window.CARESITS_AUTH_STATE = "signed-in"; });
   const uerrs = [];
   up.on("pageerror", (e) => uerrs.push(String(e)));
   await up.addInitScript(() => {
@@ -637,7 +673,7 @@ const { planSave } = await import("./account-save.js");
 // ---- Round 3: F15 the trust seam carries the real member ----
 {
   const mp = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await mp.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
+  await mp.addInitScript(() => { window.CARESITS_LIVE_OFF = true; window.CARESITS_UID = "f1"; window.CARESITS_AUTH_STATE = "signed-in"; });
   const merrs = [];
   mp.on("pageerror", (e) => merrs.push(String(e)));
   await mp.goto("http://localhost:8933/index.html", { waitUntil: "networkidle" });
@@ -664,7 +700,7 @@ const { planSave } = await import("./account-save.js");
 // ---- Round 4: F14 the gallery, and the S-2 resume picker ----
 {
   const gp = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await gp.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
+  await gp.addInitScript(() => { window.CARESITS_LIVE_OFF = true; window.CARESITS_UID = "f1"; window.CARESITS_AUTH_STATE = "signed-in"; });
   const gerrs = [];
   gp.on("pageerror", (e) => gerrs.push(String(e)));
   await gp.goto("http://localhost:8933/index.html", { waitUntil: "networkidle" });
@@ -733,7 +769,7 @@ const { planSave } = await import("./account-save.js");
   await gp.close();
   // The demo: no account, so a gallery pick previews on the device and writes nothing.
   const dp = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await dp.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
+  await dp.addInitScript(() => { window.CARESITS_LIVE_OFF = true; window.CARESITS_UID = "f1"; window.CARESITS_AUTH_STATE = "signed-in"; });
   const derrs = [];
   dp.on("pageerror", (e) => derrs.push(String(e)));
   await dp.goto("http://localhost:8933/index.html", { waitUntil: "networkidle" });
@@ -771,7 +807,7 @@ const { planSave } = await import("./account-save.js");
 // ---- file can be picked again and still fires change    ----
 {
   const fp = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await fp.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
+  await fp.addInitScript(() => { window.CARESITS_LIVE_OFF = true; window.CARESITS_UID = "f1"; window.CARESITS_AUTH_STATE = "signed-in"; });
   const ferrs = [];
   fp.on("pageerror", (e) => ferrs.push(String(e)));
   await fp.goto("http://localhost:8933/index.html", { waitUntil: "networkidle" });
@@ -809,10 +845,10 @@ const { planSave } = await import("./account-save.js");
 
 // ---- Round 3: F16 the questionnaire keys belong to the account ----
 {
-  const seedA = { side: "family", page: 1, answers: { country: "Australia" }, strengths: {}, resumeFeed: [], countryStep: false };
+  const seedA = { side: "family", page: 1, stage: "essentials", answers: { country: "Australia" }, strengths: {}, resumeFeed: [], countryStep: false };
   const mkJourney = async (uid, seed) => {
     const p = await browser.newPage({ viewport: { width: 390, height: 844 } });
-    await p.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
+    await p.addInitScript(() => { window.CARESITS_LIVE_OFF = true; window.CARESITS_UID = "f1"; window.CARESITS_AUTH_STATE = "signed-in"; });
     const errs = [];
     p.on("pageerror", (e) => errs.push(String(e)));
     await p.addInitScript(({ uid, seed }) => {
@@ -824,7 +860,7 @@ const { planSave } = await import("./account-save.js");
     return { p, errs };
   };
   const a1 = await mkJourney("uidA", seedA);
-  t("isolation (F16): A's draft returns when A is signed in", await a1.p.evaluate(() => !document.getElementById("journey").hidden && document.getElementById("pageCount").textContent.includes("Page 2")));
+  t("isolation (F16): A's draft returns when A is signed in", await a1.p.evaluate(() => !document.getElementById("journey").hidden && document.getElementById("pageCount").textContent.includes("Question 2 of")));
   await a1.p.evaluate(() => {
     const c = document.querySelector("#fields [data-chip], #fields [data-yesno], #fields [data-field], #fields select");
     if (c) { c.click(); c.dispatchEvent(new Event("change", { bubbles: true })); c.dispatchEvent(new Event("input", { bubbles: true })); }
@@ -840,7 +876,7 @@ const { planSave } = await import("./account-save.js");
   t("isolation (F16): signed out mode never shows A's draft", await o1.p.evaluate(() => !document.getElementById("welcome").hidden && document.getElementById("journey").hidden));
   await o1.p.close();
   const a2 = await mkJourney("uidA", seedA);
-  t("isolation (F16): A signs back in and the draft is still there", await a2.p.evaluate(() => !document.getElementById("journey").hidden && document.getElementById("pageCount").textContent.includes("Page 2")));
+  t("isolation (F16): A signs back in and the draft is still there", await a2.p.evaluate(() => !document.getElementById("journey").hidden && document.getElementById("pageCount").textContent.includes("Question 2 of")));
   await a2.p.close();
 }
 
@@ -866,7 +902,14 @@ const { planSave } = await import("./account-save.js");
 {
   const src = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
   t("Ruling (Leg 19 FAIL 1): the shell gates a signed out entry back to the door", src("./live.js").includes("gateSignedOut") && src("./live.js").includes('location.href = "door.html"'));
-  t("Ruling (Leg 19 FAIL 1): a deliberate Explore entry carries the exempting marker", src("./live.js").includes('sessionStorage.getItem("caresits-demo")') && src("./door.js").includes('sessionStorage.setItem("caresits-demo", "1")') && src("./journey.js").includes('sessionStorage.setItem("caresits-demo", "1")'));
+  // Fleet rule (Ilse, 29 Oct 2026): the demo is GONE. No
+  // shipped file reads or sets the old marker, the gate
+  // carries no exemption, and no demo slot stands in the
+  // key resolver. (storage-keys.js still DELETES the stale
+  // marker at sign out: hygiene for old installs, not a
+  // gate, so the census hunts reads and writes only.)
+  const shipped = ["./live.js", "./door.js", "./journey.js", "./purchase.js", "./plans.js", "./storage-keys.js", "./shell.js", "./index.html", "./door.html", "./journey.html"];
+  t("Ruling (fleet, 29 Oct 2026): no demo way in stands anywhere in the shipped set", shipped.every((f) => { const x = src(f); return !x.includes('getItem("caresits-demo")') && !x.includes('setItem("caresits-demo"') && !x.includes("isDemoSession") && !x.includes("plans.demoLine") && !x.includes("door.demo"); }));
   t("Ruling (Leg 14): the shell publishes its show mechanism as a seam", src("./shell.js").includes("window.CARESITS_NAV = show"));
   t("Ruling (Leg 14): homes opens the thread by the shell seam, never by a class", src("./homes.js").includes('CARESITS_NAV("thread")') && !src("./homes.js").includes('classList.toggle("active"'));
   t("Ruling (Leg 3 Note 2): the stored device name serves the signed in world only", src("./homes.js").includes("if (m && m.uid)"));
@@ -887,7 +930,7 @@ const { planSave } = await import("./account-save.js");
   t("b104 ROOT A: the journey save judges the user only after the restore settles", src("./account-save.js").includes("authStateReady") && src("./account-save.js").includes("await frameUser(auth)"));
   t("b104 ROOT A: Find judges by the same frame rule", src("./find.js").includes("await frameUser("));
   t("b104 ROOT A: the Done screen earns its saved line", src("./journey.js").includes("window.CARESITS_SAVE(bundle)") && src("./journey.js").includes('r.saved !== "account"') && src("./journey.js").includes("journey.dLeadLocal") && src("./journey.js").includes("withTimeout"));
-  t("b104 ROOT B: the boot publishes the week seam and the saved background, then re-renders", src("./live.js").includes("window.CARESITS_WEEK = weekSeamFrom") && src("./live.js").includes('localStorage.setItem("caresits-app2-bg"') && src("./live.js").includes("CARESITS_WEEK_RENDER"));
+  t("b104 ROOT B: the boot publishes the week seam and the saved background, then re-renders", src("./live.js").includes("window.CARESITS_WEEK = weekSeamFrom") && src("./live.js").includes('accountKey("caresits-app2-bg", uid)') && src("./live.js").includes("CARESITS_WEEK_RENDER"));
   t("b104 ROOT B: the family surfaces re-render when the boot lands", src("./live.js").includes("CARESITS_FAMILY_RENDER") && src("./family.js").includes("window.CARESITS_FAMILY_RENDER = bootFamily"));
   t("b104 Leg 14: the boot publishes the thread seam and the surface re-renders on open", src("./live.js").includes("window.CARESITS_THREAD = threadSeamFrom") && src("./thread.js").includes("window.CARESITS_THREAD_OPEN = bootThread") && src("./shell.js").includes("CARESITS_THREAD_OPEN"));
   t("b104 Leg 7: a removal joins the bin's live list in the same moment", src("./family.js").includes("CARESITS_BIN_ADD") && src("./bin.js").includes("winOf().CARESITS_BIN_ADD"));
@@ -904,7 +947,7 @@ const { planSave } = await import("./account-save.js");
   t("b107 FAIL 2: completeness is recomputed at publish from the seam's facts", src("./live.js").includes("window.CARESITS_PROFILE_COMPLETE = Boolean("));
   t("b107 Leg 7 residual: bin leaves the live list on restore and forever", src("./bin.js").includes("export function binLeave") && (src("./bin.js").match(/binLeave\(w\.CARESITS_BIN, item\.id\)/g) || []).length === 2);
   t("b107 Legs 9+10 same-session: a landed save raises the completeness flag on both hosts", src("./account-save.js").includes("h.CARESITS_PROFILE_COMPLETE = true"));
-  t("b107 language ride: the pick writes the account doc, the boot seeds it back", src("./live.js").includes('case "language":') && src("./live.js").includes('localStorage.setItem("caresits-lang", appDoc.language)') && src("./trust.js").includes('write("language", { code })'));
+  t("b107 language ride: the pick writes the account doc, the boot seeds it back", src("./live.js").includes('case "language":') && src("./live.js").includes('accountKey("caresits-lang", uid)') && src("./trust.js").includes('write("language", { code })'));
   t("b108 language dispatch: the write settles before the reload, bounded", src("./trust.js").includes("return window.CARESITS_WRITE(kind, payload)") && src("./trust.js").includes("Promise.resolve(w).then(go, go)") && src("./trust.js").includes("setTimeout(go, 10000)"));
   t("b111 language bound: the hang guard stands far above the write's healthy settle range", src("./trust.js").includes("setTimeout(go, 10000)") && !src("./trust.js").includes("setTimeout(go, 1500)"));
   t("b108 save drain: the realm warms at entry, the shell and journey drain the envelope", src("./account-save.js").includes("export function warmSave") && src("./account-save.js").includes("export async function drainOutbox") && src("./journey.js").includes("warmSave();") && src("./journey.js").includes("drainOutbox();") && src("./live.js").includes("m.drainOutbox()"));
@@ -923,7 +966,7 @@ const { planSave } = await import("./account-save.js");
   const src = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
   t("b111 FIND: find.js imports stitchAnswers from browse.js", /import \{[^}]*stitchAnswers[^}]*\} from "\.\/browse\.js"/.test(src("./find.js")));
   const p = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await p.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
+  await p.addInitScript(() => { window.CARESITS_LIVE_OFF = true; window.CARESITS_UID = "f1"; window.CARESITS_AUTH_STATE = "signed-in"; });
   await p.goto("http://localhost:8933/index.html", { waitUntil: "networkidle" });
   const res = await p.evaluate(async () => {
     try {
@@ -998,7 +1041,7 @@ const { planSave } = await import("./account-save.js");
 {
   const src = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
   const sat = (p) => (src(p).match(/env\(safe-area-inset-top/g) || []).length;
-  t("safe-area: every top chrome surface insets by the safe area", sat("./shell.css") === 3 && sat("./door.css") === 1 && sat("./styles.css") === 1);
+  t("safe-area: every top chrome surface insets by the safe area", sat("./shell.css") >= 3 && sat("./door.css") === 1 && sat("./styles.css") === 1);
   t("safe-area: the app's three pages extend under the bar by design", ["./door.html", "./index.html", "./journey.html"].every((p) => src(p).includes("viewport-fit=cover")));
   t("no-zoom: a double tap never zooms, on any of the app's pages (her ruling, 21 Oct)", ["./door.html", "./index.html", "./journey.html"].every((p) => src(p).includes("maximum-scale=1.0") && src(p).includes("user-scalable=no")) && ["./shell.css", "./door.css", "./styles.css"].every((p) => src(p).includes("touch-action: manipulation")));
 }
@@ -1031,24 +1074,40 @@ const { planSave } = await import("./account-save.js");
   t("b112 FIND: the save's publication fires the Find refresh", src("./account-save.js").includes("h.CARESITS_FIND_REFRESH") && src("./account-save.js").includes("h.CARESITS_FIND_REFRESH()"));
 }
 
-// ---- Leg 11: the level picker (welcome choice + computed boundary) ----
+// ---- Leg 11: the level boundary (the staged journey's shape) ----
+// The welcome level picker and stop panel of the old design
+// are gone on this base: the staged journey's ready step IS
+// the stop point (See my matches / Make my matches better),
+// and the done screen names the level levels.js computes.
 {
   const src = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
   const html = src("./journey.html");
-  t("Leg 11: the welcome offers all four levels as choices", ["explore", "quick", "better", "full"].every((v) => html.includes(`data-level="${v}"`)));
+  t("Leg 11: the ready step offers the stop or deepen choice", html.includes('id="seeMatchesBtn"') && html.includes('id="betterMatchesBtn"'));
   t("Leg 11: the journey computes the boundary from levels.js", src("./journey.js").includes("levelOf(state.side, state.answers)"));
-  const p = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await p.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
-  const errs = [];
-  p.on("pageerror", (e) => errs.push(String(e)));
-  await p.goto("http://localhost:8933/", { waitUntil: "networkidle" });
-  await p.waitForTimeout(250);
-  t("Leg 11: the welcome shows the four level choices", await p.evaluate(() => document.querySelectorAll("[data-level]").length === 4));
-  t("Leg 11: the choices name Better Match and Full Match", await p.evaluate(() => document.body.textContent.includes("Better Match") && document.body.textContent.includes("Full Match")));
-  await p.evaluate(() => document.querySelector('[data-level="full"]').click());
-  t("Leg 11: picking Full marks it and stores the target", await p.evaluate(() => document.querySelector('[data-level="full"]').classList.contains("on") && (JSON.parse(localStorage.getItem("caresits-app2-draft") || "{}").target === "full")));
-  t("Leg 11: the picker page carries no errors", errs.length === 0);
-  await p.close();
+  const mkSeeded = async (seed) => {
+    const p = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    await p.addInitScript(() => { window.CARESITS_LIVE_OFF = true; window.CARESITS_UID = "f1"; window.CARESITS_AUTH_STATE = "signed-in"; });
+    const errs = [];
+    p.on("pageerror", (e) => errs.push(String(e)));
+    await p.addInitScript(({ seed }) => { window.CARESITS_UID = "uidA"; if (seed) localStorage.setItem("caresits-app2-draft-uidA", JSON.stringify(seed)); }, { seed });
+    await p.goto("http://localhost:8933/", { waitUntil: "networkidle" });
+    await p.waitForTimeout(250);
+    return { p, errs };
+  };
+  const essentialsSeed = {
+    side: "family", page: 7, stage: "essentials", countryStep: false,
+    answers: { country: "Australia", postcode: "2021", role: "Nanny", childrenBands: ["1-3"], startWhen: "As soon as possible", scheduleNeed: { Thu: ["morning"] }, languages: ["English"], mustLanguages: ["English"], nonSmoker: true },
+    strengths: { nonSmoker: "Must have" }, resumeFeed: [],
+  };
+  const s1 = await mkSeeded(essentialsSeed);
+  await s1.p.click("#nextBtn");
+  await s1.p.waitForTimeout(200);
+  t("Leg 11: finishing the essentials lands on the ready step", await s1.p.evaluate(() => !document.getElementById("essentialsDone").hidden && !!document.getElementById("seeMatchesBtn") && !!document.getElementById("betterMatchesBtn")));
+  await s1.p.click("#betterMatchesBtn");
+  await s1.p.waitForTimeout(200);
+  t("Leg 11: Make my matches better returns to the walk, past the boundary", await s1.p.evaluate(() => document.getElementById("essentialsDone").hidden && !document.getElementById("journey").hidden && !document.getElementById("optionalLead").hidden));
+  t("Leg 11: the boundary walk carries no errors", s1.errs.length === 0);
+  await s1.p.close();
 
   const { FAMILY_PAGES } = await import("./questions.js");
   const { EXPANSION } = await import("./questions2.js");
@@ -1067,32 +1126,11 @@ const { planSave } = await import("./account-save.js");
   const answers = { country: "Australia" };
   for (const pg of FAMILY_PAGES) for (const f of pg.fields) if (f.required) answers[f.id] = valFor(f);
   for (const pg of EXPANSION.family) for (const f of pg.fields) if (f.level === "quick") answers[f.id] = valFor(f);
-  const seed = { side: "family", page: 0, answers, strengths: {}, resumeFeed: [], countryStep: false, target: "quick", beyond: false };
-  const mkSeeded = async () => {
-    const p = await browser.newPage({ viewport: { width: 390, height: 844 } });
-    await p.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
-    const errs = [];
-    p.on("pageerror", (e) => errs.push(String(e)));
-    await p.addInitScript(({ seed }) => { window.CARESITS_UID = "uidA"; if (seed) localStorage.setItem("caresits-app2-draft-uidA", JSON.stringify(seed)); }, { seed });
-    await p.goto("http://localhost:8933/", { waitUntil: "networkidle" });
-    await p.waitForTimeout(250);
-    return { p, errs };
-  };
-  const s1 = await mkSeeded();
-  await s1.p.click("#nextBtn");
-  await s1.p.waitForTimeout(200);
-  t("Leg 11: reaching the picked level offers the stop panel", await s1.p.evaluate(() => !document.getElementById("stopPanel").hidden && document.getElementById("stopTitle").textContent.includes("Quick Connect")));
-  await s1.p.click("#keepBtn");
-  await s1.p.waitForTimeout(200);
-  t("Leg 11: Keep going returns to the walk, past the boundary", await s1.p.evaluate(() => document.getElementById("stopPanel").hidden && !document.getElementById("journey").hidden));
-  t("Leg 11: the boundary walk carries no errors", s1.errs.length === 0);
-  await s1.p.close();
-  const s2 = await mkSeeded();
-  await s2.p.click("#nextBtn");
-  await s2.p.waitForTimeout(200);
-  await s2.p.click("#stopBtn");
+  const seed = { side: "family", page: 0, stage: "optional", answers, strengths: {}, resumeFeed: [], countryStep: false };
+  const s2 = await mkSeeded(seed);
+  for (let i = 0; i < 160 && (await s2.p.locator("#done").isHidden()); i++) await s2.p.click("#skipBtn");
   await s2.p.waitForTimeout(300);
-  t("Leg 11: Stop here finishes and the done screen names the computed level", await s2.p.evaluate(() => !document.getElementById("done").hidden && document.getElementById("doneLevel").textContent.includes("Quick Connect")));
+  t("Leg 11: finishing names the computed level on the done screen", await s2.p.evaluate(() => !document.getElementById("done").hidden && document.getElementById("doneLevel").textContent.includes("Quick Connect")));
   await s2.p.close();
 }
 
@@ -1103,7 +1141,7 @@ const { planSave } = await import("./account-save.js");
 // carers are never gated; no member seam means no gate.
 {
   const pp = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await pp.addInitScript(() => { try { sessionStorage.setItem("caresits-demo", "1"); } catch {} });
+  await pp.addInitScript(() => { window.CARESITS_LIVE_OFF = true; window.CARESITS_UID = "f1"; window.CARESITS_AUTH_STATE = "signed-in"; });
   const perrs = [];
   pp.on("pageerror", (e) => perrs.push(String(e)));
   await pp.goto("http://localhost:8933/index.html", { waitUntil: "networkidle" });

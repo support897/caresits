@@ -1,4 +1,9 @@
 import assert from "node:assert/strict";
+// lang.js documents its own test mode: the shipped app stands
+// ENGLISH_ONLY for now, and "tests set CARESITS_ALL_LANGS=1" to
+// exercise the multilingual machinery this suite proves. The flag
+// must stand before lang.js is imported (it is read at load).
+process.env.CARESITS_ALL_LANGS = "1";
 Object.defineProperty(globalThis, "navigator", { value: { language: "es-ES" }, configurable: true });
 globalThis.localStorage = { _m: {}, getItem(k) { return this._m[k] ?? null; }, setItem(k, v) { this._m[k] = v; } };
 globalThis.sessionStorage = { _m: {}, getItem(k) { return this._m[k] ?? null; }, setItem(k, v) { this._m[k] = v; }, removeItem(k) { delete this._m[k]; } };
@@ -25,6 +30,17 @@ ck("every questionnaire question has English and Spanish bunny guidance", async 
 });
 ck("Help prompts are clear in English and Spanish", () => { for (const k of ["help.title", "help.body", "help.answers", "help.privacy"]) { assert.ok(STRINGS.en[k], k); assert.ok(STRINGS.es[k], k); } });
 ck("every find key has a Spanish twin", () => { for (const k of Object.keys(STRINGS.en)) if (k.startsWith("find.")) assert.ok(STRINGS.es[k], k); });
+ck("the au pair Australia line stands in every language table, its English word for word", () => {
+  assert.equal(STRINGS.en["find.auPairNote"], "In Australia an au pair lives with the family and helps with the children. Pocket money is often about $250 a week for about 25 hours of help, with 1.5 to 2 days off each week. Fair Work rules can treat an au pair as an employee, so agree the hours, the pocket money and the days off in writing before anyone travels.");
+  for (const lang of ["es", "zh", "ar", "hi", "vi", "yue"]) assert.ok(STRINGS[lang]["find.auPairNote"], lang);
+});
+ck("the view switch words stand in every language table, their English word for word", () => {
+  assert.equal(STRINGS.en["shell.connected"], "Connected");
+  assert.equal(STRINGS.en["shell.today"], "Today");
+  assert.equal(STRINGS.en["mode.title"], "Your view");
+  assert.equal(STRINGS.en["mode.sell"], "Connected: your shared calendar, today's activities made for your kids, photo updates of their day, and messages, all in one place.");
+  for (const k of ["shell.connected", "shell.today", "mode.title", "mode.sell"]) for (const lang of ["es", "zh", "ar", "hi", "vi", "yue"]) assert.ok(STRINGS[lang][k], `${lang} ${k}`);
+});
 ck("every home + matches + board key has a Spanish twin", () => { for (const k of Object.keys(STRINGS.en)) if (k.startsWith("home.") || k.startsWith("matches.") || k.startsWith("board.")) assert.ok(STRINGS.es[k], k); });
 ck("every family key has a Spanish twin", () => { for (const k of Object.keys(STRINGS.en)) if (k.startsWith("family.")) assert.ok(STRINGS.es[k], k); });
 ck("every week key has a Spanish twin", () => { for (const k of Object.keys(STRINGS.en)) if (k.startsWith("week.")) assert.ok(STRINGS.es[k], k); });

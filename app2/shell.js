@@ -1,4 +1,6 @@
 import { applyI18n, t as tr } from "./lang.js";
+import { cleanMode, resolveBootMode, MODE_CONNECTED, MODE_FINDING } from "./mode.js";
+import { modeKey } from "./storage-keys.js";
 applyI18n();
 // Caresitters app2 shell — role-based bottom tabs, with the
 // existing grouped menu under More. Menu-open state is not saved.
@@ -126,8 +128,64 @@ function plusLocked(nav) {
   return me.plusExtras !== true;
 }
 
+// The whole view mode (Ilse's ruling, 28 Oct 2026): Finding
+// or Connected, switched from the side bar menu or Settings,
+// never from a home page. The choice is saved on the account
+// (the meta/app doc, through the live write route) and read
+// back at boot; a device copy rides beside it, keyed to the
+// account. Pressing Connected changes the WHOLE app: the
+// Finding group leaves the menu, the Finding bottom tabs
+// leave the bar, the top button becomes Today, and Home
+// renders the Connected daily home.
+// The surfaces only the Finding world holds:
+const FINDING_ONLY = new Set(["find", "matches", "board", "questionnaire"]);
+let chosenMode = null;
+try { const k = modeKey(); if (k) chosenMode = cleanMode(localStorage.getItem(k)); } catch { /* storage off */ }
+let bootInfo = null;
+function currentMode() {
+  if (bootInfo) return bootInfo.mode;
+  return chosenMode || MODE_FINDING;
+}
+function applyMode() {
+  const mode = currentMode();
+  if (layout) layout.dataset.mode = mode;
+  const homeBtn = document.querySelector('.navBtn[data-nav="home"]');
+  if (homeBtn) homeBtn.textContent = mode === MODE_CONNECTED ? tr("shell.today") : tr("shell.home");
+  document.querySelectorAll("[data-mode-pick]").forEach((b) => b.classList.toggle("on", b.dataset.modePick === mode));
+  window.CARESITS_MODE_STATE = { mode, chosen: Boolean(chosenMode), booted: Boolean(bootInfo) };
+}
+// The switch itself: the pick is kept on this device (under
+// this account's own key), written to the account, and
+// applied to the whole app at once. A member standing on a
+// Finding only surface lands Home.
+window.CARESITS_SET_MODE = (mode) => {
+  const m = cleanMode(mode);
+  if (!m) return;
+  chosenMode = m;
+  if (bootInfo) bootInfo = { mode: m, chosen: m };
+  try { const k = modeKey(); if (k) localStorage.setItem(k, m); } catch { /* storage off */ }
+  if (typeof window.CARESITS_WRITE === "function") { try { window.CARESITS_WRITE("mode", { mode: m }); } catch { /* the device copy stands */ } }
+  applyMode();
+  if (m === MODE_CONNECTED && FINDING_ONLY.has(activeNav)) show("home");
+  if (typeof window.CARESITS_RENDER_HOME === "function") window.CARESITS_RENDER_HOME();
+};
+// The boot's decision (live.js, once it knows the account's
+// saved pick and whether a live pair stands): the account
+// choice wins, then a past pick on this device, then the
+// standing default.
+window.CARESITS_MODE_BOOT = ({ accountMode = null, hasLivePair = false } = {}) => {
+  let deviceMode = null;
+  try { const k = modeKey(); if (k) deviceMode = cleanMode(localStorage.getItem(k)); } catch { /* storage off */ }
+  const r = resolveBootMode({ accountMode, deviceMode: deviceMode || chosenMode, hasLivePair });
+  bootInfo = r;
+  if (r.chosen) chosenMode = r.chosen;
+  applyMode();
+  if (typeof window.CARESITS_RENDER_HOME === "function") window.CARESITS_RENDER_HOME();
+};
+
 function show(nav) {
-  if (nav === "home" && resolvedActiveSide() !== "communicate") nav = "find";
+  if (currentMode() === MODE_CONNECTED && FINDING_ONLY.has(nav)) nav = "home";
+  if (nav === "home" && currentMode() !== MODE_CONNECTED && resolvedActiveSide() !== "communicate") nav = "find";
   if (plusLocked(nav)) {
     if (typeof window.CARESITS_OPEN_PLANS === "function") window.CARESITS_OPEN_PLANS("plus");
     closeMenu();
@@ -197,6 +255,8 @@ document.querySelectorAll(".navGroupHead").forEach((h) =>
 );
 document.querySelectorAll("[data-nav]").forEach((b) => b.addEventListener("click", () => show(b.dataset.nav)));
 document.querySelectorAll("[data-goto]").forEach((b) => b.addEventListener("click", () => show(b.dataset.goto)));
+document.querySelectorAll("[data-mode-pick]").forEach((b) => b.addEventListener("click", () => window.CARESITS_SET_MODE(b.dataset.modePick)));
+applyMode();
 
 setBottomActive("home");
 refreshHomeSwitch();

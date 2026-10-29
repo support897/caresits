@@ -99,6 +99,12 @@ export async function uploadToStorage(path, blob) {
 // writes can ever be derived from a URL.
 export function planPathFromUrl(url) {
   if (typeof url !== "string" || !url) return null;
+  // A stored reference names its own path directly: the
+  // planner path itself, or the gatekeeper key
+  // (<uid>/profile-photos/<name>) the files road stores.
+  if (url.startsWith("profile-photos/") || url.startsWith("resumes/")) return url;
+  const key = url.match(/^[^/]+\/(profile-photos\/.+|resumes\/.+)$/);
+  if (key) return key[1];
   const m = url.match(/\/o\/([^?#]+)/);
   if (!m) return null;
   try {
