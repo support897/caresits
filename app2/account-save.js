@@ -91,7 +91,7 @@ export function planSave(bundle, opts) {
       path: `profiles/${uid}`,
       data: {
         side: bundle.side,
-        displayName: bundle.side === "carer" ? (cardIn.displayName || displayName) : displayName,
+        displayName: cardIn.displayName || displayName,
         postcode: cardIn.postcode || "",
         photoUrl: photoUrl || "",
         card: withAreaCoords(cardWithGallery(card, gallery), cardIn.postcode || ""),

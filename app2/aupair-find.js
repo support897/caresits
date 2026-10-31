@@ -23,7 +23,7 @@ function detailLines(doc, u) {
   if (u.track === "aupair") {
     if (c.age) L.push(`Age: ${c.age}`);
     if (u.country) L.push(`From: ${u.country}`);
-    if (list(c.languages).length) L.push(`Languages: ${list(c.languages).join(", ")}`);
+    if (list(c.languages).length) L.push(`Languages: ${list(c.languages).map((x) => String(x).charAt(0).toUpperCase() + String(x).slice(1)).join(", ")}`);
     if (u.english) L.push(`English: ${u.english}`);
     L.push(u.worldwide ? "Wants to go: anywhere in the world" : `Wants to go to: ${u.dest.map((d) => (countryByCode(d) || {}).name || d).join(", ") || "not set"}`);
     if (u.ym) L.push(`Can arrive from: ${ymToMonth(u.ym)}`);
@@ -36,7 +36,7 @@ function detailLines(doc, u) {
   } else {
     if (u.country) L.push(`Lives in: ${u.country}`);
     if (list(c.childrenBands).length) L.push(`Children's ages: ${list(c.childrenBands).join(", ")}`);
-    if (list(c.languages).length) L.push(`Languages at home: ${list(c.languages).join(", ")}`);
+    if (list(c.languages).length) L.push(`Languages at home: ${list(c.languages).map((x) => String(x).charAt(0).toUpperCase() + String(x).slice(1)).join(", ")}`);
     if (u.hours) L.push(`Hours a week: ${u.hours}`);
     L.push(u.room ? "Au pair has a private room" : "Room not confirmed yet");
     if (u.ym) L.push(`Wants an au pair from: ${ymToMonth(u.ym)}`);
@@ -44,7 +44,7 @@ function detailLines(doc, u) {
     if (c.pets) L.push("Has pets");
     if (c.smokerHousehold) L.push("Someone smokes at home");
   }
-  if (doc.about) L.push(doc.about);
+  if (doc.about) L.push("\u201c" + doc.about + "\u201d");
   return L;
 }
 

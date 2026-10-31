@@ -602,6 +602,9 @@ async function finish() {
     try {
       const r = await withTimeout(window.CARESITS_SAVE(bundle), 15000, "questionnaire save");
       if (!r || r.saved !== "account") landed = "local";
+      // The hello letter of an au pair or host family is the profile "About".
+      const letter = String(state.answers.apLetter || state.answers.hostLetter || "").trim();
+      if (landed === "account" && letter && typeof window.CARESITS_WRITE === "function") await window.CARESITS_WRITE("about", { about: letter });
     } catch { landed = "local"; }
     if (landed !== "account") {
       const lead = document.querySelector('[data-i18n="journey.dLead"]');
