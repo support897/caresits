@@ -700,11 +700,21 @@ async function loadVerified() {
   } catch { /* badge just does not show */ }
 }
 // What the viewer's own country calls the check, and where to look it up.
-function myCheckFacts() {
-  const m = window.CARESITS_ME || {};
+async function myCheckFacts() {
+  const m = { ...(window.CARESITS_ME || {}) };
+  if (!m.country || !m.postcode) {
+    // the answers just saved may not have reached the shared state yet
+    try {
+      const dbx = window.CARESITS_DB;
+      const q = await dbx.fs.getDoc(dbx.fs.doc(dbx.db, "users", me().uid, "meta", "questionnaire"));
+      const a = (q.exists() && q.data().answers) || {};
+      m.country = m.country || (q.exists() && q.data().country) || a.country || "";
+      m.postcode = m.postcode || a.postcode || "";
+    } catch { /* the generic wording stands */ }
+  }
   const pack = packByName(m.country || "");
   if (!pack) return null;
-  const facts = checkFor(pack, m.postcode || (window.CARESITS_TRUST && window.CARESITS_TRUST.me && window.CARESITS_TRUST.me.postcode)) || {};
+  const facts = checkFor(pack, m.postcode) || {};
   const j = pack.id === "AU" ? auJurisdiction(m.postcode || "") : null;
   return { pack, facts, code: pack.id + (j ? "-" + j.id : "") };
 }
@@ -719,7 +729,7 @@ function addMeVerify() {
   root.insertBefore(box, root.children[2] || null);
   const paint = async () => {
     body.replaceChildren();
-    const cf = myCheckFacts();
+    const cf = await myCheckFacts();
     const checkName = cf && cf.facts.name ? cf.facts.name : "working with children check";
     let ver = null, req = null;
     try { const v = await dbx.fs.getDoc(dbx.fs.doc(dbx.db, "verified", uid)); ver = v.exists() ? v.data() : null; } catch { /* none */ }
