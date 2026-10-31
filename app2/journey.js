@@ -390,7 +390,7 @@ function wire() {
     const uid = shellMember()?.uid;
     const res = await uploadProfilePhoto(uid, f);
     const write = (url) => { try { const w = window.CARESITS_WRITE || window.parent?.CARESITS_WRITE; if (typeof w === "function") return w("photo", { photoUrl: url }); } catch { /* local only */ } };
-    if (res.ok && res.url) { photoPreview = res.url; await write(res.url); photoNote = "Saved to your profile."; state.answers.photoDone = true; }
+    if (res.ok && res.url) { photoPreview = res.url; state.answers.photoUrl = res.url; await write(res.url); photoNote = "Saved to your profile."; state.answers.photoDone = true; }
     else if (res.dataUrl) { photoPreview = res.dataUrl; photoNote = "Saved on this device. It reaches your profile when the photo service is back."; state.answers.photoDone = true; }
     else { photoNote = "That picture did not work. Try another one."; }
     persistDraft(); render();

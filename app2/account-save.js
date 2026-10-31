@@ -235,7 +235,9 @@ export async function saveBundle(bundle, firebaseConfig) {
     uid: user.uid,
     displayName: profSnap.exists() ? (profSnap.data().displayName || "") : "",
     alreadyActivated,
-    photoUrl: keptPhoto,
+    // a photo chosen in the questionnaire rides along, in case the profile
+    // document did not exist yet when the photo was first written
+    photoUrl: keptPhoto || (bundle && bundle.answers && bundle.answers.photoUrl) || "",
     gallery: keptGallery,
     nowIso: new Date().toISOString(),
   });
