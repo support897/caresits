@@ -277,6 +277,8 @@ function fieldHtml(f, showLabel = false) {
 }
 
 function answered(f) {
+  if (f.type === "photo") return state.answers.photoDone === true || state.answers.photoSkipped === true;
+  if (f.type === "info") return true;
   const v = state.answers[f.id];
   if (v === undefined || v === null || v === "") return false;
   if (Array.isArray(v)) return v.length > 0 || (f.noPreference && Object.prototype.hasOwnProperty.call(state.answers, f.id));

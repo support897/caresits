@@ -628,6 +628,8 @@ export async function bootLive() {
               if (picked.track) { track = picked.track; entryRole = TRACKS[track].entryRole; await window.CARESITS_WRITE("track", { track }); }
               else { entryRole = "communicate"; }
               await window.CARESITS_WRITE("entry-role", { entryRole });
+              // straight into the questions, one at a time (no old Find page first)
+              if (track) { let tries = 0; const t = setInterval(() => { const b = document.querySelector('[data-nav="questionnaire"]'); tries += 1; if (b) { clearInterval(t); b.click(); } else if (tries > 40) clearInterval(t); }, 500); }
             } catch { /* the pick stands for this session; asked again next visit */ }
           } else if (entryRole && !track && entryRole !== "communicate") {
             track = entryRole === "career" ? "nanny" : "family-nanny";
