@@ -116,7 +116,7 @@ export function drawDestMap(answers) {
   if (!host || !L) { if (host) host.hidden = true; return; }
   const v = answers.destinations || { worldwide: false, list: [] };
   host.style.height = "220px";
-  const map = L.map(host, { zoomControl: true, attributionControl: true, worldCopyJump: true });
+  const map = L.map(host, { zoomControl: true, attributionControl: true, worldCopyJump: true, scrollWheelZoom: false });
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 6, minZoom: 1, attribution: "© OpenStreetMap" }).addTo(map);
   const pts = (v.list || []).map(countryPoint).filter(Boolean);
   for (const p of pts) L.circleMarker([p.lat, p.lng], { radius: 9, color: "#c2185b", fillColor: "#e91e63", fillOpacity: 0.85 }).addTo(map).bindTooltip(p.name);

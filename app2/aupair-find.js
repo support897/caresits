@@ -91,7 +91,7 @@ function cardEl(doc, u, fit) {
 function drawMap(host, groups, onPick) {
   const L = window.L;
   if (!L || !groups.length) { host.hidden = !groups.length; return false; }
-  const map = L.map(host, { worldCopyJump: true });
+  const map = L.map(host, { worldCopyJump: true, scrollWheelZoom: false });
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 7, minZoom: 1, attribution: "\u00a9 OpenStreetMap" }).addTo(map);
   const pts = [];
   for (const g of groups) {

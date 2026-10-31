@@ -215,7 +215,7 @@ export function leafletMap(host, points, centre, onPick) {
   if (!L || !points.length) return false;
   const box = el("div", "v2Map");
   host.append(box);
-  const map = L.map(box, { zoomControl: true, attributionControl: true });
+  const map = L.map(box, { zoomControl: true, attributionControl: true, scrollWheelZoom: false });
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18, attribution: "© OpenStreetMap" }).addTo(map);
   const icon = L.icon({ iconUrl: "vendor/leaflet/images/marker-icon.png", iconRetinaUrl: "vendor/leaflet/images/marker-icon-2x.png", shadowUrl: "vendor/leaflet/images/marker-shadow.png", iconSize: [25, 41], iconAnchor: [12, 41], shadowSize: [41, 41] });
   const bounds = [];
