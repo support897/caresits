@@ -11,6 +11,7 @@ import { t as tr } from "./lang.js";
 import { frameUser } from "./account-save.js";
 import { LANGS, BANDS, DAYS } from "./questions.js";
 import { paintFileImg } from "./files.js";
+import { renderAuPairFind, viewerIsAuPairWorld } from "./aupair-find.js";
 const labelText = (s) => tr({ "Perfect Pair": "find.label.perfect", "Strong Fit": "find.label.strong", "Good Fit": "find.label.good" }[s] || "find.label.good");
 const qualText = (s) => (s === "Quick profile, rough match" ? tr("find.qualifier") : s);
 const reasonText = (result, r, i) => { const code = result.reasonCodes?.[i]; return code ? tr("reason." + code) : r; };
@@ -431,6 +432,10 @@ export function renderFind(root, viewerDoc, candidateDocs) {
   }
   const favNow = window.CARESITS_V2 && window.CARESITS_V2.favs ? window.CARESITS_V2.favs() : new Set();
   const visibleCandidates = candidateDocs.filter((d) => !excludedUids.has(d.uid || d.displayName) && (!showSaved || favNow.has(d.uid)));
+  // The au pair world has its own Find (aupair-find.js); the nanny Find
+  // never lists au pair or host cards, and the reverse.
+  if (viewerDoc && viewerIsAuPairWorld(viewerDoc)) { renderAuPairFind(root, viewerDoc, visibleCandidates); return; }
+  for (let i = visibleCandidates.length - 1; i >= 0; i -= 1) if (viewerIsAuPairWorld(visibleCandidates[i])) visibleCandidates.splice(i, 1);
   root.replaceChildren();
   const isCarerView = (viewerDoc && viewerDoc.side === "carer") || (!viewerDoc && window.CARESITS_V2 && window.CARESITS_V2.role() === "career");
   root.append(el("h2", "findTitle", isCarerView ? "Jobs" : tr("shell.find")));

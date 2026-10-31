@@ -25,7 +25,11 @@ export function isPassOpen(pass, now) {
 
 // comp: null or { plan: "finding", forever: true } from _comp/{uid}
 // payment: null or { plan, status, currentPeriodEnd, pass: {endsAt} }
+// FREE FOR EVERYONE (Ilse, 31 Oct 2026): nothing is paid for now. Every
+// account has the door open, no taste limit, and every extra open.
+export const FREE_FOR_ALL = true;
 export function resolvePlan({ side, comp, payment, now }) {
+  if (FREE_FOR_ALL) return { tier: side === "carer" ? PLANS.CARER : PLANS.FINDING, doorOpen: true, source: "free for everyone" };
   if (side === "carer") {
     return { tier: PLANS.CARER, doorOpen: true, source: "carers free forever" };
   }
@@ -47,6 +51,7 @@ export function resolvePlan({ side, comp, payment, now }) {
 // message per day (her word, standing since 14 Oct 2026). A paid
 // door or a carer side sends without the taste limit.
 export function canSendMessage({ plan, tasteUsedToday }) {
+  if (FREE_FOR_ALL) return true;
   if (!plan) return false;
   if (plan.tier === PLANS.CARER) return true;
   if (plan.doorOpen) return true;
@@ -129,6 +134,7 @@ export function entitlementFromRecord(rec, now) {
 export const PLUS_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 
 export function plusExtrasOpen({ plan, side, createdAtMs, now }) {
+  if (FREE_FOR_ALL) return true;
   if (side === "carer") return true;
   if (plan && plan.tier === PLANS.FAMILY_PLUS) return true;
   if (createdAtMs != null && now >= createdAtMs && now - createdAtMs < PLUS_MONTH_MS) return true;

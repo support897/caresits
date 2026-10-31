@@ -89,3 +89,24 @@ table.grid th { font-size: 13px; padding: 4px; text-transform: capitalize; }
   .questionWhy img { width: 30px; }
   .questionWhyHide { grid-column: 2; justify-self: start; }
 }
+
+/* Tracks (31 Oct 2026): info boxes, country picker, photo step, track chooser */
+.infoBox{background:#fff7fa;border-left:4px solid #e91e63;border-radius:10px;padding:10px 14px;margin:10px 0}
+.infoBox h4{margin:0 0 4px}
+.destMap{width:100%;border-radius:12px;margin:10px 0;overflow:hidden}
+.destList{display:flex;flex-wrap:wrap;gap:6px;max-height:210px;overflow:auto;margin-top:8px}
+.destPick input[type=search]{width:100%;min-height:44px;font-size:16px;margin:6px 0}
+.photoStep{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.photoStep .profilePhoto{width:140px;height:140px;object-fit:cover;border-radius:50%}
+.trackOverlay{position:fixed;inset:0;z-index:9999;background:var(--cream,#fdf8f1);display:flex;align-items:center;justify-content:center;padding:18px;overflow:auto}
+.trackCard{max-width:460px;width:100%;text-align:center}
+.trackCard img{width:120px;height:auto}
+.trackCard h2{margin:8px 0 4px}
+.trackChoices{display:flex;flex-direction:column;gap:10px;margin:14px 0}
+.trackChoices button{min-height:64px;text-align:left;padding:12px 16px;border-radius:14px;border:2px solid #f4b6c8;background:#fff;font:inherit;cursor:pointer}
+.trackChoices button b{display:block;font-size:18px}
+.trackChoices button span{font-size:14px;opacity:.8}
+.trackChoices button:focus-visible{outline:3px solid #1f4d3d}
+.tag.apTag{background:#ede7f6}.tag.hostTag{background:#ffe9d6}
+.apCard .apFit li.miss{color:#8a4b00}
+.apMap{height:300px;border-radius:12px;overflow:hidden;margin:8px 0}

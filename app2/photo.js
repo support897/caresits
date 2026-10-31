@@ -170,6 +170,13 @@ async function uploadPhotoTo(path, file) {
   }
   const result = await uploadToStorage(path, downscaled);
   if (result.ok) return { ok: true, url: result.url };
+  // No photo storage on this plan: keep a small copy inside the profile
+  // itself, so the photo still reaches other people and other devices.
+  try {
+    const small = await downscaleImage(file, 320);
+    const inline = await readAsDataUrl(small);
+    if (inline && inline.length < 120000) return { ok: true, url: inline, inline: true };
+  } catch { /* fall through to the device-only answer */ }
   const dataUrl = await readAsDataUrl(downscaled);
   return { ok: false, reason: result.reason || "upload-failed", dataUrl };
 }

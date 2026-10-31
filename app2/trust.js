@@ -537,16 +537,11 @@ export function renderSettings(root) {
   // the card stands unless the viewer is known to be a carer. The
   // button opens the plans sheet through its seam.
   const sideNow = ((window.CARESITS_TRUST || {}).me || {}).side || (window.CARESITS_ME || {}).side || "";
-  if (sideNow !== "carer") {
-    const plansCard = el("div", "findCard");
-    plansCard.append(el("h3", "findName", tr("plans.title")));
-    const plansBtn = el("button", "mainBtn", tr("plans.title"));
-    plansBtn.type = "button";
-    plansBtn.id = "plansBtn";
-    plansBtn.addEventListener("click", () => { if (typeof window.CARESITS_OPEN_PLANS === "function") window.CARESITS_OPEN_PLANS(); });
-    plansCard.append(plansBtn);
-    accountGroup.append(plansCard);
-  }
+  // Free for everyone for now (Ilse, 31 Oct 2026): no plans, no prices.
+  const freeCard = el("div", "findCard");
+  freeCard.append(el("h3", "findName", "Free for everyone"));
+  freeCard.append(el("p", "fine", "Caresitters costs nothing right now. Checks and getting verified are free too."));
+  accountGroup.append(freeCard);
   // Push switches stand only when the native seam is live on
   // this device (Security fence: no controls that cannot
   // work). The switches write this device's own doc, which

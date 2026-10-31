@@ -12,6 +12,9 @@ import { levelOf } from "./levels.js";
 import { withTimeout } from "../accounts/account.js";
 import { warmSave, drainOutbox } from "./account-save.js";
 import { EXPANSION } from "./questions2.js";
+import { trackFields, ESSENTIAL_IDS, checksLabel, infoHtml, countriesHtml, destAnswered, drawDestMap, geoForPostcode, packFor } from "./track-fields.js";
+import { isTrack, sideOfTrack, isAuPairTrack, packAuPair, monthToYm } from "./tracks.js";
+import { uploadProfilePhoto } from "./photo.js";
 // VALUE CODING at the bundle boundary: any string that IS one of
 // the questionnaire's answer words is stored as its stable slug,
 // so matching compares codes in every language. Prose (the write
@@ -29,11 +32,11 @@ const codeWalk = (node) => {
 };
 const codeOf = (f) => f.pair || f.id;
 const keyFor = (f) => { const c = codeOf(f); const qk = "q." + state.side + "." + c; return tr(qk) === qk ? "q." + c : qk; };
-const L = (f) => { const k = keyFor(f); const v = tr(k); return v === k ? f.label : v; };
-const O = (f, o, i) => { const k = keyFor(f) + ".o" + i; const v = tr(k); return v === k ? o : v; };
+const L = (f) => { if (f.fixed || f.type === "info" || f.type === "photo" || f.type === "countries" || f.type === "dropdown") return f.label; const k = keyFor(f); const v = tr(k); return v === k ? f.label : v; };
+const O = (f, o, i) => { if (f.fixed || f.id === "english" || f.id === "duties" || f.id === "extras") return o; const k = keyFor(f) + ".o" + i; const v = tr(k); return v === k ? o : v; };
 
 const $ = (s) => document.querySelector(s);
-const state = { side: null, page: 0, answers: {}, strengths: {}, resumeFeed: [], countryStep: null, target: "quick", beyond: false, stage: "essentials", choicePages: {}, gridDays: {} };
+const state = { track: "", side: null, page: 0, answers: {}, strengths: {}, resumeFeed: [], countryStep: null, target: "quick", beyond: false, stage: "essentials", choicePages: {}, gridDays: {} };
 const WHY_KEY = "caresits-question-why";
 let activeWhyIdentity = "";
 let activeWhyVisible = false;
@@ -107,10 +110,13 @@ function startForEntryRole() {
   const side = role === "career" || member.side === "carer" ? "carer" : role === "family" || member.side === "family" ? "family" : "";
   if (!side) return false;
   state.side = side;
+  state.track = isTrack(member.track) && sideOfTrack(member.track) === side ? member.track : (side === "carer" ? "nanny" : "family-nanny");
+  if (!state.answers.displayName) state.answers.displayName = member.name || "";
+  if (state.track === "family-aupair") state.answers.role = "Au pair";
   state.page = 0;
   state.stage = "essentials";
   if (side === "carer" && !state.answers.displayName) state.answers.displayName = shellMember()?.name || "";
-  state.countryStep = !storedCountry();
+  state.countryStep = state.track === "aupair" ? false : !storedCountry();
   $("#welcome").hidden = true;
   $("#journey").hidden = false;
   render();
@@ -120,29 +126,38 @@ function startForEntryRole() {
 function allFields() {
   const base = state.side === "family" ? FAMILY_PAGES : CARER_PAGES;
   const xp = state.side === "family" ? EXPANSION.family : EXPANSION.carer;
-  return base.flatMap((p) => p.fields).concat(xp.flatMap((p) => p.fields));
+  const own = [{ id: "displayName", label: state.side === "family" ? "Your family name, as carers will see it" : "Your name, as families will see it", type: "text", required: true, fixed: true }];
+  return own.concat(trackFields(), base.flatMap((p) => p.fields), xp.flatMap((p) => p.fields));
 }
 function availableField(f) {
   if (!f.whenRole) return true;
   const roles = (shellMember()?.roles || []).map((r) => String(r).toLowerCase().replace(/[^a-z]/g, ""));
   return !roles.length || f.whenRole.some((w) => roles.some((r) => r.includes(w)));
 }
+const ROLES_NO_AUPAIR = ["Babysitter", "Nanny", "Mother's help", "Newborn and overnight", "Governess", "Childminder"];
 function questionPage(fields, titleKey = null, bunny = "point-guide", country = false) {
   return { title: "", _tk: titleKey, bunny, fields, _country: country };
 }
 function essentials() {
   if (state.countryStep === null) state.countryStep = !storedCountry();
   const byId = new Map(allFields().map((f) => [f.id, f]));
-  // Keep the essential path short and make every stop one clear
-  // question. A family can refine travel distance later; a carer's
-  // travel range is needed to make their profile useful.
-  const ids = state.side === "family"
-    ? ["postcode", "role", "childrenBands", "startWhen", "scheduleNeed", "languages", "mustLanguages", "nonSmoker"]
-    : ["postcode", "maxDistanceKm", "experience", "agesAccepted", "availability", "languages", "checksLevel", "payFloor"];
+  // Each track has its own questions, in its own order (tracks.js,
+  // track-fields.js). Photo is step 3 in every track.
+  const trackKey = state.track || (state.side === "family" ? "family-nanny" : "nanny");
+  const ids = ESSENTIAL_IDS[trackKey] || ESSENTIAL_IDS.nanny;
+  const member = shellMember() || {};
   const out = ids.map((id) => {
-    const f = byId.get(id);
+    let f = byId.get(id);
     if (!f) return null;
-    return questionPage([{ ...f, required: true, ...(id === "mustLanguages" ? { noPreference: true } : {}) }], null, "point-guide");
+    f = { ...f, required: f.type === "info" || f.optional ? false : true, ...(id === "mustLanguages" ? { noPreference: true } : {}) };
+    if (id === "checksLevel") f = { ...f, fixed: true, label: checksLabel(state.answers, member) };
+    if (id === "role") f = { ...f, fixed: true, options: ROLES_NO_AUPAIR, label: "What kind of carer are you looking for?" };
+    if (id === "postcode") f = { ...f, fixed: true, label: state.track === "family-aupair" ? "Your postal code (we only show your area)" : "Your postal code" };
+    if (id === "mustLanguages" && state.track === "family-aupair") f = { ...f, fixed: true, label: "Languages you would like the au pair to speak" };
+    if (id === "languages" && state.track === "aupair") f = { ...f, fixed: true, label: "Languages you speak" };
+    if (id === "age" && state.track === "aupair") f = { ...f, fixed: true, label: "How old are you?", options: AGES.filter((a) => Number(a) >= 18 && Number(a) <= 35) };
+    if (id === "experience" && state.track === "aupair") f = { ...f, fixed: true, label: "Years of experience with children, by age" };
+    return questionPage([f], null, id === "photo" || id === "displayName" ? "hello" : "point-guide");
   }).filter(Boolean);
   if (state.countryStep) out.unshift(questionPage(COUNTRY_PAGE.fields, COUNTRY_PAGE._tk, COUNTRY_PAGE.bunny, true));
   return out;
@@ -158,14 +173,14 @@ function pages(stage = state.stage) {
 
 function writeDraft() {
   if (!activeDraftKey) return;
-  try { localStorage.setItem(activeDraftKey, JSON.stringify({ side: state.side, page: state.page, answers: state.answers, strengths: state.strengths, resumeFeed: state.resumeFeed, countryStep: state.countryStep, target: state.target, beyond: state.beyond, stage: state.stage, choicePages: state.choicePages, gridDays: state.gridDays })); } catch { /* storage off */ }
+  try { localStorage.setItem(activeDraftKey, JSON.stringify({ track: state.track, side: state.side, page: state.page, answers: state.answers, strengths: state.strengths, resumeFeed: state.resumeFeed, countryStep: state.countryStep, target: state.target, beyond: state.beyond, stage: state.stage, choicePages: state.choicePages, gridDays: state.gridDays })); } catch { /* storage off */ }
 }
 function persistDraft() {
   interacted = true;
   writeDraft();
 }
 function resetJourneyState() {
-  state.side = null; state.page = 0; state.answers = {}; state.strengths = {}; state.resumeFeed = []; state.countryStep = null; state.target = "quick"; state.beyond = false; state.stage = "essentials"; state.choicePages = {}; state.gridDays = {};
+  state.side = null; state.track = ""; state.page = 0; state.answers = {}; state.strengths = {}; state.resumeFeed = []; state.countryStep = null; state.target = "quick"; state.beyond = false; state.stage = "essentials"; state.choicePages = {}; state.gridDays = {};
 }
 function loadDraft() {
   if (!activeDraftKey) return false;
@@ -173,6 +188,7 @@ function loadDraft() {
     const d = JSON.parse(localStorage.getItem(activeDraftKey) || "null");
     if (d?.target) state.target = d.target;
     if (d?.beyond) state.beyond = true;
+    if (d?.track && isTrack(d.track)) state.track = d.track;
     if (d?.side) { state.side = d.side; state.page = d.stage ? (d.page || 0) : 0; state.stage = d.stage || "essentials"; state.answers = d.answers || {}; state.strengths = d.strengths || {}; state.resumeFeed = d.resumeFeed || []; state.countryStep = d.countryStep === undefined ? null : d.countryStep; state.choicePages = d.choicePages || {}; state.gridDays = d.gridDays || {}; return true; }
   } catch { /* fresh start */ }
   return false;
@@ -217,6 +233,17 @@ function choiceCards(f, options, selected, multi = false) {
   const pager = pageCount > 1 ? `<div class="optionPager"><span>${escapeHtml(tr("journey.optionCount", undefined, { a: from + 1, b: Math.min(from + pageSize, options.length), c: options.length }))}</span><div>${page > 0 ? `<button type="button" class="quietBtn" data-choice-page="${escapeHtml(f.id)}" data-page="${page - 1}">${escapeHtml(tr("journey.optionPrevious"))}</button>` : ""}${page < pageCount - 1 ? `<button type="button" class="quietBtn" data-choice-page="${escapeHtml(f.id)}" data-page="${page + 1}">${escapeHtml(tr("journey.optionMore"))}</button>` : ""}</div></div>` : "";
   return `<div class="answerChoices" role="group" aria-label="${escapeHtml(L(f))}">${cards}${noPreference}</div>${pager}`;
 }
+let photoPreview = "";
+let photoNote = "";
+function photoHtml() {
+  const has = state.answers.photoDone === true;
+  return `<div class="photoStep">${photoPreview ? `<img class="profilePhoto" src="${escapeHtml(photoPreview)}" alt="Your photo">` : ""}
+    <p class="fine">A clear photo of your face, in good light. Others see it on your profile. ${state.side === "family" ? "A photo of you or your family is lovely." : ""}</p>
+    <button type="button" class="mainBtn" data-photo-pick="1">${has ? "Change photo" : "Choose a photo"}</button>
+    <input type="file" accept="image/*" data-photo-file="1" hidden>
+    <p class="fine" id="photoNote" role="status">${escapeHtml(photoNote)}</p>
+    ${has ? "" : `<button type="button" class="quietBtn" data-photo-skip="1">I will add it later</button>`}</div>`;
+}
 function fieldHtml(f, showLabel = false) {
   const v = state.answers[f.id];
   const optional = state.stage === "optional" || !f.required;
@@ -227,6 +254,10 @@ function fieldHtml(f, showLabel = false) {
   let body = "";
   if (f.type === "text") body = `<input type="text" data-field="${escapeHtml(f.id)}" aria-label="${aria}" value="${escapeHtml(v ?? "")}" autocomplete="off">`;
   if (f.type === "number") body = `<input type="number" data-field="${escapeHtml(f.id)}" aria-label="${aria}" value="${escapeHtml(v ?? "")}" min="0" inputmode="numeric">`;
+  if (f.type === "dropdown") body = `<select data-field="${escapeHtml(f.id)}" aria-label="${aria}"><option value="">Choose...</option>${f.options.map((o) => `<option value="${escapeHtml(o)}" ${String(v ?? "") === String(o) ? "selected" : ""}>${escapeHtml(o)}</option>`).join("")}</select>`;
+  if (f.type === "info") body = `<div class="infoBlock">${infoHtml(f.info, state.answers, shellMember())}</div>`;
+  if (f.type === "countries") body = countriesHtml(f, state.answers);
+  if (f.type === "photo") body = photoHtml();
   if (f.type === "select") body = choiceCards(f, f.options, v, false);
   if (f.type === "chips") body = choiceCards(f, f.options, v, true);
   if (f.type === "yesno") body = `<div class="answerChoices" role="group" aria-label="${aria}"><button type="button" class="answerCard ${v === true ? "on" : ""}" data-yesno="${escapeHtml(f.id)}" data-value="yes" aria-pressed="${v === true}">${escapeHtml(tr("journey.yes"))}</button><button type="button" class="answerCard ${v === false ? "on" : ""}" data-yesno="${escapeHtml(f.id)}" data-value="no" aria-pressed="${v === false}">${escapeHtml(tr("journey.no"))}</button></div>`;
@@ -254,6 +285,9 @@ function answered(f) {
   if (f.type === "experience") return experienceComplete(v);
   if (f.type === "expchecks") return Boolean(v?.checks) || Object.values(v?.years || {}).some((x) => x !== "" && x != null);
   if (f.type === "homefacts") return true;
+  if (f.type === "photo") return state.answers.photoDone === true || state.answers.photoSkipped === true;
+  if (f.type === "countries") return destAnswered(v);
+  if (f.type === "info") return true;
   return true;
 }
 
@@ -288,6 +322,7 @@ function render() {
   $("#skipBtn").hidden = state.stage !== "optional";
   $("#nextBtn").textContent = state.stage === "optional" && state.page === list.length - 1 ? tr("journey.finish") : tr("journey.next");
   document.title = `Caresitters · ${title}`;
+  if (p.fields.some((f) => f.type === "countries")) drawDestMap(state.answers);
 }
 
 function wire() {
@@ -298,6 +333,21 @@ function wire() {
     if (choicePage) { state.choicePages[choicePage.dataset.choicePage] = Number(choicePage.dataset.page) || 0; render(); return; }
     const noPreference = e.target.closest("[data-no-preference]");
     if (noPreference) { state.answers[noPreference.dataset.noPreference] = []; persistDraft(); render(); return; }
+    const pick = e.target.closest("[data-photo-pick]");
+    if (pick) { $("#fields").querySelector("[data-photo-file]")?.click(); return; }
+    const skip = e.target.closest("[data-photo-skip]");
+    if (skip) { state.answers.photoSkipped = true; persistDraft(); advancePage(); return; }
+    const dw = e.target.closest("[data-dest-world]");
+    if (dw) { const cur = state.answers.destinations || { worldwide: false, list: [] }; state.answers.destinations = { ...cur, worldwide: !cur.worldwide }; persistDraft(); render(); return; }
+    const dc = e.target.closest("[data-dest]");
+    if (dc) {
+      const cur = state.answers.destinations || { worldwide: false, list: [] };
+      const set = new Set(cur.list || []);
+      set.has(dc.dataset.dest) ? set.delete(dc.dataset.dest) : set.add(dc.dataset.dest);
+      state.answers.destinations = { ...cur, list: [...set] };
+      if (!state.answers.country && set.size) state.answers.country = [...set][0];
+      persistDraft(); render(); return;
+    }
     const chip = e.target.closest("[data-chip]");
     if (chip) {
       const f = pages()[state.page].fields.find((x) => x.id === chip.dataset.chip);
@@ -329,8 +379,24 @@ function wire() {
   });
   $("#fields").addEventListener("change", (e) => { onFieldInput(e); render(); });
   $("#fields").addEventListener("input", onFieldInput);
+  async function onPhotoFile(inp) {
+    const f = inp.files && inp.files[0];
+    inp.value = "";
+    if (!f) return;
+    photoNote = "One moment...";
+    const noteEl = $("#photoNote"); if (noteEl) noteEl.textContent = photoNote;
+    const uid = shellMember()?.uid;
+    const res = await uploadProfilePhoto(uid, f);
+    const write = (url) => { try { const w = window.CARESITS_WRITE || window.parent?.CARESITS_WRITE; if (typeof w === "function") return w("photo", { photoUrl: url }); } catch { /* local only */ } };
+    if (res.ok && res.url) { photoPreview = res.url; await write(res.url); photoNote = "Saved to your profile."; state.answers.photoDone = true; }
+    else if (res.dataUrl) { photoPreview = res.dataUrl; photoNote = "Saved on this device. It reaches your profile when the photo service is back."; state.answers.photoDone = true; }
+    else { photoNote = "That picture did not work. Try another one."; }
+    persistDraft(); render();
+  }
   function onFieldInput(e) {
     const inp = e.target;
+    if (inp.dataset.photoFile) { void onPhotoFile(inp); return; }
+    if (inp.dataset.destSearch) { const q = inp.value.trim().toLowerCase(); document.querySelectorAll("#fields [data-dest]").forEach((b) => { b.hidden = q && !b.textContent.toLowerCase().includes(q); }); return; }
     if (inp.dataset.gridDay) { state.gridDays[inp.dataset.gridDay] = inp.value; persistDraft(); render(); return; }
     if (inp.dataset.field) state.answers[inp.dataset.field] = inp.type === "number" ? (inp.value === "" ? "" : Number(inp.value)) : inp.value;
     if (inp.dataset.band) {
@@ -358,7 +424,7 @@ function wire() {
     }
     finish();
   };
-  $("#nextBtn").addEventListener("click", () => {
+  $("#nextBtn").addEventListener("click", async () => {
     const p = pages()[state.page];
     const missing = state.stage === "essentials" ? p.fields.filter((f) => f.required && !answered(f)) : [];
     if (missing.length) {
@@ -367,6 +433,10 @@ function wire() {
       return;
     }
     $("#notice").textContent = "";
+    if (state.stage === "essentials" && p.fields.some((f) => f.id === "postcode")) {
+      const pack = packFor(state.answers, shellMember());
+      if (pack && pack.id !== "AU" && state.answers.postcode) { const g = await geoForPostcode(pack.id, state.answers.postcode); state.answers.geo = g || null; persistDraft(); }
+    }
     advancePage();
   });
   $("#skipBtn").addEventListener("click", advancePage);
@@ -420,6 +490,8 @@ function deepSets() {
   return { deep, deepMusts };
 }
 
+// Firestore refuses undefined values: drop them before saving.
+const scrub = (o) => JSON.parse(JSON.stringify(o));
 export function buildBundle() {
   const a = state.answers, s = state.strengths;
   const must = (id) => s[id] === "Must have";
@@ -427,7 +499,9 @@ export function buildBundle() {
   if (state.side === "family") {
     const expYears = a.experienceChecks?.years || {};
     const card = {
-      side: "family", postcode: a.postcode, childrenBands: a.childrenBands || [],
+      side: "family", postcode: a.postcode, displayName: a.displayName, ...(a.geo || {}),
+      ...(isAuPairTrack(state.track) ? { auPair: packAuPair(state.track, a) } : {}),
+      childrenBands: a.childrenBands || [],
       languages: a.languages || [], pets: Boolean(a.pets), smokerHousehold: Boolean(a.smokerHousehold),
       scheduleNeed: a.scheduleNeed || {}, payOffered: Number(a.payOffered) || 0,
     };
@@ -459,11 +533,12 @@ export function buildBundle() {
     const { deep, deepMusts } = deepSets();
     if (Object.keys(deep).length) looking.prefs.deep = deep;
     if (Object.keys(deepMusts).length) looking.musts.deep = deepMusts;
-    return { side: "family", answers: a, strengths: s, country: a.country || "", card: codeWalk({ ...card, ...looking }) };
+    return { side: "family", track: state.track, answers: a, strengths: s, country: a.country || "", card: scrub(codeWalk({ ...card, ...looking })) };
   }
   const card = {
-    side: "carer", displayName: a.displayName, postcode: a.postcode, age: Number(a.age) || null,
-    nationality: a.nationality, cultureOffer: Array.isArray(a.cultureOffer) ? a.cultureOffer.join(", ") : a.cultureOffer || "", languages: a.languages || [], smoker: Boolean(a.smoker),
+    side: "carer", displayName: a.displayName, postcode: a.postcode, age: Number(a.age) || null, ...(a.geo || {}),
+    ...(isAuPairTrack(state.track) ? { auPair: packAuPair(state.track, a) } : {}),
+    nationality: a.nationality || a.homeCountry || "", cultureOffer: Array.isArray(a.cultureOffer) ? a.cultureOffer.join(", ") : a.cultureOffer || "", languages: a.languages || [], smoker: Boolean(a.smoker),
     experience: Object.fromEntries(Object.entries(a.experience || {}).filter(([, v]) => v !== "" && v != null)),
     checksLevel: a.checksLevel === "Register verified" ? "register" : a.checksLevel === "Document sighted" ? "sighted" : "none",
     availability: a.availability || {},
@@ -481,7 +556,7 @@ export function buildBundle() {
   const looking = { musts: {}, prefs: {} };
   if (Object.keys(deep).length) looking.prefs.deep = deep;
   if (Object.keys(deepMusts).length) looking.musts.deep = deepMusts;
-  return { side: "carer", answers: a, strengths: s, country: a.country || "", card: codeWalk({ ...card, looking }) };
+  return { side: "carer", track: state.track, answers: a, strengths: s, country: a.country || "", card: scrub(codeWalk({ ...card, looking })) };
 }
 
 let previewSaving = null;

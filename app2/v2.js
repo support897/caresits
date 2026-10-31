@@ -2,6 +2,7 @@
 // Describe box, real map, real two-way messages, photo updates,
 // the Me hub and the mode switch. Plain DOM, no framework.
 import { canSendMessage } from "../accounts/account.js";
+import { packById, packByName, checkFor, auJurisdiction } from "./countries.js";
 import { paintFileImg } from "./files.js";
 import { t as tr } from "./lang.js";
 
@@ -698,9 +699,19 @@ async function loadVerified() {
     window.CARESITS_FIND_REFRESH && window.CARESITS_FIND_REFRESH();
   } catch { /* badge just does not show */ }
 }
+// What the viewer's own country calls the check, and where to look it up.
+function myCheckFacts() {
+  const m = window.CARESITS_ME || {};
+  const pack = packByName(m.country || "");
+  if (!pack) return null;
+  const facts = checkFor(pack, m.postcode || (window.CARESITS_TRUST && window.CARESITS_TRUST.me && window.CARESITS_TRUST.me.postcode)) || {};
+  const j = pack.id === "AU" ? auJurisdiction(m.postcode || "") : null;
+  return { pack, facts, code: pack.id + (j ? "-" + j.id : "") };
+}
 function addMeVerify() {
   const root = document.getElementById("meRoot");
   if (!root || root.querySelector(".v2VerBlock")) return;
+  if ((window.CARESITS_ME || {}).side === "family") return; // checks are for carers
   const dbx = window.CARESITS_DB; const uid = me().uid;
   const box = el("section", "v2Card v2VerBlock");
   box.append(el("h3", "v2Title", "Get verified (free)"));
@@ -708,25 +719,30 @@ function addMeVerify() {
   root.insertBefore(box, root.children[2] || null);
   const paint = async () => {
     body.replaceChildren();
+    const cf = myCheckFacts();
+    const checkName = cf && cf.facts.name ? cf.facts.name : "working with children check";
     let ver = null, req = null;
     try { const v = await dbx.fs.getDoc(dbx.fs.doc(dbx.db, "verified", uid)); ver = v.exists() ? v.data() : null; } catch { /* none */ }
-    if (ver) { body.append(el("p", "v2RevSum", "\u2713 Verified: Blue Card checked by Caresitters")); return; }
+    if (ver) { body.append(el("p", "v2RevSum", `\u2713 Verified: ${ver.check || checkName} checked by Caresitters`)); return; }
     try { const r = await dbx.fs.getDoc(dbx.fs.doc(dbx.db, "verifyRequests", uid)); req = r.exists() ? r.data() : null; } catch { /* none */ }
-    if (req) { body.append(el("p", "v2Sub", "We got your request. We check it by hand against the free Queensland Blue Card checker. This can take a few days.")); body.append(btn("ghostBtn", "Cancel request", async () => { try { await dbx.fs.deleteDoc(dbx.fs.doc(dbx.db, "verifyRequests", uid)); } catch { /* ignore */ } paint(); })); return; }
-    body.append(el("p", "v2Sub", "Add your Queensland Blue Card (working with children card). We check it is valid, then show a Verified badge on your profile."));
+    if (req) { body.append(el("p", "v2Sub", "We got your request. We check it by hand. This can take a few days. It costs you nothing.")); body.append(btn("ghostBtn", "Cancel request", async () => { try { await dbx.fs.deleteDoc(dbx.fs.doc(dbx.db, "verifyRequests", uid)); } catch { /* ignore */ } paint(); })); return; }
+    body.append(el("p", "v2Sub", `Add your ${checkName}${cf && cf.facts.place ? " (" + cf.facts.place + ")" : ""}. We check it is real${cf && cf.facts.register ? " on the free official register" : " by looking at your document"}, then show a Verified badge on your profile. Getting verified with Caresitters is always free.`));
+    if (cf && cf.facts.costText) body.append(el("p", "v2Sub", "The government check itself: " + cf.facts.costText));
+    if (cf && cf.facts.checkUrl) { const a = el("a", null, "Where to apply or check (official site)"); a.href = cf.facts.checkUrl; a.target = "_blank"; a.rel = "noopener"; body.append(a); }
     const nm = el("input", "txtIn"); nm.placeholder = "Full name on the card"; nm.maxLength = 60; nm.value = me().name || "";
-    const no = el("input", "txtIn"); no.placeholder = "Blue Card number"; no.maxLength = 30;
-    const ex = el("input", "txtIn"); ex.type = "date"; ex.setAttribute("aria-label", "Card expiry date");
+    const no = el("input", "txtIn"); no.placeholder = "Card or certificate number"; no.maxLength = 22;
+    const ex = el("input", "txtIn"); ex.type = "date"; ex.setAttribute("aria-label", "Expiry date, if it has one");
     const msg = el("p", "formMsg"); msg.setAttribute("role", "status");
     const go = btn("mainBtn", "Ask to be verified", async () => {
-      if (!nm.value.trim() || !no.value.trim() || !ex.value) { msg.textContent = "Fill in all three boxes."; return; }
+      if (!nm.value.trim() || !no.value.trim()) { msg.textContent = "Fill in your name and the number."; return; }
       go.disabled = true;
       try {
-        await dbx.fs.setDoc(dbx.fs.doc(dbx.db, "verifyRequests", uid), { kind: "bluecard", number: no.value.trim(), expiry: ex.value, name: nm.value.trim(), state: "pending", at: dbx.fs.serverTimestamp() });
+        const tag = (cf ? cf.code : "XX") + " ";
+        await dbx.fs.setDoc(dbx.fs.doc(dbx.db, "verifyRequests", uid), { kind: "bluecard", number: (tag + no.value.trim()).slice(0, 30), expiry: ex.value || "", name: nm.value.trim(), state: "pending", at: dbx.fs.serverTimestamp() });
         paint();
       } catch { go.disabled = false; msg.textContent = "Could not send. Try again."; }
     });
-    body.append(nm, no, el("p", "v2Label", "Card expiry date"), ex, msg, go, el("p", "v2Sub", "Only you and the Caresitters team can see these details."));
+    body.append(nm, no, el("p", "v2Label", "Expiry date (leave empty if it has none)"), ex, msg, go, el("p", "v2Sub", "Only you and the Caresitters team can see these details."));
   };
   paint();
 }
@@ -741,10 +757,15 @@ async function addMeAdmin() {
   if (!docs.length) box.append(el("p", "v2Sub", "None waiting."));
   for (const d of docs) {
     const r = d.data(); const row = el("div", "v2Rev");
-    row.append(el("p", "v2RevText", `${r.name} \u00b7 card ${r.number} \u00b7 expires ${r.expiry}`));
-    row.append(el("p", "v2RevBy", "Check it at bluecard.qld.gov.au, then Approve."));
+    const mm = /^([A-Z]{2})(?:-([A-Za-z]+))? /.exec(r.number || "");
+    const rp = mm ? packById(mm[1]) : null;
+    const rj = rp && mm[2] && rp.jurisdictions ? rp.jurisdictions.find((j) => j.id === mm[2]) : null;
+    const rname = (rj && rj.checkName) || (rp && rp.checkName) || "check";
+    const rurl = (rj && rj.checkUrl) || (rp && rp.checkUrl) || "";
+    row.append(el("p", "v2RevText", `${r.name} \u00b7 ${r.number} \u00b7 expires ${r.expiry || "none"}`));
+    row.append(el("p", "v2RevBy", `Check it: ${rname}${rurl ? " at " + rurl : ""}, then Approve.`));
     row.append(btn("mainBtn", "Approve", async () => {
-      await dbx.fs.setDoc(dbx.fs.doc(dbx.db, "verified", d.id), { level: "bluecard", expiry: r.expiry, at: dbx.fs.serverTimestamp() });
+      await dbx.fs.setDoc(dbx.fs.doc(dbx.db, "verified", d.id), { level: "checked", check: rname, expiry: r.expiry || "", at: dbx.fs.serverTimestamp() });
       await dbx.fs.deleteDoc(dbx.fs.doc(dbx.db, "verifyRequests", d.id)); row.remove(); loadVerified();
     }), btn("ghostBtn", "Reject", async () => { await dbx.fs.deleteDoc(dbx.fs.doc(dbx.db, "verifyRequests", d.id)); row.remove(); }));
     box.append(row);

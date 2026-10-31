@@ -13,6 +13,8 @@ import { cleanJobListings } from "./pair-actions.js";
 import { normaliseLearningPlan, publicLearningPlan } from "./activities.js";
 import { applyI18n } from "./lang.js";
 import { resolvePlan, entitlementFromRecord, plusExtrasOpen, withTimeout } from "../accounts/account.js";
+import { pickTrack } from "./track-pick.js";
+import { isTrack, TRACKS } from "./tracks.js";
 import { installFileRoads } from "./files.js";
 
 // The photo lifecycle stamp path (HQ spec, 19 Oct 2026):
@@ -75,6 +77,7 @@ export function routeWrite(kind, payload, uid) {
     case "emergency": return { ok: true, op: "merge", path: `users/${uid}/meta/emergency`, data: { name: payload.name, phone: payload.phone } };
     case "appearance": return { ok: true, op: "merge", path: `users/${uid}/meta/app`, data: { background: payload.choice } };
     case "entry-role": return ENTRY_ROLES.includes(payload.entryRole) ? { ok: true, op: "merge", path: `users/${uid}/meta/app`, data: { entryRole: payload.entryRole } } : { ok: false, reason: "invalid-role" };
+    case "track": return isTrack(payload.track) ? { ok: true, op: "merge", path: `users/${uid}/meta/app`, data: { track: payload.track } } : { ok: false, reason: "invalid-track" };
     case "active-side": return ENTRY_ROLES.includes(payload.side) ? { ok: true, op: "merge", path: `users/${uid}/meta/app`, data: { activeSide: payload.side } } : { ok: false, reason: "invalid-side" };
     case "side-tour": {
       const field = { family: "tourFamilyDone", career: "tourCareerDone", communicate: "tourCommunicateDone" }[payload.side];
@@ -616,11 +619,24 @@ export async function bootLive() {
           if (savedRole && pendingRole) {
             try { sessionStorage.removeItem("caresits-entry-role"); } catch { /* session storage off */ }
           }
+          // The one question after sign-up (Ilse, 31 Oct 2026): who are you,
+          // and what are you looking for. Four tracks, asked once.
+          let track = isTrack(appDoc && appDoc.track) ? appDoc.track : "";
+          if (!entryRole && !track) {
+            try {
+              const picked = await pickTrack();
+              if (picked.track) { track = picked.track; entryRole = TRACKS[track].entryRole; await window.CARESITS_WRITE("track", { track }); }
+              else { entryRole = "communicate"; }
+              await window.CARESITS_WRITE("entry-role", { entryRole });
+            } catch { /* the pick stands for this session; asked again next visit */ }
+          } else if (entryRole && !track && entryRole !== "communicate") {
+            track = entryRole === "career" ? "nanny" : "family-nanny";
+          }
           const roleSide = entryRole === "career" ? "carer" : entryRole === "family" ? "family" : entryRole === "communicate" ? "communicate" : "";
           const effectiveSide = roleSide || profile.side || qData.side || "";
           window.CARESITS_ME = {
             ...(window.CARESITS_ME || { uid }),
-            uid, side: effectiveSide, entryRole,
+            uid, side: effectiveSide, entryRole, track,
             activeSide: ["family", "career", "communicate"].includes(appDoc?.activeSide) ? appDoc.activeSide : entryRole,
             sideTours: { family: appDoc?.tourFamilyDone === true, career: appDoc?.tourCareerDone === true, communicate: appDoc?.tourCommunicateDone === true },
             learningPlan: appDoc?.learningPlan || cardData?.learningPlan ? normaliseLearningPlan(appDoc?.learningPlan || cardData?.learningPlan) : null,

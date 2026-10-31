@@ -103,6 +103,13 @@ try {
   if (rememberedRole) chooseRole(rememberedRole, false);
 } catch { /* session storage off */ }
 
+// One sign-up first (Ilse, 31 Oct 2026): the door shows only Google, Apple
+// and email. "Who are you?" is asked right after, inside the app.
+$("#roleChooser").hidden = true;
+$("#authDoor").hidden = false;
+$("#changeRoleBtn").hidden = true;
+$("#entryRoleHeading").hidden = true;
+
 $("#nextBtn").addEventListener("click", () => {
   const email = $("#emailIn").value.trim();
   if (!email || !email.includes("@")) { msg(tr("door.badEmail")); return; }

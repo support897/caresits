@@ -121,6 +121,7 @@ refreshSideSwitch();
 // does not switch surfaces: it speaks through the plans sheet.
 const PLUS_NAV = new Set(["daystory", "roster", "timesheet"]);
 function plusLocked(nav) {
+  return false; // free for everyone (31 Oct 2026)
   if (!PLUS_NAV.has(nav)) return false;
   const me = window.CARESITS_ME;
   if (!me || !me.uid) return false;
