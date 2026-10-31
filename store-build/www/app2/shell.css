@@ -50,6 +50,18 @@ h1, h2 { font-family: "Newsreader", Georgia, serif; font-weight: 600; line-heigh
 .navBtn.top { font-weight: 700; }
 .sideSwitch { margin: 8px 0 12px; padding: 12px; border: 1px solid var(--line); border-radius: 16px; background: rgba(255, 255, 255, .72); }
 .sideSwitch h2 { font-family: "Atkinson Hyperlegible", system-ui, sans-serif; font-size: 17px; margin: 0 0 4px; }
+/* The whole view mode (Ilse's ruling, 28 Oct 2026): the
+   layout carries the mode; in Connected the Finding group
+   leaves the menu and the Finding bottom tabs leave the
+   bar. The switch itself stands in the menu (below) and in
+   Settings, never on a home page. */
+.layout[data-mode="connected"] [data-mode-group="finding"] { display: none; }
+.layout[data-mode="connected"] .bottomTab[data-nav="find"],
+.layout[data-mode="connected"] .bottomTab[data-nav="board"] { display: none; }
+.modeSwitch { display: flex; gap: 8px; margin: 10px 0 6px; }
+.modeBtn { flex: 1; background: #fff; border: 1.5px solid var(--line); border-radius: 999px; padding: 9px 10px; font: inherit; font-weight: 600; cursor: pointer; color: var(--ink); }
+.modeBtn.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+.modeSell { color: var(--soft); font-size: 13px; line-height: 1.45; margin: 2px 2px 12px; }
 .sideActiveLine { margin: 0 0 8px; font-size: 14px; }
 .sideSwitchChoices { display: grid; gap: 6px; }
 .sideSwitchChoices button { min-height: 42px; width: 100%; border: 1.5px solid var(--line); border-radius: 12px; background: var(--card); color: var(--ink); font: inherit; text-align: start; padding: 8px 11px; cursor: pointer; }
@@ -73,6 +85,11 @@ html[data-entry-role="family"] { --entry-accent: #1E4D44; --entry-soft: #E6F2EC;
 html[data-entry-role="communicate"] { --entry-accent: #704A83; --entry-soft: #F0E7F4; }
 .homeRoleHeading { display: inline-block; margin: 0 0 8px; padding: 5px 11px; border-left: 4px solid var(--entry-accent, var(--ink)); border-radius: 9px; background: var(--entry-soft, #EAF2ED); color: var(--entry-accent, var(--ink)); font-weight: 700; }
 .findPool { margin: 0 0 14px; font-weight: 700; }
+.findSort { margin: -8px 0 12px; font-size: 0.85em; opacity: 0.75; }
+.findUpdated { margin: 0; font-size: 0.82em; opacity: 0.7; }
+.findActiveChips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+.findChip { display: inline-flex; align-items: center; gap: 2px; padding: 3px 6px 3px 10px; border-radius: 999px; background: #f6e3ee; font-size: 0.85em; font-weight: 600; }
+.findChipX { border: 0; background: transparent; font-size: 1em; line-height: 1; padding: 2px 4px; cursor: pointer; }
 .findList { display: grid; gap: 14px; margin-bottom: 16px; }
 .findCard { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 18px; }
 .findCard.nearly { opacity: .82; }
@@ -216,8 +233,11 @@ html[data-theme="white"] body { background: #FFFFFF; }
 .mapSlot { margin-top: 10px; }
 .qualLine { font-weight: 700; color: var(--ink); margin: 4px 0 0; }
 
-/* The two homes (17 Oct 2026): posture switch, plan rows,
-   week strip, tiles, link + shopping + request cards. */
+/* The two homes (17 Oct 2026): plan rows, week strip,
+   tiles, link + shopping + request cards. The posture
+   switch that stood here retired on 29 Oct 2026: the view
+   is switched from the menu or Settings (the mode rules
+   above), never from the home page. */
 .homeCard { text-align: left; margin-bottom: 16px; }
 .homeCard .findTitle { text-align: left; }
 .homeHead { text-align: center; margin-bottom: 14px; }
@@ -226,9 +246,6 @@ html[data-theme="white"] body { background: #FFFFFF; }
 .homeWarm { color: var(--ink); font-weight: 600; }
 .homePlace { font-weight: 700; margin: 2px 0 8px; }
 .homeBtnRow { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
-.postureRow { display: flex; gap: 8px; justify-content: center; margin: 4px 0 18px; }
-.postureBtn { background: #fff; border: 1.5px solid var(--line); border-radius: 999px; padding: 9px 18px; font: inherit; font-weight: 600; cursor: pointer; color: var(--ink); }
-.postureBtn.on { background: var(--ink); color: #fff; border-color: var(--ink); }
 .guideRow { display: flex; gap: 12px; align-items: center; background: var(--sageBg, #eef4ec); border-radius: 18px; padding: 12px 16px; margin-top: 4px; }
 .guideBunny { width: 54px; height: auto; }
 .guideText { margin: 0; font-weight: 600; }
@@ -526,3 +543,24 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .v2RefBlock{margin-bottom:12px}.v2ChatHead{display:flex;align-items:center;gap:8px}.v2RevBtn{margin-left:auto}
 
 #bottomNav button.hasDot{position:relative}#bottomNav button.hasDot::after{content:"";position:absolute;top:8px;right:calc(50% - 22px);width:10px;height:10px;border-radius:50%;background:#e5484d;border:2px solid #fff}
+
+/* Tracks (31 Oct 2026): info boxes, country picker, photo step, track chooser */
+.infoBox{background:#fff7fa;border-left:4px solid #e91e63;border-radius:10px;padding:10px 14px;margin:10px 0}
+.infoBox h4{margin:0 0 4px}
+.destMap{width:100%;border-radius:12px;margin:10px 0;overflow:hidden}
+.destList{display:flex;flex-wrap:wrap;gap:6px;max-height:210px;overflow:auto;margin-top:8px}
+.destPick input[type=search]{width:100%;min-height:44px;font-size:16px;margin:6px 0}
+.photoStep{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.photoStep .profilePhoto{width:140px;height:140px;object-fit:cover;border-radius:50%}
+.trackOverlay{position:fixed;inset:0;z-index:9999;background:var(--cream,#fdf8f1);display:flex;align-items:center;justify-content:center;padding:18px;overflow:auto}
+.trackCard{max-width:460px;width:100%;text-align:center}
+.trackCard img{width:120px;height:auto}
+.trackCard h2{margin:8px 0 4px}
+.trackChoices{display:flex;flex-direction:column;gap:10px;margin:14px 0}
+.trackChoices button{min-height:64px;text-align:left;padding:12px 16px;border-radius:14px;border:2px solid #f4b6c8;background:#fff;font:inherit;cursor:pointer}
+.trackChoices button b{display:block;font-size:18px}
+.trackChoices button span{font-size:14px;opacity:.8}
+.trackChoices button:focus-visible{outline:3px solid #1f4d3d}
+.tag.apTag{background:#ede7f6}.tag.hostTag{background:#ffe9d6}
+.apCard .apFit li.miss{color:#8a4b00}
+.apMap{height:300px;border-radius:12px;overflow:hidden;margin:8px 0}

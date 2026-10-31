@@ -2,6 +2,9 @@
 // Describe box, real map, real two-way messages, photo updates,
 // the Me hub and the mode switch. Plain DOM, no framework.
 import { canSendMessage } from "../accounts/account.js";
+import { packById, packByName, checkFor, auJurisdiction } from "./countries.js";
+import { paintFileImg } from "./files.js";
+import { t as tr } from "./lang.js";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const PARTS = [["morning", "Morning"], ["afternoon", "Afternoon"], ["evening", "Evening"]];
@@ -63,7 +66,7 @@ export function profileOf(uid) {
 }
 export function avatar(name, url, cls = "v2Avatar") {
   const box = el("span", cls);
-  if (url) { const img = el("img"); img.src = url; img.alt = ""; box.append(img); }
+  if (url) { const img = el("img"); paintFileImg(img, url); img.alt = ""; box.append(img); }
   else box.textContent = (name || "?").trim().slice(0, 1).toUpperCase();
   return box;
 }
@@ -74,7 +77,7 @@ export function composer(root, viewerDoc) {
   const isFam = r !== "career";
   const saved = lsGet("need") || {};
   const text0 = saved.text != null ? saved.text : (viewerDoc && viewerDoc.about) || "";
-  const state = { name: saved.name != null ? saved.name : ((viewerDoc && viewerDoc.displayName) || ""), text: text0, kinds: saved.kinds || [], days: saved.days || [], parts: saved.parts || [], aupair: saved.aupair || {} };
+  const state = { name: saved.name != null ? saved.name : ((viewerDoc && viewerDoc.displayName) || ""), text: text0, kinds: saved.kinds || [], days: saved.days || [], parts: saved.parts || [], aupair: saved.aupair || {}, postcode: saved.postcode || (viewerDoc && viewerDoc.postcode) || "", dates: Array.isArray(saved.dates) ? saved.dates : [] };
   const card = el("section", "v2Card v2Composer");
   const done = () => state.text.trim().length > 0;
   const render = (editing) => {
@@ -85,6 +88,8 @@ export function composer(root, viewerDoc) {
       const chips = el("div", "v2ChipRow");
       for (const k of state.kinds) chips.append(el("span", "v2Tag", k));
       if (state.days.length) chips.append(el("span", "v2Tag", state.days.join(" ")));
+      if (isFam && state.postcode) chips.append(el("span", "v2Tag", "Postcode " + state.postcode));
+      if (isFam) for (const d of state.dates) chips.append(el("span", "v2Tag", d));
       card.append(chips, btn("ghostBtn", "Edit", () => render(true)));
       return;
     }
@@ -93,7 +98,6 @@ export function composer(root, viewerDoc) {
     const nm = el("input", "txtIn v2Name"); nm.type = "text"; nm.maxLength = 40; nm.placeholder = "Your first name"; nm.value = state.name;
     nm.setAttribute("aria-label", "Your first name");
     nm.addEventListener("input", () => { state.name = nm.value; });
-    card.append(nm);
     const ta = el("textarea", "txtIn v2Text");
     ta.rows = 3; ta.maxLength = 300;
     ta.placeholder = isFam ? "Example: Babysitter for my 2 kids (3 and 5), Tuesday and Thursday after school." : "Example: Friendly babysitter, 4 years of experience, first aid trained, free after 3pm.";
@@ -130,12 +134,36 @@ export function composer(root, viewerDoc) {
       parts.append(b);
     }
     card.append(parts);
+    if (isFam) {
+      card.append(el("p", "v2Label", "Your postcode"));
+      const pc = el("input", "txtIn v2Postcode"); pc.type = "text"; pc.inputMode = "numeric"; pc.maxLength = 4; pc.placeholder = "2031"; pc.value = state.postcode;
+      pc.setAttribute("aria-label", "Your postcode");
+      pc.addEventListener("input", () => { state.postcode = pc.value.replace(/\D/g, "").slice(0, 4); pc.value = state.postcode; });
+      card.append(pc);
+      card.append(el("p", "v2Label", "Specific dates (optional)"));
+      const dateRow = el("div", "v2ChipRow");
+      const renderDates = () => {
+        dateRow.replaceChildren();
+        for (const d of state.dates) {
+          const chip = el("span", "v2Tag", d + "  ");
+          const x = btn("chipX", "×", () => { state.dates = state.dates.filter((y) => y !== d); renderDates(); });
+          x.setAttribute("aria-label", "Remove " + d);
+          chip.append(x);
+          dateRow.append(chip);
+        }
+      };
+      renderDates();
+      const din = el("input", "txtIn v2Date"); din.type = "date"; din.setAttribute("aria-label", "Add a date");
+      const dadd = btn("ghostBtn", "Add date", () => { const v = din.value; if (/^\d{4}-\d{2}-\d{2}$/.test(v) && !state.dates.includes(v) && state.dates.length < 14) { state.dates = [...state.dates, v].sort(); renderDates(); } din.value = ""; });
+      card.append(din, dadd, dateRow);
+    }
+    card.append(nm);
     if (!isFam) card.append(auPairFields(state));
     const msg = el("p", "formMsg"); msg.setAttribute("role", "status");
     const save = btn("mainBtn", "Save", async () => {
       if (!state.text.trim()) { msg.textContent = "Write a few words first."; return; }
       save.disabled = true;
-      const payload = { name: (state.name || "").trim(), text: state.text.trim(), kinds: state.kinds, days: state.days, parts: state.parts };
+      const payload = { name: (state.name || "").trim(), text: state.text.trim(), kinds: state.kinds, days: state.days, parts: state.parts, postcode: isFam ? state.postcode : "", dates: isFam ? state.dates : [] };
       lsSet("need", payload);
       const a = await write("need", payload);
       const b = await write("about", { about: payload.text, name: payload.name });
@@ -187,7 +215,7 @@ export function leafletMap(host, points, centre, onPick) {
   if (!L || !points.length) return false;
   const box = el("div", "v2Map");
   host.append(box);
-  const map = L.map(box, { zoomControl: true, attributionControl: true });
+  const map = L.map(box, { zoomControl: true, attributionControl: true, scrollWheelZoom: false });
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18, attribution: "© OpenStreetMap" }).addTo(map);
   const icon = L.icon({ iconUrl: "vendor/leaflet/images/marker-icon.png", iconRetinaUrl: "vendor/leaflet/images/marker-icon-2x.png", shadowUrl: "vendor/leaflet/images/marker-shadow.png", iconSize: [25, 41], iconAnchor: [12, 41], shadowSize: [41, 41] });
   const bounds = [];
@@ -648,6 +676,7 @@ export function auPairFields(state, card) {
     l.append(c, document.createTextNode(" " + label)); return l;
   };
   wrap.append(sel("Can arrive from", months, "arrival"), cl, sel("English level", AUPAIR_ENGLISH.map((x) => [x, x]), "english"), chk("Qualified to care for babies", "infant"), chk("Drives", "drives"), chk("Swims", "swim"));
+  wrap.append(el("p", "v2Sub", tr("find.auPairNote")));
   return wrap;
 }
 export function cleanAuPair(a, on) {
@@ -670,9 +699,29 @@ async function loadVerified() {
     window.CARESITS_FIND_REFRESH && window.CARESITS_FIND_REFRESH();
   } catch { /* badge just does not show */ }
 }
+// What the viewer's own country calls the check, and where to look it up.
+async function myCheckFacts() {
+  const m = { ...(window.CARESITS_ME || {}) };
+  if (!m.country || !m.postcode) {
+    // the answers just saved may not have reached the shared state yet
+    try {
+      const dbx = window.CARESITS_DB;
+      const q = await dbx.fs.getDoc(dbx.fs.doc(dbx.db, "users", me().uid, "meta", "questionnaire"));
+      const a = (q.exists() && q.data().answers) || {};
+      m.country = m.country || (q.exists() && q.data().country) || a.country || "";
+      m.postcode = m.postcode || a.postcode || "";
+    } catch { /* the generic wording stands */ }
+  }
+  const pack = packByName(m.country || "");
+  if (!pack) return null;
+  const facts = checkFor(pack, m.postcode) || {};
+  const j = pack.id === "AU" ? auJurisdiction(m.postcode || "") : null;
+  return { pack, facts, code: pack.id + (j ? "-" + j.id : "") };
+}
 function addMeVerify() {
   const root = document.getElementById("meRoot");
   if (!root || root.querySelector(".v2VerBlock")) return;
+  if ((window.CARESITS_ME || {}).side === "family") return; // checks are for carers
   const dbx = window.CARESITS_DB; const uid = me().uid;
   const box = el("section", "v2Card v2VerBlock");
   box.append(el("h3", "v2Title", "Get verified (free)"));
@@ -680,25 +729,30 @@ function addMeVerify() {
   root.insertBefore(box, root.children[2] || null);
   const paint = async () => {
     body.replaceChildren();
+    const cf = await myCheckFacts();
+    const checkName = cf && cf.facts.name ? cf.facts.name : "working with children check";
     let ver = null, req = null;
     try { const v = await dbx.fs.getDoc(dbx.fs.doc(dbx.db, "verified", uid)); ver = v.exists() ? v.data() : null; } catch { /* none */ }
-    if (ver) { body.append(el("p", "v2RevSum", "\u2713 Verified: Blue Card checked by Caresitters")); return; }
+    if (ver) { body.append(el("p", "v2RevSum", `\u2713 Verified: ${ver.check || checkName} checked by Caresitters`)); return; }
     try { const r = await dbx.fs.getDoc(dbx.fs.doc(dbx.db, "verifyRequests", uid)); req = r.exists() ? r.data() : null; } catch { /* none */ }
-    if (req) { body.append(el("p", "v2Sub", "We got your request. We check it by hand against the free Queensland Blue Card checker. This can take a few days.")); body.append(btn("ghostBtn", "Cancel request", async () => { try { await dbx.fs.deleteDoc(dbx.fs.doc(dbx.db, "verifyRequests", uid)); } catch { /* ignore */ } paint(); })); return; }
-    body.append(el("p", "v2Sub", "Add your Queensland Blue Card (working with children card). We check it is valid, then show a Verified badge on your profile."));
+    if (req) { body.append(el("p", "v2Sub", "We got your request. We check it by hand. This can take a few days. It costs you nothing.")); body.append(btn("ghostBtn", "Cancel request", async () => { try { await dbx.fs.deleteDoc(dbx.fs.doc(dbx.db, "verifyRequests", uid)); } catch { /* ignore */ } paint(); })); return; }
+    body.append(el("p", "v2Sub", `Add your ${checkName}${cf && cf.facts.place ? " (" + cf.facts.place + ")" : ""}. We check it is real${cf && cf.facts.register ? " on the free official register" : " by looking at your document"}, then show a Verified badge on your profile. Getting verified with Caresitters is always free.`));
+    if (cf && cf.facts.costText) body.append(el("p", "v2Sub", "The government check itself: " + cf.facts.costText));
+    if (cf && cf.facts.checkUrl) { const a = el("a", null, "Where to apply or check (official site)"); a.href = cf.facts.checkUrl; a.target = "_blank"; a.rel = "noopener"; body.append(a); }
     const nm = el("input", "txtIn"); nm.placeholder = "Full name on the card"; nm.maxLength = 60; nm.value = me().name || "";
-    const no = el("input", "txtIn"); no.placeholder = "Blue Card number"; no.maxLength = 30;
-    const ex = el("input", "txtIn"); ex.type = "date"; ex.setAttribute("aria-label", "Card expiry date");
+    const no = el("input", "txtIn"); no.placeholder = "Card or certificate number"; no.maxLength = 22;
+    const ex = el("input", "txtIn"); ex.type = "date"; ex.setAttribute("aria-label", "Expiry date, if it has one");
     const msg = el("p", "formMsg"); msg.setAttribute("role", "status");
     const go = btn("mainBtn", "Ask to be verified", async () => {
-      if (!nm.value.trim() || !no.value.trim() || !ex.value) { msg.textContent = "Fill in all three boxes."; return; }
+      if (!nm.value.trim() || !no.value.trim()) { msg.textContent = "Fill in your name and the number."; return; }
       go.disabled = true;
       try {
-        await dbx.fs.setDoc(dbx.fs.doc(dbx.db, "verifyRequests", uid), { kind: "bluecard", number: no.value.trim(), expiry: ex.value, name: nm.value.trim(), state: "pending", at: dbx.fs.serverTimestamp() });
+        const tag = (cf ? cf.code : "XX") + " ";
+        await dbx.fs.setDoc(dbx.fs.doc(dbx.db, "verifyRequests", uid), { kind: "bluecard", number: (tag + no.value.trim()).slice(0, 30), expiry: ex.value || "", name: nm.value.trim(), state: "pending", at: dbx.fs.serverTimestamp() });
         paint();
       } catch { go.disabled = false; msg.textContent = "Could not send. Try again."; }
     });
-    body.append(nm, no, el("p", "v2Label", "Card expiry date"), ex, msg, go, el("p", "v2Sub", "Only you and the Caresitters team can see these details."));
+    body.append(nm, no, el("p", "v2Label", "Expiry date (leave empty if it has none)"), ex, msg, go, el("p", "v2Sub", "Only you and the Caresitters team can see these details."));
   };
   paint();
 }
@@ -713,10 +767,15 @@ async function addMeAdmin() {
   if (!docs.length) box.append(el("p", "v2Sub", "None waiting."));
   for (const d of docs) {
     const r = d.data(); const row = el("div", "v2Rev");
-    row.append(el("p", "v2RevText", `${r.name} \u00b7 card ${r.number} \u00b7 expires ${r.expiry}`));
-    row.append(el("p", "v2RevBy", "Check it at bluecard.qld.gov.au, then Approve."));
+    const mm = /^([A-Z]{2})(?:-([A-Za-z]+))? /.exec(r.number || "");
+    const rp = mm ? packById(mm[1]) : null;
+    const rj = rp && mm[2] && rp.jurisdictions ? rp.jurisdictions.find((j) => j.id === mm[2]) : null;
+    const rname = (rj && rj.checkName) || (rp && rp.checkName) || "check";
+    const rurl = (rj && rj.checkUrl) || (rp && rp.checkUrl) || "";
+    row.append(el("p", "v2RevText", `${r.name} \u00b7 ${r.number} \u00b7 expires ${r.expiry || "none"}`));
+    row.append(el("p", "v2RevBy", `Check it: ${rname}${rurl ? " at " + rurl : ""}, then Approve.`));
     row.append(btn("mainBtn", "Approve", async () => {
-      await dbx.fs.setDoc(dbx.fs.doc(dbx.db, "verified", d.id), { level: "bluecard", expiry: r.expiry, at: dbx.fs.serverTimestamp() });
+      await dbx.fs.setDoc(dbx.fs.doc(dbx.db, "verified", d.id), { level: "checked", check: rname, expiry: r.expiry || "", at: dbx.fs.serverTimestamp() });
       await dbx.fs.deleteDoc(dbx.fs.doc(dbx.db, "verifyRequests", d.id)); row.remove(); loadVerified();
     }), btn("ghostBtn", "Reject", async () => { await dbx.fs.deleteDoc(dbx.fs.doc(dbx.db, "verifyRequests", d.id)); row.remove(); }));
     box.append(row);

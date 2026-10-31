@@ -91,7 +91,7 @@ export function planSave(bundle, opts) {
       path: `profiles/${uid}`,
       data: {
         side: bundle.side,
-        displayName: bundle.side === "carer" ? (cardIn.displayName || displayName) : displayName,
+        displayName: cardIn.displayName || displayName,
         postcode: cardIn.postcode || "",
         photoUrl: photoUrl || "",
         card: withAreaCoords(cardWithGallery(card, gallery), cardIn.postcode || ""),
@@ -235,7 +235,9 @@ export async function saveBundle(bundle, firebaseConfig) {
     uid: user.uid,
     displayName: profSnap.exists() ? (profSnap.data().displayName || "") : "",
     alreadyActivated,
-    photoUrl: keptPhoto,
+    // a photo chosen in the questionnaire rides along, in case the profile
+    // document did not exist yet when the photo was first written
+    photoUrl: keptPhoto || (bundle && bundle.answers && bundle.answers.photoUrl) || "",
     gallery: keptGallery,
     nowIso: new Date().toISOString(),
   });

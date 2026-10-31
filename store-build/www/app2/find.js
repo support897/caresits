@@ -10,6 +10,8 @@ import { assembleBrowse, pinLayout, kmBetween, stitchAnswers, areaCoordsFor } fr
 import { t as tr } from "./lang.js";
 import { frameUser } from "./account-save.js";
 import { LANGS, BANDS, DAYS } from "./questions.js";
+import { paintFileImg } from "./files.js";
+import { renderAuPairFind, viewerIsAuPairWorld } from "./aupair-find.js";
 const labelText = (s) => tr({ "Perfect Pair": "find.label.perfect", "Strong Fit": "find.label.strong", "Good Fit": "find.label.good" }[s] || "find.label.good");
 const qualText = (s) => (s === "Quick profile, rough match" ? tr("find.qualifier") : s);
 const reasonText = (result, r, i) => { const code = result.reasonCodes?.[i]; return code ? tr("reason." + code) : r; };
@@ -163,6 +165,8 @@ function openFilterSheet(root, viewerDoc, candidates, opener) {
     filterSelect(extra, controls, "experienceYears", tr("find.filterExperience"), [...any, ...[1, 3, 5, 10].map((n) => [String(n), n === 1 ? tr("find.filterOneYear") : tr("find.filterYears", undefined, { n })])], filterState.experienceYears);
     filterSelect(extra, controls, "maxPay", tr("find.filterMaxPay"), [...any, ...[20, 25, 30, 40, 50].map((n) => [String(n), tr("find.filterCurrency", undefined, { n })])], filterState.maxPay);
     filterSelect(extra, controls, "transport", tr("find.filterTransport"), [...any, ["drive", tr("find.filterDrive")], ["ownCar", tr("find.filterOwnCar")]], filterState.transport);
+    const apNote = el("p", "findFilterHelp", tr("find.auPairNote"));
+    extra.append(apNote);
   } else {
     filterSelect(extra, controls, "maxPay", tr("find.filterMinPay"), [...any, ...[18, 20, 25, 30, 40].map((n) => [String(n), tr("find.filterCurrency", undefined, { n })])], filterState.maxPay);
   }
@@ -241,10 +245,23 @@ function detailLines(doc) {
   const ages = listValue(card.agesAccepted || card.agesPreferred);
   if (ages.length) lines.push(tr("find.detailAges", undefined, { n: ages.join(", ") }));
   if (card.checksLevel) lines.push(tr("find.detailChecks", undefined, { n: card.checksLevel === "register" ? tr("find.trustRegister") : card.checksLevel === "sighted" ? tr("find.trustSighted") : card.checksLevel }));
+  const checksNorm = norm(card.checksLevel || doc.checksLevel);
+  if (!["register", "verified", "register verified", "sighted", "document sighted"].includes(checksNorm)) lines.push(tr("find.detailSelfReported"));
   const availability = DAYS.filter((day) => dayAvailable(card, day, doc.side === "carer" ? "family" : "carer"));
   if (availability.length) lines.push(tr("find.detailAvailability", undefined, { n: availability.map((day) => tr("journey.day." + day) === "journey.day." + day ? day : tr("journey.day." + day)).join(", ") }));
   if (card.age) lines.push(tr("find.detailAge", undefined, { n: card.age }));
   return lines;
+}
+
+// The profile's own updated stamp, month and year only:
+// honest about freshness without pretending to be a
+// last active clock (the pool carries no activity read).
+function updatedStamp(doc) {
+  const u = doc && doc.updatedAt;
+  if (!u) return "";
+  const d = u.toDate ? u.toDate() : new Date(typeof u === "number" ? u : (u.seconds ? u.seconds * 1000 : u));
+  if (!d || isNaN(d.getTime())) return "";
+  return tr("find.updated", undefined, { n: d.toLocaleString("en", { month: "short", year: "numeric" }) });
 }
 
 function cardFor(entry) {
@@ -253,7 +270,7 @@ function cardFor(entry) {
   const head = el("div", "findHead");
   if (doc.photoUrl) {
     const img = el("img", "findPhoto");
-    img.src = doc.photoUrl;
+    paintFileImg(img, doc.photoUrl);
     img.alt = "";
     head.append(img);
   } else {
@@ -263,6 +280,8 @@ function cardFor(entry) {
   who.append(el("h3", "findName", doc.displayName || tr("find.member")));
   const place = [doc.postcode ? tr("find.postcode", undefined, { n: doc.postcode }) : null, distanceKm != null ? tr("find.away", undefined, { n: distanceKm }) : null].filter(Boolean).join(" · ");
   who.append(el("p", "findPlace", place));
+  const stamp = updatedStamp(doc);
+  if (stamp) who.append(el("p", "findUpdated", stamp));
   head.append(who);
   if (window.CARESITS_V2 && window.CARESITS_V2.heartButton && doc.uid) head.append(window.CARESITS_V2.heartButton(doc.uid));
   card.append(head);
@@ -278,7 +297,7 @@ function cardFor(entry) {
     const row = el("div", "galleryThumbs");
     for (const u of gallery) {
       const im = el("img", "galleryThumbSm");
-      im.src = u;
+      paintFileImg(im, u);
       im.alt = "";
       row.append(im);
     }
@@ -413,6 +432,10 @@ export function renderFind(root, viewerDoc, candidateDocs) {
   }
   const favNow = window.CARESITS_V2 && window.CARESITS_V2.favs ? window.CARESITS_V2.favs() : new Set();
   const visibleCandidates = candidateDocs.filter((d) => !excludedUids.has(d.uid || d.displayName) && (!showSaved || favNow.has(d.uid)));
+  // The au pair world has its own Find (aupair-find.js); the nanny Find
+  // never lists au pair or host cards, and the reverse.
+  if (viewerDoc && viewerIsAuPairWorld(viewerDoc)) { renderAuPairFind(root, viewerDoc, visibleCandidates); return; }
+  for (let i = visibleCandidates.length - 1; i >= 0; i -= 1) if (viewerIsAuPairWorld(visibleCandidates[i])) visibleCandidates.splice(i, 1);
   root.replaceChildren();
   const isCarerView = (viewerDoc && viewerDoc.side === "carer") || (!viewerDoc && window.CARESITS_V2 && window.CARESITS_V2.role() === "career");
   root.append(el("h2", "findTitle", isCarerView ? "Jobs" : tr("shell.find")));
@@ -439,6 +462,7 @@ export function renderFind(root, viewerDoc, candidateDocs) {
     : (b.poolCount === 1 ? tr("find.pool.family1") : tr("find.pool.familyN", undefined, { n: b.poolCount }));
   const matchWord = b.shownCount === 1 ? tr("find.pool.match1") : tr("find.pool.matchN", undefined, { n: b.shownCount });
   root.append(el("p", "findPool", poolWord + " · " + matchWord));
+  root.append(el("p", "findSort", tr("find.sortLine")));
   const toolbar = el("div", "findToolbar");
   const filterCount = activeFilterCount();
   const filterButton = el("button", "ghostBtn findFilterOpen", filterCount ? tr("find.filtersCount", undefined, { n: filterCount }) : tr("find.filters"));
@@ -450,6 +474,23 @@ export function renderFind(root, viewerDoc, candidateDocs) {
   savedBtn.addEventListener("click", () => { showSaved = !showSaved; renderFind(root, viewerDoc, candidateDocs); });
   toolbar.append(savedBtn, filterButton);
   root.append(toolbar);
+  if (filterCount) {
+    const FILTER_CHIP_LABELS = { distanceKm: () => tr("find.filterDistance"), language: () => tr("find.filterLanguage"), ageBand: () => tr(viewerDoc.side === "family" ? "find.filterCarerAges" : "find.filterChildAges"), day: () => tr("find.filterDay"), verifiedOnly: () => tr("find.filterChecks"), pets: () => tr("find.filterPets"), auPairOnly: () => "Au pairs only", auPairInfant: () => "Au pair: can care for babies", auPairEnglish: () => "Au pair: English at least", auPairArrive: () => "Au pair: can arrive by", experienceYears: () => tr("find.filterExperience"), maxPay: () => tr(viewerDoc.side === "family" ? "find.filterMaxPay" : "find.filterMinPay"), transport: () => tr("find.filterTransport") };
+    const chipsRow = el("div", "findActiveChips");
+    for (const key of Object.keys(FILTER_DEFAULTS)) {
+      const v = filterState[key];
+      const active = typeof FILTER_DEFAULTS[key] === "boolean" ? Boolean(v) : Boolean(v);
+      if (!active) continue;
+      const chip = el("span", "findChip", (FILTER_CHIP_LABELS[key] ? FILTER_CHIP_LABELS[key]() : key) + (typeof v === "string" && v ? ": " + v : "") + "  ");
+      const x = el("button", "findChipX", "×");
+      x.type = "button";
+      x.setAttribute("aria-label", tr("find.removeFilter"));
+      x.addEventListener("click", () => { filterState = { ...filterState, [key]: FILTER_DEFAULTS[key] }; renderFind(root, viewerDoc, candidateDocs); });
+      chip.append(x);
+      chipsRow.append(chip);
+    }
+    root.append(chipsRow);
+  }
   const toggle = el("div", "viewToggle");
   const listBtn = el("button", "chip on", tr("find.list"));
   const mapBtn = el("button", "chip", tr("find.map"));
@@ -503,7 +544,7 @@ export function renderFind(root, viewerDoc, candidateDocs) {
       const head = el("div", "findHead");
       if (nItem.doc.photoUrl) {
         const photo = el("img", "findPhoto");
-        photo.src = nItem.doc.photoUrl;
+        paintFileImg(photo, nItem.doc.photoUrl);
         photo.alt = "";
         head.append(photo);
       } else head.append(el("div", "findInitial", (nItem.doc.displayName || "?").slice(0, 1)));

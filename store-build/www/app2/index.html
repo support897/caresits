@@ -2,7 +2,7 @@
 <html lang="en" data-theme="brand">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Caresitters</title>
 <meta name="description" content="Caresitters. Find care. Share the day.">
 <link rel="icon" href="../icon.svg">
@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="shell.css">
 </head>
 <body>
-<div id="layout" class="layout">
+<div id="layout" class="layout" data-mode="finding">
   <aside id="menu" class="menu" aria-label="Menu">
     <div class="menuHead">
       <img class="menuBunny" src="bunny/bunny-hello.png" alt="">
@@ -28,8 +28,13 @@
       </div>
       <p id="sideSwitchStatus" class="sideSwitchStatus" role="status" aria-live="polite"></p>
     </section>
+    <div class="modeSwitch" role="group" aria-label="Finding or Connected">
+      <button type="button" class="modeBtn" data-mode-pick="finding" data-i18n="shell.finding">Finding care</button>
+      <button type="button" class="modeBtn" data-mode-pick="connected" data-i18n="shell.connected">Connected</button>
+    </div>
+    <p class="modeSell" data-i18n="mode.sell">Connected: your shared calendar, today's activities made for your kids, photo updates of their day, and messages, all in one place.</p>
     <button type="button" id="commMessages" class="navBtn top" data-nav="thread" data-i18n="homes.conversations" hidden>Conversations</button>
-    <div class="navGroup">
+    <div class="navGroup" data-mode-group="finding">
       <button type="button" class="navGroupHead" data-group="finding" aria-expanded="false" aria-controls="menu-group-finding" data-i18n="shell.finding">Finding care</button>
       <div class="navGroupBody" id="menu-group-finding">
         <button type="button" class="navBtn" data-nav="questionnaire" data-i18n="shell.questionnaire">Questionnaire</button>
@@ -176,6 +181,9 @@
     <button type="button" class="bottomTab" data-bottom-role="family" data-bottom-tab="family-messages" data-nav="thread">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v12H9l-5 4z"/><path d="M8 10h8M8 13h5"/></svg><span>Messages</span>
     </button>
+    <button type="button" class="bottomTab" data-bottom-role="family" data-bottom-tab="family-more" data-open-more="true">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>More</span>
+    </button>
 
     <button type="button" class="bottomTab" data-bottom-role="career" data-bottom-tab="career-find" data-nav="find" hidden>
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><span>Jobs</span>
@@ -189,6 +197,9 @@
     <button type="button" class="bottomTab" data-bottom-role="career" data-bottom-tab="career-messages" data-nav="thread" hidden>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v12H9l-5 4z"/><path d="M8 10h8M8 13h5"/></svg><span>Messages</span>
     </button>
+    <button type="button" class="bottomTab" data-bottom-role="career" data-bottom-tab="career-more" data-open-more="true" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>More</span>
+    </button>
 
     <button type="button" class="bottomTab" data-bottom-role="communicate" data-bottom-tab="connect-home" data-nav="home" hidden>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"/></svg><span>Today</span>
@@ -201,6 +212,9 @@
     </button>
     <button type="button" class="bottomTab" data-bottom-role="communicate" data-bottom-tab="connect-messages" data-nav="thread" hidden>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v12H9l-5 4z"/><path d="M8 10h8M8 13h5"/></svg><span>Messages</span>
+    </button>
+    <button type="button" class="bottomTab" data-bottom-role="communicate" data-bottom-tab="connect-more" data-open-more="true" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>More</span>
     </button>
   </nav>
 </div>

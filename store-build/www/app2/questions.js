@@ -13,7 +13,8 @@ export const PARTS = ["morning", "midday", "afternoon", "evening", "night"];
 export const BANDS = ["0-1", "1-3", "3-5", "5-12", "12+"];
 export const EXPERIENCE_YEAR_CHOICES = ["", "0", "1", "2", "3", "4", "5", "6", "7", "10", "15", "20"];
 export function experienceComplete(value) {
-  return BANDS.every((band) => value && value[band] !== "" && value[band] != null);
+  // One age group is enough (a new carer, or an au pair, has not cared for every age).
+  return BANDS.some((band) => value && value[band] !== "" && value[band] != null);
 }
 export const ACTIVITIES = ["Arts and crafts", "Going to the park", "Library", "Reading and storytime", "Music", "Swimming", "Cooking together", "Sports and active play", "Games and puzzles", "Nature time", "Homework help", "Pretend play"];
 export const TRAITS = ["Warm", "Patient", "Playful", "Calm", "Energetic", "Organised", "Gentle", "Funny", "Reliable", "Creative"];
