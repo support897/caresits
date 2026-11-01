@@ -3,10 +3,14 @@
 // The answer picks one of four separate tracks (tracks.js). A person who
 // already has a family can still choose Stay connected from here.
 import { WHO_CARDS, LOOKING_CARDS } from "./tracks.js";
+import { t as tr } from "./lang.js";
 
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
 
-// Resolves { track } or { role: "communicate" }.
+// Resolves { track }, { role: "communicate" }, or { skipped: true }
+// when the person closes the pick without choosing (Difference Map
+// 31 Oct, item 3): a close is never a choice, and nothing is saved
+// for it, so the pick is offered again next boot.
 export function pickTrack() {
   return new Promise((resolve) => {
     const wrap = el("div", "trackOverlay");
@@ -17,7 +21,14 @@ export function pickTrack() {
     const card = el("div", "trackCard");
     wrap.append(card);
     const bunny = el("img"); bunny.src = "bunny/bunny-hello.png"; bunny.alt = "The Caresitters bunny says hello";
-    const finish = (value) => { wrap.remove(); resolve(value); };
+    const onKey = (event) => { if (event.key === "Escape") finish({ skipped: true }); };
+    const finish = (value) => { document.removeEventListener("keydown", onKey); wrap.remove(); resolve(value); };
+    const exitBtn = () => {
+      const b = el("button", "trackExit", tr("tour.notNow"));
+      b.type = "button"; b.dataset.exit = "1";
+      b.addEventListener("click", () => finish({ skipped: true }));
+      return b;
+    };
 
     const stepWho = () => {
       card.replaceChildren(bunny);
@@ -34,7 +45,7 @@ export function pickTrack() {
       const later = el("button", "quietBtn", "I already have a family and want to stay connected");
       later.type = "button"; later.dataset.who = "communicate";
       later.addEventListener("click", () => finish({ role: "communicate" }));
-      card.append(later);
+      card.append(later, exitBtn());
     };
 
     const stepLooking = (who) => {
@@ -51,11 +62,12 @@ export function pickTrack() {
       card.append(list);
       const back = el("button", "quietBtn", "Back"); back.type = "button";
       back.addEventListener("click", stepWho);
-      card.append(back);
+      card.append(back, exitBtn());
     };
 
     stepWho();
     document.body.append(wrap);
+    document.addEventListener("keydown", onKey);
     wrap.querySelector("button")?.focus();
   });
 }

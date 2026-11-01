@@ -9,9 +9,10 @@
 import { assembleBrowse, pinLayout, kmBetween, stitchAnswers, areaCoordsFor } from "./browse.js";
 import { t as tr } from "./lang.js";
 import { frameUser } from "./account-save.js";
-import { LANGS, BANDS, DAYS } from "./questions.js";
+import { LANGS, BANDS, DAYS, PARTS } from "./questions.js";
 import { paintFileImg } from "./files.js";
 import { renderAuPairFind, viewerIsAuPairWorld } from "./aupair-find.js";
+import { openProfile } from "./profile-view.js";
 const labelText = (s) => tr({ "Perfect Pair": "find.label.perfect", "Strong Fit": "find.label.strong", "Good Fit": "find.label.good" }[s] || "find.label.good");
 const qualText = (s) => (s === "Quick profile, rough match" ? tr("find.qualifier") : s);
 const reasonText = (result, r, i) => { const code = result.reasonCodes?.[i]; return code ? tr("reason." + code) : r; };
@@ -32,12 +33,17 @@ const el = (tag, cls, text) => {
   return n;
 };
 
-const FILTER_DEFAULTS = { distanceKm: "", language: "", ageBand: "", day: "", verifiedOnly: false, auPairOnly: false, auPairInfant: false, auPairEnglish: "", auPairArrive: "", experienceYears: "", maxPay: "", transport: "", pets: "" };
+const FILTER_DEFAULTS = { sortBy: "match", types: [], distanceKm: "", language: "", ageBands: [], slots: [], verifiedOnly: false, auPairOnly: false, auPairInfant: false, auPairEnglish: "", auPairArrive: "", expYears: 0, maxPay: "", transport: "", pets: "" };
 let filterState = { ...FILTER_DEFAULTS };
 let filterOwner = null;
-let moreFiltersOpen = false;
+let roleTab = "";
 const norm = (value) => String(value ?? "").trim().toLowerCase();
-const activeFilterCount = () => Object.entries(filterState).filter(([k, v]) => v !== "" && v !== false).length;
+const activeFilterCount = () => Object.entries(filterState).filter(([k, v]) => {
+  if (Array.isArray(v)) return v.length > 0;
+  if (k === "sortBy") return v !== "match";
+  if (k === "expYears") return Number(v) > 0;
+  return v !== "" && v !== false;
+}).length + (roleTab ? 1 : 0);
 const listValue = (value) => Array.isArray(value) ? value : value == null || value === "" ? [] : [value];
 
 function dayAvailable(card, day, viewerSide) {
@@ -50,50 +56,118 @@ function dayAvailable(card, day, viewerSide) {
   return Boolean(raw);
 }
 
-function filterCandidates(viewerDoc, candidateDocs) {
+function slotAvailable(card, day, part, viewerSide) {
+  const value = viewerSide === "family" ? card.availability : card.scheduleNeed;
+  if (!value || typeof value !== "object") return false;
+  const raw = value[day] ?? value[day.toLowerCase()] ?? value[day.toUpperCase()];
+  if (raw === true) return true;
+  if (Array.isArray(raw)) return part ? raw.map(norm).includes(norm(part)) : raw.length > 0;
+  if (raw && typeof raw === "object") return Object.values(raw).some((p) => Array.isArray(p) ? p.length > 0 : Boolean(p));
+  return Boolean(raw);
+}
+
+// The viewer's own saved need (the composer on this screen
+// writes it; the copy on this device is the composer's own
+// read path). Difference Map item 6: the need is READ here,
+// by the filtering and the order, not only written.
+function viewerNeed(viewerDoc) {
+  try {
+    if (!viewerDoc || !viewerDoc.uid) return null;
+    const raw = localStorage.getItem(`caresits-v2-need-${viewerDoc.uid}`);
+    const need = raw ? JSON.parse(raw) : null;
+    if (!need || typeof need !== "object") return null;
+    return {
+      days: Array.isArray(need.days) ? need.days : [],
+      dates: Array.isArray(need.dates) ? need.dates : [],
+      kinds: Array.isArray(need.kinds) ? need.kinds : [],
+      needFreq: typeof need.needFreq === "string" ? need.needFreq : "",
+      needUrgency: typeof need.needUrgency === "string" ? need.needUrgency : "",
+      carePlace: typeof need.carePlace === "string" ? need.carePlace : "",
+    };
+  } catch { return null; }
+}
+
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+function needCover(card, viewerDoc, need) {
+  // How many of the needed days (the named days, plus the
+  // weekdays of the named dates) this card's week covers.
+  if (!need) return 0;
+  const wanted = new Set(need.days || []);
+  for (const d of need.dates || []) {
+    const dt = new Date(String(d) + "T12:00:00");
+    if (!isNaN(dt.getTime())) wanted.add(DAY_NAMES[dt.getDay()]);
+  }
+  let n = 0;
+  for (const day of wanted) if (dayAvailable(card, day, viewerDoc.side)) n += 1;
+  // The type of care the family asked for, in the same words
+  // the family wizard uses: a carer whose own type is one of
+  // them covers more of this need.
+  if (viewerDoc.side === "family" && (need.kinds || []).length) {
+    const roles = listValue(card.roles || card.role).map(norm);
+    if ((need.kinds || []).some((k) => roles.some((r) => r.includes(norm(k)) || norm(k).includes(r)))) n += 1;
+  }
+  return n;
+}
+
+function filterCandidates(viewerDoc, candidateDocs, state = filterState) {
   const familyViewer = viewerDoc.side === "family";
+  const need = viewerDoc.side === "family" || viewerDoc.side === "carer" ? viewerNeed(viewerDoc) : null;
+  const needDays = need ? new Set([...(need.days || []), ...(need.dates || []).map((d) => { const dt = new Date(String(d) + "T12:00:00"); return isNaN(dt.getTime()) ? "" : DAY_NAMES[dt.getDay()]; }).filter(Boolean)]) : new Set();
   return candidateDocs.filter((doc) => {
     if (doc.side === viewerDoc.side) return true;
     const card = doc.card || {};
-    if (filterState.distanceKm) {
+    // The saved need's days: a card that covers none of them
+    // is not what this member asked for (their own words, in
+    // their own composer). Dates count through their weekday.
+    if (needDays.size && ![...needDays].some((day) => dayAvailable(card, day, viewerDoc.side))) return false;
+    const wantedTypes = [...(state.types || []), ...(roleTab ? [roleTab] : [])];
+    if (wantedTypes.length) {
+      const roles = listValue(card.roles || card.role).map(norm);
+      const hit = wantedTypes.some((t) => norm(t) === "au pair" ? Boolean(card.auPair && card.auPair.on) : roles.some((r) => r.includes(norm(t))));
+      if (!hit) return false;
+    }
+    if (state.distanceKm) {
       const km = kmBetween(viewerDoc.card || {}, card);
-      if (km == null || km > Number(filterState.distanceKm)) return false;
+      if (km == null || km > Number(state.distanceKm)) return false;
     }
-    if (filterState.language) {
+    if (state.language) {
       const languages = listValue(card.languages).map(norm);
-      if (!languages.includes(norm(filterState.language))) return false;
+      if (!languages.includes(norm(state.language))) return false;
     }
-    if (filterState.ageBand) {
+    if ((state.ageBands || []).length) {
       const ages = listValue(familyViewer ? (card.agesAccepted || card.agesPreferred) : card.childrenBands).map(norm);
-      if (!ages.includes(norm(filterState.ageBand))) return false;
+      if (!state.ageBands.some((b) => ages.includes(norm(b)))) return false;
     }
-    if (filterState.day && !dayAvailable(card, filterState.day, viewerDoc.side)) return false;
-    if (filterState.verifiedOnly) {
+    if ((state.slots || []).length) {
+      const hit = state.slots.some((slot) => { const [day, part] = String(slot).split("|"); return slotAvailable(card, day, part, viewerDoc.side); });
+      if (!hit) return false;
+    }
+    if (state.verifiedOnly) {
       const checks = norm(card.checksLevel || doc.checksLevel);
       if (!(["register", "sighted", "verified", "register verified", "document sighted"].includes(checks))) return false;
     }
-    if (familyViewer && (filterState.auPairOnly || filterState.auPairInfant || filterState.auPairEnglish || filterState.auPairArrive)) {
+    if (familyViewer && (state.auPairOnly || state.auPairInfant || state.auPairEnglish || state.auPairArrive)) {
       const ap = card.auPair || {};
       if (!ap.on) return false;
-      if (filterState.auPairInfant && !ap.infant) return false;
-      if (filterState.auPairEnglish && ["Basic", "Good", "Fluent"].indexOf(ap.english) < ["Basic", "Good", "Fluent"].indexOf(filterState.auPairEnglish)) return false;
-      if (filterState.auPairArrive && (!ap.arrival || ap.arrival > filterState.auPairArrive)) return false;
+      if (state.auPairInfant && !ap.infant) return false;
+      if (state.auPairEnglish && ["Basic", "Good", "Fluent"].indexOf(ap.english) < ["Basic", "Good", "Fluent"].indexOf(state.auPairEnglish)) return false;
+      if (state.auPairArrive && (!ap.arrival || ap.arrival > state.auPairArrive)) return false;
     }
-    if (filterState.experienceYears) {
+    if (Number(state.expYears) > 0) {
       const years = Object.values(card.experience || {}).map(Number).filter(Number.isFinite);
-      if (!years.length || Math.max(...years) < Number(filterState.experienceYears)) return false;
+      if (!years.length || Math.max(...years) < Number(state.expYears)) return false;
     }
-    if (filterState.maxPay) {
+    if (state.maxPay) {
       const amount = Number(familyViewer ? card.payFloor : card.payOffered);
-      if (!Number.isFinite(amount) || amount <= 0 || (familyViewer ? amount > Number(filterState.maxPay) : amount < Number(filterState.maxPay))) return false;
+      if (!Number.isFinite(amount) || amount <= 0 || (familyViewer ? amount > Number(state.maxPay) : amount < Number(state.maxPay))) return false;
     }
-    if (filterState.transport && familyViewer) {
-      if (filterState.transport === "drive" && !card.drives && !card.ownCar) return false;
-      if (filterState.transport === "ownCar" && !card.ownCar) return false;
+    if (state.transport && familyViewer) {
+      if (state.transport === "drive" && !card.drives && !card.ownCar) return false;
+      if (state.transport === "ownCar" && !card.ownCar) return false;
     }
-    if (filterState.pets && !familyViewer) {
-      if (filterState.pets === "pets" && !card.pets) return false;
-      if (filterState.pets === "noPets" && card.pets) return false;
+    if (state.pets && !familyViewer) {
+      if (state.pets === "pets" && !card.pets) return false;
+      if (state.pets === "noPets" && card.pets) return false;
     }
     return true;
   });
@@ -130,6 +204,8 @@ function filterCheck(container, controls, key, label, checked) {
 
 function openFilterSheet(root, viewerDoc, candidates, opener) {
   document.getElementById("findFilterSheet")?.remove();
+  const familyViewer = viewerDoc.side === "family";
+  const draft = { ...filterState, types: [...(filterState.types || [])], ageBands: [...(filterState.ageBands || [])], slots: [...(filterState.slots || [])] };
   const wrap = el("div", "sheetWrap filterSheetWrap");
   wrap.id = "findFilterSheet";
   const sheet = el("section", "sheetCard filterSheetCard");
@@ -143,40 +219,132 @@ function openFilterSheet(root, viewerDoc, candidates, opener) {
   head.append(close);
   sheet.append(head, el("p", "findFilterHelp", tr("find.filterHelp")));
   const controls = {};
+  const onChange = () => refreshCount();
+
+  // Sort, as a real control (Difference Map item 9): the
+  // choices are the engine's own rank keys, named plainly.
+  const sortBox = el("div", "findFilterGroup");
+  sortBox.append(el("p", "findFilterLabel", tr("find.sortBy")));
+  for (const [value, key] of [["match", "find.sortMatch"], ["nearest", "find.sortNearest"], ["reply", "find.sortReply"], ["worked", "find.sortWorked"]]) {
+    const row = el("label", "findFilterCheck");
+    const input = el("input");
+    input.type = "radio"; input.name = "findSortBy"; input.value = value;
+    input.checked = draft.sortBy === value;
+    input.addEventListener("change", () => { if (input.checked) { draft.sortBy = value; onChange(); } });
+    row.append(input, el("span", null, tr(key)));
+    sortBox.append(row);
+  }
+  sheet.append(sortBox);
+
   const basic = el("div", "findFilterGrid");
   const any = [["", tr("find.filterAny")]];
-  filterSelect(basic, controls, "distanceKm", tr("find.filterDistance"), [...any, ...[5, 10, 25, 50, 100].map((n) => [String(n), tr("find.filterKm", undefined, { n })])], filterState.distanceKm);
-  filterSelect(basic, controls, "language", tr("find.filterLanguage"), [...any, ...LANGS.map((v) => [v, v])], filterState.language);
-  filterSelect(basic, controls, "ageBand", tr(viewerDoc.side === "family" ? "find.filterCarerAges" : "find.filterChildAges"), [...any, ...BANDS.map((v) => [v, v])], filterState.ageBand);
-  filterSelect(basic, controls, "day", tr("find.filterDay"), [...any, ...DAYS.map((d) => [d, tr("journey.day." + d)])], filterState.day);
-  if (viewerDoc.side === "family") filterCheck(basic, controls, "verifiedOnly", tr("find.filterChecks"), filterState.verifiedOnly);
-  else filterSelect(basic, controls, "pets", tr("find.filterPets"), [...any, ["pets", tr("find.filterPetsYes")], ["noPets", tr("find.filterPetsNo")]], filterState.pets);
+  filterSelect(basic, controls, "distanceKm", tr("find.filterDistance"), [...any, ...[5, 10, 25, 50, 100].map((n) => [String(n), tr("find.filterKm", undefined, { n })])], draft.distanceKm);
+  filterSelect(basic, controls, "language", tr("find.filterLanguage"), [...any, ...LANGS.map((v) => [v, v])], draft.language);
   sheet.append(basic);
-  const moreButton = el("button", "quietBtn findMoreFilters", tr(moreFiltersOpen ? "find.lessFilters" : "find.moreFilters"));
-  moreButton.type = "button";
-  moreButton.setAttribute("aria-expanded", String(moreFiltersOpen));
+
+  // Type of carer, as checkboxes (the industry shape).
+  if (familyViewer) {
+    const typeBox = el("div", "findFilterGroup");
+    typeBox.append(el("p", "findFilterLabel", tr("find.filterTypes")));
+    for (const t of ["Babysitter", "Nanny", "Au pair"]) {
+      const row = el("label", "findFilterCheck");
+      const input = el("input");
+      input.type = "checkbox";
+      input.checked = draft.types.includes(t);
+      input.addEventListener("change", () => { draft.types = input.checked ? [...draft.types, t] : draft.types.filter((x) => x !== t); onChange(); });
+      row.append(input, el("span", null, t));
+      typeBox.append(row);
+    }
+    sheet.append(typeBox);
+  }
+
+  // Age bands, as checkboxes.
+  const agesBox = el("div", "findFilterGroup");
+  agesBox.append(el("p", "findFilterLabel", tr(familyViewer ? "find.filterCarerAges" : "find.filterChildAges")));
+  const agesRow = el("div", "findChipChecks");
+  for (const b of BANDS) {
+    const row = el("label", "findFilterCheck");
+    const input = el("input");
+    input.type = "checkbox";
+    input.checked = draft.ageBands.includes(b);
+    input.addEventListener("change", () => { draft.ageBands = input.checked ? [...draft.ageBands, b] : draft.ageBands.filter((x) => x !== b); onChange(); });
+    row.append(input, el("span", null, b));
+    agesRow.append(row);
+  }
+  agesBox.append(agesRow);
+  sheet.append(agesBox);
+
+  // Availability: dayparts by days, the industry grid.
+  const availBox = el("div", "findFilterGroup");
+  availBox.append(el("p", "findFilterLabel", tr("find.filterAvail")));
+  const table = el("table", "findAvailGrid");
+  const headRow = el("tr");
+  headRow.append(el("th", null, ""));
+  for (const d of DAYS) headRow.append(el("th", null, d.slice(0, 3)));
+  table.append(headRow);
+  for (const part of PARTS) {
+    const row = el("tr");
+    row.append(el("th", null, part.charAt(0).toUpperCase() + part.slice(1)));
+    for (const d of DAYS) {
+      const cell = el("td");
+      const slot = d + "|" + part;
+      const b = el("button", "findAvailCell" + (draft.slots.includes(slot) ? " on" : ""), draft.slots.includes(slot) ? "●" : "");
+      b.type = "button";
+      b.setAttribute("aria-pressed", String(draft.slots.includes(slot)));
+      b.setAttribute("aria-label", d + " " + part);
+      b.addEventListener("click", () => {
+        const on = !draft.slots.includes(slot);
+        draft.slots = on ? [...draft.slots, slot] : draft.slots.filter((x) => x !== slot);
+        b.classList.toggle("on", on);
+        b.textContent = on ? "●" : "";
+        b.setAttribute("aria-pressed", String(on));
+        onChange();
+      });
+      cell.append(b);
+      row.append(cell);
+    }
+    table.append(row);
+  }
+  availBox.append(table);
+  sheet.append(availBox);
+
   const extra = el("div", "findFilterGrid findExtraFilters");
-  extra.hidden = !moreFiltersOpen;
-  if (viewerDoc.side === "family") {
-    filterCheck(extra, controls, "auPairOnly", "Au pairs only", filterState.auPairOnly);
-    filterCheck(extra, controls, "auPairInfant", "Au pair: can care for babies", filterState.auPairInfant);
-    filterSelect(extra, controls, "auPairEnglish", "Au pair: English at least", [...any, ["Basic", "Basic"], ["Good", "Good"], ["Fluent", "Fluent"]], filterState.auPairEnglish);
-    filterSelect(extra, controls, "auPairArrive", "Au pair: can arrive by", [...any, ...Array.from({ length: 12 }, (_, i) => { const d = new Date(new Date().getFullYear(), new Date().getMonth() + i, 1); return [d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"), d.toLocaleString("en", { month: "short", year: "numeric" })]; })], filterState.auPairArrive);
-    filterSelect(extra, controls, "experienceYears", tr("find.filterExperience"), [...any, ...[1, 3, 5, 10].map((n) => [String(n), n === 1 ? tr("find.filterOneYear") : tr("find.filterYears", undefined, { n })])], filterState.experienceYears);
-    filterSelect(extra, controls, "maxPay", tr("find.filterMaxPay"), [...any, ...[20, 25, 30, 40, 50].map((n) => [String(n), tr("find.filterCurrency", undefined, { n })])], filterState.maxPay);
-    filterSelect(extra, controls, "transport", tr("find.filterTransport"), [...any, ["drive", tr("find.filterDrive")], ["ownCar", tr("find.filterOwnCar")]], filterState.transport);
+  if (familyViewer) {
+    // Experience, as a slider of minimum years.
+    const expWrap = el("label", "findFilterField");
+    expWrap.append(el("span", "findFilterLabel", tr("find.filterExperience")));
+    const slider = el("input", "findExpSlider");
+    slider.type = "range"; slider.min = "0"; slider.max = "11"; slider.step = "1";
+    slider.value = String(draft.expYears || 0);
+    slider.setAttribute("aria-label", tr("find.filterExperience"));
+    const expOut = el("span", "findFilterValue", Number(draft.expYears) > 0 ? tr("find.filterYears", undefined, { n: draft.expYears }) : tr("find.filterAny"));
+    slider.addEventListener("input", () => { draft.expYears = Number(slider.value); expOut.textContent = draft.expYears > 0 ? tr("find.filterYears", undefined, { n: draft.expYears }) : tr("find.filterAny"); onChange(); });
+    expWrap.append(slider, expOut);
+    extra.append(expWrap);
+    filterCheck(extra, controls, "verifiedOnly", tr("find.filterChecks"), draft.verifiedOnly);
+    filterSelect(extra, controls, "maxPay", tr("find.filterMaxPay"), [...any, ...[20, 25, 30, 40, 50].map((n) => [String(n), tr("find.filterCurrency", undefined, { n })])], draft.maxPay);
+    // The honest average: computed from this pool's own
+    // rates, shown only when the pool carries rates at all.
+    const rates = candidates.filter((d) => d.side !== viewerDoc.side).map((d) => Number((d.card || {}).payFloor)).filter((n) => Number.isFinite(n) && n > 0);
+    if (rates.length) extra.append(el("p", "findFilterHelp", tr("find.rateAverage", undefined, { n: Math.round(rates.reduce((s, n) => s + n, 0) / rates.length) })));
+    filterSelect(extra, controls, "transport", tr("find.filterTransport"), [...any, ["drive", tr("find.filterDrive")], ["ownCar", tr("find.filterOwnCar")]], draft.transport);
+    filterCheck(extra, controls, "auPairInfant", "Au pair: can care for babies", draft.auPairInfant);
+    filterSelect(extra, controls, "auPairEnglish", "Au pair: English at least", [...any, ["Basic", "Basic"], ["Good", "Good"], ["Fluent", "Fluent"]], draft.auPairEnglish);
+    filterSelect(extra, controls, "auPairArrive", "Au pair: can arrive by", [...any, ...Array.from({ length: 12 }, (_, i) => { const d = new Date(new Date().getFullYear(), new Date().getMonth() + i, 1); return [d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"), d.toLocaleString("en", { month: "short", year: "numeric" })]; })], draft.auPairArrive);
     const apNote = el("p", "findFilterHelp", tr("find.auPairNote"));
     extra.append(apNote);
   } else {
-    filterSelect(extra, controls, "maxPay", tr("find.filterMinPay"), [...any, ...[18, 20, 25, 30, 40].map((n) => [String(n), tr("find.filterCurrency", undefined, { n })])], filterState.maxPay);
+    filterCheck(extra, controls, "verifiedOnly", tr("find.filterChecks"), draft.verifiedOnly);
+    filterSelect(extra, controls, "pets", tr("find.filterPets"), [...any, ["pets", tr("find.filterPetsYes")], ["noPets", tr("find.filterPetsNo")]], draft.pets);
+    filterSelect(extra, controls, "maxPay", tr("find.filterMinPay"), [...any, ...[18, 20, 25, 30, 40].map((n) => [String(n), tr("find.filterCurrency", undefined, { n })])], draft.maxPay);
+    const rates = candidates.filter((d) => d.side !== viewerDoc.side).map((d) => Number((d.card || {}).payOffered)).filter((n) => Number.isFinite(n) && n > 0);
+    if (rates.length) extra.append(el("p", "findFilterHelp", tr("find.rateAverage", undefined, { n: Math.round(rates.reduce((s, n) => s + n, 0) / rates.length) })));
   }
-  sheet.append(moreButton, extra);
-  moreButton.addEventListener("click", () => {
-    moreFiltersOpen = !moreFiltersOpen;
-    extra.hidden = !moreFiltersOpen;
-    moreButton.setAttribute("aria-expanded", String(moreFiltersOpen));
-    moreButton.textContent = tr(moreFiltersOpen ? "find.lessFilters" : "find.moreFilters");
-  });
+  sheet.append(extra);
+  const readControls = () => {
+    for (const [key, input] of Object.entries(controls)) draft[key] = input.type === "checkbox" ? input.checked : input.value;
+    return draft;
+  };
   const actions = el("div", "findFilterActions");
   const clear = el("button", "quietBtn", tr("find.clearFilters"));
   clear.type = "button";
@@ -184,6 +352,11 @@ function openFilterSheet(root, viewerDoc, candidates, opener) {
   apply.type = "button";
   actions.append(clear, apply);
   sheet.append(actions);
+  function refreshCount() {
+    const n = filterCandidates(viewerDoc, candidates, readControls()).filter((d) => d.side !== viewerDoc.side).length;
+    apply.textContent = tr("find.viewResults", undefined, { n });
+  }
+  sheet.addEventListener("change", onChange);
   const closeSheet = () => {
     wrap.remove();
     document.removeEventListener("keydown", onKey);
@@ -193,24 +366,31 @@ function openFilterSheet(root, viewerDoc, candidates, opener) {
   close.addEventListener("click", closeSheet);
   wrap.addEventListener("click", (event) => { if (event.target === wrap) closeSheet(); });
   document.addEventListener("keydown", onKey);
-  const readControls = () => {
-    filterState = { ...FILTER_DEFAULTS };
-    for (const [key, input] of Object.entries(controls)) filterState[key] = input.type === "checkbox" ? input.checked : input.value;
-  };
   clear.addEventListener("click", () => {
-    filterState = { ...FILTER_DEFAULTS };
-    moreFiltersOpen = false;
+    filterState = { ...FILTER_DEFAULTS, types: [], ageBands: [], slots: [] };
+    roleTab = "";
     closeSheet();
     renderFind(root, viewerDoc, candidates);
   });
   apply.addEventListener("click", () => {
-    readControls();
+    filterState = { ...readControls() };
     closeSheet();
     renderFind(root, viewerDoc, candidates);
   });
   wrap.append(sheet);
   document.body.append(wrap);
+  refreshCount();
   close.focus();
+}
+
+// A message tap must never die silently (Difference Map
+// item 12): when the contact layer is not standing, the tap
+// says so in plain words.
+function contactFailed() {
+  const t = document.createElement("div");
+  t.className = "v2Toast"; t.setAttribute("role", "status"); t.textContent = tr("contact.failed");
+  document.body.append(t);
+  setTimeout(() => t.remove(), 4500);
 }
 
 function trustChips(doc) {
@@ -233,24 +413,6 @@ function trustChips(doc) {
   const reply = doc.responseTime || card.responseTime || doc.replyTime || card.replyTime;
   if (reply) chips.push(tr("find.trustResponse", undefined, { n: reply }));
   return chips.slice(0, 4);
-}
-
-function detailLines(doc) {
-  const card = doc.card || {};
-  const lines = [];
-  const roles = listValue(card.roles || card.role);
-  if (roles.length) lines.push(tr("find.detailRoles", undefined, { n: roles.join(", ") }));
-  const languages = listValue(card.languages).slice(0, 4).map((v) => LANGS.find((l) => norm(l) === norm(v)) || v);
-  if (languages.length) lines.push(tr("find.detailLanguages", undefined, { n: languages.join(", ") }));
-  const ages = listValue(card.agesAccepted || card.agesPreferred);
-  if (ages.length) lines.push(tr("find.detailAges", undefined, { n: ages.join(", ") }));
-  if (card.checksLevel) lines.push(tr("find.detailChecks", undefined, { n: card.checksLevel === "register" ? tr("find.trustRegister") : card.checksLevel === "sighted" ? tr("find.trustSighted") : card.checksLevel }));
-  const checksNorm = norm(card.checksLevel || doc.checksLevel);
-  if (!["register", "verified", "register verified", "sighted", "document sighted"].includes(checksNorm)) lines.push(tr("find.detailSelfReported"));
-  const availability = DAYS.filter((day) => dayAvailable(card, day, doc.side === "carer" ? "family" : "carer"));
-  if (availability.length) lines.push(tr("find.detailAvailability", undefined, { n: availability.map((day) => tr("journey.day." + day) === "journey.day." + day ? day : tr("journey.day." + day)).join(", ") }));
-  if (card.age) lines.push(tr("find.detailAge", undefined, { n: card.age }));
-  return lines;
 }
 
 // The profile's own updated stamp, month and year only:
@@ -278,6 +440,13 @@ function cardFor(entry) {
   }
   const who = el("div", "findWho");
   who.append(el("h3", "findName", doc.displayName || tr("find.member")));
+  // The face, in the industry order (Difference Map item 7):
+  // the role in its place first, then where, then the stamp.
+  const card0 = doc.card || {};
+  const roles0 = listValue(card0.roles || card0.role);
+  const place0 = doc.postcode || card0.postcode || "";
+  if (doc.side === "carer" && roles0.length && place0) who.append(el("p", "findRoleLine", tr("find.roleIn", undefined, { role: roles0[0], place: place0 })));
+  else if (doc.side === "family" && place0) who.append(el("p", "findRoleLine", tr("find.lookingIn", undefined, { place: place0 })));
   const place = [doc.postcode ? tr("find.postcode", undefined, { n: doc.postcode }) : null, distanceKm != null ? tr("find.away", undefined, { n: distanceKm }) : null].filter(Boolean).join(" · ");
   who.append(el("p", "findPlace", place));
   const stamp = updatedStamp(doc);
@@ -286,6 +455,35 @@ function cardFor(entry) {
   if (window.CARESITS_V2 && window.CARESITS_V2.heartButton && doc.uid) head.append(window.CARESITS_V2.heartButton(doc.uid));
   card.append(head);
   if (doc.about) card.append(el("p", "v2About", doc.about));
+  // The face facts (Difference Map item 7): a carer's
+  // experience in years, a family's children by age band,
+  // and the honest rate. Stars ride in only when reviews
+  // the app itself loaded say so, never from the card.
+  if (doc.side === "carer") {
+    const years = Object.values(card0.experience || {}).map(Number).filter(Number.isFinite);
+    if (years.length) card.append(el("p", "findExpLine", tr(Math.max(...years) === 1 ? "find.expOneLine" : "find.expLine", undefined, { n: Math.max(...years) })));
+  } else {
+    // The children count first when the published card
+    // carries it (the sealed rules admit no count key yet,
+    // so the line stands ready), then the age bands.
+    if (card0.childrenCount) card.append(el("p", "findExpLine", tr("find.childrenLine", undefined, { n: card0.childrenCount })));
+    const bands = listValue(card0.childrenBands);
+    if (bands.length) card.append(el("p", "findExpLine", tr("find.detailChildren", undefined, { n: bands.join(", ") })));
+  }
+  const rate0 = Number(doc.side === "carer" ? card0.payFloor : card0.payOffered);
+  if (Number.isFinite(rate0) && rate0 > 0) card.append(el("p", "findRate", tr("find.filterCurrency", undefined, { n: rate0 })));
+  const starsSlot = el("p", "findStars");
+  starsSlot.hidden = true;
+  card.append(starsSlot);
+  if (doc.uid && window.CARESITS_V2 && typeof window.CARESITS_V2.loadReviews === "function") {
+    window.CARESITS_V2.loadReviews(doc.uid).then((list) => {
+      if (!Array.isArray(list) || !list.length) return;
+      const avg = list.reduce((s, r) => s + (r.stars || 0), 0) / list.length;
+      if (!(avg > 0)) return;
+      starsSlot.textContent = tr("find.starsLine", undefined, { s: "★".repeat(Math.max(1, Math.round(avg))), a: avg.toFixed(1), n: list.length });
+      starsSlot.hidden = false;
+    }).catch(() => { /* no stars is the honest empty state */ });
+  }
   const trust = trustChips(doc);
   if (trust.length) {
     const row = el("div", "trustRow");
@@ -319,28 +517,19 @@ function cardFor(entry) {
     card.append(ul);
   }
   if (result.qualifier) card.append(el("p", "qualLine", qualText(result.qualifier)));
-  const details = el("div", "findDetails");
-  details.hidden = true;
-  const lines = detailLines(doc);
-  if (lines.length) for (const line of lines) details.append(el("p", "findDetailLine", line));
-  else details.append(el("p", "findDetailLine", tr("find.detailEmpty")));
-  const revBox = el("div", "v2RevList");
-  details.append(revBox);
-  card.append(details);
+  // "See details" opens the real profile page now
+  // (profile-view.js, Difference Map item 8): the expanded
+  // footnote this button used to toggle is gone, replaced
+  // by the page it always pointed at in spirit.
   const actions = el("div", "findActions");
   const detailsButton = el("button", "ghostBtn findDetailsBtn", tr("find.details"));
   detailsButton.type = "button";
-  detailsButton.setAttribute("aria-expanded", "false");
-  detailsButton.addEventListener("click", () => {
-    details.hidden = !details.hidden;
-    if (!details.hidden && !revBox.dataset.l && window.CARESITS_V2 && window.CARESITS_V2.reviewsInto) { revBox.dataset.l = "1"; window.CARESITS_V2.reviewsInto(revBox, doc.uid); }
-    detailsButton.setAttribute("aria-expanded", String(!details.hidden));
-    detailsButton.textContent = tr(details.hidden ? "find.details" : "find.hideDetails");
-  });
+  detailsButton.addEventListener("click", () => openProfile(doc));
   const messageButton = el("button", "mainBtn findMsg", tr("find.message"));
   messageButton.type = "button";
   messageButton.addEventListener("click", () => {
     if (typeof window.CARESITS_CONTACT === "function") window.CARESITS_CONTACT(doc.uid || "", doc);
+    else contactFailed();
   });
   actions.append(detailsButton, messageButton);
   card.append(actions);
@@ -364,17 +553,32 @@ function mapCardFor(doc, entry, viewerLevel, distanceKm) {
   card.append(who);
   if (!entry || entry.result.personal === false) {
     card.append(el("p", null, tr("find.invite")));
-    return card;
+  } else {
+    const pct = el("p", "findFit");
+    pct.append(el("span", "fitChip", labelText(entry.result.label)));
+    pct.append(el("span", "fitScore mapPct", tr("find.matchPct", undefined, { n: entry.result.pair })));
+    card.append(pct);
+    const ul = el("ul", "findReasons");
+    (entry.result.reasons || []).slice(0, 3).forEach((r, i) => ul.append(el("li", null, reasonText(entry.result, r, i))));
+    (entry.result.learningReasons || []).forEach((reason) => ul.append(el("li", "learningMatchReason", learningReasonText(reason))));
+    card.append(ul);
+    if (entry.result.qualifier) card.append(el("p", "qualLine", qualText(entry.result.qualifier)));
   }
-  const pct = el("p", "findFit");
-  pct.append(el("span", "fitChip", labelText(entry.result.label)));
-  pct.append(el("span", "fitScore mapPct", tr("find.matchPct", undefined, { n: entry.result.pair })));
-  card.append(pct);
-  const ul = el("ul", "findReasons");
-  (entry.result.reasons || []).slice(0, 3).forEach((r, i) => ul.append(el("li", null, reasonText(entry.result, r, i))));
-  (entry.result.learningReasons || []).forEach((reason) => ul.append(el("li", "learningMatchReason", learningReasonText(reason))));
-  card.append(ul);
-  if (entry.result.qualifier) card.append(el("p", "qualLine", qualText(entry.result.qualifier)));
+  // The pin's card is not a dead end any more (Difference
+  // Map item 5): it carries the same two ways forward as a
+  // list card, the profile page and the message.
+  const actions = el("div", "findActions");
+  const detailsButton = el("button", "ghostBtn findDetailsBtn", tr("find.details"));
+  detailsButton.type = "button";
+  detailsButton.addEventListener("click", () => openProfile(doc));
+  const messageButton = el("button", "mainBtn findMsg", tr("find.message"));
+  messageButton.type = "button";
+  messageButton.addEventListener("click", () => {
+    if (typeof window.CARESITS_CONTACT === "function") window.CARESITS_CONTACT(doc.uid || "", doc);
+    else contactFailed();
+  });
+  actions.append(detailsButton, messageButton);
+  card.append(actions);
   return card;
 }
 
@@ -384,7 +588,14 @@ function mapSection(viewerDoc, candidateDocs, browse) {
   panel.setAttribute("aria-label", tr("find.mapAria"));
   const byUid = new Map();
   if (browse) for (const e of [...browse.top, ...browse.more]) byUid.set(e.doc.uid || e.doc.displayName, e);
-  const entries = candidateDocs.filter((d) => d.side !== (viewerDoc?.side || "family")).map((doc) => ({ doc, result: null }));
+  // ONE POOL, TWO VIEWS (Difference Map item 5): when the
+  // assembled browse exists, the pins are drawn from exactly
+  // the entries the list shows, exclusions included (a swept
+  // carer is on neither). Only the signed out sketch, which
+  // has no assembled browse, falls back to the raw pool.
+  const entries = browse
+    ? [...browse.top, ...browse.more].map((e) => ({ doc: e.doc, result: e.result }))
+    : candidateDocs.filter((d) => d.side !== (viewerDoc?.side || "family")).map((doc) => ({ doc, result: null }));
   const pins = pinLayout(viewerDoc?.card || null, entries);
   const slot = el("div", "mapSlot");
   const V2 = window.CARESITS_V2;
@@ -427,8 +638,8 @@ export function renderFind(root, viewerDoc, candidateDocs) {
   const owner = viewerDoc?.uid || null;
   if (owner !== filterOwner) {
     filterOwner = owner;
-    filterState = { ...FILTER_DEFAULTS };
-    moreFiltersOpen = false;
+    filterState = { ...FILTER_DEFAULTS, types: [], ageBands: [], slots: [] };
+    roleTab = "";
   }
   const favNow = window.CARESITS_V2 && window.CARESITS_V2.favs ? window.CARESITS_V2.favs() : new Set();
   const visibleCandidates = candidateDocs.filter((d) => !excludedUids.has(d.uid || d.displayName) && (!showSaved || favNow.has(d.uid)));
@@ -439,6 +650,30 @@ export function renderFind(root, viewerDoc, candidateDocs) {
   root.replaceChildren();
   const isCarerView = (viewerDoc && viewerDoc.side === "carer") || (!viewerDoc && window.CARESITS_V2 && window.CARESITS_V2.role() === "career");
   root.append(el("h2", "findTitle", isCarerView ? "Jobs" : tr("shell.find")));
+  // The search pill and the role tabs (Difference Map item
+  // 11), the finding side's shape: one pill that names the
+  // member's own area and opens the filters, and the three
+  // directories. Jobs is the board, where families post.
+  if (viewerDoc && viewerDoc.side === "family") {
+    const pill = el("button", "findSearchPill", viewerDoc.postcode ? tr("find.postcode", undefined, { n: viewerDoc.postcode }) : tr("find.setArea"));
+    pill.type = "button";
+    pill.setAttribute("aria-haspopup", "dialog");
+    pill.addEventListener("click", () => openFilterSheet(root, viewerDoc, visibleCandidates, pill));
+    root.append(pill);
+    const tabs = el("div", "findRoleTabs");
+    for (const [value, key] of [["Babysitter", "find.tabBabysitters"], ["Nanny", "find.tabNannies"]]) {
+      const tab = el("button", "chip findRoleTab" + (roleTab === value ? " on" : ""), tr(key));
+      tab.type = "button";
+      tab.setAttribute("aria-pressed", String(roleTab === value));
+      tab.addEventListener("click", () => { roleTab = roleTab === value ? "" : value; renderFind(root, viewerDoc, candidateDocs); });
+      tabs.append(tab);
+    }
+    const jobs = el("button", "chip findRoleTab", tr("find.tabJobs"));
+    jobs.type = "button";
+    jobs.addEventListener("click", () => window.CARESITS_NAV?.("board"));
+    tabs.append(jobs);
+    root.append(tabs);
+  }
   if (window.CARESITS_V2) window.CARESITS_V2.composer(root, viewerDoc || null);
   if (!viewerDoc) {
     const box = el("div", "cardIn");
@@ -462,7 +697,29 @@ export function renderFind(root, viewerDoc, candidateDocs) {
     : (b.poolCount === 1 ? tr("find.pool.family1") : tr("find.pool.familyN", undefined, { n: b.poolCount }));
   const matchWord = b.shownCount === 1 ? tr("find.pool.match1") : tr("find.pool.matchN", undefined, { n: b.shownCount });
   root.append(el("p", "findPool", poolWord + " · " + matchWord));
-  root.append(el("p", "findSort", tr("find.sortLine")));
+  // The order of the list (Difference Map items 6 and 9):
+  // the engine's chain stands by default; the member's saved
+  // need lifts the people who cover more of it; a sort the
+  // member picked in the filter sheet wins over both.
+  const need = viewerNeed(viewerDoc);
+  let ordered = [...b.top, ...b.more];
+  if (filterState.sortBy === "nearest") ordered = ordered.map((e, i) => [e, i]).sort((a, z) => ((a[0].distanceKm ?? 1e9) - (z[0].distanceKm ?? 1e9)) || (a[1] - z[1])).map(([e]) => e);
+  else if (filterState.sortBy === "reply") ordered = ordered.map((e, i) => [e, i]).sort((a, z) => (((a[0].carer?.replyHours ?? a[0].result?.replyHours ?? 999)) - ((z[0].carer?.replyHours ?? z[0].result?.replyHours ?? 999))) || (a[1] - z[1])).map(([e]) => e);
+  else if (filterState.sortBy === "worked") ordered = ordered.map((e, i) => [e, i]).sort((a, z) => (Number(z[0].usedBefore || z[0].result?.usedBefore || false) - Number(a[0].usedBefore || a[0].result?.usedBefore || false)) || (a[1] - z[1])).map(([e]) => e);
+  else if (need && (need.days.length || need.dates.length || (need.kinds || []).length)) ordered = ordered.map((e, i) => [e, i]).sort((a, z) => (needCover(z[0].doc.card || {}, viewerDoc, need) - needCover(a[0].doc.card || {}, viewerDoc, need)) || (a[1] - z[1])).map(([e]) => e);
+  const orderedTop = ordered.slice(0, 5);
+  const orderedMore = ordered.slice(5);
+  if (need && (need.days.length || need.dates.length || (need.kinds || []).length || need.needFreq || need.needUrgency || need.carePlace)) {
+    const bits = [...(need.kinds || []), ...need.days];
+    if (need.dates.length) bits.push(need.dates.length === 1 ? need.dates[0] : need.dates.length + " dates");
+    if (need.needFreq) bits.push(need.needFreq);
+    if (need.needUrgency) bits.push(need.needUrgency);
+    if (need.carePlace) bits.push(need.carePlace);
+    root.append(el("p", "findNeedLine", tr("find.fromNeed", undefined, { n: bits.join(" · ") })));
+  }
+  root.append(el("p", "findSort", filterState.sortBy !== "match"
+    ? tr("find.sortChosen", undefined, { n: tr("find.sort" + filterState.sortBy.charAt(0).toUpperCase() + filterState.sortBy.slice(1)) })
+    : tr("find.sortLine")));
   const toolbar = el("div", "findToolbar");
   const filterCount = activeFilterCount();
   const filterButton = el("button", "ghostBtn findFilterOpen", filterCount ? tr("find.filtersCount", undefined, { n: filterCount }) : tr("find.filters"));
@@ -475,17 +732,26 @@ export function renderFind(root, viewerDoc, candidateDocs) {
   toolbar.append(savedBtn, filterButton);
   root.append(toolbar);
   if (filterCount) {
-    const FILTER_CHIP_LABELS = { distanceKm: () => tr("find.filterDistance"), language: () => tr("find.filterLanguage"), ageBand: () => tr(viewerDoc.side === "family" ? "find.filterCarerAges" : "find.filterChildAges"), day: () => tr("find.filterDay"), verifiedOnly: () => tr("find.filterChecks"), pets: () => tr("find.filterPets"), auPairOnly: () => "Au pairs only", auPairInfant: () => "Au pair: can care for babies", auPairEnglish: () => "Au pair: English at least", auPairArrive: () => "Au pair: can arrive by", experienceYears: () => tr("find.filterExperience"), maxPay: () => tr(viewerDoc.side === "family" ? "find.filterMaxPay" : "find.filterMinPay"), transport: () => tr("find.filterTransport") };
+    const FILTER_CHIP_LABELS = { sortBy: () => tr("find.sortBy") + ": " + tr("find.sort" + filterState.sortBy.charAt(0).toUpperCase() + filterState.sortBy.slice(1)), types: () => tr("find.filterTypes") + ": " + filterState.types.join(", "), distanceKm: () => tr("find.filterDistance"), language: () => tr("find.filterLanguage"), ageBands: () => tr(viewerDoc.side === "family" ? "find.filterCarerAges" : "find.filterChildAges") + ": " + filterState.ageBands.join(", "), slots: () => tr("find.filterAvail"), verifiedOnly: () => tr("find.filterChecks"), pets: () => tr("find.filterPets"), auPairInfant: () => "Au pair: can care for babies", auPairEnglish: () => "Au pair: English at least", auPairArrive: () => "Au pair: can arrive by", expYears: () => tr("find.filterExperience") + ": " + filterState.expYears, maxPay: () => tr(viewerDoc.side === "family" ? "find.filterMaxPay" : "find.filterMinPay"), transport: () => tr("find.filterTransport") };
     const chipsRow = el("div", "findActiveChips");
-    for (const key of Object.keys(FILTER_DEFAULTS)) {
-      const v = filterState[key];
-      const active = typeof FILTER_DEFAULTS[key] === "boolean" ? Boolean(v) : Boolean(v);
-      if (!active) continue;
-      const chip = el("span", "findChip", (FILTER_CHIP_LABELS[key] ? FILTER_CHIP_LABELS[key]() : key) + (typeof v === "string" && v ? ": " + v : "") + "  ");
+    if (roleTab) {
+      const chip = el("span", "findChip", roleTab + "  ");
       const x = el("button", "findChipX", "×");
       x.type = "button";
       x.setAttribute("aria-label", tr("find.removeFilter"));
-      x.addEventListener("click", () => { filterState = { ...filterState, [key]: FILTER_DEFAULTS[key] }; renderFind(root, viewerDoc, candidateDocs); });
+      x.addEventListener("click", () => { roleTab = ""; renderFind(root, viewerDoc, candidateDocs); });
+      chip.append(x);
+      chipsRow.append(chip);
+    }
+    for (const key of Object.keys(FILTER_DEFAULTS)) {
+      const v = filterState[key];
+      const active = Array.isArray(v) ? v.length > 0 : key === "sortBy" ? v !== "match" : key === "expYears" ? Number(v) > 0 : Boolean(v);
+      if (!active) continue;
+      const chip = el("span", "findChip", (FILTER_CHIP_LABELS[key] ? FILTER_CHIP_LABELS[key]() : key) + (typeof v === "string" && v && !FILTER_CHIP_LABELS[key] ? ": " + v : "") + "  ");
+      const x = el("button", "findChipX", "×");
+      x.type = "button";
+      x.setAttribute("aria-label", tr("find.removeFilter"));
+      x.addEventListener("click", () => { filterState = { ...filterState, [key]: Array.isArray(FILTER_DEFAULTS[key]) ? [] : FILTER_DEFAULTS[key] }; renderFind(root, viewerDoc, candidateDocs); });
       chip.append(x);
       chipsRow.append(chip);
     }
@@ -524,12 +790,12 @@ export function renderFind(root, viewerDoc, candidateDocs) {
     root.append(box);
   }
   const list = el("div", "findList");
-  for (const e of b.top) list.append(cardFor(e));
+  for (const e of orderedTop) list.append(cardFor(e));
   root.append(list);
-  if (b.more.length) {
+  if (orderedMore.length) {
     const moreBox = el("div", "findList");
     moreBox.hidden = true;
-    for (const e of b.more) moreBox.append(cardFor(e));
+    for (const e of orderedMore) moreBox.append(cardFor(e));
     const btn = el("button", "mainBtn findMore", tr("find.more"));
     btn.type = "button";
     btn.addEventListener("click", () => { moreBox.hidden = false; btn.remove(); });

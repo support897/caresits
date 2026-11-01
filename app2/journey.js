@@ -109,8 +109,14 @@ function startForEntryRole() {
   const role = member.entryRole;
   const side = role === "career" || member.side === "carer" ? "carer" : role === "family" || member.side === "family" ? "family" : "";
   if (!side) return false;
+  // No track on the account, no build (Difference Map 31 Oct,
+  // item 2): the journey never defaults a track from the side.
+  // In the app the pick runs before the questionnaire opens,
+  // so a member standing here always carries the track they
+  // chose; a standalone opening simply stays on the welcome.
+  if (!isTrack(member.track) || sideOfTrack(member.track) !== side) return false;
   state.side = side;
-  state.track = isTrack(member.track) && sideOfTrack(member.track) === side ? member.track : (side === "carer" ? "nanny" : "family-nanny");
+  state.track = member.track;
   if (!state.answers.displayName) state.answers.displayName = member.name || "";
   if (state.track === "family-aupair") state.answers.role = "Au pair";
   state.page = 0;
@@ -146,12 +152,29 @@ function essentials() {
   const trackKey = state.track || (state.side === "family" ? "family-nanny" : "nanny");
   const ids = ESSENTIAL_IDS[trackKey] || ESSENTIAL_IDS.nanny;
   const member = shellMember() || {};
+  // The family type of care step stands pre ticked on
+  // Babysitter, exactly as in the wizard it copies (account
+  // walk, 1 Nov 2026); a family that unticks everything holds
+  // an empty list, which reads unanswered, never a default.
+  if (trackKey === "family-nanny" && state.answers.role === undefined) state.answers.role = ["Babysitter"];
   const out = ids.map((id) => {
     let f = byId.get(id);
     if (!f) return null;
-    f = { ...f, required: f.type === "info" || f.optional ? false : true, ...(id === "mustLanguages" ? { noPreference: true } : {}) };
+    // In the two builds copied from the observed wizard every
+    // step must be answered to move on, except the one step
+    // that wizard lets you skip (applies to you) and the info
+    // screens. The au pair tracks keep the older rule, where a
+    // field the data marks optional stays optional.
+    const walkTrack = trackKey === "nanny" || trackKey === "family-nanny";
+    f = { ...f, required: f.type === "info" ? false : walkTrack ? id !== "appliesToYou" : (f.optional ? false : true), ...(id === "mustLanguages" ? { noPreference: true } : {}) };
     if (id === "checksLevel") f = { ...f, fixed: true, label: checksLabel(state.answers, member) };
-    if (id === "role") f = { ...f, fixed: true, options: ROLES_NO_AUPAIR, label: "What kind of carer are you looking for?" };
+    if (id === "role" && trackKey === "family-nanny") f = { ...f, fixed: true, type: "chips", options: ["Babysitter", "Nanny", "Childminder", "Other parent"], label: "Which type of care are you looking for?" };
+    else if (id === "role") f = { ...f, fixed: true, options: ROLES_NO_AUPAIR, label: "What kind of carer are you looking for?" };
+    if (id === "personality" && trackKey === "nanny") f = { ...f, fixed: true, label: "Describe yourself in 3 words", maxPick: 3 };
+    if (id === "activities" && trackKey === "nanny") f = { ...f, fixed: true, label: "What are your babysitting superpowers?" };
+    if (id === "childrenTraits") f = { ...f, maxPick: 3 };
+    if (id === "needWords" && trackKey === "family-nanny") f = { ...f, fixed: true, label: "Tell carers about your family" };
+    if (id === "aboutMe" && trackKey === "nanny") f = { ...f, minChars: 60 };
     if (id === "postcode") f = { ...f, fixed: true, label: state.track === "family-aupair" ? "Your postal code (we only show your area)" : "Your postal code" };
     if (id === "mustLanguages" && state.track === "family-aupair") f = { ...f, fixed: true, label: "Languages you would like the au pair to speak" };
     if (id === "languages" && state.track === "aupair") f = { ...f, fixed: true, label: "Languages you speak" };
@@ -162,9 +185,18 @@ function essentials() {
   if (state.countryStep) out.unshift(questionPage(COUNTRY_PAGE.fields, COUNTRY_PAGE._tk, COUNTRY_PAGE.bunny, true));
   return out;
 }
+const TRACK_FIELD_IDS = new Set(trackFields().map((f) => f.id));
 function optionalPages() {
   const needed = new Set(essentials().flatMap((p) => p.fields.map((f) => f.id)));
-  return allFields().filter((f) => !needed.has(f.id) && availableField(f) && !(f.id === "displayName" && state.answers.displayName))
+  // Only this track's own world is offered (Difference Map
+  // 31 Oct, item 4): a field that belongs to another track's
+  // build (an au pair's destinations, a host family's room)
+  // never appears in this member's optional stage, where its
+  // answers built nothing the member could see.
+  const trackKey = state.track || (state.side === "family" ? "family-nanny" : "nanny");
+  const ownTrack = new Set(ESSENTIAL_IDS[trackKey] || []);
+  return allFields().filter((f) => !needed.has(f.id) && availableField(f) && !(f.id === "displayName" && state.answers.displayName)
+    && !(TRACK_FIELD_IDS.has(f.id) && !ownTrack.has(f.id)))
     .map((f) => questionPage([f], null, "encourage"));
 }
 function pages(stage = state.stage) {
@@ -212,7 +244,19 @@ function payHelp(f) {
     else if (pack && pack.aupairNote) txt += " " + pack.aupairNote;
   }
   if (pack && pack.caution && (isAuPair || state.side === "carer")) txt += " " + tr("country.usCaution");
-  return `<p class="fine payHelp">${txt}</p>`;
+  // Live guidance, like the observed wizard's: the average
+  // rate in the member's own pool right now, computed from
+  // the published cards the Find load already fetched. No
+  // pool, or no rates in it, no line: a number is never
+  // invented.
+  let avg = "";
+  try {
+    const docs = (window.CARESITS_FIND_DATA?.candidates || []).filter((d) => d && d.side !== state.side);
+    const key = state.side === "family" ? "payFloor" : "payOffered";
+    const rates = docs.map((d) => Number(d.card?.[key]) || 0).filter((n) => n > 0);
+    if (rates.length) avg = `<p class="fine payHelp">${escapeHtml(tr("find.rateAverage", undefined, { n: Math.round((rates.reduce((s, n) => s + n, 0) / rates.length) * 100) / 100 }))}</p>`;
+  } catch { /* guidance is a courtesy, never a blocker */ }
+  return `<p class="fine payHelp">${txt}</p>${avg}`;
 }
 
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[ch]));
@@ -235,6 +279,11 @@ function choiceCards(f, options, selected, multi = false) {
 }
 let photoPreview = "";
 let photoNote = "";
+// In the two builds copied from the observed wizard (account
+// walk, 1 Nov 2026) the photo step stands last and is required
+// to finish: there is no skip on those tracks. The au pair
+// tracks keep their own shape, skip included.
+const photoRequiredHere = () => state.track === "nanny" || state.track === "family-nanny";
 function photoHtml() {
   const has = state.answers.photoDone === true;
   return `<div class="photoStep">${photoPreview ? `<img class="profilePhoto" src="${escapeHtml(photoPreview)}" alt="Your photo">` : ""}
@@ -242,7 +291,7 @@ function photoHtml() {
     <button type="button" class="mainBtn" data-photo-pick="1">${has ? "Change photo" : "Choose a photo"}</button>
     <input type="file" accept="image/*" data-photo-file="1" hidden>
     <p class="fine" id="photoNote" role="status">${escapeHtml(photoNote)}</p>
-    ${has ? "" : `<button type="button" class="quietBtn" data-photo-skip="1">I will add it later</button>`}</div>`;
+    ${has || photoRequiredHere() ? "" : `<button type="button" class="quietBtn" data-photo-skip="1">I will add it later</button>`}</div>`;
 }
 function fieldHtml(f, showLabel = false) {
   const v = state.answers[f.id];
@@ -255,6 +304,9 @@ function fieldHtml(f, showLabel = false) {
   if (f.type === "text") body = `<input type="text" data-field="${escapeHtml(f.id)}" aria-label="${aria}" value="${escapeHtml(v ?? "")}" autocomplete="off">`;
   if (f.type === "number") body = `<input type="number" data-field="${escapeHtml(f.id)}" aria-label="${aria}" value="${escapeHtml(v ?? "")}" min="0" inputmode="numeric">`;
   if (f.type === "dropdown") body = `<select data-field="${escapeHtml(f.id)}" aria-label="${aria}"><option value="">Choose...</option>${f.options.map((o) => `<option value="${escapeHtml(o)}" ${String(v ?? "") === String(o) ? "selected" : ""}>${escapeHtml(o)}</option>`).join("")}</select>`;
+  if (f.type === "date") body = `<input type="date" data-field="${escapeHtml(f.id)}" aria-label="${aria}" value="${escapeHtml(typeof v === "string" ? v : "")}">`;
+  if (f.type === "education") { const ev = v && typeof v === "object" ? v : {}; body = `<select data-edu-level="${escapeHtml(f.id)}" aria-label="${aria}"><option value="">Choose your education level</option>${(f.options || []).map((o) => `<option value="${escapeHtml(o)}" ${ev.level === o ? "selected" : ""}>${escapeHtml(o)}</option>`).join("")}</select><input type="text" data-edu-text="${escapeHtml(f.id)}" aria-label="Describe your education" value="${escapeHtml(ev.text ?? "")}" placeholder="Describe your education and courses" autocomplete="off">`; }
+  if (f.type === "frequency") { const fv = v && typeof v === "object" ? v : {}; const group = (key, words, opts) => `<p class="qLabel">${words}</p><div class="answerChoices" role="group" aria-label="${words}">${opts.map((o) => `<button type="button" class="answerCard ${fv[key] === o ? "on" : ""}" data-freq="${key}" data-value="${escapeHtml(o)}" aria-pressed="${fv[key] === o}">${escapeHtml(o)}</button>`).join("")}</div>`; body = group("often", "How often do you need care?", ["One off", "One or two days a week", "Three to four days a week", "Five days a week"]) + group("soon", "How soon do you need care?", ["As soon as possible", "Within a week", "Within a month", "Just planning"]); }
   if (f.type === "info") body = `<div class="infoBlock">${infoHtml(f.info, state.answers, shellMember())}</div>`;
   if (f.type === "countries") body = countriesHtml(f, state.answers);
   if (f.type === "photo") body = photoHtml();
@@ -270,6 +322,7 @@ function fieldHtml(f, showLabel = false) {
   if (f.type === "expchecks") body = `<div class="expRows">${BANDS.slice(0, 4).map((b) => `<label>${tr("journey.yearsAges", undefined, { b })} <select data-exp="${f.id}" data-bandname="${b}">${EXPERIENCE_YEAR_CHOICES.map((y) => `<option value="${y}" ${String((v?.years || {})[b] ?? "") === y ? "selected" : ""}>${y === "" ? tr("journey.pick") : y + (y === "20" ? "+" : "")}</option>`).join("")}</select></label>`).join("")}</div><div class="chips">${["Register verified", "Document sighted", "Getting them now"].map((o, oi) => `<button type="button" class="chip ${v?.checks === o ? "on" : ""}" data-expchecks="${f.id}" data-value="${o}">${tr(["checks.level.register", "checks.level.sighted", "checks.level.getting"][oi])}</button>`).join("")}</div>`;
   if (f.type === "homefacts") body = `<div class="chips"><button type="button" class="chip ${v?.petsOk ? "on" : ""}" data-home="${f.id}" data-key="petsOk">${tr("journey.petsOk")}</button><button type="button" class="chip ${v?.smokerOk ? "on" : ""}" data-home="${f.id}" data-key="smokerOk">${tr("journey.smokerOk")}</button><button type="button" class="chip ${v?.nonSmokerHousehold ? "on" : ""}" data-home="${f.id}" data-key="nonSmokerHousehold">${tr("journey.nonSmokerHome")}</button></div>`;
   if (f.companionText) body += `<input type="text" data-field="${f.id}Note" value="${state.answers[f.id + "Note"] ?? ""}" placeholder="${tr("journey.addNote")}" autocomplete="off">`;
+  if (f.id === "displayName") body += `<p class="fine">Use the name on your government ID. It is the name others see on your profile.</p>`;
   const strength = f.strength
     ? `<div class="strength" role="group" aria-label="${tr("journey.strengthAria")}"><span>${tr("journey.strengthPre")}</span>${["Must have", "I prefer", "Either way"].map((x) => `<button type="button" class="chip sm ${(state.strengths[f.id] || "Either way") === x ? "on" : ""}" data-strength="${f.id}" data-value="${x}">${tr({ "Must have": "journey.must", "I prefer": "journey.prefer", "Either way": "journey.either" }[x])}</button>`).join("")}</div>`
     : "";
@@ -277,10 +330,13 @@ function fieldHtml(f, showLabel = false) {
 }
 
 function answered(f) {
-  if (f.type === "photo") return state.answers.photoDone === true || state.answers.photoSkipped === true;
+  if (f.type === "photo") return state.answers.photoDone === true || Boolean(state.answers.photoUrl) || (!photoRequiredHere() && state.answers.photoSkipped === true);
   if (f.type === "info") return true;
   const v = state.answers[f.id];
   if (v === undefined || v === null || v === "") return false;
+  if (f.type === "education") return typeof v === "string" ? v.trim().length > 0 : Boolean(v.level && String(v.text || "").trim());
+  if (f.type === "frequency") return Boolean(v && typeof v === "object" && v.often && v.soon);
+  if (f.minChars && typeof v === "string") return v.trim().length >= f.minChars;
   if (Array.isArray(v)) return v.length > 0 || (f.noPreference && Object.prototype.hasOwnProperty.call(state.answers, f.id));
   if (f.type === "grid") return Object.values(v).some((a) => a.length);
   if (f.type === "band") return Array.isArray(v) && v[0] != null && v[1] != null;
@@ -338,7 +394,7 @@ function wire() {
     const pick = e.target.closest("[data-photo-pick]");
     if (pick) { $("#fields").querySelector("[data-photo-file]")?.click(); return; }
     const skip = e.target.closest("[data-photo-skip]");
-    if (skip) { state.answers.photoSkipped = true; persistDraft(); advancePage(); return; }
+    if (skip) { if (photoRequiredHere()) return; state.answers.photoSkipped = true; persistDraft(); advancePage(); return; }
     const dw = e.target.closest("[data-dest-world]");
     if (dw) { const cur = state.answers.destinations || { worldwide: false, list: [] }; state.answers.destinations = { ...cur, worldwide: !cur.worldwide }; persistDraft(); render(); return; }
     const dc = e.target.closest("[data-dest]");
@@ -347,7 +403,11 @@ function wire() {
       const set = new Set(cur.list || []);
       set.has(dc.dataset.dest) ? set.delete(dc.dataset.dest) : set.add(dc.dataset.dest);
       state.answers.destinations = { ...cur, list: [...set] };
-      if (!state.answers.country && set.size) state.answers.country = [...set][0];
+      // A destination tap never writes the member's country
+      // answer (Difference Map 31 Oct, item 14): the country
+      // they live in and the countries they dream of are two
+      // different answers, and the first tap used to overwrite
+      // the saved one with the first dream.
       persistDraft(); render(); return;
     }
     const chip = e.target.closest("[data-chip]");
@@ -361,6 +421,8 @@ function wire() {
         state.answers[f.id] = [...arr];
       }
     }
+    const fq = e.target.closest("[data-freq]");
+    if (fq) { const cur = state.answers.frequency && typeof state.answers.frequency === "object" ? state.answers.frequency : {}; state.answers.frequency = { ...cur, [fq.dataset.freq]: fq.dataset.value }; }
     const yn = e.target.closest("[data-yesno]");
     if (yn) state.answers[yn.dataset.yesno] = yn.dataset.value === "yes";
     const cell = e.target.closest("[data-grid]");
@@ -400,6 +462,8 @@ function wire() {
     if (inp.dataset.photoFile) { void onPhotoFile(inp); return; }
     if (inp.dataset.destSearch) { const q = inp.value.trim().toLowerCase(); document.querySelectorAll("#fields [data-dest]").forEach((b) => { b.hidden = q && !b.textContent.toLowerCase().includes(q); }); return; }
     if (inp.dataset.gridDay) { state.gridDays[inp.dataset.gridDay] = inp.value; persistDraft(); render(); return; }
+    if (inp.dataset.eduLevel) { const cur = state.answers[inp.dataset.eduLevel] && typeof state.answers[inp.dataset.eduLevel] === "object" ? state.answers[inp.dataset.eduLevel] : {}; state.answers[inp.dataset.eduLevel] = { ...cur, level: inp.value }; }
+    if (inp.dataset.eduText) { const cur = state.answers[inp.dataset.eduText] && typeof state.answers[inp.dataset.eduText] === "object" ? state.answers[inp.dataset.eduText] : {}; state.answers[inp.dataset.eduText] = { ...cur, text: inp.value }; }
     if (inp.dataset.field) state.answers[inp.dataset.field] = inp.type === "number" ? (inp.value === "" ? "" : Number(inp.value)) : inp.value;
     if (inp.dataset.band) {
       const cur = [...(state.answers[inp.dataset.band] || [null, null])];
@@ -446,12 +510,14 @@ function wire() {
     if (state.stage === "optional" && state.page === 0) { state.stage = "ready"; state.page = 0; persistDraft(); render(); return; }
     if (state.page > 0) { state.page -= 1; persistDraft(); render(); }
   });
-  document.querySelectorAll("[data-side]").forEach((b) => b.addEventListener("click", () => {
-    state.side = b.dataset.side; state.page = 0; state.stage = "essentials";
-    if (state.side === "carer" && !state.answers.displayName) state.answers.displayName = shellMember()?.name || "";
-    persistDraft();
-    $("#welcome").hidden = true; $("#journey").hidden = false; render();
-  }));
+  // The welcome carries no side buttons any more (Difference
+  // Map 31 Oct, item 2): the standalone journey entry is
+  // closed, because a side pick here could only default the
+  // track. In the app, the track pick runs first and
+  // startForEntryRole opens the build; opened on its own,
+  // the welcome offers the road back into the app.
+  const standaloneBtns = $("#standaloneBtns");
+  if (standaloneBtns && window.parent === window) standaloneBtns.hidden = false;
   $("#seeMatchesBtn").addEventListener("click", async () => {
     await savePreview();
     try {
@@ -590,7 +656,7 @@ async function finish() {
   $("#journey").hidden = true;
   $("#done").hidden = false;
   const dl = $("#doneLevel");
-  if (dl) dl.textContent = tr("level." + levelOf(state.side, state.answers));
+  if (dl) dl.textContent = tr("level." + levelOf(state.side, state.answers, state.track));
   $("#doneBunny").src = "bunny/bunny-celebrate.png";
   window.scrollTo(0, 0);
   // The Done screen's saved line is earned, not assumed
@@ -603,7 +669,11 @@ async function finish() {
       const r = await withTimeout(window.CARESITS_SAVE(bundle), 15000, "questionnaire save");
       if (!r || r.saved !== "account") landed = "local";
       // The hello letter of an au pair or host family is the profile "About".
-      const letter = String(state.answers.apLetter || state.answers.hostLetter || "").trim();
+      // So are the family's own words need and the nanny's
+      // about line (Difference Map 31 Oct, item 14): one
+      // about on the profile, written by whichever words
+      // this track's build asked for.
+      const letter = String(state.answers.apLetter || state.answers.hostLetter || state.answers.needWords || state.answers.aboutMe || "").trim();
       if (landed === "account" && letter && typeof window.CARESITS_WRITE === "function") await window.CARESITS_WRITE("about", { about: letter });
     } catch { landed = "local"; }
     if (landed !== "account") {

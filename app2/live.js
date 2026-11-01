@@ -138,7 +138,7 @@ export function trustSeamFrom(profile, card, questionnaire) {
   // The member's depth level, computed from their own saved
   // answers by the one computation of record (levels.js). My
   // Profile presents it; nothing else reads it from the seam.
-  const level = (q.answers && Object.keys(q.answers).length && side) ? levelOf(side, q.answers) : (c.level || "");
+  const level = (q.answers && Object.keys(q.answers).length && side) ? levelOf(side, q.answers, q.track || "") : (c.level || "");
   return {
     name,
     side,
@@ -599,40 +599,39 @@ export async function bootLive() {
           const emergencyDoc = await docOr(`users/${uid}/meta/emergency`);
           const appDoc = await docOr(`users/${uid}/meta/app`);
           bootAppDoc = appDoc;
-          let pendingRole = "";
-          try { pendingRole = sessionStorage.getItem("caresits-entry-role") || ""; } catch { /* session storage off */ }
           const savedRole = ENTRY_ROLES.includes(appDoc && appDoc.entryRole) ? appDoc.entryRole : "";
           const savedSide = qData.side || profile.side || "";
           const inferredRole = savedSide === "carer" ? "career" : savedSide === "family" ? "family" : "";
-          // The role on the account wins on return. A door choice is
-          // saved only for a new account that has no role or profile side.
+          // The role on the account wins on return.
           let entryRole = savedRole || inferredRole || "";
-          if (!entryRole && ENTRY_ROLES.includes(pendingRole)) {
-            entryRole = pendingRole;
-            try {
-              const saved = await window.CARESITS_WRITE("entry-role", { entryRole });
-              if (saved && saved.ok) { try { sessionStorage.removeItem("caresits-entry-role"); } catch { /* session storage off */ } }
-            } catch { /* keep this session's chosen role; retry next visit */ }
-          } else if (!savedRole && inferredRole) {
+          if (!savedRole && inferredRole) {
             try { await window.CARESITS_WRITE("entry-role", { entryRole }); } catch { /* the profile side still identifies this member */ }
-          }
-          if (savedRole && pendingRole) {
-            try { sessionStorage.removeItem("caresits-entry-role"); } catch { /* session storage off */ }
           }
           // The one question after sign-up (Ilse, 31 Oct 2026): who are you,
           // and what are you looking for. Four tracks, asked once.
+          // The pick fires whenever the account carries NO TRACK,
+          // whatever a legacy role says (Difference Map 31 Oct,
+          // item 3): a saved or inferred role never defaults the
+          // track silently, and the old door's session key no
+          // longer exists to bypass it. Closing the pick writes
+          // nothing: the account stands as not chosen and is
+          // asked again next boot. Stay Connected (the
+          // communicate role) carries no track by design.
           let track = isTrack(appDoc && appDoc.track) ? appDoc.track : "";
-          if (!entryRole && !track) {
+          if (!track && entryRole !== "communicate") {
             try {
               const picked = await pickTrack();
-              if (picked.track) { track = picked.track; entryRole = TRACKS[track].entryRole; await window.CARESITS_WRITE("track", { track }); }
-              else { entryRole = "communicate"; }
-              await window.CARESITS_WRITE("entry-role", { entryRole });
-              // straight into the questions, one at a time (no old Find page first)
-              if (track) { let tries = 0; const t = setInterval(() => { const b = document.querySelector('[data-nav="questionnaire"]'); tries += 1; if (b) { clearInterval(t); b.click(); } else if (tries > 40) clearInterval(t); }, 500); }
+              if (picked && picked.track) {
+                track = picked.track; entryRole = TRACKS[track].entryRole;
+                await window.CARESITS_WRITE("track", { track });
+                await window.CARESITS_WRITE("entry-role", { entryRole });
+                // straight into the questions, one at a time (no old Find page first)
+                let tries = 0; const t = setInterval(() => { const b = document.querySelector('[data-nav="questionnaire"]'); tries += 1; if (b) { clearInterval(t); b.click(); } else if (tries > 40) clearInterval(t); }, 500);
+              } else if (picked && picked.role === "communicate") {
+                entryRole = "communicate";
+                await window.CARESITS_WRITE("entry-role", { entryRole });
+              }
             } catch { /* the pick stands for this session; asked again next visit */ }
-          } else if (entryRole && !track && entryRole !== "communicate") {
-            track = entryRole === "career" ? "nanny" : "family-nanny";
           }
           const roleSide = entryRole === "career" ? "carer" : entryRole === "family" ? "family" : entryRole === "communicate" ? "communicate" : "";
           const effectiveSide = roleSide || profile.side || qData.side || "";

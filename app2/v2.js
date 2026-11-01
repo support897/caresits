@@ -72,12 +72,21 @@ export function avatar(name, url, cls = "v2Avatar") {
 }
 
 // ---- the describe box (top of Find / Jobs) ----
+// The family's type of care picks, in the family wizard's
+// own words (account walk, 1 Nov 2026), so the need a family
+// saves here is the same need their profile build states.
+const CARE_TYPES = ["Babysitter", "Nanny", "Childminder", "Other parent"];
+const NEED_FREQS = ["One off", "One or two days a week", "Three to four days a week", "Five days a week"];
+const NEED_URGENCIES = ["As soon as possible", "Within a week", "Within a month", "Just planning"];
+const CARE_PLACES = ["At our home", "At the carer's home"];
+
 export function composer(root, viewerDoc) {
   const r = role();
   const isFam = r !== "career";
   const saved = lsGet("need") || {};
   const text0 = saved.text != null ? saved.text : (viewerDoc && viewerDoc.about) || "";
-  const state = { name: saved.name != null ? saved.name : ((viewerDoc && viewerDoc.displayName) || ""), text: text0, kinds: saved.kinds || [], days: saved.days || [], parts: saved.parts || [], aupair: saved.aupair || {}, postcode: saved.postcode || (viewerDoc && viewerDoc.postcode) || "", dates: Array.isArray(saved.dates) ? saved.dates : [] };
+  const savedKinds = Array.isArray(saved.kinds) ? saved.kinds : [];
+  const state = { name: saved.name != null ? saved.name : ((viewerDoc && viewerDoc.displayName) || ""), text: text0, kinds: isFam ? (savedKinds.filter((k) => CARE_TYPES.includes(k)).length ? savedKinds.filter((k) => CARE_TYPES.includes(k)) : ["Babysitter"]) : savedKinds, days: saved.days || [], parts: saved.parts || [], postcode: saved.postcode || (viewerDoc && viewerDoc.postcode) || "", dates: Array.isArray(saved.dates) ? saved.dates : [], needFreq: saved.needFreq || "", needUrgency: saved.needUrgency || "", carePlace: saved.carePlace || "" };
   const card = el("section", "v2Card v2Composer");
   const done = () => state.text.trim().length > 0;
   const render = (editing) => {
@@ -90,14 +99,14 @@ export function composer(root, viewerDoc) {
       if (state.days.length) chips.append(el("span", "v2Tag", state.days.join(" ")));
       if (isFam && state.postcode) chips.append(el("span", "v2Tag", "Postcode " + state.postcode));
       if (isFam) for (const d of state.dates) chips.append(el("span", "v2Tag", d));
+      if (isFam && state.needFreq) chips.append(el("span", "v2Tag", state.needFreq));
+      if (isFam && state.needUrgency) chips.append(el("span", "v2Tag", state.needUrgency));
+      if (isFam && state.carePlace) chips.append(el("span", "v2Tag", state.carePlace));
       card.append(chips, btn("ghostBtn", "Edit", () => render(true)));
       return;
     }
     card.append(el("h2", "v2Title", isFam ? "What do you need?" : "Tell families about you"));
     card.append(el("p", "v2Sub", isFam ? "A few words is enough. Carers nearby will see it." : "A few words is enough. Families nearby will see it."));
-    const nm = el("input", "txtIn v2Name"); nm.type = "text"; nm.maxLength = 40; nm.placeholder = "Your first name"; nm.value = state.name;
-    nm.setAttribute("aria-label", "Your first name");
-    nm.addEventListener("input", () => { state.name = nm.value; });
     const ta = el("textarea", "txtIn v2Text");
     ta.rows = 3; ta.maxLength = 300;
     ta.placeholder = isFam ? "Example: Babysitter for my 2 kids (3 and 5), Tuesday and Thursday after school." : "Example: Friendly babysitter, 4 years of experience, first aid trained, free after 3pm.";
@@ -105,9 +114,9 @@ export function composer(root, viewerDoc) {
     ta.addEventListener("input", () => { state.text = ta.value; count.textContent = `${ta.value.length}/300`; });
     const count = el("p", "v2Count", `${ta.value.length}/300`);
     card.append(ta, count);
-    card.append(el("p", "v2Label", isFam ? "What kind of help?" : "What can you do?"));
+    card.append(el("p", "v2Label", isFam ? "Type of care" : "What can you do?"));
     const kinds = el("div", "v2ChipRow");
-    for (const k of KINDS) {
+    for (const k of isFam ? CARE_TYPES : KINDS) {
       const b = btn("chipBtn" + (state.kinds.includes(k) ? " on" : ""), k, () => {
         state.kinds = state.kinds.includes(k) ? state.kinds.filter((x) => x !== k) : [...state.kinds, k];
         b.classList.toggle("on", state.kinds.includes(k));
@@ -157,17 +166,39 @@ export function composer(root, viewerDoc) {
       const dadd = btn("ghostBtn", "Add date", () => { const v = din.value; if (/^\d{4}-\d{2}-\d{2}$/.test(v) && !state.dates.includes(v) && state.dates.length < 14) { state.dates = [...state.dates, v].sort(); renderDates(); } din.value = ""; });
       card.append(din, dadd, dateRow);
     }
-    card.append(nm);
-    if (!isFam) card.append(auPairFields(state));
+    if (isFam) {
+      // Frequency, urgency and place, in the family wizard's
+      // words (account walk, 1 Nov 2026): the need saved here
+      // is read by Find's order and its "From your need" line.
+      const pick = (label, key, options) => {
+        card.append(el("p", "v2Label", label));
+        const sel = el("select", "txtIn v2Select");
+        sel.setAttribute("aria-label", label);
+        const blank = el("option", null, "Choose...");
+        blank.value = "";
+        sel.append(blank);
+        for (const o of options) { const op = el("option", null, o); op.value = o; if (state[key] === o) op.selected = true; sel.append(op); }
+        sel.addEventListener("change", () => { state[key] = sel.value; });
+        card.append(sel);
+      };
+      pick("How often do you need care?", "needFreq", NEED_FREQS);
+      pick("How soon do you need care?", "needUrgency", NEED_URGENCIES);
+      pick("Where does care happen?", "carePlace", CARE_PLACES);
+    }
+    // No name field here (Difference Map 31 Oct, item 6): the
+    // name is asked once, in the profile build, and a second
+    // one appended after the dates only confused the order.
+    // No au pair block here either (item 4): the au pair path
+    // has its own build; this composer once carried a second,
+    // legacy one whose answers built nothing on the profile.
     const msg = el("p", "formMsg"); msg.setAttribute("role", "status");
     const save = btn("mainBtn", "Save", async () => {
       if (!state.text.trim()) { msg.textContent = "Write a few words first."; return; }
       save.disabled = true;
-      const payload = { name: (state.name || "").trim(), text: state.text.trim(), kinds: state.kinds, days: state.days, parts: state.parts, postcode: isFam ? state.postcode : "", dates: isFam ? state.dates : [] };
+      const payload = { name: (state.name || "").trim(), text: state.text.trim(), kinds: state.kinds, days: state.days, parts: state.parts, postcode: isFam ? state.postcode : "", dates: isFam ? state.dates : [], needFreq: isFam ? state.needFreq : "", needUrgency: isFam ? state.needUrgency : "", carePlace: isFam ? state.carePlace : "" };
       lsSet("need", payload);
       const a = await write("need", payload);
       const b = await write("about", { about: payload.text, name: payload.name });
-      if (!isFam) { payload.aupair = cleanAuPair(state.aupair, state.kinds.includes("Au pair")); lsSet("need", payload); await write("aupair", { auPair: payload.aupair }); }
       save.disabled = false;
       if (!a || !a.ok) { msg.textContent = "Saved on this phone. Could not reach your account, try again later."; return; }
       if (!b || !b.ok) { msg.textContent = "Saved to your account. Others cannot see it yet."; }
@@ -651,38 +682,11 @@ function addMeReferences() {
   reviewsInto(mine, me().uid);
 }
 
-// ---- au pair details (carer) and chips ----
-export const AUPAIR_ENGLISH = ["Basic", "Good", "Fluent"];
-export function auPairFields(state, card) {
-  const wrap = el("details", "v2AuPair");
-  wrap.append(el("summary", null, "Au pair details (optional)"));
-  const a = state.aupair;
-  const months = [];
-  const d0 = new Date();
-  for (let i = 0; i < 12; i++) { const d = new Date(d0.getFullYear(), d0.getMonth() + i, 1); months.push([`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, d.toLocaleString("en", { month: "short", year: "numeric" })]); }
-  const sel = (label, opts, key) => {
-    const l = el("label", "v2Field"); l.append(el("span", "v2Label", label));
-    const s = el("select", "txtIn");
-    for (const [v, t] of [["", "Choose"], ...opts]) { const o = el("option", null, t); o.value = v; s.append(o); }
-    s.value = a[key] || ""; s.addEventListener("change", () => { a[key] = s.value; });
-    l.append(s); return l;
-  };
-  const country = el("input", "txtIn"); country.maxLength = 40; country.placeholder = "Home country"; country.value = a.homeCountry || "";
-  country.addEventListener("input", () => { a.homeCountry = country.value; });
-  const cl = el("label", "v2Field"); cl.append(el("span", "v2Label", "Home country"), country);
-  const chk = (label, key) => {
-    const l = el("label", "v2Check"); const c = el("input"); c.type = "checkbox"; c.checked = !!a[key];
-    c.addEventListener("change", () => { a[key] = c.checked; });
-    l.append(c, document.createTextNode(" " + label)); return l;
-  };
-  wrap.append(sel("Can arrive from", months, "arrival"), cl, sel("English level", AUPAIR_ENGLISH.map((x) => [x, x]), "english"), chk("Qualified to care for babies", "infant"), chk("Drives", "drives"), chk("Swims", "swim"));
-  wrap.append(el("p", "v2Sub", tr("find.auPairNote")));
-  return wrap;
-}
-export function cleanAuPair(a, on) {
-  return { on: !!on, arrival: String(a.arrival || "").slice(0, 7), homeCountry: String(a.homeCountry || "").trim().slice(0, 40), english: AUPAIR_ENGLISH.includes(a.english) ? a.english : "", infant: !!a.infant, drives: !!a.drives, swim: !!a.swim };
-}
-Object.assign(window.CARESITS_V2, { loadReviews, reviewsInto, reviewForm, auPairFields, cleanAuPair, AUPAIR_ENGLISH });
+// (The legacy au pair block that once lived in the need
+// composer, a second au pair build with a free text home
+// country, was deleted whole: Difference Map 31 Oct, item 4.
+// The au pair track's own build is the one road now.)
+Object.assign(window.CARESITS_V2, { loadReviews, reviewsInto, reviewForm });
 {
   const baseMe = renderMe;
   window.CARESITS_ME_OPEN = () => { baseMe(); addMeReferences(); };

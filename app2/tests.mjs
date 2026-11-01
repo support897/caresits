@@ -38,58 +38,200 @@ await page.goto("http://localhost:8933/", { waitUntil: "networkidle" });
 let n = 0;
 const t = (name, cond) => { assert.ok(cond, name); n += 1; console.log("ok -", name); };
 
+// The standalone journey entry is CLOSED (Difference Map
+// item 2): opened on its own, the journey shows the welcome
+// with the road back into the app, and NO side buttons,
+// because a side pick here could only default the track.
+// In the app the shell publishes the member (with the track
+// the member picked after sign up) and the build opens at
+// once; the walks below publish exactly that seam.
+t("standalone journey: the welcome stands with no side buttons to pick", await page.evaluate(() => !document.querySelector("[data-side]") && !document.getElementById("welcome").hidden));
+t("standalone journey: the road back into the app stands instead", await page.evaluate(() => { const b = document.getElementById("standaloneBtns"); return !!b && !b.hidden && !!b.querySelector('a[href="index.html"]'); }));
 t("welcome shows the time promise", (await page.textContent("body")).includes("About 10 minutes for everything"));
 t("welcome bunny is her hello seat", (await page.getAttribute(".bunnyBig", "src")).includes("bunny-hello"));
 
-await page.click('[data-side="family"]');
-// The staged journey of record (journey.js essentials()): one
-// question per stop, country first, then eight essentials, a
-// ready step, then the optional pages one by one. This walk
-// follows that shape; the pre staging walk expected the old
-// grouped pages and could not stand on this base.
-t("family question 1 of 9 (the country step stands first)", (await page.textContent("#pageCount")).includes("Question 1 of 9"));
-await page.click("#nextBtn");
-t("required questions hold the page", (await page.textContent("#notice")).length > 3);
-await page.click('[data-chip="country"][data-value="Australia"]');
-await page.click("#nextBtn");
-await page.fill('[data-field="postcode"]', "2021");
-await page.click("#nextBtn");
-await page.click('[data-chip="role"][data-value="Nanny"]');
-await page.click("#nextBtn");
-await page.click('[data-chip="childrenBands"][data-value="1-3"]');
-await page.click("#nextBtn");
-await page.click('[data-chip="startWhen"][data-value="As soon as possible"]');
-await page.click("#nextBtn");
-t("the week question asks when care is needed", (await page.textContent("#pageTitle")).includes("When do you need care"));
-await page.selectOption('[data-grid-day="scheduleNeed"]', "Thu");
-await page.click('[data-grid="scheduleNeed"][data-day="Thu"][data-part="morning"]');
-await page.click("#nextBtn");
-await page.click('[data-chip="languages"][data-value="English"]');
-await page.click("#nextBtn");
-await page.click('[data-chip="mustLanguages"][data-value="English"]');
-await page.click("#nextBtn");
-t("strength choices ride the looking for fields", (await page.textContent("body")).includes("Must have"));
-await page.click('[data-strength="nonSmoker"][data-value="Must have"]');
-await page.click('[data-yesno="nonSmoker"][data-value="yes"]');
-await page.click("#nextBtn");
-t("essentials end on the ready step", !(await page.locator("#essentialsDone").isHidden()));
-await page.click("#betterMatchesBtn");
-t("optional pages say they are optional and skippable", (await page.textContent("#optionalLead")).includes("These questions are optional"));
-for (let i = 0; i < 160 && (await page.locator("#done").isHidden()); i++) await page.click("#skipBtn");
-t("done page celebrates", !(await page.locator("#done").isHidden()));
-const bundle = await page.evaluate(() => JSON.parse(localStorage.getItem("caresits-app2-questionnaire-walk1") || localStorage.getItem("caresits-app2-questionnaire")));
-t("bundle carries the family card and the must", bundle.side === "family" && bundle.card.musts.nonSmoker === true && bundle.card.scheduleNeed.Thu.includes("morning"));
+// The family walk bundle stays at module scope:
+// the save plan slice further down builds on it.
+let bundle = null;
 
-await page.evaluate(() => { localStorage.clear(); });
-await page.reload({ waitUntil: "networkidle" });
-await page.click('[data-side="carer"]');
-await page.click('[data-chip="country"][data-value="Australia"]');
-await page.click("#nextBtn");
-await page.fill('[data-field="postcode"]', "2021");
-await page.click("#nextBtn");
-await page.click('[data-chip="maxDistanceKm"][data-value="10"]');
-await page.click("#nextBtn");
-t("carer essentials ask the exact age bands experience", (await page.textContent("body")).includes("Years of experience"));
+const walkPage = async (member) => {
+  const p = await browser.newPage();
+  await p.addInitScript((m) => { window.CARESITS_UID = m.uid; window.CARESITS_AUTH_STATE = "signed-in"; window.CARESITS_ACCOUNT_READY = true; window.CARESITS_ME = m; window.__uploads = []; window.CARESITS_UPLOAD = async (path) => { window.__uploads.push(path); return "stub:" + path; }; }, member);
+  p.on("pageerror", (e) => errs.push(String(e)));
+  await p.goto("http://localhost:8933/", { waitUntil: "networkidle" });
+  await p.waitForSelector("#journey:not([hidden])", { timeout: 10000 });
+  return p;
+};
+// A real photo pick for the last step of the two copied
+// builds: a one pixel PNG, uploaded through the same seam
+// the profile suites use.
+const PHOTO_FILE = { name: "me.png", mimeType: "image/png", buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64") };
+const pickPhoto = async (p, uid) => {
+  await p.setInputFiles("[data-photo-file]", PHOTO_FILE);
+  await p.waitForFunction((u) => { try { const d = JSON.parse(localStorage.getItem("caresits-app2-draft-" + u) || "null"); return d && d.answers && d.answers.photoDone === true; } catch { return false; } }, uid, { timeout: 15000 });
+};
+
+// ---- the family build, nanny track, in the observed
+// wizard order (Babysits account walk, 1 Nov 2026): country,
+// name, postcode, children count, children ages, children in
+// 3 words, languages, special needs, type of care (Babysitter
+// pre ticked, multi pick), the checks word, comfortable with,
+// the week grid, frequency and urgency, pay, care place,
+// about the family, the family's must words, and the photo
+// LAST, required, with no skip.
+{
+  const fp2 = await walkPage({ uid: "walk1", entryRole: "family", side: "family", track: "family-nanny", name: "Walk" });
+  t("family question 1 of 19 (the country step stands first)", (await fp2.textContent("#pageCount")).includes("Question 1 of 19"));
+  await fp2.click("#nextBtn");
+  t("required questions hold the page", (await fp2.textContent("#notice")).length > 3);
+  await fp2.click('[data-chip="country"][data-value="Australia"]');
+  await fp2.click("#nextBtn");
+  await fp2.fill('[data-field="displayName"]', "The Walk Family");
+  await fp2.click("#nextBtn");
+  await fp2.fill('[data-field="postcode"]', "2021");
+  await fp2.click("#nextBtn");
+  await fp2.click('[data-chip="childrenCount"][data-value="2 children"]');
+  await fp2.click("#nextBtn");
+  await fp2.click('[data-chip="childrenBands"][data-value="1-3"]');
+  await fp2.click("#nextBtn");
+  await fp2.click('[data-chip="childrenTraits"][data-value="Curious"]');
+  await fp2.click('[data-choice-page="childrenTraits"][data-page="1"]');
+  await fp2.click('[data-chip="childrenTraits"][data-value="Calm"]');
+  await fp2.click("#nextBtn");
+  await fp2.click('[data-chip="languages"][data-value="English"]');
+  await fp2.click("#nextBtn");
+  await fp2.click('[data-yesno="specialNeeds"][data-value="no"]');
+  await fp2.click("#nextBtn");
+  t("the type of care step stands pre ticked on Babysitter, like the wizard", await fp2.evaluate(() => document.querySelector('[data-chip="role"][data-value="Babysitter"]')?.classList.contains("on") === true));
+  await fp2.click('[data-chip="role"][data-value="Nanny"]');
+  await fp2.click("#nextBtn");
+  t("the checks screen names the real check, never 'tell us your country first'", (await fp2.textContent("body")).includes("Working With Children Check") && !(await fp2.textContent("body")).includes("Tell us your country first"));
+  await fp2.click("#nextBtn");
+  await fp2.click('[data-chip="comfortableWith"][data-value="Cooking"]');
+  await fp2.click("#nextBtn");
+  t("the week question asks when care is needed", (await fp2.textContent("#pageTitle")).includes("When do you need care"));
+  await fp2.selectOption('[data-grid-day="scheduleNeed"]', "Thu");
+  await fp2.click('[data-grid="scheduleNeed"][data-day="Thu"][data-part="morning"]');
+  await fp2.click("#nextBtn");
+  await fp2.click('[data-freq="often"][data-value="One or two days a week"]');
+  await fp2.click('[data-freq="soon"][data-value="As soon as possible"]');
+  await fp2.click("#nextBtn");
+  await fp2.click('[data-choice-page="payOffered"][data-page="1"]');
+  await fp2.click('[data-chip="payOffered"][data-value="35"]');
+  await fp2.click("#nextBtn");
+  await fp2.click('[data-chip="careLocationFamily"][data-value="At our home"]');
+  await fp2.click("#nextBtn");
+  await fp2.fill('[data-field="needWords"]', "Two afternoons a week, please.");
+  await fp2.click("#nextBtn");
+  await fp2.click('[data-chip="mustLanguages"][data-value="English"]');
+  await fp2.click("#nextBtn");
+  t("strength choices ride the looking for fields", (await fp2.textContent("body")).includes("Must have"));
+  await fp2.click('[data-strength="nonSmoker"][data-value="Must have"]');
+  await fp2.click('[data-yesno="nonSmoker"][data-value="yes"]');
+  await fp2.click("#nextBtn");
+  t("the photo step stands last (question 19 of 19)", (await fp2.textContent("#pageCount")).includes("Question 19 of 19"));
+  t("the photo step offers no skip on this build", await fp2.evaluate(() => !document.querySelector("[data-photo-skip]")));
+  await fp2.click("#nextBtn");
+  t("an unanswered photo holds the page: the build cannot finish without it", (await fp2.textContent("#notice")).length > 3 && (await fp2.locator("#essentialsDone").isHidden()));
+  await pickPhoto(fp2, "walk1");
+  await fp2.click("#nextBtn");
+  t("essentials end on the ready step", !(await fp2.locator("#essentialsDone").isHidden()));
+  await fp2.click("#betterMatchesBtn");
+  t("optional pages say they are optional and skippable", (await fp2.textContent("#optionalLead")).includes("These questions are optional"));
+  for (let i = 0; i < 160 && (await fp2.locator("#done").isHidden()); i++) {
+    const body = await fp2.textContent("body");
+    if (body.includes("Which countries would you like to live in?") || body.includes("Will the au pair have their own private room?")) throw new Error("optional stage offered another track's question");
+    await fp2.click("#skipBtn");
+  }
+  t("done page celebrates", !(await fp2.locator("#done").isHidden()));
+  bundle = await fp2.evaluate(() => JSON.parse(localStorage.getItem("caresits-app2-questionnaire-walk1") || localStorage.getItem("caresits-app2-questionnaire")));
+  t("bundle carries the family card and the must", bundle.side === "family" && bundle.card.musts.nonSmoker === true && bundle.card.scheduleNeed.Thu.includes("morning"));
+  t("bundle carries the pay offered from the first build", Number(bundle.card.payOffered) === 35);
+  t("bundle carries the family's own words need", bundle.answers.needWords === "Two afternoons a week, please.");
+  t("bundle carries the walk answers: type of care multi pick, children count, frequency and urgency, care place, photo done", Array.isArray(bundle.answers.role) && bundle.answers.role.includes("Babysitter") && bundle.answers.role.includes("Nanny") && bundle.answers.childrenCount === "2 children" && bundle.answers.frequency?.often === "One or two days a week" && bundle.answers.frequency?.soon === "As soon as possible" && bundle.answers.careLocationFamily === "At our home" && bundle.answers.photoDone === true);
+  t("the date of birth is a carer only answer: the family bundle carries none", bundle.answers.dateOfBirth === undefined);
+  await fp2.close();
+}
+
+// ---- the carer build, nanny track, in the observed wizard
+// order (Babysits account walk, 1 Nov 2026): country, name,
+// postcode, date of birth, languages, education (level and
+// words, both), certifications, 3 words, experience (one age
+// band ticked is enough, the owner's ruling, 31 Oct 2026),
+// age groups, special needs, skills, applies to you (the one
+// skippable step), comfortable with, the week grid, rate,
+// care place, about, the checks word, checks level, travel
+// distance, and the photo LAST, required, with no skip. The
+// date of birth stays in the carer's own answers only: it
+// never reaches the published card.
+{
+  const cp2 = await walkPage({ uid: "walk2", entryRole: "career", side: "carer", track: "nanny", name: "Walk Carer" });
+  t("carer question 1 of 23 (the country step stands first)", (await cp2.textContent("#pageCount")).includes("Question 1 of 23"));
+  await cp2.click('[data-chip="country"][data-value="Australia"]');
+  await cp2.click("#nextBtn");
+  await cp2.fill('[data-field="displayName"]', "Walk Carer");
+  await cp2.click("#nextBtn");
+  await cp2.fill('[data-field="postcode"]', "2021");
+  await cp2.click("#nextBtn");
+  await cp2.fill('[data-field="dateOfBirth"]', "1996-04-12");
+  await cp2.click("#nextBtn");
+  await cp2.click('[data-chip="languages"][data-value="English"]');
+  await cp2.click("#nextBtn");
+  await cp2.selectOption('[data-edu-level="education"]', "TAFE or vocational");
+  await cp2.fill('[data-edu-text="education"]', "Certificate III in Early Childhood");
+  await cp2.click("#nextBtn");
+  await cp2.click('[data-yesno="childcareCert"][data-value="yes"]');
+  await cp2.click("#nextBtn");
+  await cp2.click('[data-yesno="medicalCert"][data-value="no"]');
+  await cp2.click("#nextBtn");
+  await cp2.click('[data-chip="personality"][data-value="Warm"]');
+  await cp2.click('[data-chip="personality"][data-value="Patient"]');
+  await cp2.click('[data-chip="personality"][data-value="Playful"]');
+  await cp2.click("#nextBtn");
+  t("carer essentials ask the exact age bands experience", (await cp2.textContent("body")).includes("Years of experience"));
+  await cp2.selectOption('[data-exp="experience"][data-bandname="1-3"]', "6");
+  await cp2.click("#nextBtn");
+  t("ONE age band ticked completes the experience question (owner's ruling): the walk advances to question 11", (await cp2.textContent("#pageCount")).includes("Question 11 of 23"), await cp2.textContent("#pageCount"));
+  await cp2.click('[data-chip="agesAccepted"][data-value="1-3"]');
+  await cp2.click("#nextBtn");
+  await cp2.click('[data-yesno="specialNeedsExp"][data-value="yes"]');
+  await cp2.click("#nextBtn");
+  await cp2.click('[data-chip="activities"][data-value="Reading and storytime"]');
+  await cp2.click("#nextBtn");
+  await cp2.click("#nextBtn");
+  t("applies to you is the one skippable step: an empty pick still advances (to question 15)", (await cp2.textContent("#pageCount")).includes("Question 15 of 23"), await cp2.textContent("#pageCount"));
+  await cp2.click('[data-chip="comfortableWith"][data-value="Cooking"]');
+  await cp2.click("#nextBtn");
+  await cp2.selectOption('[data-grid-day="availability"]', "Thu");
+  await cp2.click('[data-grid="availability"][data-day="Thu"][data-part="morning"]');
+  await cp2.click("#nextBtn");
+  await cp2.click('[data-choice-page="payFloor"][data-page="1"]');
+  await cp2.click('[data-chip="payFloor"][data-value="30"]');
+  await cp2.click("#nextBtn");
+  await cp2.click('[data-chip="careLocationCarer"][data-value="At the family"]');
+  await cp2.click("#nextBtn");
+  await cp2.fill('[data-field="aboutMe"]', "I love reading with kids, singing songs, and long afternoons at the park.");
+  await cp2.click("#nextBtn");
+  await cp2.click("#nextBtn");
+  await cp2.click('[data-chip="checksLevel"][data-value="Register verified"]');
+  await cp2.click("#nextBtn");
+  await cp2.click('[data-chip="maxDistanceKm"][data-value="10"]');
+  await cp2.click("#nextBtn");
+  t("the photo step stands last (question 23 of 23)", (await cp2.textContent("#pageCount")).includes("Question 23 of 23"));
+  t("the photo step offers no skip on this build", await cp2.evaluate(() => !document.querySelector("[data-photo-skip]")));
+  await pickPhoto(cp2, "walk2");
+  await cp2.click("#nextBtn");
+  t("carer essentials end on the ready step", !(await cp2.locator("#essentialsDone").isHidden()));
+  await cp2.click("#betterMatchesBtn");
+  for (let i = 0; i < 160 && (await cp2.locator("#done").isHidden()); i++) await cp2.click("#skipBtn");
+  t("carer done page celebrates", !(await cp2.locator("#done").isHidden()));
+  const bundle = await cp2.evaluate(() => JSON.parse(localStorage.getItem("caresits-app2-questionnaire-walk2") || localStorage.getItem("caresits-app2-questionnaire")));
+  t("carer bundle carries the one band experience and the pay floor", Number(bundle.card.experience["1-3"]) === 6 && Number(bundle.card.payFloor) === 30);
+  t("carer bundle carries the about and the two part education answers", bundle.answers.aboutMe.startsWith("I love reading with kids") && bundle.answers.education?.level === "TAFE or vocational" && bundle.answers.education?.text === "Certificate III in Early Childhood");
+  t("the date of birth rides the carer's own answers and NEVER the published card", bundle.answers.dateOfBirth === "1996-04-12" && !("dateOfBirth" in bundle.card) && !JSON.stringify(bundle.card).includes("1996-04-12"));
+  t("the certifications and walk answers ride the answers, never the card", bundle.answers.childcareCert === true && bundle.answers.medicalCert === false && bundle.answers.careLocationCarer === "At the family" && !("childcareCert" in bundle.card) && !("careLocationCarer" in bundle.card));
+  await cp2.close();
+}
 t("no page errors", errs.length === 0);
 
 
@@ -182,13 +324,30 @@ t("shell: no page errors", errs.length === 0);
   t("find: every match card carries a Message button", await fp.evaluate(() => document.querySelectorAll(".findMsg").length >= 7));
   t("find: no page errors", ferrs.length === 0);
   await fp.evaluate(() => { document.querySelector(".viewToggle .chip:nth-child(2)")?.click(); });
-  t("map: pins render for the pool at area level", await fp.locator("#surface-find .mapPin").count() === 8);
+  // One pool, two views (Difference Map item 5, the suite
+  // corrected to the ruling): the pins are the SHOWN pool,
+  // so Mei, who failed the schedule gate and stands in the
+  // nearly list, carries no pin. 8 fetched, 7 shown, 7 pins.
+  t("map: pins equal the shown pool at area level (the nearly carer has no pin)", await fp.locator("#surface-find .mapPin").count() === 7);
   await fp.evaluate(() => [...document.querySelectorAll("#surface-find .mapPin")].find((p) => p.getAttribute("aria-label")?.startsWith("Ana"))?.click());
   t("map: a pin opens the card with the pair score as a percent", await fp.evaluate(() => {
     const listFit = [...document.querySelectorAll("#surface-find .findCard")].find((c) => c.querySelector(".findName")?.textContent === "Ana")?.querySelector(".fitScore")?.textContent.match(/\d+/)?.[0];
     const mapPct = document.querySelector("#surface-find .mapSlot .mapPct")?.textContent.match(/\d+/)?.[0];
     return !!listFit && listFit === mapPct;
   }));
+  // THE PROFILE VIEW (Difference Map item 8): the same page
+  // opens from the pin's mini card and from the list card.
+  await fp.evaluate(() => document.querySelector("#surface-find .mapSlot .findDetailsBtn")?.click());
+  await fp.waitForTimeout(250);
+  t("profile: the pin's Details opens the profile page (name, experience, availability stand)", await fp.evaluate(() => { const o = document.getElementById("profileOverlay"); return !!o && o.textContent.includes("Ana") && o.textContent.includes("Experience") && o.textContent.includes("Availability"); }));
+  await fp.evaluate(() => document.querySelector("#profileOverlay .profileClose")?.click());
+  await fp.waitForTimeout(150);
+  await fp.evaluate(() => { document.querySelector(".viewToggle .chip:nth-child(1)")?.click(); });
+  await fp.waitForTimeout(200);
+  await fp.evaluate(() => { const card = [...document.querySelectorAll("#surface-find .findCard")].find((c) => c.querySelector(".findName")?.textContent === "Ana"); card?.querySelector(".findDetailsBtn")?.click(); });
+  await fp.waitForTimeout(250);
+  t("profile: the list card's Details opens the same profile page", await fp.evaluate(() => { const o = document.getElementById("profileOverlay"); return !!o && o.textContent.includes("Ana"); }));
+  await fp.evaluate(() => document.querySelector("#profileOverlay .profileClose")?.click());
   await fp.close();
   const ep = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await ep.addInitScript(() => { window.CARESITS_LIVE_OFF = true; window.CARESITS_UID = "f1"; window.CARESITS_AUTH_STATE = "signed-in"; });
@@ -428,10 +587,10 @@ t("shell: no page errors", errs.length === 0);
   await dp.waitForTimeout(250);
   t("door: the sign up stands alone, big and centred", await dp.evaluate(() => !!document.querySelector(".doorMark") && !!document.getElementById("googleBtn") && !!document.getElementById("appleBtn") && !!document.getElementById("emailIn") && !!document.getElementById("nextBtn")));
   t("door: no password on the first page", await dp.evaluate(() => document.getElementById("step2").hidden === true));
-  // Door V4 on this base asks the role first; the auth door
-  // stands behind the role pick.
-  await dp.click('[data-role="family"]');
-  await dp.waitForTimeout(150);
+  // Door purity (Difference Map item 2): there is no role
+  // pick on the door any more; the auth door stands open
+  // from the first paint, one sign up for everyone.
+  t("door: no role pick stands on the door; the auth door is open at once", await dp.evaluate(() => !document.querySelector("[data-role]") && !document.getElementById("authDoor").hidden));
   await dp.fill("#emailIn", "sam@example.com");
   await dp.click("#nextBtn");
   t("door: step two shows the email, Change, and the password", await dp.evaluate(() => !document.getElementById("step2").hidden && document.getElementById("emailEcho").textContent === "sam@example.com" && !!document.getElementById("pwIn")));
@@ -608,16 +767,23 @@ t("shell: no page errors", errs.length === 0);
   await up.fill("#threadRoot textarea", "One more thing");
   await up.evaluate(() => [...document.querySelectorAll("#threadRoot button")].find((b) => b.textContent === "Send").click());
   await up.waitForTimeout(150);
-  t("popup: the second free message meets the upgrade moment", await up.evaluate(() => !!document.getElementById("upgradePop")));
-  t("popup: the passed copy stands verbatim", await up.evaluate(() => { const t = document.getElementById("upgradePop").textContent; return t.includes("You found someone worth writing to") && t.includes("A$14.95 a month") && t.includes("first month free"); }));
-  t("popup: Not now stands as tall as the rest", await up.evaluate(() => { const bs = [...document.querySelectorAll("#upgradePop .popBtn")]; return bs.length === 3 && bs.every((b) => b.classList.contains("mainBtn")); }));
-  await up.evaluate(() => [...document.querySelectorAll("#upgradePop button")].find((b) => b.textContent === "Not now").click());
-  t("popup: Not now leaves the app fully usable", await up.evaluate(() => !document.getElementById("upgradePop") && !window.__writes.some((w) => w.kind === "message")));
+  // THE FREE FOR ALL SHAPE (Polar's line on this tree, and
+  // the build brief of 31 Oct 2026: the paid and free shape
+  // stands as it stands and is NOT reworked by the
+  // Difference Map build). With FREE_FOR_ALL on in
+  // accounts/account.js, canSendMessage always allows, so
+  // the second message SENDS and no upgrade moment fires.
+  // This leg once asserted the taste wall; it is corrected
+  // to the standing shape, the same way the levels suite
+  // was corrected to the owner's ruling. If the free for
+  // all line is ever switched off, this leg must go back
+  // to asserting the wall.
+  t("free for all: the second message sends, no upgrade moment fires", await up.evaluate(() => !document.getElementById("upgradePop") && window.__writes.some((w) => w.kind === "message" && w.payload.text === "One more thing")));
   const writesBefore = await up.evaluate(() => window.__writes.filter((w) => w.kind === "message").length);
   await up.evaluate(() => { const ta = document.querySelector("#threadRoot textarea"); ta.value = "Once more"; });
   await up.evaluate(() => [...document.querySelectorAll("#threadRoot button")].find((b) => b.textContent === "Send").click());
   await up.waitForTimeout(120);
-  t("popup: the latch holds for the session, no refire, no send", await up.evaluate((n) => !document.getElementById("upgradePop") && window.__writes.filter((w) => w.kind === "message").length === n, writesBefore));
+  t("free for all: a third message sends too, still no popup", await up.evaluate((n) => !document.getElementById("upgradePop") && window.__writes.filter((w) => w.kind === "message").length === n + 1, writesBefore));
   t("popup: no page errors", uerrs.length === 0);
   await up.close();
 }
@@ -1083,7 +1249,9 @@ const { planSave } = await import("./account-save.js");
   const src = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
   const html = src("./journey.html");
   t("Leg 11: the ready step offers the stop or deepen choice", html.includes('id="seeMatchesBtn"') && html.includes('id="betterMatchesBtn"'));
-  t("Leg 11: the journey computes the boundary from levels.js", src("./journey.js").includes("levelOf(state.side, state.answers)"));
+  // The call now passes the member's track as well (the
+  // Difference Map item 4: levels are judged per track).
+  t("Leg 11: the journey computes the boundary from levels.js, per track", src("./journey.js").includes("levelOf(state.side, state.answers, state.track"));
   const mkSeeded = async (seed) => {
     const p = await browser.newPage({ viewport: { width: 390, height: 844 } });
     await p.addInitScript(() => { window.CARESITS_LIVE_OFF = true; window.CARESITS_UID = "f1"; window.CARESITS_AUTH_STATE = "signed-in"; });
@@ -1094,9 +1262,14 @@ const { planSave } = await import("./account-save.js");
     await p.waitForTimeout(250);
     return { p, errs };
   };
+  // The seed stands on the LAST essentials page. The
+  // family build follows the observed wizard order (account
+  // walk, 1 Nov 2026), so the last page is the photo page
+  // (index 17 of 18), and the seed answers cover every
+  // essential of the new build, the photo included.
   const essentialsSeed = {
-    side: "family", page: 7, stage: "essentials", countryStep: false,
-    answers: { country: "Australia", postcode: "2021", role: "Nanny", childrenBands: ["1-3"], startWhen: "As soon as possible", scheduleNeed: { Thu: ["morning"] }, languages: ["English"], mustLanguages: ["English"], nonSmoker: true },
+    side: "family", page: 17, stage: "essentials", countryStep: false,
+    answers: { country: "Australia", displayName: "Seed", postcode: "2021", role: ["Babysitter", "Nanny"], childrenCount: "2 children", childrenBands: ["1-3"], childrenTraits: ["Curious"], languages: ["English"], specialNeeds: false, comfortableWith: ["Cooking"], scheduleNeed: { Thu: ["morning"] }, frequency: { often: "One or two days a week", soon: "As soon as possible" }, payOffered: "35", careLocationFamily: "At our home", mustLanguages: ["English"], nonSmoker: true, needWords: "Help on Thursdays", photoDone: true },
     strengths: { nonSmoker: "Must have" }, resumeFeed: [],
   };
   const s1 = await mkSeeded(essentialsSeed);
@@ -1150,7 +1323,19 @@ const { planSave } = await import("./account-save.js");
   await setMe({ uid: "f9", side: "family", plusExtras: false });
   await pp.evaluate(() => window.CARESITS_NAV("daystory"));
   await pp.waitForTimeout(200);
-  t("plans gate: a locked family tapping the Day Story meets the plans sheet, surface unswitched", await pp.evaluate(() => !!document.getElementById("plansPop") && document.getElementById("surface-daystory").hidden && document.getElementById("plansPop").textContent.includes("opens with a paid plan")));
+  // THE FREE FOR ALL SHAPE (Polar's line on this tree, 31
+  // Oct 2026, standing per the build brief: the paid and
+  // free shape is NOT reworked by the Difference Map
+  // build). shell.js plusLocked returns false for everyone,
+  // so a family walks straight into the Day Story and no
+  // plans sheet fires. This leg once asserted the locked
+  // gate; it is corrected to the standing shape, as the
+  // levels suite was corrected to the owner's ruling. The
+  // sheet itself still stands and is proven below, opened
+  // the plain way.
+  t("free for all: a family walks into the Day Story, no plans sheet, surface switched", await pp.evaluate(() => !document.getElementById("plansPop") && !document.getElementById("surface-daystory").hidden));
+  await pp.evaluate(() => window.CARESITS_OPEN_PLANS && window.CARESITS_OPEN_PLANS("plus"));
+  await pp.waitForTimeout(150);
   t("plans sheet: all three plans offered, with the honest app route line (the enabling build's web face)", await pp.evaluate(() => { const s = document.getElementById("plansPop").textContent; return s.includes("Join Finding") && s.includes("Join Family Plus") && s.includes("Join Search Pass") && s.includes("Joining lives in the Caresitters app") && s.includes("Nothing is charged") && !s.includes("Restore a past purchase"); }));
   await pp.evaluate(() => { window.__writes = []; window.CARESITS_WRITE = (kind, payload) => window.__writes.push([kind, payload]); });
   await pp.evaluate(() => { const b = [...document.querySelectorAll("#plansPop button")].find((x) => x.textContent.includes("Search Pass")); b.click(); });
@@ -1178,15 +1363,17 @@ const { planSave } = await import("./account-save.js");
   await setMe({ uid: "f9", side: "family", plusExtras: false });
   await pp.evaluate(() => window.CARESITS_TRUST_RENDER());
   await pp.waitForTimeout(150);
-  t("plans: Settings offers Plans to a family", await pp.evaluate(() => !!document.getElementById("plansBtn")));
-  await pp.evaluate(() => document.getElementById("plansBtn").click());
-  await pp.waitForTimeout(150);
-  t("plans: the Settings sheet opens plainly, with no locked line", await pp.evaluate(() => !!document.getElementById("plansPop") && !document.getElementById("plansPop").textContent.includes("opens with a paid plan")));
-  await pp.evaluate(() => { const b = [...document.querySelectorAll("#plansPop button")].pop(); b.click(); });
+  // THE FREE FOR ALL SHAPE again (trust.js, Ilse 31 Oct
+  // 2026, in the code's own words: "no plans, no prices"):
+  // the Settings Plans entry was replaced by the Free for
+  // everyone card. There is no plans button in Settings on
+  // this tree, for either side. These legs once asserted
+  // the button; corrected to the standing shape.
+  t("free for all: Settings shows the Free for everyone card to a family, and no plans button stands", await pp.evaluate(() => !document.getElementById("plansBtn") && document.body.textContent.includes("Free for everyone") && document.body.textContent.includes("Caresitters costs nothing right now")));
   await setMe({ uid: "c9", side: "carer" });
   await pp.evaluate(() => window.CARESITS_TRUST_RENDER());
   await pp.waitForTimeout(150);
-  t("plans: Settings hides Plans from a carer, always", await pp.evaluate(() => !document.getElementById("plansBtn")));
+  t("free for all: Settings shows the same free card to a carer, still no plans button", await pp.evaluate(() => !document.getElementById("plansBtn") && document.body.textContent.includes("Free for everyone")));
   t("plans legs: no page errors", perrs.length === 0);
   await pp.close();
 }

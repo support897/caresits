@@ -107,6 +107,8 @@ table.grid th { font-size: 13px; padding: 4px; text-transform: capitalize; }
 .trackChoices button b{display:block;font-size:18px}
 .trackChoices button span{font-size:14px;opacity:.8}
 .trackChoices button:focus-visible{outline:3px solid #1f4d3d}
+.trackExit{display:block;margin:6px auto 0;min-height:44px;padding:8px 18px;border:0;border-radius:12px;background:transparent;font:inherit;color:inherit;text-decoration:underline;cursor:pointer}
+.trackExit:focus-visible{outline:3px solid #1f4d3d}
 .tag.apTag{background:#ede7f6}.tag.hostTag{background:#ffe9d6}
 .apCard .apFit li.miss{color:#8a4b00}
 .apMap{height:300px;border-radius:12px;overflow:hidden;margin:8px 0}

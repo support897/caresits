@@ -305,11 +305,19 @@ const JPEG = Buffer.from("/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP////////////////////
 const jpegPath = join(RIG, "pick.jpg");
 writeFileSync(jpegPath, JPEG);
 
-const doorSignIn = async (email, password, role) => {
+const completePick = async (page, who, track) => {
+  const overlay = page.locator("#trackOverlay");
+  await overlay.waitFor({ state: "visible", timeout: 30000 }).catch(() => {});
+  if (await overlay.isVisible().catch(() => false)) {
+    await page.click(`#trackOverlay [data-who="${who}"]`);
+    await page.click(`#trackOverlay [data-track="${track}"]`);
+    await overlay.waitFor({ state: "detached", timeout: 10000 }).catch(() => {});
+  }
+};
+const doorSignIn = async (email, password, who, track) => {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await page.addInitScript(() => { window.CARESITS_FILES_BASE = "http://127.0.0.1:8124"; });
   await page.goto(BASE + "/app2/door.html", { waitUntil: "load" });
-  await page.click(`[data-role="${role}"]`);
   await page.waitForSelector("#authDoor:not([hidden])", { timeout: 8000 });
   await page.fill("#emailIn", email);
   await page.click("#nextBtn");
@@ -318,6 +326,12 @@ const doorSignIn = async (email, password, role) => {
   await page.click("#joinBtn");
   await page.waitForURL(/index\.html/, { timeout: 25000 });
   await page.waitForFunction(() => window.CARESITS_AUTH_STATE === "signed-in", null, { timeout: 25000 });
+  if (who && track) await completePick(page, who, track);
+  // The boot publishes the trust seam only after the pick
+  // resolves; on the twin the account reads are slow, so
+  // wait for the seam to carry the member before driving
+  // surfaces that render from it (My Profile among them).
+  await page.waitForFunction(() => (window.CARESITS_TRUST || {}).me && window.CARESITS_TRUST.me.side, null, { timeout: 30000 }).catch(() => {});
   return page;
 };
 const uploadPhoto = async (page) => {
@@ -339,7 +353,7 @@ const FAM = { email: "desk.family.twin@example.com", password: "TwinFamily-2026-
 const car = await signIn(CAR.email, CAR.password);
 await clearSlot(car.token, car.uid);
 {
-  const page = await doorSignIn(CAR.email, CAR.password, "career");
+  const page = await doorSignIn(CAR.email, CAR.password, "carer", "nanny");
   await uploadPhoto(page);
   const doc = await profilePoll(car.token, car.uid, (d) => field(d, "photoUrl") === `${car.uid}/profile-photos/photo.jpg`);
   t("carer photo: the profile slot names the gatekeeper key after the in app upload", !!doc, doc ? field(doc, "photoUrl") : "no doc");
@@ -354,6 +368,11 @@ await clearSlot(car.token, car.uid);
   t("resume: the fixture PDF's facts are drafted on the profile, with the name", profileText.includes("Maria Santos"));
   t("resume: the genuine postcode 2031 is drafted (the phone's head never lands)", profileText.includes("2031"));
   const useBtn = page.locator("#profileRoot button", { hasText: "Use these in my questionnaire" });
+  // The pick's auto open of the questionnaire can switch
+  // the shell's surface after the upload; a member tapping
+  // Use is looking at their profile, so bring it forward.
+  await page.evaluate(() => document.querySelector('[data-nav="profile"]')?.click());
+  await page.waitForTimeout(300);
   await useBtn.first().click();
   await page.waitForTimeout(400);
   const handoff = await page.evaluate((uid) => {
@@ -392,7 +411,7 @@ await clearSlot(car.token, car.uid);
 {
   const fam = await signIn(FAM.email, FAM.password);
   await clearSlot(fam.token, fam.uid);
-  const page = await doorSignIn(FAM.email, FAM.password, "family");
+  const page = await doorSignIn(FAM.email, FAM.password, "family", "family-nanny");
   await uploadPhoto(page);
   const doc = await profilePoll(fam.token, fam.uid, (d) => field(d, "photoUrl") === `${fam.uid}/profile-photos/photo.jpg`);
   t("family photo: the profile slot names the gatekeeper key after the in app upload", !!doc, doc ? field(doc, "photoUrl") : "no doc");

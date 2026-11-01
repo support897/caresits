@@ -280,7 +280,7 @@ export function publishSavedProfile(bundle, plan, uid) {
     if (code) byPair[code] = a.data || {};
   }
   const mergedAnswers = mergeDeepAnswers(bundle.answers || {}, byPair, bundle.side || "");
-  const savedLevel = Object.keys(mergedAnswers).length ? levelOf(bundle.side || "", mergedAnswers) : "";
+  const savedLevel = Object.keys(mergedAnswers).length ? levelOf(bundle.side || "", mergedAnswers, bundle.track || "") : "";
   const fresh = {
     name: plan.card.data.displayName || "",
     side: bundle.side || plan.card.data.side || "",

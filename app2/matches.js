@@ -416,11 +416,16 @@ function bootPhaseC() {
     const sharedPlan = mergeLearningPlans(familyPlan, carerPlan);
     const plan = planContact({ familyUid, carerUid, createdBy: me.uid, nowIso: nowIso(), createdDay: today(), profileComplete: profileDone(), learningPlan: sharedPlan, learningMatches: learning.reasons });
     if (!plan.ok && plan.reason === "profile-incomplete") { walkToQuestions(); return; }
+    // No silent dead taps (Difference Map item 12): every
+    // other refusal and every failed write says so, plainly.
+    if (!plan.ok) { softToast(tr("contact.failed")); return; }
     if (plan.ok) {
       const result = await write("contact", plan);
       if (result?.ok) {
         softToast("Request sent. You can chat as soon as they say yes.");
         window.CARESITS_NAV && window.CARESITS_NAV("thread");
+      } else {
+        softToast(tr("contact.failed"));
       }
     }
   };

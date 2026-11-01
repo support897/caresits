@@ -16,6 +16,7 @@
 // level. A pair is capped by the less complete side.
 import { FAMILY_PAGES, CARER_PAGES } from "./questions.js";
 import { EXPANSION } from "./questions2.js";
+import { ESSENTIAL_IDS, trackFields } from "./track-fields.js";
 
 export const LEVELS = ["explore", "quick", "better", "full"];
 export const levelRank = (l) => LEVELS.indexOf(l || "explore");
@@ -28,6 +29,30 @@ const answered = (answers, f) => {
   return true;
 };
 
+// The four tracks ask four different first builds (tracks.js,
+// track-fields.js), so the "did they finish the basics" gate
+// is judged per track when a track is known (Difference Map
+// 31 Oct, item 4): a host family is judged on the host build,
+// never on the nanny family's base pages, whose fields it was
+// never asked. The photo step counts through the journey's own
+// markers, and the languages must question counts an explicit
+// "no preference" (an empty list the member chose) as answered.
+const FIELD_DEFS = new Map();
+for (const p of [...FAMILY_PAGES, ...CARER_PAGES, ...EXPANSION.family, ...EXPANSION.carer]) for (const f of p.fields) if (!FIELD_DEFS.has(f.id)) FIELD_DEFS.set(f.id, f);
+for (const f of trackFields()) if (!FIELD_DEFS.has(f.id)) FIELD_DEFS.set(f.id, f);
+FIELD_DEFS.set("displayName", { id: "displayName", required: true });
+const trackAnswered = (answers, f, track) => {
+  // On the two builds copied from the observed wizard the
+  // photo is required to finish (owner's word, 1 Nov 2026):
+  // a skipped photo completes nothing there. The au pair
+  // tracks keep their own shape.
+  if (f.id === "photo") return answers.photoDone === true || Boolean(answers.photoUrl) || ((track !== "nanny" && track !== "family-nanny") && answers.photoSkipped === true);
+  if (f.id === "mustLanguages") return answers.mustLanguages !== undefined && answers.mustLanguages !== null;
+  if (f.id === "education") { const v = answers.education; return typeof v === "string" ? v.trim().length > 0 : Boolean(v && v.level && String(v.text || "").trim()); }
+  if (f.id === "frequency") { const v = answers.frequency; return Boolean(v && typeof v === "object" && v.often && v.soon); }
+  return answered(answers, f);
+};
+
 // NOTE for future readers: "better" can never come back for a
 // FAMILY, and that is intended, not a bug. The approved 50
 // question cap emptied the family's Full tier, so a family that
@@ -37,11 +62,23 @@ const answered = (answers, f) => {
 // so "better" is reachable for them. The "optional" fields are
 // profile colour only and sit outside this ladder on purpose:
 // Full means every MATCH BEARING question answered.
-export function levelOf(side, answers) {
+export function levelOf(side, answers, track) {
   if (!side || !answers) return "explore";
-  const base = side === "family" ? FAMILY_PAGES : CARER_PAGES;
-  const required = base.flatMap((p) => p.fields).filter((f) => f.required);
-  if (!required.every((f) => answered(answers, f))) return "explore";
+  const trackIds = track && ESSENTIAL_IDS[track] ? ESSENTIAL_IDS[track] : null;
+  if (trackIds) {
+    // On the two builds copied from the observed wizard,
+    // finishing the build means every build step answered
+    // (bar the one skippable step and the info screens),
+    // whatever the older field data says. The au pair tracks
+    // keep the field data rule.
+    const walkTrack = track === "nanny" || track === "family-nanny";
+    const required = trackIds.map((id) => FIELD_DEFS.get(id)).filter((f) => f && f.type !== "info" && (walkTrack ? f.id !== "appliesToYou" : f.required === true));
+    if (!required.every((f) => trackAnswered(answers, f, track))) return "explore";
+  } else {
+    const base = side === "family" ? FAMILY_PAGES : CARER_PAGES;
+    const required = base.flatMap((p) => p.fields).filter((f) => f.required);
+    if (!required.every((f) => answered(answers, f))) return "explore";
+  }
   const deep = EXPANSION[side].flatMap((p) => p.fields);
   const tierDone = (tier) => deep.filter((f) => f.level === tier).every((f) => answered(answers, f));
   if (!tierDone("quick")) return "explore";

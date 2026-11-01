@@ -119,7 +119,6 @@ try {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   page.on("requestfailed", (r) => console.log("REQFAIL:", r.url().slice(0, 110), r.failure()?.errorText));
   await page.goto(BASE + "/door.html", { waitUntil: "load" });
-  await page.click('[data-role="family"]');
   await page.waitForSelector("#authDoor:not([hidden])", { timeout: 8000 });
   await page.fill("#emailIn", FAMILY.email);
   await page.click("#nextBtn");
@@ -127,6 +126,17 @@ try {
   await page.fill("#pwIn", FAMILY.password);
   await page.click("#joinBtn");
   await page.waitForURL(/index\.html/, { timeout: 25000 });
+  // The path pick fires when the account has no track
+  // (Difference Map item 3): answer it if it stands.
+  {
+    const overlay = page.locator("#trackOverlay");
+    await overlay.waitFor({ state: "visible", timeout: 30000 }).catch(() => {});
+    if (await overlay.isVisible().catch(() => false)) {
+      await page.click('#trackOverlay [data-who="family"]');
+      await page.click('#trackOverlay [data-track="family-nanny"]');
+      await overlay.waitFor({ state: "detached", timeout: 10000 }).catch(() => {});
+    }
+  }
   await page.waitForFunction(() => window.CARESITS_FIND_DATA && window.CARESITS_FIND_DATA.candidates, null, { timeout: 30000 });
   const pool = await page.evaluate(() => {
     const { areaCoordsFor } = window.__mapProbe || {};
@@ -136,10 +146,18 @@ try {
   console.log("fetched candidates:", pool.length, "| placeable (coords after fetch derive):", placeable.length, "|", placeable.map((d) => d.name).join(", "));
   await page.evaluate(() => { const b = [...document.querySelectorAll('[data-nav="find"]')].find((x) => x.offsetParent !== null) || document.querySelector('[data-nav="find"]'); b && b.click(); });
   await page.waitForSelector(".viewToggle", { timeout: 15000 });
+  // ONE POOL, TWO VIEWS (Difference Map item 5, the suite
+  // corrected to the ruling): the pins are drawn from the
+  // assembled pool the LIST shows, exclusions included, so
+  // the count is taken against the placeable members OF THE
+  // LIST, not of the raw fetch.
+  const shownNames = await page.evaluate(() => [...document.querySelectorAll("#findRoot .findCard:not(.nearly) .findName")].map((n) => n.textContent));
+  const shownPlaceable = placeable.filter((d) => shownNames.includes(d.name));
+  console.log("shown in list:", shownNames.length, "| shown and placeable:", shownPlaceable.length);
   await page.click(".viewToggle .chip:nth-child(2)");
   await page.waitForTimeout(1500);
   const pins = await page.evaluate(() => document.querySelectorAll(".mapPin, .leaflet-marker-icon").length);
-  ok(pins === placeable.length, "pins shown equals the placeable pool", `pins=${pins} placeable=${placeable.length}`);
+  ok(pins === shownPlaceable.length, "pins shown equals the placeable pool OF THE LIST (one pool, two views)", `pins=${pins} shownPlaceable=${shownPlaceable.length}`);
   // Tap Map Carer One's pin: the letter button carries her
   // name in its aria label; a Leaflet marker is tapped by its
   // place in the same candidate order the pool printed.

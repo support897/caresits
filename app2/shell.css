@@ -564,3 +564,33 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .tag.apTag{background:#ede7f6}.tag.hostTag{background:#ffe9d6}
 .apCard .apFit li.miss{color:#8a4b00}
 .apMap{height:300px;border-radius:12px;overflow:hidden;margin:8px 0}
+
+/* Difference Map build (31 Oct 2026): the Find face lines,
+   the search pill and role tabs, the filter sheet groups and
+   availability grid, and the profile page. */
+.findRoleLine{font-weight:600;margin:2px 0}
+.findExpLine{margin:4px 0}
+.findRate{font-weight:700;font-size:18px;margin:6px 0}
+.findStars{color:#b8860b;margin:2px 0}
+.findSearchPill{display:block;width:100%;min-height:48px;margin:10px 0;padding:10px 16px;border-radius:999px;border:2px solid #f4b6c8;background:#fff;font:inherit;text-align:left;cursor:pointer}
+.findRoleTabs{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap}
+.findRoleTab[aria-pressed="true"]{border-color:#c2185b}
+.findNeedLine{font-weight:600}
+.findFilterGroup{margin:12px 0}
+.findChipChecks{display:flex;flex-wrap:wrap;gap:6px 14px}
+.findAvailGrid{border-collapse:collapse;width:100%}
+.findAvailGrid th,.findAvailGrid td{padding:2px;text-align:center;font-size:12px}
+.findAvailCell{width:32px;height:32px;border-radius:8px;border:1px solid #ccc;background:#fff;cursor:pointer;color:#c2185b}
+.findAvailCell.on{background:#fde7ef;border-color:#c2185b}
+.findExpSlider{width:100%}
+.profileCard{max-width:560px;width:100%;max-height:92vh;overflow:auto}
+.profileSection{margin:16px 0}
+.profileSectionTitle{margin:0 0 6px}
+.profileRate{font-weight:700;font-size:22px}
+.profileAvail{border-collapse:collapse}
+.profileAvail th,.profileAvail td{padding:3px 7px;text-align:center;font-size:13px}
+.profileAvail td.on{color:#c2185b}
+.profilePhoto{width:84px;height:84px}
+.profileClose{float:right}
+.trackExit{display:block;margin:6px auto 0;min-height:44px;padding:8px 18px;border:0;border-radius:12px;background:transparent;font:inherit;color:inherit;text-decoration:underline;cursor:pointer}
+.trackExit:focus-visible{outline:3px solid #1f4d3d}

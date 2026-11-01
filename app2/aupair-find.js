@@ -4,12 +4,14 @@
 // The nanny Find (find.js) is untouched: it never shows these cards.
 import { unpackAuPair, auPairFit, countryByCode, countryPoint, ymToMonth } from "./tracks.js";
 import { paintFileImg } from "./files.js";
+import { t as tr } from "./lang.js";
 
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
 export const docAuTrack = (doc) => unpackAuPair(doc && doc.card && doc.card.auPair).track;
 export const viewerIsAuPairWorld = (doc) => { const t = docAuTrack(doc); return t === "aupair" || t === "host"; };
 
 let mapCountry = "";
+let apShowSaved = false;
 
 function factsOf(doc) {
   const u = unpackAuPair(doc.card && doc.card.auPair);
@@ -79,7 +81,16 @@ function cardEl(doc, u, fit) {
   const toggle = () => { details.hidden = !details.hidden; more.setAttribute("aria-expanded", String(!details.hidden)); more.textContent = details.hidden ? "See profile" : "Hide profile"; };
   more.addEventListener("click", (e) => { e.stopPropagation(); toggle(); });
   const say = el("button", "mainBtn findMsg", "Say hello"); say.type = "button";
-  say.addEventListener("click", (e) => { e.stopPropagation(); if (typeof window.CARESITS_CONTACT === "function") window.CARESITS_CONTACT(doc.uid || "", doc); });
+  say.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (typeof window.CARESITS_CONTACT === "function") window.CARESITS_CONTACT(doc.uid || "", doc);
+    else {
+      const t = document.createElement("div");
+      t.className = "v2Toast"; t.setAttribute("role", "status"); t.textContent = tr("contact.failed");
+      document.body.append(t);
+      setTimeout(() => t.remove(), 4500);
+    }
+  });
   actions.append(more, say);
   card.append(actions);
   // The whole card opens the profile, not only the small button.
@@ -114,8 +125,15 @@ export function renderAuPairFind(root, viewerDoc, candidateDocs) {
   const want = meIsAuPair ? "host" : "aupair";
   root.replaceChildren();
   root.append(el("h2", "findTitle", meIsAuPair ? "Host families" : "Au pairs"));
+  // The Saved view (Difference Map item 13): the hearts on
+  // these cards lead somewhere, the same as the nanny side.
+  const favNow = window.CARESITS_V2 && window.CARESITS_V2.favs ? window.CARESITS_V2.favs() : new Set();
+  const savedBtn = el("button", "ghostBtn v2SavedBtn" + (apShowSaved ? " on" : ""), apShowSaved ? "♥ Saved (on)" : "♡ Saved");
+  savedBtn.type = "button";
+  savedBtn.addEventListener("click", () => { apShowSaved = !apShowSaved; renderAuPairFind(root, viewerDoc, candidateDocs); });
+  root.append(savedBtn);
   const rows = candidateDocs
-    .filter((d) => d.uid !== viewerDoc.uid && d.side !== viewerDoc.side)
+    .filter((d) => d.uid !== viewerDoc.uid && d.side !== viewerDoc.side && (!apShowSaved || favNow.has(d.uid)))
     .map((d) => ({ doc: d, u: factsOf(d) }))
     .filter((r) => r.u.track === want)
     .map((r) => {
@@ -164,7 +182,15 @@ export function renderAuPairFind(root, viewerDoc, candidateDocs) {
     }
   };
   root.append(mapHost);
-  drawMap(mapHost, [...groups].map(([country, n]) => ({ country, n })), (country) => { mapCountry = country; paint(); listHost.scrollIntoView({ behavior: "smooth", block: "start" }); });
+  const mapDrawn = drawMap(mapHost, [...groups].map(([country, n]) => ({ country, n })), (country) => { mapCountry = country; paint(); listHost.scrollIntoView({ behavior: "smooth", block: "start" }); });
+  // The map must never vanish silently (Difference Map item
+  // 13): when the map library or its tiles are missing, the
+  // box goes away and a plain note stands in its place; the
+  // list below always carries everyone.
+  if (!mapDrawn) {
+    mapHost.remove();
+    if (groups.size) root.append(el("p", "findSort", tr("apFind.mapOff")));
+  }
   root.append(listHost);
   paint();
 }

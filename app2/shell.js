@@ -94,6 +94,24 @@ async function setActiveSide(side) {
     return false;
   }
   if (status) status.textContent = "";
+  // The Switch side speaks the one vocabulary (Difference Map
+  // 31 Oct, item 3): the track follows the side, so the menu and
+  // the account's path can never disagree. A track already in
+  // the new side's family stands (an au pair stays an au pair);
+  // Stay Connected carries no track.
+  if (side !== "communicate" && typeof window.CARESITS_WRITE === "function") {
+    const familyTracks = ["family-nanny", "family-aupair"];
+    const carerTracks = ["nanny", "aupair"];
+    const current = (window.CARESITS_ME || {}).track || "";
+    const inFamily = side === "career" ? carerTracks.includes(current) : familyTracks.includes(current);
+    if (!inFamily) {
+      const next = side === "career" ? "nanny" : "family-nanny";
+      try {
+        const wrote = await window.CARESITS_WRITE("track", { track: next });
+        if (wrote?.ok) window.CARESITS_ME = { ...window.CARESITS_ME, track: next };
+      } catch { /* the side stands; the pick is offered again next boot */ }
+    }
+  }
   document.getElementById("homeSideSwitchDialog").hidden = true;
   show("home");
   window.CARESITS_RENDER_HOME?.();

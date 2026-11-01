@@ -5,7 +5,11 @@
 // log out; every user's data is isolated.
 //
 // This suite drives the REAL door (door.html + the real
-// Firebase Auth SDK) against the caresits-test TWIN. It
+// Firebase Auth SDK) against the caresits-test TWIN.
+// Reworked 31 Oct 2026 (Difference Map items 2 and 3): the
+// door carries NO role chooser any more (door purity: one
+// sign up first); the path pick stands in the shell, after
+// sign in, and fires whenever the account has no track. It
 // builds a throwaway copy of the tree in /tmp with the
 // twin config swapped into firebase-config.js — the copy
 // trick the parent desk ruled: test only, never shipped.
@@ -155,9 +159,7 @@ const CAR = { email: "desk.carer.twin@example.com", password: "TwinCarer-2026-x"
   await page.goto(BASE + "/app2/door.html", { waitUntil: "networkidle" });
   const bodyText = await page.textContent("body");
   t("door: no demo or guest way in is offered", !/demo|guest|explore/i.test(bodyText), bodyText.slice(0, 200));
-  t("door: the role question stands first", bodyText.includes("What brings you here?"));
-  await page.click('[data-role="family"]');
-  await page.waitForSelector("#authDoor:not([hidden])", { timeout: 5000 });
+  t("door: NO role chooser stands on the door (one sign up first; the pick lives after sign in)", await page.evaluate(() => !document.getElementById("roleChooser") && !document.querySelector("[data-role]") && !document.getElementById("authDoor").hidden), bodyText.slice(0, 200));
   t("door: Google button stands", await page.evaluate(() => !!document.getElementById("googleBtn")));
   t("door: Apple button stands", await page.evaluate(() => !!document.getElementById("appleBtn")));
   t("door: email field stands", await page.evaluate(() => !!document.getElementById("emailIn")));
@@ -166,12 +168,20 @@ const CAR = { email: "desk.carer.twin@example.com", password: "TwinCarer-2026-x"
 }
 
 // ---- 2. Email sign in (family) reaches the shell signed in ----
-const doorSignIn = async (email, password, role) => {
+const completePick = async (page, who, track) => {
+  const overlay = page.locator("#trackOverlay");
+  await overlay.waitFor({ state: "visible", timeout: 30000 }).catch(() => {});
+  if (await overlay.isVisible().catch(() => false)) {
+    await page.click(`#trackOverlay [data-who="${who}"]`);
+    await page.click(`#trackOverlay [data-track="${track}"]`);
+    await overlay.waitFor({ state: "detached", timeout: 10000 }).catch(() => {});
+  }
+};
+const doorSignIn = async (email, password, who, track) => {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   const errs = [];
   page.on("pageerror", (e) => errs.push(String(e)));
   await page.goto(BASE + "/app2/door.html", { waitUntil: "networkidle" });
-  await page.click(`[data-role="${role}"]`);
   await page.waitForSelector("#authDoor:not([hidden])", { timeout: 5000 });
   await page.fill("#emailIn", email);
   await page.click("#nextBtn");
@@ -180,11 +190,12 @@ const doorSignIn = async (email, password, role) => {
   await page.click("#joinBtn");
   await page.waitForURL(/index\.html/, { timeout: 20000 });
   await page.waitForFunction(() => window.CARESITS_AUTH_STATE === "signed-in", null, { timeout: 20000 });
+  if (who && track) await completePick(page, who, track);
   const uid = await page.evaluate(() => window.CARESITS_UID);
   return { page, uid, errs };
 };
 {
-  const { page, uid, errs } = await doorSignIn(FAM.email, FAM.password, "family");
+  const { page, uid, errs } = await doorSignIn(FAM.email, FAM.password, "family", "family-nanny");
   const rest = await signIn(FAM.email, FAM.password);
   t("email door (family): sign in lands in the shell signed in with the account uid", uid === rest.uid, `page uid ${uid} vs rest uid ${rest.uid}`);
   t("email door (family): the family shell stands (no bounce back to the door)", page.url().includes("index.html"));
@@ -192,7 +203,7 @@ const doorSignIn = async (email, password, role) => {
   await page.close();
 }
 {
-  const { page, uid, errs } = await doorSignIn(CAR.email, CAR.password, "career");
+  const { page, uid, errs } = await doorSignIn(CAR.email, CAR.password, "carer", "nanny");
   const rest = await signIn(CAR.email, CAR.password);
   t("email door (carer): sign in lands in the shell signed in with the account uid", uid === rest.uid, `page uid ${uid} vs rest uid ${rest.uid}`);
   t("email door (carer): no page errors", errs.length === 0, errs.join(" | ").slice(0, 200));
@@ -204,7 +215,6 @@ const doorSignIn = async (email, password, role) => {
   const email = `door.signup.${Date.now()}@example.com`;
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await page.goto(BASE + "/app2/door.html", { waitUntil: "networkidle" });
-  await page.click('[data-role="family"]');
   await page.waitForSelector("#authDoor:not([hidden])", { timeout: 5000 });
   await page.fill("#emailIn", email);
   await page.click("#nextBtn");
@@ -216,6 +226,21 @@ const doorSignIn = async (email, password, role) => {
   const uid = await page.evaluate(() => window.CARESITS_UID);
   const rest = await signIn(email, "Signup-2026-x");
   t("email door: sign up creates the account and enters signed in", !!uid && uid === rest.uid, `page uid ${uid} vs rest uid ${rest.uid}`);
+  // The pick fires for a fresh account (it has no track):
+  // answer it as a family looking for a nanny, and read the
+  // saved track back from the account itself.
+  await completePick(page, "family", "family-nanny");
+  // The track write rides the shell's async account write;
+  // poll the account doc until it lands (up to ~20 s).
+  let appDoc = null;
+  let appStatus = 0;
+  for (let i = 0; i < 20 && !(appDoc && appDoc.fields && appDoc.fields.track); i++) {
+    const r = await fetch(`https://firestore.googleapis.com/v1/projects/${PROJ}/databases/(default)/documents/users/${rest.uid}/meta/app`, { headers: { Authorization: "Bearer " + rest.token } });
+    appStatus = r.status;
+    appDoc = r.status === 200 ? await r.json() : null;
+    if (!(appDoc && appDoc.fields && appDoc.fields.track)) await new Promise((res) => setTimeout(res, 1000));
+  }
+  t("the pick after sign up saves the track on the account (family-nanny)", !!(appDoc && appDoc.fields && appDoc.fields.track && appDoc.fields.track.stringValue === "family-nanny"), appStatus + " " + JSON.stringify(appDoc && appDoc.fields).slice(0, 120));
   await page.close();
 }
 
@@ -232,7 +257,6 @@ const doorSignIn = async (email, password, role) => {
 for (const [label, btn, host] of [["Google", "#googleBtn", "accounts.google.com"], ["Apple", "#appleBtn", "appleid.apple.com"]]) {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await page.goto(BASE + "/app2/door.html", { waitUntil: "networkidle" });
-  await page.click('[data-role="family"]');
   await page.waitForSelector("#authDoor:not([hidden])", { timeout: 5000 });
   const popupPromise = page.waitForEvent("popup", { timeout: 15000 }).catch(() => null);
   await page.click(btn);
@@ -274,7 +298,6 @@ for (const [label, btn, host] of [["Google", "#googleBtn", "accounts.google.com"
   const ctx1 = await chromium.launchPersistentContext(dir, { ...LAUNCH, viewport: { width: 390, height: 844 } });
   const p1 = ctx1.pages()[0] || await ctx1.newPage();
   await p1.goto(BASE + "/app2/door.html", { waitUntil: "networkidle" });
-  await p1.click('[data-role="family"]');
   await p1.waitForSelector("#authDoor:not([hidden])", { timeout: 5000 });
   await p1.fill("#emailIn", FAM.email);
   await p1.click("#nextBtn");
@@ -283,6 +306,7 @@ for (const [label, btn, host] of [["Google", "#googleBtn", "accounts.google.com"
   await p1.click("#joinBtn");
   await p1.waitForURL(/index\.html/, { timeout: 20000 });
   await p1.waitForFunction(() => window.CARESITS_AUTH_STATE === "signed-in", null, { timeout: 20000 });
+  await completePick(p1, "family", "family-nanny");
   const uid1 = await p1.evaluate(() => window.CARESITS_UID);
   await ctx1.close();
   const ctx2 = await chromium.launchPersistentContext(dir, { ...LAUNCH, viewport: { width: 390, height: 844 } });

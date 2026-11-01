@@ -1,7 +1,11 @@
 // Caresitters app2 — the questions of each track, as data (31 Oct 2026).
 // journey.js reads these: which questions, in which order, for which
-// track. Photo is always step 3 (right after the name and place), so
-// it is in the very first build and never buried at the end.
+// track. The nanny and family nanny builds follow the observed
+// Babysits wizard order (account walk, 1 Nov 2026): the photo step
+// stands LAST in those two builds and is required to finish, with
+// no skip, exactly as in the wizard they copy. The au pair tracks
+// are ours (Babysits has none) and keep their 137 shape, photo
+// step 3 included.
 import { ROLES, LANGS, BANDS, AGES, ACTIVITIES } from "./questions.js";
 import { packByName, packById, checkFor, auJurisdiction, COUNTRY_NAMES } from "./countries.js";
 import { WORLD_NAMES, monthChoices, STAY_MONTHS, HOURS_WEEK, DUTIES, HOST_EXTRAS, ENGLISH_LEVELS, AUPAIR_RULES, CHECK_DUTY, countryPoint } from "./tracks.js";
@@ -31,16 +35,69 @@ export function trackFields() {
     { id: "wantArrive", label: "When do you want your au pair to arrive?", type: "dropdown", options: months, required: true },
     { id: "wantStay", label: "How many months do you want them to stay?", type: "dropdown", options: STAY_MONTHS, required: true },
     { id: "hostLetter", label: "Write a short hello to the au pair", type: "text", optional: true },
+    // nanny family: the pay and the need in their own words,
+    // in the first build (Difference Map 31 Oct, item 14).
+    // payOffered itself is defined with the family pages.
+    { id: "needWords", label: "Tell carers what you need, in your own words", type: "text", required: true },
+    // nanny: about and education, in the first build
+    // (Difference Map 31 Oct, item 14). The about rides the
+    // profile's own about line at Finish, like the letters
+    // above. The education answer is saved with the
+    // questionnaire; the public card cannot carry it until
+    // the rules fold admits an education key, so it is not
+    // shown to families yet, and that is named, not hidden.
+    // Education is the walk's two part step (account walk,
+    // 1 Nov 2026): a level pick AND a short written part,
+    // both required, like theirs.
+    { id: "aboutMe", label: "Tell families about you", type: "text", required: true },
+    { id: "education", label: "Education", type: "education", options: ["Primary school", "Secondary school", "TAFE or vocational", "University", "Postgraduate"], required: true },
     // nanny and nanny-family: the checks, in the country's own words
     { id: "checkDuty", label: "Checks in your area", type: "info", info: "checkDuty" },
+    // ---- the walk steps (Babysits account walk, 1 Nov 2026) ----
+    // These answers live in the member's own questionnaire
+    // record only. The sealed rules admit no card key for any
+    // of them, so none is published to other members until
+    // the Security rules fold admits one; the profile view
+    // renders each one only when a published card carries it.
+    // A date of birth is the member's own private account
+    // data by the owner's word: account side only, never on
+    // a card, never on a profile page.
+    { id: "dateOfBirth", label: "What is your date of birth?", type: "date", required: true },
+    { id: "childcareCert", label: "Do you have a childcare certification?", type: "yesno", required: true },
+    { id: "medicalCert", label: "Do you have a medical certification?", type: "yesno", required: true },
+    { id: "specialNeedsExp", label: "Do you have experience caring for children with special needs?", type: "yesno", required: true },
+    { id: "appliesToYou", label: "Which of these applies to you?", type: "chips", options: ["Driving licence", "Own car", "First aid certificate", "Smoker", "I have children"], optional: true },
+    { id: "comfortableWith", label: "What are you comfortable with?", type: "chips", options: ["Pets", "Cooking", "Chores", "Homework help"], required: true },
+    { id: "careLocationCarer", label: "Where does care happen?", type: "select", options: ["At the family", "At my home"], required: true },
+    { id: "childrenCount", label: "How many children do you have?", type: "select", options: ["1 child", "2 children", "3 children", "4 or more"], required: true },
+    { id: "childrenTraits", label: "Describe your children in 3 words", type: "chips", options: ["Active", "Shy", "Funny", "Sweet", "Curious", "Talkative", "Calm", "Creative", "Independent", "Sensitive", "Adventurous", "Playful"], required: true },
+    { id: "careLocationFamily", label: "Where does care happen?", type: "select", options: ["At our home", "At the carer's home"], required: true },
+    { id: "frequency", label: "How often, and how soon?", type: "frequency", required: true },
   ];
 }
 
 // ---- the order, per track ----
 // COUNTRY comes first only when the journey has no country yet.
 export const ESSENTIAL_IDS = {
-  "family-nanny": ["displayName", "photo", "postcode", "checkDuty", "role", "childrenBands", "startWhen", "scheduleNeed", "languages", "mustLanguages", "nonSmoker"],
-  nanny: ["displayName", "photo", "postcode", "maxDistanceKm", "checkDuty", "checksLevel", "experience", "agesAccepted", "availability", "languages", "payFloor"],
+  // Family nanny, in the observed family wizard order (account
+  // walk, 1 Nov 2026): location, children count, children ages,
+  // children in 3 words, languages, special needs, type of care
+  // (multi pick), comfortable with, availability, frequency and
+  // urgency, rate, care place, about the family, photo LAST and
+  // required. Ours alone: the checks word rides after the type
+  // of care, and the family's own must words (languages must,
+  // non smoker) ride at the end, before the photo, because they
+  // feed the family's musts and are not part of that wizard.
+  "family-nanny": ["displayName", "postcode", "childrenCount", "childrenBands", "childrenTraits", "languages", "specialNeeds", "role", "checkDuty", "comfortableWith", "scheduleNeed", "frequency", "payOffered", "careLocationFamily", "needWords", "mustLanguages", "nonSmoker", "photo"],
+  // Nanny, in the observed carer wizard order (account walk,
+  // 1 Nov 2026): location, date of birth, languages, education,
+  // certifications, 3 words, experience, age groups, special
+  // needs, skills, applies to you (skippable, like theirs),
+  // comfortable with, availability grid, rate, care place,
+  // about, photo LAST and required. Ours alone: the checks
+  // word, the checks level and the travel distance ride after
+  // the about step, before the photo.
+  nanny: ["displayName", "postcode", "dateOfBirth", "languages", "education", "childcareCert", "medicalCert", "personality", "experience", "agesAccepted", "specialNeedsExp", "activities", "appliesToYou", "comfortableWith", "availability", "payFloor", "careLocationCarer", "aboutMe", "checkDuty", "checksLevel", "maxDistanceKm", "photo"],
   "family-aupair": ["displayName", "photo", "postcode", "hostRules", "childrenBands", "hostRoom", "duties", "hoursWeek", "extras", "wantArrive", "wantStay", "mustLanguages", "hostLetter"],
   aupair: ["displayName", "photo", "homeCountry", "age", "destinations", "auRules", "arrivalFrom", "stayMonths", "languages", "english", "infantOk", "experience", "swim", "drivesCar", "apLetter"],
 };
