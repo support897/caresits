@@ -385,6 +385,16 @@ function render() {
 
 function wire() {
   $("#fields").addEventListener("click", (e) => {
+    // A tap on a form control is the control's own business: the
+    // input and change listeners below read its value. Rebuilding
+    // the fields here (the persist + render at the end of this
+    // handler) replaces the very element the tap is focusing, so
+    // on a phone the keyboard never opens (Ilse's phone, build
+    // 139, 1 Nov 2026: the name field would not take the keyboard;
+    // every automated drive types without a real tap, so no suite
+    // could see it). Labels ride along: a label tap forwards to
+    // its control, and a rebuild would eat the forwarded tap.
+    if (e.target.closest("input, select, textarea, label")) return;
     const hideWhy = e.target.closest("[data-hide-question-why]");
     if (hideWhy) { hideQuestionWhy(); return; }
     const choicePage = e.target.closest("[data-choice-page]");
