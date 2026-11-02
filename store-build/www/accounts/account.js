@@ -189,7 +189,7 @@ export const DOOR_TIMEOUTS = { native: 20000, ensure: 10000 };
 // creates it, like for like: initializeAuth naming
 // browserLocalPersistence, the reliable settler in that
 // webview. The web keeps getAuth.
-export function authInitShape(native) { return native ? "browserLocal" : "default"; }
+export function authInitShape(native) { return "browserLocal"; }
 function isNativePlatform() {
   try { const cap = window.Capacitor; return !!(cap && typeof cap.isNativePlatform === "function" && cap.isNativePlatform()); }
   catch { return false; }
@@ -197,7 +197,9 @@ function isNativePlatform() {
 function initAuthForPlatform(authMod, app, native) {
   if (authInitShape(native) === "browserLocal" && typeof authMod.initializeAuth === "function") {
     try {
-      const auth = authMod.initializeAuth(app, { persistence: authMod.browserLocalPersistence });
+      const persistence = [authMod.browserLocalPersistence];
+      if (authMod.indexedDBLocalPersistence) persistence.push(authMod.indexedDBLocalPersistence);
+      const auth = authMod.initializeAuth(app, { persistence });
       console.info("[door] auth init: native named persistence (browserLocal)");
       return auth;
     } catch { /* an instance already stands: fall through */ }
@@ -214,7 +216,10 @@ export async function initAccounts(config, onUser) {
   const authMod = await import(`${SDK}/firebase-auth.js`);
   const fsMod = await import(`${SDK}/firebase-firestore.js`);
   const app = initializeApp(config);
+  let shared = null;
+  try { shared = await import("../app2/auth-shared.js"); await shared.restoreSessionMirror(); } catch { /* the mirror is a bonus */ }
   _auth = initAuthForPlatform(authMod, app, isNativePlatform());
+  try { shared && shared.sharedAuth(authMod, app); } catch { /* starts the session mirror */ }
   _db = fsMod.getFirestore(app);
   authMod.onAuthStateChanged(_auth, async (u) => {
     _user = u;
