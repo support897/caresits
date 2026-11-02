@@ -406,7 +406,7 @@ function bootPhaseC() {
     if (mRoot) renderMatches(mRoot, "", [], {});
     if (bRoot) renderBoard(bRoot, null, []);
   }
-  window.CARESITS_CONTACT = async (otherUid, otherDoc) => {
+  window.CARESITS_CONTACT = async (otherUid, otherDoc, opts = {}) => {
     const me = window.CARESITS_ME || {};
     const familyUid = me.side === "family" ? me.uid : otherUid;
     const carerUid = me.side === "family" ? otherUid : me.uid;
@@ -415,14 +415,17 @@ function bootPhaseC() {
     const learning = learningMatchDetails(familyPlan, carerPlan);
     const sharedPlan = mergeLearningPlans(familyPlan, carerPlan);
     const plan = planContact({ familyUid, carerUid, createdBy: me.uid, nowIso: nowIso(), createdDay: today(), profileComplete: profileDone(), learningPlan: sharedPlan, learningMatches: learning.reasons });
-    if (!plan.ok && plan.reason === "profile-incomplete") { walkToQuestions(); return; }
+    if (!plan.ok && plan.reason === "profile-incomplete") { walkToQuestions(); return false; }
     if (plan.ok) {
       const result = await write("contact", plan);
       if (result?.ok) {
-        softToast("Request sent. You can chat as soon as they say yes.");
-        window.CARESITS_NAV && window.CARESITS_NAV("thread");
+        softToast(opts.stay ? "Interest sent. You can chat as soon as they say yes." : "Request sent. You can chat as soon as they say yes.");
+        if (!opts.stay) window.CARESITS_NAV && window.CARESITS_NAV("thread");
+        return true;
       }
+      return false;
     }
+    return false;
   };
 }
 

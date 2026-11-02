@@ -83,12 +83,14 @@ function visibleInMenu(node) {
   return !!node && !node.hidden && !node.closest("[hidden]");
 }
 const TAB_TEXT = {
-  "family-find": "Find: say what you need, then see carers on a map.",
-  "family-week": "Calendar: mark the days you need help.",
+  "family-find": "Discover: swipe through carers near you, with your match score.",
+  "family-matches": "Matches: people who like you back.",
+  "family-profile": "Profile: your family page, photos, reviews and badges. Edit it any time.",
   "family-urgent": "Urgent: need help fast? Post it here in a few taps.",
   "family-messages": "Messages: chat with your carer.",
-  "career-find": "Jobs: see families near you on a map.",
-  "career-week": "Calendar: mark the days you are free.",
+  "career-find": "Discover: swipe through families near you, with your match score.",
+  "career-matches": "Matches: families who like you back.",
+  "career-profile": "Profile: your page, photos, references, reviews and badges. Edit it any time.",
   "career-urgent": "Urgent: families who need help right now.",
   "career-messages": "Messages: chat with families.",
   "connect-home": "Today: fun activities picked for your kids.",
@@ -105,6 +107,7 @@ function sideTabs(side) {
         : tab.endsWith("-find") ? "find"
           : tab.endsWith("-family") ? "family"
             : tab.endsWith("-week") ? "week"
+              : tab.endsWith("-matches") ? "matches"
               : tab.endsWith("-jobs") ? "jobs"
                 : tab.endsWith("-profile") ? "profile"
                   : tab.endsWith("-messages") ? "messages"

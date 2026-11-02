@@ -153,7 +153,7 @@ $("#forgotBtn").addEventListener("click", async () => {
     const appMod = await import("../accounts/sdk/firebase-app.js");
     const authMod = await import("../accounts/sdk/firebase-auth.js");
     const app = appMod.getApps().length ? appMod.getApps()[0] : appMod.initializeApp(firebaseConfig);
-    await authMod.sendPasswordResetEmail(authMod.getAuth(app), email);
+    await authMod.sendPasswordResetEmail((await import("./auth-shared.js")).sharedAuth(authMod, app), email);
     msg(tr("door.resetSent"));
   } catch { msg(tr("door.resetFail")); }
 });

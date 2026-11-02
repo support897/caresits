@@ -6,8 +6,9 @@
 <title>Caresitters</title>
 <meta name="description" content="Caresitters. Find care. Share the day.">
 <link rel="icon" href="../icon.svg">
-<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="maplib/leaflet/leaflet.css">
 <link rel="stylesheet" href="shell.css">
+<link rel="stylesheet" href="swipe.css">
 </head>
 <body>
 <div id="layout" class="layout" data-mode="finding">
@@ -170,32 +171,32 @@
   </main>
   <nav id="bottomNav" class="bottomNav" data-i18n-aria="shell.navigation" aria-label="Main navigation">
     <button type="button" class="bottomTab" data-bottom-role="family" data-bottom-tab="family-find" data-nav="find">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><span>Find</span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="16" rx="3"/><path d="M9 9h6M9 13h4"/></svg><span>Discover</span>
     </button>
-    <button type="button" class="bottomTab" data-bottom-role="family" data-bottom-tab="family-week" data-nav="calendar">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M8 14h3M8 17h3"/></svg><span>Calendar</span>
-    </button>
-    <button type="button" class="bottomTab" data-bottom-role="family" data-bottom-tab="family-urgent" data-nav="board">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg><span>Urgent</span>
+    <button type="button" class="bottomTab" data-bottom-role="family" data-bottom-tab="family-matches" data-nav="matches">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2z"/></svg><span>Matches</span>
     </button>
     <button type="button" class="bottomTab" data-bottom-role="family" data-bottom-tab="family-messages" data-nav="thread">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v12H9l-5 4z"/><path d="M8 10h8M8 13h5"/></svg><span>Messages</span>
+    </button>
+    <button type="button" class="bottomTab" data-bottom-role="family" data-bottom-tab="family-profile" data-nav="profile">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span>Profile</span>
     </button>
     <button type="button" class="bottomTab" data-bottom-role="family" data-bottom-tab="family-more" data-open-more="true">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>More</span>
     </button>
 
     <button type="button" class="bottomTab" data-bottom-role="career" data-bottom-tab="career-find" data-nav="find" hidden>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><span>Jobs</span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="16" rx="3"/><path d="M9 9h6M9 13h4"/></svg><span>Discover</span>
     </button>
-    <button type="button" class="bottomTab" data-bottom-role="career" data-bottom-tab="career-week" data-nav="calendar" hidden>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M8 14h3M8 17h3"/></svg><span>Calendar</span>
-    </button>
-    <button type="button" class="bottomTab" data-bottom-role="career" data-bottom-tab="career-urgent" data-nav="board" hidden>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg><span>Urgent</span>
+    <button type="button" class="bottomTab" data-bottom-role="career" data-bottom-tab="career-matches" data-nav="matches" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2z"/></svg><span>Matches</span>
     </button>
     <button type="button" class="bottomTab" data-bottom-role="career" data-bottom-tab="career-messages" data-nav="thread" hidden>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v12H9l-5 4z"/><path d="M8 10h8M8 13h5"/></svg><span>Messages</span>
+    </button>
+    <button type="button" class="bottomTab" data-bottom-role="career" data-bottom-tab="career-profile" data-nav="profile" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span>Profile</span>
     </button>
     <button type="button" class="bottomTab" data-bottom-role="career" data-bottom-tab="career-more" data-open-more="true" hidden>
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>More</span>
@@ -234,7 +235,7 @@
 <script type="module" src="matches.js"></script>
 <script type="module" src="safety.js"></script>
 <script type="module" src="calendar.js"></script>
-<script src="vendor/leaflet/leaflet.js"></script>
+<script src="maplib/leaflet/leaflet.js"></script>
 <script type="module" src="tour.js"></script>
 <script type="module" src="family.js"></script>
 <script type="module" src="bin.js"></script>

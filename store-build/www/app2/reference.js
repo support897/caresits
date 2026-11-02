@@ -36,7 +36,7 @@ $("form").addEventListener("submit", async (e) => {
   $("go").disabled = true; msg.textContent = "Sending...";
   try {
     const app = appMod.getApps().find((a) => a.name === "[DEFAULT]") || appMod.initializeApp(firebaseConfig);
-    const auth = authMod.getAuth(app);
+    const auth = (await import("./auth-shared.js")).sharedAuth(authMod, app);
     const cred = auth.currentUser ? { user: auth.currentUser } : await authMod.signInAnonymously(auth);
     const db = fs.getFirestore(app);
     const data = { from: cred.user.uid, kind: "link", stars, text, at: fs.serverTimestamp() };

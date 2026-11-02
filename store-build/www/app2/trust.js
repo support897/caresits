@@ -174,8 +174,28 @@ export function renderProfile(root, me) {
   const go = el("button", "ghostBtn", tr("trust.seeQ"));
   go.type = "button";
   go.addEventListener("click", () => document.querySelector('[data-nav="questionnaire"]')?.click());
+  go.classList.replace("ghostBtn", "mainBtn");
   card.append(go);
+  // Badges and references live on the profile: what others see on the card.
+  const badgeRow = el("div", "dkBadges");
+  const tr0 = window.CARESITS_TRUST || {};
+  const checks = String(me.checksLevel || (tr0.me && tr0.me.checksLevel) || "").toLowerCase();
+  badgeRow.append(el("span", "dkBadge" + (checks === "register" || checks === "sighted" ? " good" : ""), checks === "register" ? "Background checked" : checks === "sighted" ? "ID sighted" : "Self-reported"));
+  for (const d of tr0.docs || []) if (d && (d.label || d.name || d.kind)) badgeRow.append(el("span", "dkBadge good", d.label || d.name || d.kind));
+  const nRev = (tr0.reviews || []).length;
+  badgeRow.append(el("span", "dkBadge" + (nRev ? " good" : ""), nRev ? nRev + (nRev === 1 ? " review" : " reviews") : "No reviews yet"));
+  card.append(badgeRow);
   root.append(card);
+  const refCard = el("div", "cardIn");
+  refCard.append(el("h3", null, "References and reviews"), el("p", null, "Reviews and references from families, carers and people who know you. They show on your card."));
+  const refBox = el("div", "v2RevList");
+  refCard.append(refBox);
+  if (me.uid && window.CARESITS_V2 && window.CARESITS_V2.reviewsInto) window.CARESITS_V2.reviewsInto(refBox, me.uid);
+  const ask = el("button", "ghostBtn", "Ask for a reference");
+  ask.type = "button";
+  ask.addEventListener("click", () => document.querySelector('[data-nav="reviews"]')?.click());
+  refCard.append(ask);
+  root.append(refCard);
   const pcard = el("div", "cardIn");
   pcard.append(el("h3", null, tr("photo.title")), el("p", null, tr("photo.body")));
   let photoImg = null;
@@ -228,7 +248,7 @@ export function renderProfile(root, me) {
   root.append(pcard);
   const trust = window.CARESITS_TRUST || {};
   renderTrustProgress(root, me, trust.docs || [], "profile", { onPhoto: () => pick.click() });
-  if (me.side === "carer") {
+  if (me.side === "carer" || me.side === "family") {
     // F14: up to four more photos. The saved list rides the
     // card (card.gallery, slot order) and every change writes
     // the whole list through the gallery seam. A pick with no

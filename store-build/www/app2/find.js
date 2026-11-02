@@ -12,6 +12,9 @@ import { frameUser } from "./account-save.js";
 import { LANGS, BANDS, DAYS } from "./questions.js";
 import { paintFileImg } from "./files.js";
 import { renderAuPairFind, viewerIsAuPairWorld } from "./aupair-find.js";
+import { renderDeck, getRadius, getPrefs } from "./swipe.js";
+import { inRadius, scoreFit } from "./fit.js";
+import { ensureLeaflet } from "./maploader.js";
 const labelText = (s) => tr({ "Perfect Pair": "find.label.perfect", "Strong Fit": "find.label.strong", "Good Fit": "find.label.good" }[s] || "find.label.good");
 const qualText = (s) => (s === "Quick profile, rough match" ? tr("find.qualifier") : s);
 const reasonText = (result, r, i) => { const code = result.reasonCodes?.[i]; return code ? tr("reason." + code) : r; };
@@ -421,6 +424,7 @@ function mapSection(viewerDoc, candidateDocs, browse) {
 
 const excludedUids = new Set();
 let showSaved = false;
+let viewMode = "swipe";
 let lastRender = null;
 export function renderFind(root, viewerDoc, candidateDocs) {
   lastRender = { root, viewerDoc, candidateDocs };
@@ -445,7 +449,7 @@ export function renderFind(root, viewerDoc, candidateDocs) {
     const img = el("img", "bunnyBig");
     img.src = "bunny/bunny-rest-calm.png";
     img.alt = tr("find.bunnyRest");
-    box.append(img, el("h3", null, isCarerView ? "Finish your profile to see families" : tr("find.waitTitle")), el("p", null, isCarerView ? "Answer a few questions and we line up families who need what you offer. Looking around costs nothing, always." : tr("find.waitBody")));
+    box.append(img, el("h3", null, isCarerView ? "Create your profile to see families" : "Create your profile to see carers"), el("p", null, isCarerView ? "Answer a few questions and we line up families who need what you offer. Looking around costs nothing, always." : tr("find.waitBody")));
     const go = el("button", "mainBtn", tr("find.startQ"));
     go.type = "button";
     go.addEventListener("click", () => document.querySelector('[data-nav="questionnaire"]')?.click());
@@ -453,10 +457,31 @@ export function renderFind(root, viewerDoc, candidateDocs) {
     root.append(box);
     root.append(el("h3", "findNearlyTitle", isCarerView ? "Families near you" : tr("find.nearYou")));
     root.append(mapSection(null, visibleCandidates, null));
+    // A new member MUST make their profile first: the account is live,
+    // the profile read came back empty, so open the profile builder once.
+    const meNow = window.CARESITS_ME || {};
+    if (meNow.uid && window.CARESITS_FIND_DATA && !window.CARESITS_FIND_DATA.viewer && !sessionStorage.getItem("caresits-profile-nudge-" + meNow.uid)) {
+      try { sessionStorage.setItem("caresits-profile-nudge-" + meNow.uid, "1"); } catch { /* storage off */ }
+      setTimeout(() => window.CARESITS_NAV?.("questionnaire"), 0);
+    }
+    if (meNow.uid && window.CARESITS_FIND_DATA && !window.CARESITS_FIND_DATA.viewer) document.getElementById("layout")?.setAttribute("data-onboarding", "1");
     return;
   }
-  const filteredCandidates = filterCandidates(viewerDoc, visibleCandidates);
+  document.getElementById("layout")?.removeAttribute("data-onboarding");
+  const radiusKm = getRadius(viewerDoc.uid, viewerDoc);
+  const filteredAll = filterCandidates(viewerDoc, visibleCandidates);
+  const filteredCandidates = filteredAll.filter((d) => d.side === viewerDoc.side || inRadius(kmBetween(viewerDoc.card || {}, d.card || {}), radiusKm));
   const b = assembleBrowse(viewerDoc, filteredCandidates);
+  // ONE match percentage everywhere (deck, list, map): the fit score
+  // from "what matters to you", distance and days, with the old
+  // questionnaire pair score mixed in when both sides answered it.
+  const prefsNow = getPrefs(viewerDoc.uid);
+  for (const e of [...b.top, ...b.more]) {
+    if (e.result && e.result.shown && e.result.personal !== false && e.result.enginePair == null) {
+      e.result.enginePair = e.result.pair;
+      e.result.pair = scoreFit({ viewer: viewerDoc, other: e.doc, prefs: prefsNow, radiusKm, km: e.distanceKm, engine: { pair: e.result.enginePair } }).pct;
+    }
+  }
   const poolWord = viewerDoc.side === "family"
     ? (b.poolCount === 1 ? tr("find.pool.carer1") : tr("find.pool.carerN", undefined, { n: b.poolCount }))
     : (b.poolCount === 1 ? tr("find.pool.family1") : tr("find.pool.familyN", undefined, { n: b.poolCount }));
@@ -491,16 +516,9 @@ export function renderFind(root, viewerDoc, candidateDocs) {
     }
     root.append(chipsRow);
   }
-  const toggle = el("div", "viewToggle");
-  const listBtn = el("button", "chip on", tr("find.list"));
-  const mapBtn = el("button", "chip", tr("find.map"));
-  listBtn.type = "button"; mapBtn.type = "button";
-  const mapWrap = mapSection(viewerDoc, filteredCandidates, b);
+  const mapWrap = mapSection(viewerDoc, visibleCandidates, b);
   mapWrap.hidden = true;
-  listBtn.addEventListener("click", () => { mapWrap.hidden = true; listBtn.classList.add("on"); mapBtn.classList.remove("on"); });
-  mapBtn.addEventListener("click", () => { mapWrap.hidden = false; mapBtn.classList.add("on"); listBtn.classList.remove("on"); });
-  toggle.append(listBtn, mapBtn);
-  root.append(toggle, mapWrap);
+  root.append(mapWrap);
   if (b.shownCount === 0) {
     const box = el("div", "cardIn");
     const img = el("img", "bunnyBig");
@@ -564,6 +582,54 @@ export function renderFind(root, viewerDoc, candidateDocs) {
     }
     root.append(nl);
   }
+  layoutModes(root, viewerDoc, visibleCandidates, b, mapWrap);
+}
+
+// Discover: Swipe | List | Map. Swipe is the home view. Everything the
+// older Find screen built (title aside) moves into the List panel.
+function layoutModes(root, viewerDoc, candidates, browse, mapWrap) {
+  const kids = [...root.children];
+  const title = kids.shift();
+  const listPanel = el("div", "dkListPanel");
+  for (const k of kids) if (k !== mapWrap) listPanel.append(k);
+  const mapPanel = el("div", "dkMapPanel");
+  mapPanel.append(mapWrap);
+  const deckHost = el("div", "dkDeck");
+  const rerender = () => renderFind(lastRender.root, lastRender.viewerDoc, lastRender.candidateDocs);
+  const byUid = new Map();
+  for (const e of [...browse.top, ...browse.more]) if (e.result?.personal !== false && e.result?.shown) byUid.set(e.doc.uid || e.doc.displayName, { pair: e.result.enginePair ?? e.result.pair });
+  const isMutual = (uid) => ((window.CARESITS_PHASE_C || {}).rels || []).some((r) => (r.members || []).includes(uid) && r.createdBy === uid);
+  const modes = { swipe: deckHost, list: listPanel, map: mapPanel };
+  const bar = el("div", "dkModeBar");
+  const seg = el("div", "dkSeg"); seg.setAttribute("role", "tablist");
+  const setMode = (m) => {
+    viewMode = m;
+    for (const [k, node] of Object.entries(modes)) node.hidden = k !== m;
+    seg.querySelectorAll("button").forEach((b2) => { b2.classList.toggle("on", b2.dataset.mode === m); b2.setAttribute("aria-selected", String(b2.dataset.mode === m)); });
+    mapWrap.hidden = true;
+    if (m === "map") {
+      // Build the map NOW, while its box is visible: Leaflet measures
+      // its box at creation, and the scripts it needs are loaded.
+      ensureLeaflet().then(() => {
+        if (viewMode !== "map") return;
+        mapPanel.replaceChildren(mapSection(viewerDoc, candidates, browse));
+        const real = mapPanel.querySelector(".v2Map");
+        if (real) setTimeout(() => window.dispatchEvent(new Event("resize")), 200);
+      });
+    }
+  };
+  for (const [m, text] of [["swipe", "Swipe"], ["list", "List"], ["map", "Map"]]) {
+    const b2 = el("button", "", text); b2.type = "button"; b2.dataset.mode = m; b2.setAttribute("role", "tab");
+    b2.addEventListener("click", () => setMode(m));
+    seg.append(b2);
+  }
+  bar.append(seg);
+  root.replaceChildren(title, bar, deckHost, listPanel, mapPanel);
+  title.hidden = true; // the mode bar is the header; the page title stays for screen readers
+  title.classList.add("srOnly");
+  title.hidden = false;
+  renderDeck(deckHost, viewerDoc, candidates, { rerender, setMode, isMutual, engineFor: (doc) => byUid.get(doc.uid || doc.displayName) || null });
+  setMode(viewMode);
 }
 
 // The pool fetch, shared by Find's own cold path and the

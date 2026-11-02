@@ -68,7 +68,7 @@ async function idToken() {
     ? appMod.getApps().find((a) => a.name === "[DEFAULT]")
     : null;
   const app = existing || appMod.initializeApp(cfgMod.firebaseConfig);
-  const auth = authMod.getAuth(app);
+  const auth = (await import("./auth-shared.js")).sharedAuth(authMod, app);
   const user = auth.currentUser;
   if (!user) throw new Error("signed-out");
   return user.getIdToken();

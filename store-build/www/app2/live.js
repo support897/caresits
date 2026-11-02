@@ -206,9 +206,9 @@ export function publishTrust(profile, card, questionnaire) {
   // boot from the user doc's name field alone, which the save
   // never completes, so landed profiles read incomplete to
   // every gate for the whole session.
-  window.CARESITS_PROFILE_COMPLETE = Boolean(
-    me.side && me.name && questionnaire && questionnaire.answers && Object.keys(questionnaire.answers).length
-  );
+  // Build 141: the long questionnaire is optional. A profile made at
+  // sign up (side + name + a postcode) is enough to like and message.
+  window.CARESITS_PROFILE_COMPLETE = Boolean(me.side && me.name && (me.postcode || (card && card.postcode) || (questionnaire && questionnaire.answers && Object.keys(questionnaire.answers).length)));
   // The progress seam (QA night N1): Home reads the member's
   // questionnaire truth from here, never from the device keys
   // alone — the drain consumes the done envelope by design,
@@ -428,6 +428,8 @@ export async function bootLive() {
   // 103 R1 fault). Every shell module resolves the default app only.
   const app = appMod.getApps().find((a) => a.name === "[DEFAULT]") || appMod.initializeApp(cfg);
   const { sharedAuth } = await import("./auth-shared.js");
+  const { restoreSessionMirror, waitForSession } = await import("./auth-shared.js");
+  await restoreSessionMirror();
   const auth = sharedAuth(authMod, app);
   const db = fs.getFirestore(app);
   window.CARESITS_DB = { fs, db };
@@ -445,6 +447,10 @@ export async function bootLive() {
           delete document.documentElement.dataset.entryRole;
           if (previousUid) { clearSessionMarkers(); resetMemberSeams(null); }
         }
+        // Never bounce on a session that is still loading: look again
+        // once the saved session has settled (iPhone webview fix).
+        const settled = await waitForSession(auth);
+        if (settled && !settled.isAnonymous) { location.reload(); return; }
         gateSignedOut();
         resolve({ on: true, signedIn: false });
         return;
@@ -502,7 +508,7 @@ export async function bootLive() {
           if (Object.keys(merged).length > Object.keys(qData.answers || {}).length) qData = { ...qData, answers: merged };
         } catch { /* the base map stands */ }
         window.CARESITS_ME = { uid, side: profile.side || "", name: profile.displayName || "", entryRole: "" };
-        window.CARESITS_PROFILE_COMPLETE = !!(profile.displayName && q.exists());
+        window.CARESITS_PROFILE_COMPLETE = !!(profile.displayName && (profile.postcode || (typeof card !== "undefined" && card && card.postcode) || q.exists()));
       } catch { /* the surfaces stand in their empty states */ }
       // The entitlement record (payments chapter §3): read at boot
       // for family accounts only. Carers never read it, and no free

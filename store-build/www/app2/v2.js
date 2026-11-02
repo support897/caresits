@@ -217,7 +217,7 @@ export function leafletMap(host, points, centre, onPick) {
   host.append(box);
   const map = L.map(box, { zoomControl: true, attributionControl: true, scrollWheelZoom: false });
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18, attribution: "© OpenStreetMap" }).addTo(map);
-  const icon = L.icon({ iconUrl: "vendor/leaflet/images/marker-icon.png", iconRetinaUrl: "vendor/leaflet/images/marker-icon-2x.png", shadowUrl: "vendor/leaflet/images/marker-shadow.png", iconSize: [25, 41], iconAnchor: [12, 41], shadowSize: [41, 41] });
+  const icon = L.icon({ iconUrl: "maplib/leaflet/images/marker-icon.png", iconRetinaUrl: "maplib/leaflet/images/marker-icon-2x.png", shadowUrl: "maplib/leaflet/images/marker-shadow.png", iconSize: [25, 41], iconAnchor: [12, 41], shadowSize: [41, 41] });
   const bounds = [];
   for (const p of points) {
     const ll = [p.lat, p.lng];
@@ -225,8 +225,18 @@ export function leafletMap(host, points, centre, onPick) {
     L.marker(ll, { icon, title: p.name }).addTo(map).on("click", () => onPick(p));
   }
   if (centre) { bounds.push([centre.lat, centre.lng]); L.circleMarker([centre.lat, centre.lng], { radius: 7, color: "#1d4c43", fillColor: "#1d4c43", fillOpacity: 0.9 }).addTo(map); }
-  map.fitBounds(bounds, { padding: [30, 30], maxZoom: 13 });
-  setTimeout(() => map.invalidateSize(), 250);
+  // Open on the member's own area: their pin plus anyone within about
+  // 130 km. With nobody that near, open on everyone. Zoom out to see all.
+  let focus = bounds;
+  if (centre) {
+    const near = bounds.filter((b) => Math.abs(b[0] - centre.lat) < 1.2 && Math.abs(b[1] - centre.lng) < 1.2);
+    if (near.length > 1) focus = near;
+  }
+  const fit = () => { try { map.invalidateSize(); map.fitBounds(focus, { padding: [30, 30], maxZoom: 13 }); } catch { /* map gone */ } };
+  fit();
+  setTimeout(fit, 250);
+  setTimeout(fit, 900);
+  window.addEventListener("resize", () => { if (box.isConnected) map.invalidateSize(); });
   return true;
 }
 
