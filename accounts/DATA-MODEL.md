@@ -98,3 +98,12 @@ matching view, hire grants on children and Day Story, document
 sighting grants) take their shapes from the matching chapter, so
 their rules matches land with the matching build. Until then, the
 wall is the canonical one: a user touches only their own folder.
+
+## CareSpace (build 146, PROPOSED, rules not deployed)
+| Path | Meaning |
+|---|---|
+| `careSpaces/{spaceId}` | One private Care Space per family. `ownerUid`, `name`. |
+| `careSpaces/{spaceId}/members/{uid}` | `role` (admin, regular, limited, viewer), `permissions`, `status` (active, removed). Access follows this doc only. |
+| `careSpaces/{spaceId}/children/{id}` | Child profile with six sections. Allergies and medication: admin write only. |
+| `careSpaces/{spaceId}/{dayStory,calendar,shopping,messages}/{id}` | Day timeline, bookings/shifts/time off, shopping list, chat. |
+Today the app3 CareSpace screens keep their data on the device only (`caresits-cs-<uid>` in localStorage) until these rules are deployed. See `accounts/firestore.rules.carespace-PROPOSED`.

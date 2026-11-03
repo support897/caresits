@@ -1,0 +1,29 @@
+// PROPOSED rules for CareSpace. OWNER MUST DEPLOY. NOT deployed, NOT emulator-tested (unverified).
+// Paste inside `match /databases/{database}/documents { ... }` next to the existing rules.
+// Access depends on membership documents only, never on a role the client wrote about itself.
+function csMember(spaceId) { return exists(/databases/$(database)/documents/careSpaces/$(spaceId)/members/$(request.auth.uid)) && get(/databases/$(database)/documents/careSpaces/$(spaceId)/members/$(request.auth.uid)).data.status == "active"; }
+function csRole(spaceId) { return get(/databases/$(database)/documents/careSpaces/$(spaceId)/members/$(request.auth.uid)).data.role; }
+match /careSpaces/{spaceId} {
+  allow read: if request.auth != null && csMember(spaceId);
+  allow create: if request.auth != null && request.resource.data.ownerUid == request.auth.uid;
+  allow update, delete: if request.auth != null && csMember(spaceId) && csRole(spaceId) == "admin";
+  match /members/{uid} {
+    allow read: if request.auth != null && csMember(spaceId);
+    // only an admin adds, changes or removes members; a member may leave (delete self)
+    allow create, update: if request.auth != null && csMember(spaceId) && csRole(spaceId) == "admin";
+    allow delete: if request.auth != null && (uid == request.auth.uid || (csMember(spaceId) && csRole(spaceId) == "admin"));
+  }
+  // allergies and medication: admin writes only; every active member reads (per-permission read still to add)
+  match /children/{childId} {
+    allow read: if request.auth != null && csMember(spaceId);
+    allow create, update, delete: if request.auth != null && csMember(spaceId) && csRole(spaceId) == "admin";
+  }
+  match /{sub}/{doc} {  // dayStory, calendar, shopping, messages
+    allow read: if request.auth != null && csMember(spaceId);
+    allow create, update: if request.auth != null && csMember(spaceId) && csRole(spaceId) in ["admin", "regular"];
+    allow delete: if request.auth != null && csMember(spaceId) && csRole(spaceId) == "admin";
+  }
+}
+// _entitlements/{uid}: server only
+match /_entitlements/{uid} { allow read: if request.auth != null && request.auth.uid == uid; allow write: if false; }
+// Verified flags are server-written only (Cloud Function, not deployed): clients must never write users/{uid}/documents.status = "verified".
