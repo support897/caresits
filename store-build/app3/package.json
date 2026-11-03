@@ -1,3 +1,1 @@
-{"name":"caresitters-app3","private":true,"type":"module","scripts":{"dev":"vite","build":"vite build"},
-"dependencies":{"react":"^18.3.1","react-dom":"^18.3.1","framer-motion":"^11.11.0","firebase":"^10.12.2","@capacitor/core":"^8.5.3","@capacitor/haptics":"^8.0.0"},
-"devDependencies":{"vite":"^5.4.10","@vitejs/plugin-react":"^4.3.3"}}
+{"name":"caresitters-app3","private":true,"type":"module","scripts":{"dev":"vite","build":"vite build"},"dependencies":{"@capacitor/core":"^8.5.3","@capacitor/haptics":"^8.0.0","firebase":"^10.12.2","framer-motion":"^11.11.0","react":"^18.3.1","react-dom":"^18.3.1","zod":"^4.6.7"},"devDependencies":{"@vitejs/plugin-react":"^4.3.3","vite":"^5.4.10"}}
