@@ -329,6 +329,12 @@ function render() {
 
 function wire() {
   $("#fields").addEventListener("click", (e) => {
+    // A tap on a form control is the control's own business: the
+    // input and change listeners below read its value. Rebuilding
+    // the fields here replaces the very element the tap is focusing,
+    // so the keyboard never opens (Ilse's phone, build 139; verified
+    // again on desktop, 3 Nov 2026). Labels ride along.
+    if (e.target.closest("input, select, textarea, label")) return;
     const hideWhy = e.target.closest("[data-hide-question-why]");
     if (hideWhy) { hideQuestionWhy(); return; }
     const choicePage = e.target.closest("[data-choice-page]");
