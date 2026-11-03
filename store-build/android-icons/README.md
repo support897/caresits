@@ -1,0 +1,1 @@
+Android adaptive icon pieces from logo B. Copy mipmap-* folders to android/app/src/main/res/ and the xml to values/. Background #FDF8F0. Not yet in an Android project (there is no android/ folder in this repo).
