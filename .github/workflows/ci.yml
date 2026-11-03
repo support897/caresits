@@ -1,0 +1,14 @@
+name: ci
+on:
+  push:
+    branches: [qa-fixes-2026-10-26]
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: cd store-build/app3 && npm ci || npm i
+      - run: cd store-build/app3/src && node allergy-tests.mjs && node i18n-tests.mjs && node match6-tests.mjs
+      - run: cd store-build/app3 && npx vite build
