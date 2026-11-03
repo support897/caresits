@@ -564,3 +564,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .tag.apTag{background:#ede7f6}.tag.hostTag{background:#ffe9d6}
 .apCard .apFit li.miss{color:#8a4b00}
 .apMap{height:300px;border-radius:12px;overflow:hidden;margin:8px 0}
+
+/* Build 149: the bunny moves on every old screen too. Stops with reduced motion. */
+@keyframes bunnyBob { 0%,100% { transform: translateY(0) rotate(-1.5deg); } 50% { transform: translateY(-6px) rotate(1.5deg); } }
+.bunnyBig { animation: bunnyBob 3.2s ease-in-out infinite; transform-origin: 50% 90%; }
+@media (prefers-reduced-motion: reduce) { .bunnyBig { animation: none; } }
