@@ -70,7 +70,7 @@ function walkIn() {
   if (walkedIn) return;
   walkedIn = true;
   try { sessionStorage.setItem("caresits-tour", "1"); } catch { /* storage off */ }
-  location.href = "index.html";
+  location.href = "../app3/index.html";
 }
 
 async function layer() {
@@ -135,7 +135,7 @@ $("#joinBtn").addEventListener("click", async () => {
     }
     joinHold = false;
     sessionStorage.setItem("caresits-tour", "1");
-    location.href = "index.html";
+    location.href = "../app3/index.html";
   } catch (e) {
     joinHold = false;
     const code = e && e.code;
