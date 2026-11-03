@@ -4,6 +4,8 @@ import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "
 import "./style.css";
 import { Bunny, setBunnyCalm } from "./bunny.jsx";
 import { APP1, TAGLINE, CANCEL_POLICY } from "./brand.js";
+import { CareSpace } from "./carespace.jsx";
+import { Welcome, Tour, Builder, getSide, setSide } from "./flow.jsx";
 import * as D from "./data.js";
 import { PRIORITIES, DAYS, daysOf, RADIUS_STEPS, cyclePriority, emptyPrefs, label } from "../../www/app2/fit.js";
 
@@ -160,7 +162,7 @@ function Profile({ me }) {
   const [about, setAbout] = useState(me.about), [saved, setSaved] = useState(false);
   const save = async () => { await D.saveProfile(me.uid, { about }); setSaved(true); haptic(); setTimeout(() => setSaved(false), 1600); };
   return <div className="scroll"><div style={{ textAlign: "center", padding: "12px 0" }}><div className="av" style={{ width: 96, height: 96, margin: "0 auto", fontSize: 40 }}>{me.photoUrl ? <img src={me.photoUrl} alt="" /> : me.name[0]}</div><h1 style={{ marginTop: 10 }}>{me.name}</h1><span className="chip">{me.side === "family" ? "Family" : "Carer"} · {me.postcode}</span></div>
-    <Checks me={me} /><h3 style={{ marginTop: 16 }}>About</h3><textarea className="field" rows={4} value={about} onChange={(e) => setAbout(e.target.value)} />
+    <button className="btn alt" style={{ margin: "10px 0" }} onClick={() => window.__openCS && window.__openCS()}>Open the care-day app</button><Checks me={me} /><h3 style={{ marginTop: 16 }}>About</h3><textarea className="field" rows={4} value={about} onChange={(e) => setAbout(e.target.value)} />
     <button className="btn" onClick={save}>{saved ? "Saved ✓" : "Save changes"}</button>
     <a className="btn alt" style={{ display: "block", textAlign: "center", marginTop: 10, textDecoration: "none" }} href="../app2/index.html#profile">Edit full profile and badges</a>
     <label className="chip" style={{ display: "flex", gap: 10, margin: "14px 0", padding: 14, fontSize: 17 }}><input type="checkbox" defaultChecked={localStorage.getItem("caresits-bunny-calm") === "1"} onChange={(e) => setBunnyCalm(e.target.checked)} /> Turn the bunny down</label>
@@ -168,7 +170,7 @@ function Profile({ me }) {
 }
 
 function App() {
-  const [user, setUser] = useState(undefined), [me, setMe] = useState(null), [people, setPeople] = useState([]), [rels, setRels] = useState([]), [tab, setTab] = useState("discover"), [loading, setLoading] = useState(true), [err, setErr] = useState("");
+  const [csOpen, setCs] = useState(false), [side, setSideS] = useState(getSide()), [tour, setTour] = useState(() => localStorage.getItem("caresits-tour-done") !== "1"), [user, setUser] = useState(undefined), [me, setMe] = useState(null), [people, setPeople] = useState([]), [rels, setRels] = useState([]), [tab, setTab] = useState("discover"), [loading, setLoading] = useState(true), [err, setErr] = useState("");
   const [prefs, setPrefsS] = useState(() => ls("caresits-discover-prefs-x", emptyPrefs())), [radius, setRadiusS] = useState(() => ls("caresits-discover-radius-x", 25));
   useEffect(() => { (async () => { await D.restoreSessionMirror(); const a = D.auth(); await D.waitForSession(a); D.onAuthStateChanged(a, (u) => setUser(u || null)); })(); }, []);
   useEffect(() => {
@@ -177,14 +179,17 @@ function App() {
       setLoading(false);
     })();
   }, [user]);
+  useEffect(() => { window.__openCS = () => setCs(true); }, []);
   const setPrefs = (p) => { setPrefsS(p); localStorage.setItem("caresits-discover-prefs-x", JSON.stringify(p)); };
   const setRadius = (r) => { setRadiusS(r); localStorage.setItem("caresits-discover-radius-x", JSON.stringify(r)); };
   if (user === undefined) return <div className="auth"><div className="sk" style={{ height: 80 }} /></div>;
-  if (!user) return <Auth />;
-  if (!loading && !me) return <div className="auth"><Bunny mood="hello" size={150} /><h1>Let's build your profile</h1><p>A few quick questions so we can match you well.</p><a className="btn" style={{ textDecoration: "none" }} href="../app2/index.html">Start</a></div>;
+  if (!user) return side ? <Auth /> : <Welcome onPick={setSideS} />;
+  if (!loading && !me) return <Builder user={user} side={side || "family"} onDone={() => location.reload()} />;
+  if (csOpen && me) return <CareSpace me={me} rels={rels} people={people} onExit={() => setCs(false)} />;
   const tabs = [["discover", "Discover"], ["matches", "Matches"], ["messages", "Messages"], ["profile", "Profile"]];
   const pips = rels.filter((r) => r.state === "pending" && r.createdBy !== user.uid).length;
-  return <div className="app"><div className="screen">
+  const endTour = () => { localStorage.setItem("caresits-tour-done", "1"); setTour(false); };
+  return <div className="app">{tour && me && <Tour onDone={endTour} />}<div className="screen">
     {err && <div className="chip" style={{ position: "absolute", top: 8, left: 16, right: 16, zIndex: 60, textAlign: "center", background: "var(--butter)" }}>{err}</div>}
     <AnimatePresence mode="wait"><motion.div key={tab} style={{ height: "100%" }} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: .18 }}>
       {tab === "discover" && me && <Discover {...{ me, people, prefs, setPrefs, radius, setRadius, loading }} />}
