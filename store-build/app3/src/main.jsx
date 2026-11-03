@@ -182,6 +182,7 @@ function Profile({ me }) {
     <button className="btn alt" style={{ marginTop: 10 }} onClick={() => D.signOut(D.auth())}>Sign out</button></div>;
 }
 
+const CS_ONLY = new URLSearchParams(location.search).get("app") === "cs";
 function App() {
   const [csOpen, setCs] = useState(false), [apOpen, setAp] = useState(false), [side, setSideS] = useState(getSide()), [tour, setTour] = useState(() => localStorage.getItem("caresits-tour-done") !== "1"), [user, setUser] = useState(undefined), [me, setMe] = useState(null), [people, setPeople] = useState([]), [rels, setRels] = useState([]), [tab, setTab] = useState("discover"), [loading, setLoading] = useState(true), [err, setErr] = useState("");
   const [prefs, setPrefsS] = useState(() => ls("caresits-discover-prefs-x", emptyPrefs())), [radius, setRadiusS] = useState(() => ls("caresits-discover-radius-x", 25));
@@ -198,7 +199,7 @@ function App() {
   if (user === undefined) return <div className="auth"><div className="sk" style={{ height: 80 }} /></div>;
   if (!user) return side ? <Auth /> : <Welcome onPick={setSideS} />;
   if (!loading && !me) return <Builder user={user} side={side || "family"} onDone={() => location.reload()} />;
-  if (csOpen && me) return <CareSpace me={me} rels={rels} people={people} onExit={() => setCs(false)} />;
+  if ((csOpen || CS_ONLY) && me) return <CareSpace me={me} rels={rels} people={people} onExit={CS_ONLY ? null : () => setCs(false)} />;
   if (apOpen && me) return <div className="app"><div className="screen"><AuPair me={me} onBack={() => setAp(false)} /></div></div>;
   const tabs = [["discover", "Discover"], ["matches", "Matches"], ["messages", "Messages"], ["profile", "Profile"]];
   const pips = rels.filter((r) => r.state === "pending" && r.createdBy !== user.uid).length;

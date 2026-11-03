@@ -30,7 +30,7 @@ const ROLES = [["admin", "Admin (parent)"], ["regular", "Regular carer"], ["limi
 export function CareSpace({ me, rels, people, onExit }) {
   const [tab, setTab] = useState("chats"), [st, upd] = useStore(me.uid);
   const tabs = [["chats", "Chats"], ["calendar", "Calendar"], ["care", "Care"], ["activities", "Activities"], ["profile", "Profile"]];
-  return <div className="app cs"><div className="csHead"><b>{APP2}</b><button className="chip" onClick={onExit}>Back to Caresitters</button></div>
+  return <div className="app cs"><div className="csHead"><b>{APP2}</b>{onExit && <button className="chip" onClick={onExit}>Back to Caresitters</button>}</div>
     <div className="screen" style={{ top: 50 }}><AnimatePresence mode="wait"><motion.div key={tab} style={{ height: "100%" }} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: .15 }}>
       {tab === "chats" && <Chats {...{ me, rels, people }} />}
       {tab === "calendar" && <Cal {...{ me, st, upd }} />}
