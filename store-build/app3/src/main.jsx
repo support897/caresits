@@ -4,6 +4,8 @@ import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "
 import "./style.css";
 import { Bunny, setBunnyCalm } from "./bunny.jsx";
 import { APP1, TAGLINE, CANCEL_POLICY } from "./brand.js";
+import { initI18n, setLang, getLang, LANGS } from "./i18n.js";
+import { AuPair } from "./aupair.jsx";
 import { CareSpace } from "./carespace.jsx";
 import { Welcome, Tour, Builder, getSide, setSide } from "./flow.jsx";
 import * as D from "./data.js";
@@ -100,18 +102,12 @@ function Discover({ me, people, prefs, setPrefs, radius, setRadius, loading }) {
           <button className="fab" onClick={() => act("nope")} aria-label="Pass"><svg viewBox="0 0 24 24" style={{ color: "#E8607A" }}><path d="M6 6l12 12M18 6L6 18" /></svg></button>
           <button className="fab big" onClick={() => act("like")} aria-label="Like"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-9.6A4 4 0 0112 8a4 4 0 017 2.4C19 15.6 12 20 12 20z" /></svg></button>
           <button className="fab sm" onClick={() => setSheet("prio")} aria-label="What matters"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M8 14v6" /></svg></button></div>
-        <div className="acts2"><button className="chip" onClick={() => setChat({ p: inside[0], kind: "msg" })}>💬 Message</button>{me.side === "carer" && <button className="chip" onClick={() => setChat({ p: inside[0], kind: "resume" })}>📄 Send resume</button>}{me.side === "family" && <button className="chip" onClick={() => setBook({ p: inside[0], date: "", from: "09:00", to: "13:00" })}>📅 Book</button>}<button className="chip" onClick={() => toggleSave(inside[0])}>{saved.includes(inside[0].uid) ? "★ Saved" : "☆ Save"}</button></div></> :
+        <div className="acts2"><button className="chip" onClick={() => setChat({ p: inside[0], kind: "msg" })}>💬 Message</button>{me.side === "carer" && <button className="chip" onClick={() => setChat({ p: inside[0], kind: "resume" })}>📄 Send resume</button>}{me.side === "family" && <button className="chip" onClick={() => setBook({ p: inside[0], date: "", from: "09:00", to: "13:00", repeat: 0 })}>📅 Book</button>}<button className="chip" onClick={() => toggleSave(inside[0])}>{saved.includes(inside[0].uid) ? "★ Saved" : "☆ Save"}</button></div></> :
         <div className="deck empty"><Bunny mood="think" size={110} /><h2>No one within {radius || "your"} km</h2><p>{near[0] ? `Closest is ${near[0].name}, ${Math.round(near[0].km ?? 0)} km away.` : "New people join all the time."}</p><button className="btn" style={{ marginTop: 14 }} onClick={() => setRadius(radius ? (RADIUS_STEPS.find((s) => s > radius) ?? 0) : 0)}>Widen search</button></div>)
       : <div className="scroll" style={{ position: "absolute", inset: "140px 0 0" }}>{near.map((p) => <div className="li" key={p.uid}><Avatar p={p} /><div style={{ flex: 1 }}><b>{p.name}</b><div style={{ fontSize: 13, opacity: .7 }}>{p.km != null ? Math.round(p.km) + " km" : "—"} · {label(p.fit.pct)}</div></div><b>{p.fit.pct}%</b></div>)}</div>}
     <AnimatePresence>{sheet && sheet.why && <Sheet onClose={() => setSheet(null)}><h2>Why {sheet.why.fit.pct}% with {sheet.why.name}</h2><ul className="why" style={{ margin: "10px 0" }}>{(sheet.why.fit.reasons || []).map((r, i) => <li key={i}>✓ {r.text || r}</li>)}{(sheet.why.fit.gaps || []).map((g, i) => <li key={"g" + i}>! {g.text || g.id}</li>)}</ul><p style={{ opacity: .75, fontSize: 15 }}>Score is rule-based from your priorities, schedule, ages, languages and distance. {isChecked(sheet.why) ? "Checks on file." : "Checks not confirmed yet. Nothing here means verified."}</p><button className="btn" style={{ marginTop: 12 }} onClick={() => setSheet(null)}>Got it</button></Sheet>}
       {chat && <Sheet onClose={() => setChat(null)}><h2>{chat.kind === "resume" ? "Send your resume to " : "Message "}{chat.p.name}</h2>{chat.kind === "resume" ? <pre className="resume">{D.resumeText(me, chat.p)}</pre> : <textarea className="field" rows={4} autoFocus placeholder="Say hello..." value={txt} onChange={(e) => setTxt(e.target.value)} />}<button className="btn" style={{ marginTop: 12 }} disabled={chat.kind === "msg" && !txt.trim()} onClick={() => send(chat.p, chat.kind === "resume" ? D.resumeText(me, chat.p) : txt.trim(), chat.kind)}>Send</button></Sheet>}
-      {book && (() => { const rate = Number(book.p.card.payFloor || book.p.card.rate || 0), hrs = Math.max(0, (parseInt(book.to) * 60 + +book.to.slice(3) - parseInt(book.from) * 60 - +book.from.slice(3)) / 60), cost = rate ? Math.round(rate * hrs) : null; const opts = Array.from({ length: 29 }, (_, i) => { const m = 6 * 60 + i * 30; return String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"); });
-        return <Sheet onClose={() => setBook(null)}><h2>Book {book.p.name}</h2>
-          <label style={{ display: "block", margin: "8px 0" }}>Day<input className="field" type="date" value={book.date} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setBook({ ...book, date: e.target.value })} /></label>
-          <div style={{ display: "flex", gap: 10 }}><label style={{ flex: 1 }}>From<select className="field" value={book.from} onChange={(e) => setBook({ ...book, from: e.target.value })}>{opts.map((o) => <option key={o}>{o}</option>)}</select></label><label style={{ flex: 1 }}>To<select className="field" value={book.to} onChange={(e) => setBook({ ...book, to: e.target.value })}>{opts.map((o) => <option key={o}>{o}</option>)}</select></label></div>
-          <p style={{ margin: "10px 0" }}><b>{rate ? `$${rate}/hour` : "Rate not listed"}</b>{cost != null && hrs > 0 ? ` · about $${cost} for ${hrs} h` : ""}<br /><small style={{ opacity: .7 }}>Estimate only. Agree the final rate in chat.</small></p>
-          <p className="chip" style={{ display: "block", padding: 12, fontSize: 15 }}>Cancellation: {CANCEL_POLICY}</p>
-          <button className="btn" style={{ marginTop: 12 }} disabled={!book.date || hrs <= 0} onClick={() => { const t = `Booking request: ${book.date}, ${book.from} to ${book.to}${cost != null ? `, about $${cost}` : ""}. Cancellation: ${CANCEL_POLICY}`; send(book.p, t, "book"); setBook(null); }}>Send request</button></Sheet>; })()}
+      {book && <BookSheet me={me} book={book} setBook={setBook} send={send} />}
       {sheet === "radius" && <Sheet onClose={() => setSheet(null)}><h2>How far?</h2><div className="row" style={{ margin: "14px 0" }}>{RADIUS_STEPS.map((s) => <button key={s} className="tag" style={{ padding: "10px 16px", background: s === radius ? "var(--ink)" : "", color: s === radius ? "#fff" : "" }} onClick={() => { haptic(); setRadius(s); }}>{s ? s + " km" : "Anywhere"}</button>)}</div><button className="btn" onClick={() => setSheet(null)}>Done</button></Sheet>}
       {sheet === "prio" && <Sheet onClose={() => setSheet(null)}><h2>What matters to you?</h2><p style={{ opacity: .7 }}>Tap to cycle: nice, important, must.</p><div className="row">{(PRIORITIES[me.side] || []).map((it) => { const lv = prefs.levels[it.id]; return <button key={it.id} className="tag" style={{ padding: "10px 14px", background: lv === "must" ? "var(--ink)" : lv === "important" ? "var(--butter)" : lv === "nice" ? "var(--blush)" : "", color: lv === "must" ? "#fff" : "" }} onClick={() => { haptic(); setPrefs({ ...prefs, levels: cyclePriority(prefs.levels, it.id) }); }}>{it.label || it.id}{lv ? " · " + lv : ""}</button>; })}</div><button className="btn" style={{ marginTop: 14 }} onClick={() => setSheet(null)}>Show my matches</button></Sheet>}
     </AnimatePresence>
@@ -121,19 +117,35 @@ function Discover({ me, people, prefs, setPrefs, radius, setRadius, loading }) {
 }
 
 const Avatar = ({ p }) => <div className="av">{p.photoUrl ? <img src={p.photoUrl} alt="" /> : p.name[0]}</div>;
+function BookSheet({ me, book, setBook, send }) {
+  const rate = Number(book.p.card.payFloor || book.p.card.rate || 0), hrs = Math.max(0, (parseInt(book.to) * 60 + +book.to.slice(3) - parseInt(book.from) * 60 - +book.from.slice(3)) / 60), cost = rate ? Math.round(rate * hrs) : null;
+  const opts = Array.from({ length: 29 }, (_, i) => { const m = 6 * 60 + i * 30; return String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"); });
+  const wk = book.date ? DAYS[(new Date(book.date + "T12:00:00").getDay() + 6) % 7] : "", av = daysOf(book.p.card.availability), free = !wk || !av.length || av.includes(wk), rep = book.repeat || 0;
+  return <Sheet onClose={() => setBook(null)}><h2>{book.usual ? "Book your usual carer: " : "Book "}{book.p.name}</h2>
+    <label style={{ display: "block", margin: "8px 0" }}>Day<input className="field" type="date" value={book.date} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setBook({ ...book, date: e.target.value })} /></label>
+    {!free && <p className="alert">{book.p.name} does not usually work on {wk}s. You can still ask.</p>}
+    <div style={{ display: "flex", gap: 10 }}><label style={{ flex: 1 }}>From<select className="field" value={book.from} onChange={(e) => setBook({ ...book, from: e.target.value })}>{opts.map((o) => <option key={o}>{o}</option>)}</select></label><label style={{ flex: 1 }}>To<select className="field" value={book.to} onChange={(e) => setBook({ ...book, to: e.target.value })}>{opts.map((o) => <option key={o}>{o}</option>)}</select></label></div>
+    <label style={{ display: "block", margin: "8px 0" }}>Repeat weekly<select className="field" value={rep} onChange={(e) => setBook({ ...book, repeat: +e.target.value })}><option value={0}>Just once</option>{[2, 4, 8, 12].map((n) => <option key={n} value={n}>Every week for {n} weeks</option>)}</select></label>
+    <p style={{ margin: "10px 0" }}><b>{rate ? `$${rate}/hour` : "Rate not listed"}</b>{cost != null && hrs > 0 ? ` · about $${cost}${rep ? " each, $" + cost * rep + " in total" : ""} for ${hrs} h` : ""}<br /><small style={{ opacity: .7 }}>Estimate only. Agree the final rate in chat.</small></p>
+    <p className="chip" style={{ display: "block", padding: 12, fontSize: 15 }}>Cancellation: {CANCEL_POLICY}</p>
+    <button className="btn" style={{ marginTop: 12 }} disabled={!book.date || hrs <= 0} onClick={() => { const t = `Booking request: ${book.date}, ${book.from} to ${book.to}${rep ? `, every week for ${rep} weeks. Each date is checked against availability and you confirm each one` : ""}${cost != null ? `, about $${cost}` : ""}. Cancellation: ${CANCEL_POLICY}`; send(book.p, t, "book"); setBook(null); }}>Send request</button></Sheet>;
+}
+
 function Sheet({ children, onClose }) { return <motion.div className="sheet" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}><motion.div className="sheetBody" initial={{ y: 400 }} animate={{ y: 0 }} exit={{ y: 400 }} transition={spring} onClick={(e) => e.stopPropagation()} drag="y" dragConstraints={{ top: 0, bottom: 0 }} dragElastic={{ top: 0, bottom: .6 }} onDragEnd={(_, i) => i.offset.y > 100 && onClose()}><div className="grab" />{children}</motion.div></motion.div>; }
 function Seg({ value, onChange, items }) { const i = items.findIndex((x) => x[0] === value); return <div className="seg" style={{ position: "relative" }}><motion.div className="pill" animate={{ left: `calc(${(100 / items.length) * i}% + 3px)`, width: `calc(${100 / items.length}% - 6px)` }} transition={spring} />{items.map(([k, l]) => <button key={k} onClick={() => { haptic(); onChange(k); }}>{l}</button>)}</div>; }
 
 function Matches({ me, rels, people }) {
-  const [joy, setJoy] = useState(false);
+  const [joy, setJoy] = useState(false), [book, setBook] = useState(null), [toast, setToast] = useState("");
+  const sendB = async (p, t) => { try { await D.sendMsg(me, p, t); setToast("Request sent. Not booked until " + p.name + " accepts."); } catch { setToast("Could not send. Try again."); } setTimeout(() => setToast(""), 2400); };
   const by = Object.fromEntries(people.map((p) => [p.uid, p]));
   const other = (r) => by[r.members.find((m) => m !== me.uid)];
   const incoming = rels.filter((r) => r.state === "pending" && r.createdBy !== me.uid), live = rels.filter((r) => r.state !== "pending" && r.state !== "ended"), sent = rels.filter((r) => r.state === "pending" && r.createdBy === me.uid);
   const Row = ({ r, act }) => { const o = other(r); return <motion.div layout initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="li"><Avatar p={o || { name: "?" }} /><div style={{ flex: 1 }}><b>{o?.name || "Member"}</b></div>{act}</motion.div>; };
   return <div className="scroll"><h1 style={{ margin: "8px 0 14px" }}>Matches</h1>
     {incoming.length > 0 && <><h3>Likes you</h3>{incoming.map((r) => <Row key={r.id} r={r} act={<button className="chip" style={{ background: "var(--ink)", color: "#fff" }} onClick={async () => { haptic("heavy"); await D.acceptRel(r.id); setJoy(true); }}>Say yes</button>} />)}</>}
-    {live.length > 0 && <><h3>Connected</h3>{live.map((r) => <Row key={r.id} r={r} act={<span className="chip">Matched</span>} />)}</>}
+    {live.length > 0 && <><h3>Connected</h3>{live.map((r) => <Row key={r.id} r={r} act={me.side === "family" && other(r) ? <button className="chip" style={{ background: "var(--ink)", color: "#fff" }} onClick={() => setBook({ p: other(r), usual: true, date: "", from: "09:00", to: "13:00", repeat: 0 })}>Book my usual</button> : <span className="chip">Matched</span>} />)}</>}
     {sent.length > 0 && <><h3>Waiting</h3>{sent.map((r) => <Row key={r.id} r={r} act={<span style={{ opacity: .6 }}>Sent</span>} />)}</>}
+    <AnimatePresence>{book && <BookSheet me={me} book={book} setBook={setBook} send={sendB} />}</AnimatePresence>{toast && <div className="chip" style={{ position: "fixed", bottom: 100, left: 16, right: 16, textAlign: "center", background: "var(--ink)", color: "#fff", zIndex: 70 }}>{toast}</div>}
     <AnimatePresence>{joy && <motion.div className="match" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><Bunny mood="celebrate" size={150} /><h1>You're connected</h1><p>You can chat now.</p><button className="btn alt" style={{ maxWidth: 280 }} onClick={() => location.reload()}>Continue</button></motion.div>}</AnimatePresence>
     {!rels.length && <div className="empty"><Bunny mood="encourage" size={110} /><h2>No matches yet</h2><p>Swipe right on people you like. They show up here.</p></div>}</div>;
 }
@@ -162,7 +174,7 @@ function Profile({ me }) {
   const [about, setAbout] = useState(me.about), [saved, setSaved] = useState(false);
   const save = async () => { await D.saveProfile(me.uid, { about }); setSaved(true); haptic(); setTimeout(() => setSaved(false), 1600); };
   return <div className="scroll"><div style={{ textAlign: "center", padding: "12px 0" }}><div className="av" style={{ width: 96, height: 96, margin: "0 auto", fontSize: 40 }}>{me.photoUrl ? <img src={me.photoUrl} alt="" /> : me.name[0]}</div><h1 style={{ marginTop: 10 }}>{me.name}</h1><span className="chip">{me.side === "family" ? "Family" : "Carer"} · {me.postcode}</span></div>
-    <button className="btn alt" style={{ margin: "10px 0" }} onClick={() => window.__openCS && window.__openCS()}>Open the care-day app</button><Checks me={me} /><h3 style={{ marginTop: 16 }}>About</h3><textarea className="field" rows={4} value={about} onChange={(e) => setAbout(e.target.value)} />
+    <button className="btn alt" style={{ margin: "10px 0" }} onClick={() => window.__openCS && window.__openCS()}>Open the care-day app</button><button className="btn alt" style={{ margin: "0 0 10px" }} onClick={() => window.__openAP && window.__openAP()}>Au pair world</button><label style={{ display: "block", margin: "10px 0" }}>Language<select className="field" defaultValue={getLang()} onChange={(e) => setLang(e.target.value)}>{LANGS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></label><Checks me={me} /><h3 style={{ marginTop: 16 }}>About</h3><textarea className="field" rows={4} value={about} onChange={(e) => setAbout(e.target.value)} />
     <button className="btn" onClick={save}>{saved ? "Saved ✓" : "Save changes"}</button>
     <a className="btn alt" style={{ display: "block", textAlign: "center", marginTop: 10, textDecoration: "none" }} href="../app2/index.html#profile">Edit full profile and badges</a>
     <label className="chip" style={{ display: "flex", gap: 10, margin: "14px 0", padding: 14, fontSize: 17 }}><input type="checkbox" defaultChecked={localStorage.getItem("caresits-bunny-calm") === "1"} onChange={(e) => setBunnyCalm(e.target.checked)} /> Turn the bunny down</label>
@@ -170,7 +182,7 @@ function Profile({ me }) {
 }
 
 function App() {
-  const [csOpen, setCs] = useState(false), [side, setSideS] = useState(getSide()), [tour, setTour] = useState(() => localStorage.getItem("caresits-tour-done") !== "1"), [user, setUser] = useState(undefined), [me, setMe] = useState(null), [people, setPeople] = useState([]), [rels, setRels] = useState([]), [tab, setTab] = useState("discover"), [loading, setLoading] = useState(true), [err, setErr] = useState("");
+  const [csOpen, setCs] = useState(false), [apOpen, setAp] = useState(false), [side, setSideS] = useState(getSide()), [tour, setTour] = useState(() => localStorage.getItem("caresits-tour-done") !== "1"), [user, setUser] = useState(undefined), [me, setMe] = useState(null), [people, setPeople] = useState([]), [rels, setRels] = useState([]), [tab, setTab] = useState("discover"), [loading, setLoading] = useState(true), [err, setErr] = useState("");
   const [prefs, setPrefsS] = useState(() => ls("caresits-discover-prefs-x", emptyPrefs())), [radius, setRadiusS] = useState(() => ls("caresits-discover-radius-x", 25));
   useEffect(() => { (async () => { await D.restoreSessionMirror(); const a = D.auth(); await D.waitForSession(a); D.onAuthStateChanged(a, (u) => setUser(u || null)); })(); }, []);
   useEffect(() => {
@@ -179,25 +191,27 @@ function App() {
       setLoading(false);
     })();
   }, [user]);
-  useEffect(() => { window.__openCS = () => setCs(true); }, []);
+  useEffect(() => { window.__openCS = () => setCs(true); window.__openAP = () => setAp(true); }, []);
   const setPrefs = (p) => { setPrefsS(p); localStorage.setItem("caresits-discover-prefs-x", JSON.stringify(p)); };
   const setRadius = (r) => { setRadiusS(r); localStorage.setItem("caresits-discover-radius-x", JSON.stringify(r)); };
   if (user === undefined) return <div className="auth"><div className="sk" style={{ height: 80 }} /></div>;
   if (!user) return side ? <Auth /> : <Welcome onPick={setSideS} />;
   if (!loading && !me) return <Builder user={user} side={side || "family"} onDone={() => location.reload()} />;
   if (csOpen && me) return <CareSpace me={me} rels={rels} people={people} onExit={() => setCs(false)} />;
+  if (apOpen && me) return <div className="app"><div className="screen"><AuPair me={me} onBack={() => setAp(false)} /></div></div>;
   const tabs = [["discover", "Discover"], ["matches", "Matches"], ["messages", "Messages"], ["profile", "Profile"]];
   const pips = rels.filter((r) => r.state === "pending" && r.createdBy !== user.uid).length;
   const endTour = () => { localStorage.setItem("caresits-tour-done", "1"); setTour(false); };
   return <div className="app">{tour && me && <Tour onDone={endTour} />}<div className="screen">
     {err && <div className="chip" style={{ position: "absolute", top: 8, left: 16, right: 16, zIndex: 60, textAlign: "center", background: "var(--butter)" }}>{err}</div>}
-    <AnimatePresence mode="wait"><motion.div key={tab} style={{ height: "100%" }} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: .18 }}>
+    <motion.div key={tab} style={{ height: "100%" }} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .18 }}>
       {tab === "discover" && me && <Discover {...{ me, people, prefs, setPrefs, radius, setRadius, loading }} />}
       {tab === "matches" && me && <Matches me={me} rels={rels} people={people} />}
       {tab === "messages" && me && <Messages me={me} rels={rels} people={people} />}
       {tab === "profile" && me && <Profile me={me} />}
-    </motion.div></AnimatePresence></div>
+    </motion.div></div>
     <nav className="tabs"><motion.div className="bar" animate={{ left: `calc(${tabs.findIndex((t) => t[0] === tab) * 25}% + 4%)`, width: "17%" }} transition={spring} />
       {tabs.map(([k, l]) => <button key={k} className={"tab" + (tab === k ? " on" : "")} onClick={() => { haptic(); setTab(k); }}><svg viewBox="0 0 24 24"><path d={Ico[k]} /></svg>{l}{k === "matches" && pips > 0 && <span className="pip">{pips}</span>}</button>)}</nav></div>;
 }
 createRoot(document.getElementById("root")).render(<App />);
+initI18n();

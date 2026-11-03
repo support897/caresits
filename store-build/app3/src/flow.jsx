@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Bunny } from "./bunny.jsx";
 import { APP1, TAGLINE } from "./brand.js";
 import * as D from "./data.js";
+import { setLang, getLang, LANGS as UILANGS } from "./i18n.js";
 import { DAYS } from "../../www/app2/fit.js";
 const spring = { type: "spring", stiffness: 420, damping: 32 };
 const haptic = () => { try { navigator.vibrate?.(8); window.Capacitor?.Plugins?.Haptics?.impact({ style: "LIGHT" }); } catch {} };
@@ -13,7 +14,7 @@ export function Welcome({ onPick }) {
   return <div className="auth"><Bunny mood="hello" size={150} /><h1>{APP1}</h1><p style={{ fontSize: 19 }}>{TAGLINE}</p>
     {[["family", "I need care", "Find a babysitter, nanny or au pair", "🏡"], ["carer", "I give care", "Find families. Carers always use it free.", "💛"]].map(([k, t, d, e], i) =>
       <motion.button key={k} className="pick" initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ ...spring, delay: .1 + i * .1 }} whileTap={{ scale: .97 }} onClick={() => { haptic(); setSide(k); onPick(k); }}><span style={{ fontSize: 34 }}>{e}</span><span><b>{t}</b><br /><small>{d}</small></span></motion.button>)}
-  </div>;
+  <select className="field" aria-label="Language" defaultValue={getLang()} onChange={(e) => setLang(e.target.value)} style={{ marginTop: 8 }}>{UILANGS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>;
 }
 
 const STEPS = [
