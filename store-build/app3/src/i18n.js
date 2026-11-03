@@ -84,6 +84,14 @@ const R = [
 ["Your password","Tu contraseña","كلمة المرور","आपका पासवर्ड","Mật khẩu của bạn","你嘅密碼","你的密码"],
 ["Priorities","Prioridades","الأولويات","प्राथमिकताएँ","Ưu tiên","優先次序","优先事项"],
 ["Distance","Distancia","المسافة","दूरी","Khoảng cách","距離","距离"],
+["Notifications","Notificaciones","الإشعارات","सूचनाएं","Thông báo","通知","通知"],
+["Nothing new.","Nada nuevo.","لا جديد.","कुछ नया नहीं।","Không có gì mới.","沒有新消息。","没有新消息。"],
+["How it adds up","Como se calcula","كيف تُحسب","यह कैसे जुड़ता है","Cách tính","點樣計算","如何计算"],
+["Not stated","No indicado","غير مذكور","नहीं बताया","Chưa nêu","未有說明","未说明"],
+["Ask for an update","Pedir una actualizacion","اطلب تحديثا","अपडेट माँगें","Hỏi cập nhật","要求更新","请求更新"],
+["Send update","Enviar actualizacion","أرسل تحديثا","अपडेट भेजें","Gửi cập nhật","發送更新","发送更新"],
+["Update asked by a parent","Un padre pidio una actualizacion","طلب أحد الوالدين تحديثا","अभिभावक ने अपडेट माँगा","Phụ huynh hỏi cập nhật","家長要求更新","家长请求更新"],
+["You are offline. You can still read. Messages will send when you are back.","Sin conexion. Puedes leer. Los mensajes se enviaran al volver.","أنت غير متصل. يمكنك القراءة. سترسل الرسائل عند عودتك.","आप ऑफ़लाइन हैं। पढ़ सकते हैं। वापस आने पर संदेश भेजे जाएंगे।","Bạn đang ngoại tuyến. Tin nhắn sẽ gửi khi có mạng.","你離線中。訊息會喺返嚟時發送。","你已离线。恢复后将发送消息。"],
 ];
 const DICT = {}; for (const r of R) { DICT[r[0]] = {}; ORDER.forEach((l, i) => (DICT[r[0]][l] = r[i + 1])); }
 let lang = "en";

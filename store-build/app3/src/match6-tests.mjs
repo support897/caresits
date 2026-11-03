@@ -1,0 +1,12 @@
+import { briefBreakdown, WEIGHTS } from "./match6.js";
+import assert from "node:assert";
+assert.equal(WEIGHTS.reduce((a, r) => a + r[2], 0), 100);
+const v = { side: "family", card: { scheduleNeed: { Mon: true, Tue: true }, payOffered: 30, personality: ["calm"], activities: ["art"] } };
+const o = { card: { availability: { Mon: true, Tue: true }, payFloor: 28, experience: { a: 4 }, personality: ["calm", "playful"], activities: ["art", "music"] } };
+const r = briefBreakdown({ viewer: v, other: o, km: 2, radius: 25 });
+assert.ok(r.pct >= 85, "strong pair " + r.pct);
+const e = briefBreakdown({ viewer: { side: "family", card: {} }, other: { card: {} }, km: null, radius: 25 });
+assert.equal(e.pct, null); assert.equal(e.rows.every((x) => x.s == null), true);
+const low = briefBreakdown({ viewer: { ...v, card: { ...v.card, payOffered: 10 } }, other: o, km: 40, radius: 10 });
+assert.ok(low.pct < r.pct);
+console.log("match6 ok", r.pct, low.pct);

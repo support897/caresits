@@ -6,6 +6,7 @@ import { sharedAuth, restoreSessionMirror, waitForSession } from "../../www/app2
 import { areaCoordsFor, kmBetween } from "../../www/app2/browse.js";
 import { planContact, pairIdFor } from "../../www/app2/pair-actions.js";
 import { scoreFit } from "../../www/app2/fit.js";
+import { clean } from "./schemas.js";
 
 export const app = initializeApp(firebaseConfig, "app3");
 export const db = fs.getFirestore(app);
@@ -86,6 +87,7 @@ export const resumeText = (me, other) => {
 };
 export async function sendMsg(me, other, text) {
   if (globalThis.__C3_TEST) return { ok: true };
+  if (!navigator.onLine) { const q = JSON.parse(localStorage.getItem("caresits-outbox") || "[]"); q.push({ me: { uid: me.uid }, other: { uid: other.uid }, text, at: new Date().toISOString() }); localStorage.setItem("caresits-outbox", JSON.stringify(q)); return { ok: true, queued: true }; }
   await like(me, other).catch(() => {});
   await fs.addDoc(fs.collection(db, "users", me.uid, "messages"), { pairId: pairIdFor(me.uid, other.uid), text, at: new Date().toISOString(), mine: true });
   return { ok: true };
@@ -109,7 +111,7 @@ export async function csPush(uid, st) {
       await b.commit();
     }
     const b2 = fs.writeBatch(db);
-    for (const [k, col] of Object.entries(CS_MAP)) (st[k] || []).forEach((it, i) => {
+    for (const [k, col] of Object.entries(CS_MAP)) clean(k, st[k]).forEach((it, i) => {
       const o = typeof it === "object" ? it : { text: String(it) };
       b2.set(fs.doc(db, "careSpaces", uid, col, String(o.id ?? i)), JSON.parse(JSON.stringify(o)));
     });
@@ -128,3 +130,13 @@ export async function csPull(uid) {
     return out;
   } catch { return null; }
 }
+
+// Offline outbox: queued messages are sent when the phone is back online.
+export async function flushOutbox() {
+  if (globalThis.__C3_TEST || !navigator.onLine) return;
+  const q = JSON.parse(localStorage.getItem("caresits-outbox") || "[]"); if (!q.length) return;
+  localStorage.setItem("caresits-outbox", "[]"); const left = [];
+  for (const m of q) { try { await fs.addDoc(fs.collection(db, "users", m.me.uid, "messages"), { pairId: pairIdFor(m.me.uid, m.other.uid), text: m.text, at: m.at, mine: true }); } catch { left.push(m); } }
+  if (left.length) localStorage.setItem("caresits-outbox", JSON.stringify(left));
+}
+addEventListener("online", () => flushOutbox());
