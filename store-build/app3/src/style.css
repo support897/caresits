@@ -106,3 +106,5 @@ body{color:#E8F1EC}
 .who,.who *{color:#fff}
 }
 @media (prefers-color-scheme:dark){.tabs{background:#12211E}.seg .pill{background:#2F5A4F}.li{background:#16282A}.sheetBody,.sheet .sheetBody{background:#12211E}.tag{color:var(--ink)}.resume{background:#1B332D}.tabs button{color:#9CC5B5}}
+.tag.good{background:var(--ink);color:#fff}
+@media (prefers-color-scheme:dark){.tag.good{color:#0F1F1B}}

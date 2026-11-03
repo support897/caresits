@@ -90,3 +90,8 @@ export async function sendMsg(me, other, text) {
   await fs.addDoc(fs.collection(db, "users", me.uid, "messages"), { pairId: pairIdFor(me.uid, other.uid), text, at: new Date().toISOString(), mine: true });
   return { ok: true };
 }
+
+export async function loadDocs(uid) {
+  if (globalThis.__C3_TEST) return globalThis.__C3_TEST.docs || [];
+  try { return (await fs.getDocs(fs.collection(db, "users", uid, "documents"))).docs.map((d) => ({ id: d.id, ...d.data() })); } catch { return []; }
+}

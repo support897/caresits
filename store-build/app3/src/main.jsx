@@ -144,11 +144,23 @@ function Messages({ me, rels, people }) {
     {!live.length && <div className="empty"><Bunny mood="rest" size={110} /><h2>No chats yet</h2><p>Chat opens when you both say yes.</p></div>}</div>;
 }
 
+const STATUS = { submitted: "Submitted", review: "Under review", "under review": "Under review", verified: "Verified", expired: "Expired", renew: "Needs renewal", "needs renewal": "Needs renewal" };
+function Checks({ me }) {
+  const [docs, setDocs] = useState([]);
+  useEffect(() => { D.loadDocs(me.uid).then(setDocs); }, [me.uid]);
+  const lvl = me.card.checksLevel, rev = me.raw.reviews || me.card.reviews || [];
+  return <><h3 style={{ marginTop: 16 }}>Checks</h3>
+    <div className="row"><span className={"tag" + (lvl === "register" || lvl === "sighted" ? " good" : "")}>{lvl === "register" ? "Background checked" : lvl === "sighted" ? "ID sighted" : "Self-reported, not yet checked"}</span></div>
+    {docs.map((d) => { const st = STATUS[String(d.status || "submitted").toLowerCase()] || "Submitted"; return <div className="li" key={d.id} style={{ padding: 10 }}><div style={{ flex: 1 }}><b>{d.label || d.name || d.kind || "Document"}</b><div style={{ fontSize: 14, opacity: .7 }}>{st}{d.checkedOn ? " · checked " + d.checkedOn : ""}{d.expires ? " · expires " + d.expires : ""}</div></div></div>; })}
+    <p style={{ fontSize: 14, opacity: .7 }}>Uploading a document does not make anyone verified. Only a real check does.</p>
+    <h3>References and reviews</h3>
+    {rev.length ? rev.slice(0, 5).map((r, i) => <div className="li" key={i}><div><b>{r.name || r.from || "Someone"}</b><div style={{ fontSize: 15 }}>{r.text || r.comment}</div></div></div>) : <p style={{ opacity: .7 }}>No reviews yet. They show here once families or carers leave one.</p>}</>;
+}
 function Profile({ me }) {
   const [about, setAbout] = useState(me.about), [saved, setSaved] = useState(false);
   const save = async () => { await D.saveProfile(me.uid, { about }); setSaved(true); haptic(); setTimeout(() => setSaved(false), 1600); };
   return <div className="scroll"><div style={{ textAlign: "center", padding: "12px 0" }}><div className="av" style={{ width: 96, height: 96, margin: "0 auto", fontSize: 40 }}>{me.photoUrl ? <img src={me.photoUrl} alt="" /> : me.name[0]}</div><h1 style={{ marginTop: 10 }}>{me.name}</h1><span className="chip">{me.side === "family" ? "Family" : "Carer"} · {me.postcode}</span></div>
-    <h3>About</h3><textarea className="field" rows={4} value={about} onChange={(e) => setAbout(e.target.value)} />
+    <Checks me={me} /><h3 style={{ marginTop: 16 }}>About</h3><textarea className="field" rows={4} value={about} onChange={(e) => setAbout(e.target.value)} />
     <button className="btn" onClick={save}>{saved ? "Saved ✓" : "Save changes"}</button>
     <a className="btn alt" style={{ display: "block", textAlign: "center", marginTop: 10, textDecoration: "none" }} href="../app2/index.html#profile">Edit full profile and badges</a>
     <label className="chip" style={{ display: "flex", gap: 10, margin: "14px 0", padding: 14, fontSize: 17 }}><input type="checkbox" defaultChecked={localStorage.getItem("caresits-bunny-calm") === "1"} onChange={(e) => setBunnyCalm(e.target.checked)} /> Turn the bunny down</label>
