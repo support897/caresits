@@ -95,3 +95,36 @@ export async function loadDocs(uid) {
   if (globalThis.__C3_TEST) return globalThis.__C3_TEST.docs || [];
   try { return (await fs.getDocs(fs.collection(db, "users", uid, "documents"))).docs.map((d) => ({ id: d.id, ...d.data() })); } catch { return []; }
 }
+
+// CareSpace sync (rules deployed 3 Nov 2026). Space id = owner uid. Local-first: any failure is silent and local copy stays.
+const CS_MAP = { children: "children", events: "calendar", shopping: "shopping", today: "dayStory" };
+export async function csPush(uid, st) {
+  if (globalThis.__C3_TEST) return false;
+  try {
+    const sp = fs.doc(db, "careSpaces", uid);
+    if (!(await fs.getDoc(sp).catch(() => ({ exists: () => false }))).exists()) {
+      const b = fs.writeBatch(db);
+      b.set(sp, { ownerUid: uid, name: "My Care Space", createdAt: new Date().toISOString() });
+      b.set(fs.doc(db, "careSpaces", uid, "members", uid), { role: "admin", status: "active", permissions: ["all"], addedAt: new Date().toISOString() });
+      await b.commit();
+    }
+    const b2 = fs.writeBatch(db);
+    for (const [k, col] of Object.entries(CS_MAP)) (st[k] || []).forEach((it, i) => {
+      const o = typeof it === "object" ? it : { text: String(it) };
+      b2.set(fs.doc(db, "careSpaces", uid, col, String(o.id ?? i)), JSON.parse(JSON.stringify(o)));
+    });
+    await b2.commit();
+    return true;
+  } catch { return false; }
+}
+export async function csPull(uid) {
+  if (globalThis.__C3_TEST) return null;
+  try {
+    const out = {};
+    for (const [k, col] of Object.entries(CS_MAP)) {
+      const q = await fs.getDocs(fs.collection(db, "careSpaces", uid, col));
+      if (q.size) out[k] = q.docs.map((d) => d.data());
+    }
+    return out;
+  } catch { return null; }
+}

@@ -6,12 +6,15 @@ import { checkMeal, ALLERGENS } from "./allergy.js";
 import * as D from "./data.js";
 const spring = { type: "spring", stiffness: 420, damping: 32 };
 const hap = () => { try { navigator.vibrate?.(8); window.Capacitor?.Plugins?.Haptics?.impact({ style: "LIGHT" }); } catch {} };
-// Local-first store. Firestore careSpaces/* rules are written in accounts/ but NOT deployed (OWNER MUST DEPLOY), so nothing here is synced yet.
+// Local-first store, synced to Firestore careSpaces/{uid}/* (rules deployed 3 Nov 2026; real-data sync unverified on device).
 function useStore(uid) {
   const k = "caresits-cs-" + uid;
   const [s, setS] = useState(() => { try { return JSON.parse(localStorage.getItem(k)) || {}; } catch { return {}; } });
   const DEF = { children: [], events: [], team: [], reports: [], shopping: [], today: [] };
   const upd = (patch) => setS((o0) => { const o = { ...DEF, ...o0 }; const n = { ...o, ...(typeof patch === "function" ? patch(o) : patch) }; localStorage.setItem(k, JSON.stringify(n)); return n; });
+  const once = React.useRef(false);
+  useEffect(() => { if (once.current) return; once.current = true; D.csPull(uid).then((r) => { if (r && Object.keys(r).length) setS((o) => ({ ...DEF, ...o, ...r })); }); }, [uid]);
+  useEffect(() => { if (!Object.keys(s).length) return; const t = setTimeout(() => D.csPush(uid, { ...DEF, ...s }), 1500); return () => clearTimeout(t); }, [s]);
   return [{ children: [], events: [], team: [], reports: [], shopping: [], today: [], ...s }, upd];
 }
 const SEC = ["Health and safety", "Meals", "Sleep and routine", "Mood", "Learning", "Memories"];
