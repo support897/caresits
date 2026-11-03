@@ -3,9 +3,9 @@ import { createRoot } from "react-dom/client";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import "./style.css";
 import { Bunny, setBunnyCalm } from "./bunny.jsx";
-import { APP1, TAGLINE } from "./brand.js";
+import { APP1, TAGLINE, CANCEL_POLICY } from "./brand.js";
 import * as D from "./data.js";
-import { PRIORITIES, DAYS, RADIUS_STEPS, cyclePriority, emptyPrefs, label } from "../../www/app2/fit.js";
+import { PRIORITIES, DAYS, daysOf, RADIUS_STEPS, cyclePriority, emptyPrefs, label } from "../../www/app2/fit.js";
 
 const haptic = (s = "light") => { try { const h = window.Capacitor?.Plugins?.Haptics; if (h) h.impact({ style: s === "heavy" ? "HEAVY" : "LIGHT" }); else navigator.vibrate?.(s === "heavy" ? 30 : 10); } catch {} };
 const ls = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
@@ -33,7 +33,7 @@ function Ring({ pct }) {
     <motion.circle cx="34" cy="34" r={r} fill="none" stroke={pct >= 85 ? "#F6D67C" : "#9CC5B5"} strokeWidth="6" strokeLinecap="round" strokeDasharray={c} initial={{ strokeDashoffset: c }} animate={{ strokeDashoffset: c * (1 - pct / 100) }} transition={{ duration: .9, ease: "easeOut" }} /></svg><b>{pct}%</b></div>;
 }
 
-function CardView({ p, me, top, onSwipe }) {
+function CardView({ p, me, top, onSwipe, onWhy }) {
   const x = useMotionValue(0);
   const rot = useTransform(x, [-200, 0, 200], [-14, 0, 14]);
   const likeO = useTransform(x, [20, 120], [0, 1]), nopeO = useTransform(x, [-120, -20], [1, 0]);
@@ -49,7 +49,7 @@ function CardView({ p, me, top, onSwipe }) {
       {photos.length ? <img src={photos[slide]} alt="" /> : <div className="initial">{p.name[0]}</div>}
       {photos.length > 1 && <div className="dots">{photos.map((_, i) => <i key={i} className={i === slide ? "on" : ""} />)}</div>}
       <div className="shade" /><div className="who"><h2>{p.name}</h2><small>{p.km != null ? `${p.km < 1 ? "<1" : Math.round(p.km)} km away` : "Distance unknown"}{p.postcode ? ` · ${p.postcode}` : ""}</small></div>
-      <Ring pct={p.fit.pct} />
+      <div onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); haptic(); onWhy && onWhy(p); }} role="button" aria-label="Why this match"><Ring pct={p.fit.pct} /></div>
     </div>
     <div className="info">
       <b>{label(p.fit.pct)}</b>
@@ -69,11 +69,19 @@ function Confetti() {
 function Discover({ me, people, prefs, setPrefs, radius, setRadius, loading }) {
   const [mode, setMode] = useState("swipe"), [seen, setSeen] = useState(() => ls("c3seen-" + me.uid, [])), [sheet, setSheet] = useState(null), [match, setMatch] = useState(null), [toast, setToast] = useState("");
   const ranked = useMemo(() => D.rank(me, people, prefs, radius), [me, people, prefs, radius]);
-  const inside = ranked.filter((p) => !seen.includes(p.uid) && (radius === 0 || p.km == null || p.km <= radius));
+  const [sec, setSec] = useState("best"), [saved, setSaved] = useState(() => ls("c3saved-" + me.uid, [])), [chat, setChat] = useState(null), [book, setBook] = useState(null), [txt, setTxt] = useState("");
+  const isChecked = (p) => p.card.checksLevel === "register" || p.card.checksLevel === "sighted";
+  const recent = (p) => { const t = Date.parse(p.raw.updatedAt || p.raw.lastActive || ""); return t && Date.now() - t < 14 * 864e5; };
+  const bySec = { best: () => true, week: (p) => daysOf(p.card.availability || p.card.scheduleNeed).length > 0, newv: isChecked, recent, saved: (p) => saved.includes(p.uid) };
+  const inRad = (p) => radius === 0 || p.km == null || p.km <= radius;
+  const inside = ranked.filter((p) => inRad(p) && bySec[sec](p) && (sec === "saved" || !seen.includes(p.uid)));
+  const toggleSave = (p) => { const n = saved.includes(p.uid) ? saved.filter((x) => x !== p.uid) : [...saved, p.uid]; setSaved(n); localStorage.setItem("c3saved-" + me.uid, JSON.stringify(n)); haptic(); };
+  const say = (m) => { setToast(m); setTimeout(() => setToast(""), 2200); };
+  const send = async (p, text, kind) => { try { await D.sendMsg(me, p, text); say(kind === "resume" ? "Resume sent to " + p.name : kind === "book" ? "Request sent. Not booked until " + p.name + " accepts." : "Message sent"); setChat(null); setTxt(""); } catch { say("Could not send. Try again."); } };
   const near = ranked.filter((p) => !seen.includes(p.uid)).sort((a, b) => (a.km ?? 1e9) - (b.km ?? 1e9));
   const deck = inside.slice(0, 2).reverse();
   const act = async (kind) => {
-    const p = inside[0]; if (!p) return;
+    const p = inside[0]; if (!p) return; if (sec === "saved" && kind === "nope") { toggleSave(p); return; }
     haptic(kind === "like" ? "heavy" : "light");
     const next = [...seen, p.uid]; setSeen(next); localStorage.setItem("c3seen-" + me.uid, JSON.stringify(next));
     if (kind === "like") { try { const r = await D.like(me, p); if (r.match) setMatch(p); else { setToast("Interest sent ✨"); setTimeout(() => setToast(""), 1800); } } catch { setToast("Could not send. Try again."); setTimeout(() => setToast(""), 2200); } }
@@ -82,16 +90,27 @@ function Discover({ me, people, prefs, setPrefs, radius, setRadius, loading }) {
   return <div style={{ height: "100%" }}>
     <div className="deckTop"><span className="logo">Caresitters</span><button className="chip" onClick={() => setSheet("radius")}>{radius ? radius + " km" : "Anywhere"} ▾</button></div>
     <Seg value={mode} onChange={setMode} items={[["swipe", "Swipe"], ["list", "List"]]} />
+    <div className="secs">{[["best", "Best matches"], ["week", "Available this week"], ["newv", "Checked"], ["recent", "Recently active"], ["saved", "Saved"]].map(([k, l]) => <button key={k} className={"tag" + (sec === k ? " on" : "")} onClick={() => { haptic(); setSec(k); }}>{l}</button>)}</div>
     {loading ? <div className="deck"><div className="sk" style={{ position: "absolute", inset: 0, borderRadius: 28 }} /></div> :
       mode === "swipe" ? (inside.length ? <>
-        <div className="deck"><AnimatePresence>{deck.map((p, idx) => <CardView key={p.uid} p={p} me={me} top={idx === deck.length - 1} onSwipe={act} />)}</AnimatePresence></div>
+        <div className="deck"><AnimatePresence>{deck.map((p, idx) => <CardView key={p.uid} p={p} me={me} top={idx === deck.length - 1} onSwipe={act} onWhy={(x) => setSheet({ why: x })} />)}</AnimatePresence></div>
         <div className="actions"><button className="fab sm" onClick={undo} aria-label="Undo"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5M4 9h10a6 6 0 010 12h-3" /></svg></button>
           <button className="fab" onClick={() => act("nope")} aria-label="Pass"><svg viewBox="0 0 24 24" style={{ color: "#E8607A" }}><path d="M6 6l12 12M18 6L6 18" /></svg></button>
           <button className="fab big" onClick={() => act("like")} aria-label="Like"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-9.6A4 4 0 0112 8a4 4 0 017 2.4C19 15.6 12 20 12 20z" /></svg></button>
-          <button className="fab sm" onClick={() => setSheet("prio")} aria-label="What matters"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M8 14v6" /></svg></button></div></> :
-        <div className="deck empty"><div style={{ fontSize: 56 }}>🧭</div><h2>No one within {radius || "your"} km</h2><p>{near[0] ? `Closest is ${near[0].name}, ${Math.round(near[0].km ?? 0)} km away.` : "New people join all the time."}</p><button className="btn" style={{ marginTop: 14 }} onClick={() => setRadius(radius ? (RADIUS_STEPS.find((s) => s > radius) ?? 0) : 0)}>Widen search</button></div>)
-      : <div className="scroll" style={{ position: "absolute", inset: "96px 0 0" }}>{near.map((p) => <div className="li" key={p.uid}><Avatar p={p} /><div style={{ flex: 1 }}><b>{p.name}</b><div style={{ fontSize: 13, opacity: .7 }}>{p.km != null ? Math.round(p.km) + " km" : "—"} · {label(p.fit.pct)}</div></div><b>{p.fit.pct}%</b></div>)}</div>}
-    <AnimatePresence>{sheet === "radius" && <Sheet onClose={() => setSheet(null)}><h2>How far?</h2><div className="row" style={{ margin: "14px 0" }}>{RADIUS_STEPS.map((s) => <button key={s} className="tag" style={{ padding: "10px 16px", background: s === radius ? "var(--ink)" : "", color: s === radius ? "#fff" : "" }} onClick={() => { haptic(); setRadius(s); }}>{s ? s + " km" : "Anywhere"}</button>)}</div><button className="btn" onClick={() => setSheet(null)}>Done</button></Sheet>}
+          <button className="fab sm" onClick={() => setSheet("prio")} aria-label="What matters"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M8 14v6" /></svg></button></div>
+        <div className="acts2"><button className="chip" onClick={() => setChat({ p: inside[0], kind: "msg" })}>💬 Message</button>{me.side === "carer" && <button className="chip" onClick={() => setChat({ p: inside[0], kind: "resume" })}>📄 Send resume</button>}{me.side === "family" && <button className="chip" onClick={() => setBook({ p: inside[0], date: "", from: "09:00", to: "13:00" })}>📅 Book</button>}<button className="chip" onClick={() => toggleSave(inside[0])}>{saved.includes(inside[0].uid) ? "★ Saved" : "☆ Save"}</button></div></> :
+        <div className="deck empty"><Bunny mood="think" size={110} /><h2>No one within {radius || "your"} km</h2><p>{near[0] ? `Closest is ${near[0].name}, ${Math.round(near[0].km ?? 0)} km away.` : "New people join all the time."}</p><button className="btn" style={{ marginTop: 14 }} onClick={() => setRadius(radius ? (RADIUS_STEPS.find((s) => s > radius) ?? 0) : 0)}>Widen search</button></div>)
+      : <div className="scroll" style={{ position: "absolute", inset: "140px 0 0" }}>{near.map((p) => <div className="li" key={p.uid}><Avatar p={p} /><div style={{ flex: 1 }}><b>{p.name}</b><div style={{ fontSize: 13, opacity: .7 }}>{p.km != null ? Math.round(p.km) + " km" : "—"} · {label(p.fit.pct)}</div></div><b>{p.fit.pct}%</b></div>)}</div>}
+    <AnimatePresence>{sheet && sheet.why && <Sheet onClose={() => setSheet(null)}><h2>Why {sheet.why.fit.pct}% with {sheet.why.name}</h2><ul className="why" style={{ margin: "10px 0" }}>{(sheet.why.fit.reasons || []).map((r, i) => <li key={i}>✓ {r.text || r}</li>)}{(sheet.why.fit.gaps || []).map((g, i) => <li key={"g" + i}>! {g.text || g.id}</li>)}</ul><p style={{ opacity: .75, fontSize: 15 }}>Score is rule-based from your priorities, schedule, ages, languages and distance. {isChecked(sheet.why) ? "Checks on file." : "Checks not confirmed yet. Nothing here means verified."}</p><button className="btn" style={{ marginTop: 12 }} onClick={() => setSheet(null)}>Got it</button></Sheet>}
+      {chat && <Sheet onClose={() => setChat(null)}><h2>{chat.kind === "resume" ? "Send your resume to " : "Message "}{chat.p.name}</h2>{chat.kind === "resume" ? <pre className="resume">{D.resumeText(me, chat.p)}</pre> : <textarea className="field" rows={4} autoFocus placeholder="Say hello..." value={txt} onChange={(e) => setTxt(e.target.value)} />}<button className="btn" style={{ marginTop: 12 }} disabled={chat.kind === "msg" && !txt.trim()} onClick={() => send(chat.p, chat.kind === "resume" ? D.resumeText(me, chat.p) : txt.trim(), chat.kind)}>Send</button></Sheet>}
+      {book && (() => { const rate = Number(book.p.card.payFloor || book.p.card.rate || 0), hrs = Math.max(0, (parseInt(book.to) * 60 + +book.to.slice(3) - parseInt(book.from) * 60 - +book.from.slice(3)) / 60), cost = rate ? Math.round(rate * hrs) : null; const opts = Array.from({ length: 29 }, (_, i) => { const m = 6 * 60 + i * 30; return String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"); });
+        return <Sheet onClose={() => setBook(null)}><h2>Book {book.p.name}</h2>
+          <label style={{ display: "block", margin: "8px 0" }}>Day<input className="field" type="date" value={book.date} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setBook({ ...book, date: e.target.value })} /></label>
+          <div style={{ display: "flex", gap: 10 }}><label style={{ flex: 1 }}>From<select className="field" value={book.from} onChange={(e) => setBook({ ...book, from: e.target.value })}>{opts.map((o) => <option key={o}>{o}</option>)}</select></label><label style={{ flex: 1 }}>To<select className="field" value={book.to} onChange={(e) => setBook({ ...book, to: e.target.value })}>{opts.map((o) => <option key={o}>{o}</option>)}</select></label></div>
+          <p style={{ margin: "10px 0" }}><b>{rate ? `$${rate}/hour` : "Rate not listed"}</b>{cost != null && hrs > 0 ? ` · about $${cost} for ${hrs} h` : ""}<br /><small style={{ opacity: .7 }}>Estimate only. Agree the final rate in chat.</small></p>
+          <p className="chip" style={{ display: "block", padding: 12, fontSize: 15 }}>Cancellation: {CANCEL_POLICY}</p>
+          <button className="btn" style={{ marginTop: 12 }} disabled={!book.date || hrs <= 0} onClick={() => { const t = `Booking request: ${book.date}, ${book.from} to ${book.to}${cost != null ? `, about $${cost}` : ""}. Cancellation: ${CANCEL_POLICY}`; send(book.p, t, "book"); setBook(null); }}>Send request</button></Sheet>; })()}
+      {sheet === "radius" && <Sheet onClose={() => setSheet(null)}><h2>How far?</h2><div className="row" style={{ margin: "14px 0" }}>{RADIUS_STEPS.map((s) => <button key={s} className="tag" style={{ padding: "10px 16px", background: s === radius ? "var(--ink)" : "", color: s === radius ? "#fff" : "" }} onClick={() => { haptic(); setRadius(s); }}>{s ? s + " km" : "Anywhere"}</button>)}</div><button className="btn" onClick={() => setSheet(null)}>Done</button></Sheet>}
       {sheet === "prio" && <Sheet onClose={() => setSheet(null)}><h2>What matters to you?</h2><p style={{ opacity: .7 }}>Tap to cycle: nice, important, must.</p><div className="row">{(PRIORITIES[me.side] || []).map((it) => { const lv = prefs.levels[it.id]; return <button key={it.id} className="tag" style={{ padding: "10px 14px", background: lv === "must" ? "var(--ink)" : lv === "important" ? "var(--butter)" : lv === "nice" ? "var(--blush)" : "", color: lv === "must" ? "#fff" : "" }} onClick={() => { haptic(); setPrefs({ ...prefs, levels: cyclePriority(prefs.levels, it.id) }); }}>{it.label || it.id}{lv ? " · " + lv : ""}</button>; })}</div><button className="btn" style={{ marginTop: 14 }} onClick={() => setSheet(null)}>Show my matches</button></Sheet>}
     </AnimatePresence>
     <AnimatePresence>{match && <motion.div className="match" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><Confetti /><motion.div initial={{ scale: 0 }} animate={{ scale: [0, 1.2, 1] }} transition={{ duration: .6 }}><Bunny mood="celebrate" size={150} /></motion.div><h1>It's a match!</h1><p>You and {match.name} both said yes.</p><button className="btn alt" style={{ maxWidth: 280 }} onClick={() => setMatch(null)}>Keep swiping</button></motion.div>}</AnimatePresence>
@@ -104,15 +123,17 @@ function Sheet({ children, onClose }) { return <motion.div className="sheet" ini
 function Seg({ value, onChange, items }) { const i = items.findIndex((x) => x[0] === value); return <div className="seg" style={{ position: "relative" }}><motion.div className="pill" animate={{ left: `calc(${(100 / items.length) * i}% + 3px)`, width: `calc(${100 / items.length}% - 6px)` }} transition={spring} />{items.map(([k, l]) => <button key={k} onClick={() => { haptic(); onChange(k); }}>{l}</button>)}</div>; }
 
 function Matches({ me, rels, people }) {
+  const [joy, setJoy] = useState(false);
   const by = Object.fromEntries(people.map((p) => [p.uid, p]));
   const other = (r) => by[r.members.find((m) => m !== me.uid)];
   const incoming = rels.filter((r) => r.state === "pending" && r.createdBy !== me.uid), live = rels.filter((r) => r.state !== "pending" && r.state !== "ended"), sent = rels.filter((r) => r.state === "pending" && r.createdBy === me.uid);
   const Row = ({ r, act }) => { const o = other(r); return <motion.div layout initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="li"><Avatar p={o || { name: "?" }} /><div style={{ flex: 1 }}><b>{o?.name || "Member"}</b></div>{act}</motion.div>; };
   return <div className="scroll"><h1 style={{ margin: "8px 0 14px" }}>Matches</h1>
-    {incoming.length > 0 && <><h3>Likes you</h3>{incoming.map((r) => <Row key={r.id} r={r} act={<button className="chip" style={{ background: "var(--ink)", color: "#fff" }} onClick={async () => { haptic("heavy"); await D.acceptRel(r.id); location.reload(); }}>Say yes</button>} />)}</>}
+    {incoming.length > 0 && <><h3>Likes you</h3>{incoming.map((r) => <Row key={r.id} r={r} act={<button className="chip" style={{ background: "var(--ink)", color: "#fff" }} onClick={async () => { haptic("heavy"); await D.acceptRel(r.id); setJoy(true); }}>Say yes</button>} />)}</>}
     {live.length > 0 && <><h3>Connected</h3>{live.map((r) => <Row key={r.id} r={r} act={<span className="chip">Matched</span>} />)}</>}
     {sent.length > 0 && <><h3>Waiting</h3>{sent.map((r) => <Row key={r.id} r={r} act={<span style={{ opacity: .6 }}>Sent</span>} />)}</>}
-    {!rels.length && <div className="empty"><div style={{ fontSize: 56 }}>💌</div><h2>No matches yet</h2><p>Swipe right on people you like. They show up here.</p></div>}</div>;
+    <AnimatePresence>{joy && <motion.div className="match" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><Bunny mood="celebrate" size={150} /><h1>You're connected</h1><p>You can chat now.</p><button className="btn alt" style={{ maxWidth: 280 }} onClick={() => location.reload()}>Continue</button></motion.div>}</AnimatePresence>
+    {!rels.length && <div className="empty"><Bunny mood="encourage" size={110} /><h2>No matches yet</h2><p>Swipe right on people you like. They show up here.</p></div>}</div>;
 }
 
 function Messages({ me, rels, people }) {
@@ -120,7 +141,7 @@ function Messages({ me, rels, people }) {
   const by = Object.fromEntries(people.map((p) => [p.uid, p]));
   return <div className="scroll"><h1 style={{ margin: "8px 0 14px" }}>Messages</h1>
     {live.map((r) => { const o = by[r.members.find((m) => m !== me.uid)]; return <a key={r.id} className="li" style={{ color: "inherit", textDecoration: "none" }} href={"../app2/index.html#thread"}><Avatar p={o || { name: "?" }} /><div style={{ flex: 1 }}><b>{o?.name || "Member"}</b><div style={{ fontSize: 13, opacity: .7 }}>Open chat</div></div>›</a>; })}
-    {!live.length && <div className="empty"><div style={{ fontSize: 56 }}>💬</div><h2>No chats yet</h2><p>Chat opens when you both say yes.</p></div>}</div>;
+    {!live.length && <div className="empty"><Bunny mood="rest" size={110} /><h2>No chats yet</h2><p>Chat opens when you both say yes.</p></div>}</div>;
 }
 
 function Profile({ me }) {

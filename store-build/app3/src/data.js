@@ -71,3 +71,22 @@ export async function saveProfile(uid, patch) {
   await fs.setDoc(fs.doc(db, "profiles", uid), patch, { merge: true });
 }
 export { pairIdFor };
+
+export const resumeText = (me, other) => {
+  const c = me.card || {}; const L = [`Hi ${other.name || "there"}, I'm ${me.name}. Here is my resume from my profile.`];
+  const yrs = c.experience && Object.values(c.experience).map(Number).filter((n) => !isNaN(n));
+  if (c.age) L.push("Age: " + c.age);
+  if (yrs && yrs.length) L.push("Experience: " + Math.max(...yrs) + "+ years");
+  const ages = c.agesAccepted || c.agesPreferred || []; if (ages.length) L.push("Ages I care for: " + ages.join(", "));
+  if ((c.languages || []).length) L.push("Languages: " + c.languages.join(", "));
+  L.push("Checks: " + (c.checksLevel === "register" ? "Background checked" : c.checksLevel === "sighted" ? "ID sighted" : "Self-reported, not yet checked"));
+  if (c.payFloor) L.push("Rate from: $" + c.payFloor + " / hour");
+  if (me.about) L.push("", me.about);
+  return L.join("\n");
+};
+export async function sendMsg(me, other, text) {
+  if (globalThis.__C3_TEST) return { ok: true };
+  await like(me, other).catch(() => {});
+  await fs.addDoc(fs.collection(db, "users", me.uid, "messages"), { pairId: pairIdFor(me.uid, other.uid), text, at: new Date().toISOString(), mine: true });
+  return { ok: true };
+}
