@@ -93,3 +93,16 @@ input,textarea{font:inherit;color:var(--ink);user-select:text;-webkit-user-selec
 .initial{position:absolute;top:12%;left:0;right:0;text-align:center}
 @media(max-height:700px){.initial{font-size:56px;top:6%}.who h2{font-size:24px}.photo{flex-basis:40%}}
 @media(max-height:700px){.initial{display:none}.deck{top:140px!important}}
+/* dark theme, same hues */
+@media (prefers-color-scheme:dark){
+:root{--ground:#0F1F1B;--ink:#CFE6DC;--teal:#2F5A4F;--soft:#1B332D;--blush:#5A3A42;--butter:#8A7432;--line:#2A4640;--card:#16282A;--heart:#F4A9BC;color-scheme:dark}
+body{color:#E8F1EC}
+.btn,.fab.big,.secs .tag.on,.chip[style*="--ink"]{color:#0F1F1B!important}
+.btn.alt{color:var(--ink)!important}
+.card,.sheetBody{background:#16282A;color:#E8F1EC}
+.field{background:#16282A;color:#E8F1EC;border-color:var(--line)}
+.fab{background:#16282A;color:var(--ink)}
+.match{color:#fff}.match .btn{color:#0F1F1B!important}
+.who,.who *{color:#fff}
+}
+@media (prefers-color-scheme:dark){.tabs{background:#12211E}.seg .pill{background:#2F5A4F}.li{background:#16282A}.sheetBody,.sheet .sheetBody{background:#12211E}.tag{color:var(--ink)}.resume{background:#1B332D}.tabs button{color:#9CC5B5}}
