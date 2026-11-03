@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState, useCallback } from "react"
 import { createRoot } from "react-dom/client";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import "./style.css";
+import { Bunny, setBunnyCalm } from "./bunny.jsx";
+import { APP1, TAGLINE } from "./brand.js";
 import * as D from "./data.js";
 import { PRIORITIES, DAYS, RADIUS_STEPS, cyclePriority, emptyPrefs, label } from "../../www/app2/fit.js";
 
@@ -17,8 +19,8 @@ function Auth() {
     try { try { await D.signInWithEmailAndPassword(D.auth(), e.trim(), p); } catch (er) { if (/user-not-found|invalid-credential/.test(er.code || "")) await D.createUserWithEmailAndPassword(D.auth(), e.trim(), p); else throw er; } }
     catch (er) { setMsg(/weak/.test(er.code) ? "Password needs 6+ characters." : /invalid|wrong/.test(er.code) ? "Email or password is not right." : "Could not sign in. Try again."); setBusy(false); }
   };
-  return <div className="auth"><motion.div initial={{ scale: .5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={spring} style={{ fontSize: 64 }}>💞</motion.div>
-    <h1>Caresitters</h1><p>Find care. Share the day.</p>
+  return <div className="auth"><motion.div initial={{ scale: .5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={spring}><Bunny mood="hello" size={130} /></motion.div>
+    <h1>{APP1}</h1><p>{TAGLINE}</p>
     <input className="field" type="email" placeholder="you@example.com" value={e} onChange={(x) => setE(x.target.value)} autoComplete="email" />
     <input className="field" type="password" placeholder="Your password" value={p} onChange={(x) => setP(x.target.value)} autoComplete="current-password" />
     <button className="btn" onClick={go} disabled={busy || !e || !p}>{busy ? "One moment…" : "Continue"}</button>
@@ -92,7 +94,7 @@ function Discover({ me, people, prefs, setPrefs, radius, setRadius, loading }) {
     <AnimatePresence>{sheet === "radius" && <Sheet onClose={() => setSheet(null)}><h2>How far?</h2><div className="row" style={{ margin: "14px 0" }}>{RADIUS_STEPS.map((s) => <button key={s} className="tag" style={{ padding: "10px 16px", background: s === radius ? "var(--ink)" : "", color: s === radius ? "#fff" : "" }} onClick={() => { haptic(); setRadius(s); }}>{s ? s + " km" : "Anywhere"}</button>)}</div><button className="btn" onClick={() => setSheet(null)}>Done</button></Sheet>}
       {sheet === "prio" && <Sheet onClose={() => setSheet(null)}><h2>What matters to you?</h2><p style={{ opacity: .7 }}>Tap to cycle: nice, important, must.</p><div className="row">{(PRIORITIES[me.side] || []).map((it) => { const lv = prefs.levels[it.id]; return <button key={it.id} className="tag" style={{ padding: "10px 14px", background: lv === "must" ? "var(--ink)" : lv === "important" ? "var(--butter)" : lv === "nice" ? "var(--blush)" : "", color: lv === "must" ? "#fff" : "" }} onClick={() => { haptic(); setPrefs({ ...prefs, levels: cyclePriority(prefs.levels, it.id) }); }}>{it.label || it.id}{lv ? " · " + lv : ""}</button>; })}</div><button className="btn" style={{ marginTop: 14 }} onClick={() => setSheet(null)}>Show my matches</button></Sheet>}
     </AnimatePresence>
-    <AnimatePresence>{match && <motion.div className="match" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><Confetti /><motion.div className="heartBig" initial={{ scale: 0 }} animate={{ scale: [0, 1.3, 1] }} transition={{ duration: .6 }}>💞</motion.div><h1>It's a match!</h1><p>You and {match.name} both said yes.</p><button className="btn alt" style={{ maxWidth: 280 }} onClick={() => setMatch(null)}>Keep swiping</button></motion.div>}</AnimatePresence>
+    <AnimatePresence>{match && <motion.div className="match" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><Confetti /><motion.div initial={{ scale: 0 }} animate={{ scale: [0, 1.2, 1] }} transition={{ duration: .6 }}><Bunny mood="celebrate" size={150} /></motion.div><h1>It's a match!</h1><p>You and {match.name} both said yes.</p><button className="btn alt" style={{ maxWidth: 280 }} onClick={() => setMatch(null)}>Keep swiping</button></motion.div>}</AnimatePresence>
     <AnimatePresence>{toast && <motion.div initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ opacity: 0 }} style={{ position: "absolute", bottom: 100, left: 0, right: 0, textAlign: "center", zIndex: 40 }}><span className="chip" style={{ background: "var(--ink)", color: "#fff" }}>{toast}</span></motion.div>}</AnimatePresence>
   </div>;
 }
@@ -128,6 +130,7 @@ function Profile({ me }) {
     <h3>About</h3><textarea className="field" rows={4} value={about} onChange={(e) => setAbout(e.target.value)} />
     <button className="btn" onClick={save}>{saved ? "Saved ✓" : "Save changes"}</button>
     <a className="btn alt" style={{ display: "block", textAlign: "center", marginTop: 10, textDecoration: "none" }} href="../app2/index.html#profile">Edit full profile and badges</a>
+    <label className="chip" style={{ display: "flex", gap: 10, margin: "14px 0", padding: 14, fontSize: 17 }}><input type="checkbox" defaultChecked={localStorage.getItem("caresits-bunny-calm") === "1"} onChange={(e) => setBunnyCalm(e.target.checked)} /> Turn the bunny down</label>
     <button className="btn alt" style={{ marginTop: 10 }} onClick={() => D.signOut(D.auth())}>Sign out</button></div>;
 }
 
@@ -145,7 +148,7 @@ function App() {
   const setRadius = (r) => { setRadiusS(r); localStorage.setItem("caresits-discover-radius-x", JSON.stringify(r)); };
   if (user === undefined) return <div className="auth"><div className="sk" style={{ height: 80 }} /></div>;
   if (!user) return <Auth />;
-  if (!loading && !me) return <div className="auth"><div style={{ fontSize: 56 }}>🌱</div><h1>Let's build your profile</h1><p>A few quick questions so we can match you well.</p><a className="btn" style={{ textDecoration: "none" }} href="../app2/index.html">Start</a></div>;
+  if (!loading && !me) return <div className="auth"><Bunny mood="hello" size={150} /><h1>Let's build your profile</h1><p>A few quick questions so we can match you well.</p><a className="btn" style={{ textDecoration: "none" }} href="../app2/index.html">Start</a></div>;
   const tabs = [["discover", "Discover"], ["matches", "Matches"], ["messages", "Messages"], ["profile", "Profile"]];
   const pips = rels.filter((r) => r.state === "pending" && r.createdBy !== user.uid).length;
   return <div className="app"><div className="screen">
