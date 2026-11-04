@@ -1,0 +1,66 @@
+name: ci-monorepo
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.16.1
+          run_install: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install workspace packages
+        run: pnpm install --frozen-lockfile
+
+      - name: Reject duplicated app-name strings
+        run: bash scripts/check-brand-string.sh
+
+      - name: Typecheck both apps and Capacitor configs
+        run: |
+          pnpm --filter @cc/caresitters typecheck
+          pnpm --filter @cc/carespace typecheck
+          pnpm --filter @cc/caresitters exec tsc --noEmit --target ES2022 --module ESNext --moduleResolution Bundler --strict --skipLibCheck --jsx react-jsx --lib ES2022,DOM --types vite/client capacitor.config.ts
+          pnpm --filter @cc/carespace exec tsc --noEmit --target ES2022 --module ESNext --moduleResolution Bundler --strict --skipLibCheck --jsx react-jsx --lib ES2022,DOM --types vite/client capacitor.config.ts
+
+      - name: Test both apps
+        run: |
+          pnpm --filter @cc/caresitters exec vitest run
+          pnpm --filter @cc/carespace exec vitest run
+
+      - name: Build both apps
+        run: |
+          pnpm --filter @cc/caresitters exec vite build
+          pnpm --filter @cc/carespace exec vite build
+
+      - name: Check image budgets
+        run: bash scripts/check-budgets.sh
+
+      - name: Test Firestore rules in the emulator
+        run: pnpm --filter @cc/rules test
+
+      - name: Smoke test phone layouts and Arabic RTL
+        run: bash scripts/playwright-phone-smoke.sh

@@ -1,0 +1,22 @@
+name: unpack-monorepo
+on:
+  push:
+    branches: [qa-fixes-2026-10-26]
+    paths: ["monorepo-src.tgz"]
+permissions:
+  contents: write
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unpack and commit
+        run: |
+          if [ ! -f monorepo-src.tgz ]; then echo "nothing to unpack"; exit 0; fi
+          tar xzf monorepo-src.tgz
+          rm monorepo-src.tgz
+          git config user.name "github-actions"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Add monorepo rewrite (apps, packages, functions, docs) [skip ci]"
+          git push
