@@ -14,7 +14,7 @@ export function Sheet({ children, onClose, label }: { children: ReactNode; onClo
     if (!node) return;
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const selector = 'button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
-    const focusable = () => [...node.querySelectorAll<HTMLElement>(selector)];
+    const focusable = () => Array.from(node.querySelectorAll<HTMLElement>(selector));
     (focusable()[0] ?? node).focus();
     const keydown = (event: globalThis.KeyboardEvent) => {
       if (event.key === "Escape") { event.preventDefault(); close.current(); return; }
