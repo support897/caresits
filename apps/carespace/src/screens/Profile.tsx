@@ -55,7 +55,7 @@ export default function Profile({ params }: ScreenProps<ProfileParams>) {
       <button type="button" className="profile-action profile-danger" disabled={busy} onClick={() => void signOut()}>{busy ? t("csProfile.signingOut", "Signing out…") : t("csProfile.signOut", "Sign out")}</button>
     </section>
     <section className="profile-card">
-      <div className="profile-card-head"><h2>{t("csProfile.languageTitle", "Language")}</h2><span className="tag">{LANGS.length} {t("csProfile.languages", "languages")}</span></div>
+      <div className="profile-card-head"><h2>{t("csProfile.languageTitle", "Language")}</h2>{LANGS.length > 1 && <span className="tag">{LANGS.length} {t("csProfile.languages", "languages")}</span>}</div>
       <label className="profile-language"><span>{t("csProfile.languageLabel", "App language")}</span><select aria-label={t("csProfile.languageLabel", "App language")} value={lang} onChange={(event) => setLang(event.target.value as (typeof LANGS)[number][0])}>
         {LANGS.map(([id, label]) => <option key={id} value={id}>{languageName(id, label)}</option>)}
       </select></label>

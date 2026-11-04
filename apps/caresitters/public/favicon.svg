@@ -1,1 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="#F6CBD3"/><path d="M512 840 C250 650 180 480 180 385 C180 275 262 205 354 205 C428 205 484 247 512 300 C540 247 596 205 670 205 C762 205 844 275 844 385 C844 480 774 650 512 840Z" fill="#1E4D44"/><g transform="translate(34 -30)" fill="#FDF8F0" stroke="#FDF8F0"><circle cx="430" cy="395" r="56"/><path d="M345 665 C345 540 385 478 430 478 C478 478 512 520 524 580 L560 640 L560 665Z"/><circle cx="615" cy="545" r="40"/><path d="M552 665 C552 600 578 572 615 572 C650 572 676 600 676 665Z"/><path d="M505 560 C540 585 560 600 575 610" stroke-width="30" stroke-linecap="round" fill="none"/></g><g fill="#1E4D44"><path d="M420 215 C380 130 395 85 425 100 C455 118 465 175 462 232Z"/><path d="M604 215 C644 130 629 85 599 100 C569 118 559 175 562 232Z"/></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="title">
+  <title id="title">Caresitters logo option B — carer hugging a child with bunny ears</title>
+  <rect width="1024" height="1024" rx="184" fill="#F6CBD3"/>
+  <path fill="#1E4D44" d="M512 840C289 682 188 553 188 405c0-116 83-199 193-199 62 0 105 29 131 80 26-51 69-80 131-80 110 0 193 83 193 199 0 148-101 277-324 435Z"/>
+  <g fill="#FDF8F0">
+    <circle cx="405" cy="392" r="59"/>
+    <path d="M312 682c8-116 42-205 94-205 54 0 89 75 94 205H312Z"/>
+    <circle cx="596" cy="496" r="49"/>
+    <path d="M520 681c7-90 34-143 77-143s70 53 77 143H520Z"/>
+    <path d="M364 519c68 92 145 135 231 136 22 0 39-16 39-38 0-21-17-38-38-38-61-1-114-32-167-103-13-17-37-20-54-7-17 13-20 34-11 50Z"/>
+  </g>
+  <g fill="#FDF8F0">
+    <path d="M568 461c-23-74-19-130 9-156 14-13 32-8 38 10 10 30 5 78-5 126Z"/>
+    <path d="M614 452c5-80 24-131 53-144 17-8 31 4 30 23-1 31-23 75-48 115Z"/>
+  </g>
+</svg>
