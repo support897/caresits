@@ -140,3 +140,20 @@ export async function flushOutbox() {
   if (left.length) localStorage.setItem("caresits-outbox", JSON.stringify(left));
 }
 addEventListener("online", () => flushOutbox());
+
+// ---- Google and Apple sign-in (native sheets inside the app, popup on the web) ----
+const nativePlugin = () => { const c = window.Capacitor; if (!c || !c.isNativePlatform || !c.isNativePlatform()) return null; return c.Plugins && c.Plugins.FirebaseAuthentication || null; };
+const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error("timeout"), { code: "auth/timeout" })), ms))]);
+export async function signInGoogle() {
+  const a = auth(), pl = nativePlugin();
+  if (pl) { const r = await withTimeout(pl.signInWithGoogle(), 90000); const c = r && r.credential; if (!c || !c.idToken) throw new Error("no credential"); return authMod.signInWithCredential(a, authMod.GoogleAuthProvider.credential(c.idToken, c.accessToken)); }
+  if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) throw new Error("native sign in unavailable");
+  return authMod.signInWithPopup(a, new authMod.GoogleAuthProvider());
+}
+export async function signInApple() {
+  const a = auth(), pl = nativePlugin(), prov = new authMod.OAuthProvider("apple.com");
+  if (pl) { const r = await withTimeout(pl.signInWithApple(), 90000); const c = r && r.credential; if (!c || !c.idToken) throw new Error("no credential"); return authMod.signInWithCredential(a, prov.credential({ idToken: c.idToken, rawNonce: c.nonce })); }
+  if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) throw new Error("native sign in unavailable");
+  return authMod.signInWithPopup(a, prov);
+}
+export const sendReset = (email) => authMod.sendPasswordResetEmail(auth(), email);

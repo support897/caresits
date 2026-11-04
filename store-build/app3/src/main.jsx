@@ -3,7 +3,9 @@ import { createRoot } from "react-dom/client";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import "./style.css";
 import { Bunny, setBunnyCalm } from "./bunny.jsx";
-import { APP1, TAGLINE, CANCEL_POLICY } from "./brand.js";
+import { ChatList, ChatThread } from "./chat.jsx";
+import { ReportBlock, EmergencyContacts, Qualifications } from "./safety.jsx";
+import { APP1, APP2, TAGLINE, CANCEL_POLICY } from "./brand.js";
 import { initI18n, setLang, getLang, LANGS } from "./i18n.js";
 import { AuPair } from "./aupair.jsx";
 import { CareSpace } from "./carespace.jsx";
@@ -17,19 +19,27 @@ const ls = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } 
 const spring = { type: "spring", stiffness: 420, damping: 32 };
 const Ico = { discover: "M6 4h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2zM8 9h8M8 13h5", matches: "M12 20s-7-4.4-7-9.6A4 4 0 0112 8a4 4 0 017 2.4C19 15.6 12 20 12 20z", messages: "M4 5h16v12H9l-5 4zM8 10h8M8 13h5", profile: "M12 12a4 4 0 100-8 4 4 0 000 8zM4 21c0-4 3.6-7 8-7s8 3 8 7" };
 
+const CS_ONLY = new URLSearchParams(location.search).get("app") === "cs";
 function Auth() {
-  const [e, setE] = useState(""), [p, setP] = useState(""), [msg, setMsg] = useState(""), [busy, setBusy] = useState(false);
+  const [e, setE] = useState(""), [p, setP] = useState(""), [msg, setMsg] = useState(""), [busy, setBusy] = useState(false), [mail, setMail] = useState(false);
+  const fail = (er) => { setBusy(false); const c = er?.code || ""; setMsg(/cancel|1001|popup-closed/i.test(c + (er?.message || "")) ? "" : /weak/.test(c) ? "Password needs 6+ characters." : /invalid|wrong|not-found/.test(c) ? "Email or password is not right." : /network|timeout/.test(c) ? "No connection. Try again." : "Could not sign in. Try again."); };
+  const social = async (fn) => { setBusy(true); setMsg(""); try { await fn(); } catch (er) { fail(er); } };
   const go = async () => {
     setBusy(true); setMsg("");
     try { try { await D.signInWithEmailAndPassword(D.auth(), e.trim(), p); } catch (er) { if (/user-not-found|invalid-credential/.test(er.code || "")) await D.createUserWithEmailAndPassword(D.auth(), e.trim(), p); else throw er; } }
-    catch (er) { setMsg(/weak/.test(er.code) ? "Password needs 6+ characters." : /invalid|wrong/.test(er.code) ? "Email or password is not right." : "Could not sign in. Try again."); setBusy(false); }
+    catch (er) { fail(er); }
   };
+  const reset = async () => { if (!e.includes("@")) { setMsg("Type your email first."); return; } try { await D.sendReset(e.trim()); setMsg("Check your email for a reset link."); } catch { setMsg("Could not send. Try again."); } };
   return <div className="auth"><motion.div initial={{ scale: .5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={spring}><Bunny mood="hello" size={130} /></motion.div>
-    <h1>{APP1}</h1><p>{TAGLINE}</p>
-    <input className="field" type="email" placeholder="you@example.com" value={e} onChange={(x) => setE(x.target.value)} autoComplete="email" />
-    <input className="field" type="password" placeholder="Your password" value={p} onChange={(x) => setP(x.target.value)} autoComplete="current-password" />
-    <button className="btn" onClick={go} disabled={busy || !e || !p}>{busy ? "One moment…" : "Continue"}</button>
-    <p style={{ color: "#B3365A", minHeight: 22 }}>{msg}</p></div>;
+    <h1>{CS_ONLY ? APP2 : APP1}</h1><p>{CS_ONLY ? "Run the care day." : TAGLINE}</p>
+    <button className="btn alt" disabled={busy} onClick={() => social(D.signInGoogle)}><b style={{ marginRight: 8 }}>G</b> Continue with Google</button>
+    <button className="btn" style={{ background: "#000", color: "#fff" }} disabled={busy} onClick={() => social(D.signInApple)}><span style={{ marginRight: 8 }}></span>Continue with Apple</button>
+    {!mail ? <button className="btn alt" disabled={busy} onClick={() => setMail(true)}>Continue with email</button> : <>
+      <input className="field" type="email" placeholder="you@example.com" value={e} onChange={(x) => setE(x.target.value)} autoComplete="email" />
+      <input className="field" type="password" placeholder="Your password" value={p} onChange={(x) => setP(x.target.value)} autoComplete="current-password" />
+      <button className="btn" onClick={go} disabled={busy || !e || !p}>{busy ? "One moment…" : "Continue"}</button>
+      <button className="chip" style={{ alignSelf: "center" }} onClick={reset}>Forgot password?</button></>}
+    <p style={{ color: "#B3365A", minHeight: 22 }}>{msg}</p><p style={{ fontSize: 13, opacity: .7 }}>You stay signed in on this phone until you sign out.</p></div>;
 }
 
 function Ring({ pct }) {
@@ -152,11 +162,11 @@ function Matches({ me, rels, people }) {
 }
 
 function Messages({ me, rels, people }) {
-  const live = rels.filter((r) => r.state === "contact" || r.state === "hired");
-  const by = Object.fromEntries(people.map((p) => [p.uid, p]));
-  return <div className="scroll"><h1 style={{ margin: "8px 0 14px" }}>Messages</h1>
-    {live.map((r) => { const o = by[r.members.find((m) => m !== me.uid)]; return <a key={r.id} className="li" style={{ color: "inherit", textDecoration: "none" }} href={"../app2/index.html#thread"}><Avatar p={o || { name: "?" }} /><div style={{ flex: 1 }}><b>{o?.name || "Member"}</b><div style={{ fontSize: 13, opacity: .7 }}>Open chat</div></div>›</a>; })}
-    {!live.length && <div className="empty"><Bunny mood="rest" size={110} /><h2>No chats yet</h2><p>Chat opens when you both say yes.</p></div>}</div>;
+  const [open, setOpen] = useState(null), [rep, setRep] = useState(false);
+  if (open) return <div style={{ height: "100%", position: "relative" }}><ChatThread me={me} other={open.other} relId={open.relId} onBack={() => setOpen(null)} />
+    <button className="chip" style={{ position: "absolute", top: 10, right: 12, zIndex: 5 }} onClick={() => setRep(true)}>Report or block</button>
+    {rep && <Sheet onClose={() => setRep(false)}><ReportBlock me={me} other={open.other} onDone={() => { setRep(false); setOpen(null); }} /></Sheet>}</div>;
+  return <ChatList me={me} rels={rels} people={people} onOpen={(other, relId) => setOpen({ other, relId })} />;
 }
 
 const STATUS = { submitted: "Submitted", review: "Under review", "under review": "Under review", verified: "Verified", expired: "Expired", renew: "Needs renewal", "needs renewal": "Needs renewal" };
@@ -171,18 +181,18 @@ function Checks({ me }) {
     <h3>References and reviews</h3>
     {rev.length ? rev.slice(0, 5).map((r, i) => <div className="li" key={i}><div><b>{r.name || r.from || "Someone"}</b><div style={{ fontSize: 15 }}>{r.text || r.comment}</div></div></div>) : <p style={{ opacity: .7 }}>No reviews yet. They show here once families or carers leave one.</p>}</>;
 }
+function DocsQual({ me }) { const [d, setD] = useState([]); useEffect(() => { D.loadDocs(me.uid).then(setD); }, [me.uid]); return <><h3 style={{ marginTop: 16 }}>Qualifications</h3><Qualifications me={me} docs={d} editable={false} /></>; }
 function Profile({ me }) {
   const [about, setAbout] = useState(me.about), [saved, setSaved] = useState(false);
   const save = async () => { await D.saveProfile(me.uid, { about }); setSaved(true); haptic(); setTimeout(() => setSaved(false), 1600); };
   return <div className="scroll"><div style={{ textAlign: "center", padding: "12px 0" }}><div className="av" style={{ width: 96, height: 96, margin: "0 auto", fontSize: 40 }}>{me.photoUrl ? <img src={me.photoUrl} alt="" /> : me.name[0]}</div><h1 style={{ marginTop: 10 }}>{me.name}</h1><span className="chip">{me.side === "family" ? "Family" : "Carer"} · {me.postcode}</span></div>
-    <button className="btn alt" style={{ margin: "10px 0" }} onClick={() => window.__openCS && window.__openCS()}>Open the care-day app</button><button className="btn alt" style={{ margin: "0 0 10px" }} onClick={() => window.__openAP && window.__openAP()}>Au pair world</button><label style={{ display: "block", margin: "10px 0" }}>Language<select className="field" defaultValue={getLang()} onChange={(e) => setLang(e.target.value)}>{LANGS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></label><Checks me={me} /><h3 style={{ marginTop: 16 }}>About</h3><textarea className="field" rows={4} value={about} onChange={(e) => setAbout(e.target.value)} />
+    <button className="btn alt" style={{ margin: "10px 0" }} onClick={() => window.__openCS && window.__openCS()}>Open the care-day app</button><button className="btn alt" style={{ margin: "0 0 10px" }} onClick={() => window.__openAP && window.__openAP()}>Au pair world</button><label style={{ display: "block", margin: "10px 0" }}>Language<select className="field" defaultValue={getLang()} onChange={(e) => setLang(e.target.value)}>{LANGS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></label><Checks me={me} />{me.side === "carer" && <DocsQual me={me} />}<h3 style={{ marginTop: 16 }}>Emergency contacts</h3><EmergencyContacts me={me} /><h3 style={{ marginTop: 16 }}>About</h3><textarea className="field" rows={4} value={about} onChange={(e) => setAbout(e.target.value)} />
     <button className="btn" onClick={save}>{saved ? "Saved ✓" : "Save changes"}</button>
     <a className="btn alt" style={{ display: "block", textAlign: "center", marginTop: 10, textDecoration: "none" }} href="../app2/index.html#profile">Edit full profile and badges</a>
     <label className="chip" style={{ display: "flex", gap: 10, margin: "14px 0", padding: 14, fontSize: 17 }}><input type="checkbox" defaultChecked={localStorage.getItem("caresits-bunny-calm") === "1"} onChange={(e) => setBunnyCalm(e.target.checked)} /> Turn the bunny down</label>
     <button className="btn alt" style={{ marginTop: 10 }} onClick={() => D.signOut(D.auth())}>Sign out</button></div>;
 }
 
-const CS_ONLY = new URLSearchParams(location.search).get("app") === "cs";
 function App() {
   const [csOpen, setCs] = useState(false), [apOpen, setAp] = useState(false), [side, setSideS] = useState(getSide()), [tour, setTour] = useState(() => localStorage.getItem("caresits-tour-done") !== "1"), [user, setUser] = useState(undefined), [me, setMe] = useState(null), [people, setPeople] = useState([]), [rels, setRels] = useState([]), [tab, setTab] = useState("discover"), [loading, setLoading] = useState(true), [err, setErr] = useState("");
   const [prefs, setPrefsS] = useState(() => ls("caresits-discover-prefs-x", emptyPrefs())), [radius, setRadiusS] = useState(() => ls("caresits-discover-radius-x", 25));
