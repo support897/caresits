@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="title">
+  <title id="title">Caresitters logo option A — heart holding a carer and child</title>
+  <rect width="1024" height="1024" rx="184" fill="#F6CBD3"/>
+  <path fill="#1E4D44" d="M512 840C289 682 188 553 188 405c0-116 83-199 193-199 62 0 105 29 131 80 26-51 69-80 131-80 110 0 193 83 193 199 0 148-101 277-324 435Z"/>
+  <g fill="#FDF8F0">
+    <circle cx="421" cy="376" r="61"/>
+    <path d="M323 677c8-122 43-211 98-211 54 0 88 75 93 211H323Z"/>
+    <circle cx="604" cy="473" r="49"/>
+    <path d="M521 677c8-94 38-151 83-151 44 0 74 57 82 151H521Z"/>
+    <path d="M379 504c53 75 131 117 215 126 21 2 39-12 42-33 3-20-11-38-31-41-65-8-117-37-154-90-12-16-35-19-51-7-16 11-19 29-21 45Z"/>
+  </g>
+</svg>

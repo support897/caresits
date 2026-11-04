@@ -1,0 +1,43 @@
+.onb-screen{height:100%;display:flex;flex-direction:column;min-height:0;background:var(--cream)}
+.onb-scroll{height:100%;overflow-y:auto;padding:16px 18px 30px;display:flex;flex-direction:column;gap:16px}
+.onb-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.onb-progress{display:flex;align-items:center;gap:12px}
+.onb-kicker{margin:0;color:var(--muted);font-size:17px;font-weight:700;letter-spacing:.03em}
+.onb-heading{display:grid;gap:6px}
+.onb-heading h1{font-size:clamp(30px,8vw,38px)}
+.onb-content{display:grid;gap:14px}
+.onb-choice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.onb-choice{min-height:82px;display:flex;align-items:center;gap:12px;text-align:start;padding:14px;border:1.5px solid var(--line);border-radius:20px;background:var(--card);box-shadow:var(--shadow);transition:transform .14s,border-color .14s}
+.onb-choice:active{transform:scale(.98)}.onb-choice.selected{border:2px solid var(--ink);background:var(--soft)}
+.onb-choice-mark{width:28px;height:28px;display:grid;place-items:center;border-radius:50%;background:var(--blush);font-weight:700;flex:none}
+.onb-choice small{display:block;color:var(--muted);font-size:17px;margin-top:3px}
+.onb-label{font-weight:700;display:block;margin:0 0 6px}
+.onb-field-stack{display:grid;gap:12px}
+.onb-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.onb-kid{display:grid;grid-template-columns:minmax(0,1fr) minmax(78px,.55fr) 44px;gap:8px;align-items:center;padding:10px;background:var(--soft);border-radius:18px}
+.onb-kid .field{min-width:0;padding-inline:10px}
+.onb-remove{min-width:44px;min-height:44px;border-radius:50%;background:var(--card);font-size:21px;font-weight:700}
+.onb-note{margin:0;font-size:17px}.onb-privacy{border-inline-start:4px solid var(--bunny);padding:10px 12px;background:var(--soft);border-radius:14px;margin:0}
+.onb-actions{display:grid;grid-template-columns:1fr 1.2fr;gap:10px;margin-top:auto;padding-top:6px}
+.onb-error{color:var(--danger);margin:0;font-weight:700}
+.onb-prompt{padding:14px;border:1px solid var(--line);border-radius:18px;background:var(--soft);display:grid;gap:10px}
+.onb-suggest-label{font-size:17px;font-weight:700;color:var(--muted);margin:0}
+.onb-suggest-text{white-space:pre-wrap;margin:0;background:var(--card);border-radius:14px;padding:12px}
+.onb-chip-row{display:flex;flex-wrap:wrap;gap:8px}
+.onb-media-step,.onb-quals-step{display:grid;gap:12px}
+.onb-photo-frame{width:min(190px,55vw);aspect-ratio:1;border-radius:50%;margin:0 auto;overflow:hidden;display:grid;place-items:center;background:linear-gradient(135deg,var(--blush),var(--soft));font-size:64px;color:var(--ink);box-shadow:var(--shadow)}
+.onb-photo-frame img{width:100%;height:100%;object-fit:cover}
+.onb-file-label{display:grid;gap:6px;font-weight:700}
+.onb-video-preview{width:100%;max-height:280px;border-radius:18px;background:var(--soft)}
+.onb-trust-note{margin:0;padding:14px;border-radius:16px;background:var(--soft);font-weight:700}
+.onb-qual-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.onb-qual-list li{display:flex;justify-content:space-between;gap:10px;align-items:center;min-height:48px;padding:10px 12px;background:var(--card);border:1px solid var(--line);border-radius:14px}
+.onb-status{font-size:17px;color:var(--muted);white-space:nowrap}.onb-matched{display:inline-block;padding:4px 10px;border-radius:99px;background:var(--card);font-weight:700}
+.onb-welcome{height:100%;overflow-y:auto;display:flex;flex-direction:column;justify-content:center;gap:20px;padding:28px 22px 36px;text-align:center}
+.onb-welcome-bunny{align-self:center}.onb-welcome h1{font-size:clamp(38px,11vw,54px);letter-spacing:-.025em}
+.onb-welcome-tagline{margin:0;color:var(--muted);font-size:19px}
+.onb-welcome-cards{display:grid;gap:14px;margin-top:10px}
+.onb-welcome-card{display:flex;align-items:center;gap:16px;text-align:start;min-height:100px;padding:18px 20px;background:var(--card);border:1.5px solid var(--line);border-radius:24px;box-shadow:var(--shadow);font:700 23px Newsreader,Georgia,serif;transition:transform .16s,border-color .16s}
+.onb-welcome-card:hover{transform:translateY(-2px);border-color:var(--ink)}
+.onb-welcome-icon{width:54px;height:54px;border-radius:18px;display:grid;place-items:center;background:var(--blush);font:700 28px Atkinson,system-ui,sans-serif;flex:none}
+@media(max-width:340px){.onb-choice-grid{grid-template-columns:1fr}.onb-scroll{padding-inline:14px}.onb-welcome-card{font-size:21px}}

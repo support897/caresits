@@ -1,0 +1,15 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "GZ9Z6BPTFR.com.ilse.caresits",
+        "paths": ["/caresitters", "/caresitters/*"]
+      },
+      {
+        "appID": "GZ9Z6BPTFR.com.ilse.carespace",
+        "paths": ["/carespace", "/carespace/*"]
+      }
+    ]
+  }
+}

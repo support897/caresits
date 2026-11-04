@@ -1,0 +1,11 @@
+// Keep people signed in on the phone. localStorage first, IndexedDB mirror second; the app waits for the saved
+// session before it ever calls someone "signed out" (fixes the build-140 iPhone bug).
+const AUTH_KEY_RE = /^firebase:authUser:/; const MIRROR_DB = "caresits-session-mirror";
+const idb = (): Promise<IDBDatabase | null> => new Promise((res) => { try { const o = indexedDB.open(MIRROR_DB, 1); o.onupgradeneeded = () => o.result.createObjectStore("kv"); o.onsuccess = () => res(o.result); o.onerror = () => res(null); } catch { res(null); } });
+async function put(k: string, v: string) { const d = await idb(); if (!d) return; await new Promise<void>((r) => { try { const tx = d.transaction("kv", "readwrite"); tx.objectStore("kv").put(v, k); tx.oncomplete = () => r(); tx.onerror = () => r(); tx.onabort = () => r(); } catch { r(); } }); d.close(); }
+async function all(): Promise<Record<string, unknown>> { const d = await idb(); if (!d) return {}; const out: Record<string, unknown> = {}; await new Promise<void>((r) => { try { const q = d.transaction("kv").objectStore("kv").openCursor(); q.onsuccess = () => { const c = q.result; if (c) { out[String(c.key)] = c.value; c.continue(); } else r(); }; q.onerror = () => r(); } catch { r(); } }); d.close(); return out; }
+export const localKeys = (): string[] => { const k: string[] = []; try { for (let i = 0; i < localStorage.length; i++) { const x = localStorage.key(i); if (x && AUTH_KEY_RE.test(x)) k.push(x); } } catch { /* storage off */ } return k; };
+export const hasSavedSession = () => localKeys().length > 0;
+export async function restoreSessionMirror(): Promise<boolean> { try { if (hasSavedSession()) return false; const s = await all(); let n = false; for (const [k, v] of Object.entries(s)) if (AUTH_KEY_RE.test(k) && typeof v === "string" && v) { localStorage.setItem(k, v); n = true; } return n; } catch { return false; } }
+let mirrorOn = false;
+export function startMirror() { if (mirrorOn) return; mirrorOn = true; const copy = () => { for (const k of localKeys()) { const v = localStorage.getItem(k); if (v) void put(k, v); } }; copy(); addEventListener("pagehide", copy); document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") copy(); }); setInterval(copy, 15000); }

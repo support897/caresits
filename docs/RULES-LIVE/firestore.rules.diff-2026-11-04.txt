@@ -1,0 +1,11 @@
+Diff summary: live 2026-11-03 to proposed 2026-11-04
+
+- Kept the live rules as the base. Qualification client writes now allow submitted-only creates; verified records and entitlement deletes are server-only.
+- Added the v2 profile-card keys with bounds; qualification claims remain outside public profile cards.
+- Added protected CareSpace invite joins, role and permission checks, separate medical sections, and matching append-only medical alerts.
+- Added family-requested bookings, carer-only accept/decline, member cancellation, and accepted-booking check-ins.
+- Time-off calendar items start requested; only admins decide or propose swaps. Calendar records cannot be client-deleted or forged as bookings.
+- Emergency contacts use one owner-only document capped at three entries. Saved and block records remain owner-only.
+- Added client-denied rate-counter and daily-recap run-marker paths. Firebase Storage remains deny-all; photos and video stay on the R2 gatekeeper.
+
+OWNER MUST DEPLOY. This proposed copy has not been deployed.

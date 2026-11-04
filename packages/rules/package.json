@@ -1,0 +1,16 @@
+{
+  "name": "@cc/rules",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "firebase emulators:exec --only firestore --project demo-cc \"node --test tests/rules.test.mjs\""
+  },
+  "dependencies": {
+    "@firebase/rules-unit-testing": "^3.0.4",
+    "firebase": "^10.12.2"
+  },
+  "devDependencies": {
+    "firebase-tools": "^14.27.0"
+  }
+}

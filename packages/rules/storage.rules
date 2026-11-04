@@ -1,0 +1,10 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Photos and video use the Cloudflare R2 gatekeeper, not Firebase Storage.
+    // Keep Firebase Storage closed unless the owner approves a separate policy.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
