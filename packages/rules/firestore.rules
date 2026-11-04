@@ -525,7 +525,7 @@ function validProfileGallery(card) {
       && (card.gallery.size() < 4 || (card.gallery[3] is string && card.gallery[3].size() <= 500 && card.gallery[3].matches("^users/" + request.auth.uid + "/.+$")))
       && (card.gallery.size() < 5 || (card.gallery[4] is string && card.gallery[4].size() <= 500 && card.gallery[4].matches("^users/" + request.auth.uid + "/.+$")))
       && (card.gallery.size() < 6 || (card.gallery[5] is string && card.gallery[5].size() <= 500 && card.gallery[5].matches("^users/" + request.auth.uid + "/.+$"))))
-    && (!("mainPhotoIndex" in card) || (card.mainPhotoIndex is int && card.mainPhotoIndex >= 0 && card.mainPhotoIndex < 6 && "gallery" in card && card.mainPhotoIndex < card.gallery.size()));
+    && (!("mainPhotoIndex" in card) || (card.mainPhotoIndex is int && card.mainPhotoIndex >= 0 && card.mainPhotoIndex < 6 && "gallery" in card && card.mainPhotoIndex < card.gallery.size())));
 }
 function validAlsoSide(other, primarySide) {
   return (other is map)
