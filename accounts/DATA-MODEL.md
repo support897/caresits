@@ -28,9 +28,17 @@ user chosen password. The isolation record is amended to cite the
 | `users/{uid}/roster/{id}` | Roster entries. |
 | `users/{uid}/timesheets/{id}` | Timesheet entries. |
 | `users/{uid}/documents/{id}` | Document records (checks, certificates). Bytes, when they arrive, live in private storage under the same uid path. |
-| `users/{uid}/messages/{id}` | Message threads this user takes part in (demo threads in v1 stay on device until the matching build moves them). |
+| `users/{uid}/messages/{id}` | Owner-private message records; rules do not let the other participant read this path. Not the shared pair chat stream. |
 | `users/{uid}/jobs/{id}` | Family job posts, incl. urgent board posts. |
 | `users/{uid}/meta/app` | App level state kept per user. |
+
+## Existing two-way chat (live app2 rules)
+
+Shared family-carer chat lives at `relationships/{pairId}/messages/{msgId}`.
+Each message has `from`, `kind`, `text`, and server `at`; `img` is optional.
+Only a signed-in pair member can read an open, unblocked relationship's messages.
+Message records are append-only: clients can create, but cannot update or delete.
+The `users/{uid}/messages/{id}` path above is owner-private and is not a shared chat stream.
 
 ## Plans (plan tracking)
 
