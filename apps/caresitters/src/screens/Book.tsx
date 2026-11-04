@@ -1,16 +1,28 @@
 import { useEffect, useMemo, useState } from "react";
-import { type Person, type ScreenProps, BackBar, Bunny, Button, Empty, auth, loadProfile, t, useNav } from "@cc/core";
+import { type Person, type ScreenProps, BackBar, Bunny, Button, Empty, auth, loadProfile, schemas, t, useNav } from "@cc/core";
 import { CANCEL_POLICY } from "@cc/core";
-import { createBookingRequest } from "../data/bookings";
+import { bookingEndAtMillis, createBookingRequest, loadBookingContextForPair, loadFamilyChildren, type BookingRecord, type BookingSeriesRecord, type FamilyChild } from "../data/bookings";
 import { checkAvailability, estimateCost, isProfileComplete } from "../lib/booking";
 import { moneyLabel } from "./booking/format";
 import "./booking/booking.css";
 
-type RepeatSeed = { date?: string; from?: string; to?: string; recurring?: "none" | "weekly"; weekdays?: string[] };
+type RepeatSeed = { date?: string; from?: string; to?: string; recurring?: "none" | "weekly"; weekdays?: string[]; endDate?: string };
 type Params = { uid: string; rate?: number; repeatFrom?: RepeatSeed };
-const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 function localDay(offset = 1): string { const date = new Date(); date.setDate(date.getDate() + offset); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`; }
-function weekdayFor(date: string): string { const value = new Date(`${date}T12:00:00`).getDay(); return DAYS[(value + 6) % 7] ?? "Mon"; }
+function addDateDays(dateValue: string, days: number): string { const date = new Date(`${dateValue}T12:00:00Z`); date.setUTCDate(date.getUTCDate() + days); return date.toISOString().slice(0, 10); }
+function weekdayFor(date: string): string { const value = new Date(`${date}T12:00:00Z`).getUTCDay(); return DAYS[(value + 6) % 7] ?? "Mon"; }
+function weeklyDates(startDate: string, endDate: string, weekdays: string[]): string[] {
+  const selected = new Set(weekdays);
+  const dates: string[] = [];
+  const cursor = new Date(`${startDate}T12:00:00Z`);
+  const last = new Date(`${endDate}T12:00:00Z`);
+  for (; cursor <= last; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
+    const day = DAYS[(cursor.getUTCDay() + 6) % 7];
+    if (day && selected.has(day)) dates.push(cursor.toISOString().slice(0, 10));
+  }
+  return dates;
+}
 
 export default function Book({ params }: ScreenProps<Params>) {
   const nav = useNav();
@@ -19,10 +31,16 @@ export default function Book({ params }: ScreenProps<Params>) {
   const [loading, setLoading] = useState(true);
   const initialDate = params.repeatFrom?.date ?? localDay();
   const [date, setDate] = useState(initialDate);
+  const [endDate, setEndDate] = useState(params.repeatFrom?.endDate ?? addDateDays(initialDate, 83));
   const [from, setFrom] = useState(params.repeatFrom?.from ?? "16:00");
   const [to, setTo] = useState(params.repeatFrom?.to ?? "19:00");
   const [repeat, setRepeat] = useState(params.repeatFrom?.recurring === "weekly");
   const [weekdays, setWeekdays] = useState<string[]>(params.repeatFrom?.weekdays?.length ? params.repeatFrom.weekdays : [weekdayFor(initialDate)]);
+  const [children, setChildren] = useState<FamilyChild[]>([]);
+  const [selectedChildIds, setSelectedChildIds] = useState<string[]>([]);
+  const [shareAddress, setShareAddress] = useState(false);
+  const [existingBookings, setExistingBookings] = useState<BookingRecord[]>([]);
+  const [existingSeries, setExistingSeries] = useState<BookingSeriesRecord[]>([]);
   const [note, setNote] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -36,9 +54,18 @@ export default function Book({ params }: ScreenProps<Params>) {
         loadProfile(params.uid).catch(() => null),
         uid ? loadProfile(uid).catch(() => null) : Promise.resolve(null),
       ]);
+      const [context, childRows] = uid && familyProfile?.side === "family"
+        ? await Promise.all([
+            loadBookingContextForPair(uid, params.uid).catch(() => ({ bookings: [], series: [] })),
+            loadFamilyChildren(uid).catch(() => []),
+          ])
+        : [{ bookings: [], series: [] }, []];
       if (!live) return;
       setCarer(carerProfile);
       setFamily(familyProfile);
+      setExistingBookings(context.bookings);
+      setExistingSeries(context.series);
+      setChildren(childRows);
       setLoading(false);
     }
     void load();
@@ -50,8 +77,22 @@ export default function Book({ params }: ScreenProps<Params>) {
   const validRate = Number.isFinite(rate) && rate >= 0;
   const estimate = validRate ? estimateCost(from, to, rate) : null;
   const availability = carer?.card.availability as Record<string, unknown> | string[] | null | undefined;
-  const clashes = useMemo(() => repeat ? checkAvailability(availability, weekdays) : [], [repeat, availability, weekdays]);
+  const availabilityClashes = useMemo(() => repeat ? checkAvailability(availability, weekdays) : [], [repeat, availability, weekdays]);
   const scheduleKnown = Array.isArray(availability) ? availability.length > 0 : Boolean(availability && Object.keys(availability).length > 0);
+  const conflictSeries = useMemo(() => existingSeries.map((series) => ({
+    ...series,
+    weekdays: series.weekdays.filter((day): day is typeof DAYS[number] => DAYS.includes(day as typeof DAYS[number])),
+  })), [existingSeries]);
+  const candidateDates = repeat ? weeklyDates(date, endDate, weekdays) : [date];
+  const overlapClashes = useMemo(() => candidateDates.flatMap((candidateDate) => schemas.findBookingConflicts(
+    { date: candidateDate, from, to },
+    existingBookings,
+    conflictSeries,
+  )), [candidateDates, from, to, existingBookings, conflictSeries]);
+  const hasInvalidRepeatRange = repeat && (endDate < date || endDate > addDateDays(date, 83) || candidateDates.length === 0);
+  const endAtMillis = bookingEndAtMillis(date, to);
+  const localEndAtMillis = new Date(`${date}T${to}:00`).getTime();
+  const endsBeforeNow = endAtMillis === null || endAtMillis <= Date.now() || !Number.isFinite(localEndAtMillis) || localEndAtMillis <= Date.now();
   const familyComplete = family?.side === "family" && isProfileComplete(family);
 
   function toggleDay(day: string) {
@@ -59,8 +100,10 @@ export default function Book({ params }: ScreenProps<Params>) {
   }
 
   async function sendRequest() {
-    if (!carer || !family || !date || estimate == null || sending || sent || clashes.length) return;
+    if (!carer || !family || !date || estimate == null || sending || sent) return;
     if (family.side !== "family") { setMessage(t("book.familyRole", "Switch to a family profile to send a booking request.")); return; }
+    if (endsBeforeNow) { setMessage(t("book.timePassed", "Choose an end time in the future.")); return; }
+    if (repeat && (!weekdays.length || hasInvalidRepeatRange)) { setMessage(t("book.repeatRangeError", "Choose at least one day and an end date within twelve weeks.")); return; }
     setSending(true);
     setMessage("");
     try {
@@ -75,12 +118,17 @@ export default function Book({ params }: ScreenProps<Params>) {
         estimate,
         recurring: repeat ? "weekly" : "none",
         weekdays: repeat ? weekdays : [],
+        ...(repeat ? { endDate } : {}),
+        childIds: selectedChildIds,
+        shareAddress,
         note,
       });
       setSent(true);
     } catch (error) {
       const reason = error instanceof Error ? error.message : "";
-      setMessage(reason === "profile-incomplete" ? t("book.completeProfile", "Finish your family profile before sending this request.") : t("book.sendError", "The request could not be sent. Check your connection and try again."));
+      setMessage(reason === "profile-incomplete" ? t("book.completeProfile", "Finish your family profile before sending this request.")
+        : reason === "repeat-range-invalid" || reason === "repeat-days-required" ? t("book.repeatRangeError", "Choose at least one day and an end date within twelve weeks.")
+          : t("book.sendError", "The request could not be sent. Check your connection and try again."));
     } finally { setSending(false); }
   }
 
@@ -94,19 +142,35 @@ export default function Book({ params }: ScreenProps<Params>) {
         {!loading && !family && <p className="booking-error" role="alert">{t("book.signInRequired", "Sign in with a family profile to send a request.")}</p>}
         <header className="booking-section"><p className="booking-kicker">{t("book.requestFor", "Booking request for {name}", { name: carer.firstName })}</p><h1>{t("book.chooseTime", "Choose a time")}</h1><p className="booking-meta">{t("book.tapPath", "Choose date and time, then send.")}</p></header>
         <section className="booking-card booking-form" aria-label={t("book.details", "Booking details")}>
-          <label>{t("book.date", "Date")}<input type="date" min={localDay(0)} value={date} onChange={(event) => { setDate(event.target.value); if (!repeat) setWeekdays([weekdayFor(event.target.value)]); }} /></label>
+          <label>{t("book.date", "Date")}<input type="date" min={localDay(0)} value={date} onChange={(event) => { setDate(event.target.value); setEndDate(addDateDays(event.target.value, 83)); if (!repeat) setWeekdays([weekdayFor(event.target.value)]); }} /></label>
           <div className="booking-time-grid"><label>{t("book.from", "From")}<input type="time" step="900" value={from} onChange={(event) => setFrom(event.target.value)} /></label><label>{t("book.to", "To")}<input type="time" step="900" value={to} onChange={(event) => setTo(event.target.value)} /></label></div>
           {validRate ? <div className="booking-cost"><div className="booking-between"><span>{t("book.rate", "Rate")}</span><b>{moneyLabel(rate)} {t("book.hour", "/ hour")}</b></div><div className="booking-between"><span>{t("book.estimate", "Estimated cost")}</span><b>{estimate == null ? t("book.checkTime", "Check the time") : moneyLabel(estimate)}</b></div><p className="booking-meta">{t("book.estimateNote", "Estimate for one visit only. The carer needs to accept this request before it becomes active.")}</p></div> : <p className="booking-error">{t("book.rateMissing", "This carer has not listed a rate. Message them before booking.")}</p>}
+          {endsBeforeNow && <p className="booking-error" role="status">{t("book.timePassed", "Choose an end time in the future.")}</p>}
+          {children.length > 0 && <div role="group" aria-label={t("book.childrenLabel", "Children for this booking")}>
+            <p className="booking-meta">{t("book.childrenLabel", "Children for this booking")}</p>
+            <div className="booking-weekdays">{children.map((child) => <button key={child.id} type="button" aria-pressed={selectedChildIds.includes(child.id)} disabled={selectedChildIds.length >= 8 && !selectedChildIds.includes(child.id)} onClick={() => setSelectedChildIds((current) => current.includes(child.id) ? current.filter((id) => id !== child.id) : [...current, child.id])}>{child.name}</button>)}</div>
+          </div>}
+          {family?.side === "family" && children.length === 0 && <p className="booking-meta">{t("book.noChildren", "No saved children to choose. You can leave this blank.")}</p>}
+          <label className="booking-repeat"><input type="checkbox" checked={shareAddress} onChange={(event) => setShareAddress(event.target.checked)} /><span><b>{t("book.shareAddress", "Allow address sharing later")}</b><br /><span className="booking-meta">{t("book.addressPrivate", "This saves your choice only. The exact address is never stored in this booking.")}</span></span></label>
           <label>{t("book.noteLabel", "Note (optional)")}<textarea maxLength={1000} value={note} onChange={(event) => setNote(event.target.value)} placeholder={t("book.notePlaceholder", "Share a short note about this visit.")} /></label>
         </section>
-        <label className="booking-repeat"><input type="checkbox" checked={repeat} onChange={(event) => setRepeat(event.target.checked)} /><span><b>{t("book.repeatWeekly", "Repeat weekly")}</b><br /><span className="booking-meta">{t("book.repeatInfo", "Choose the days. We check the shared availability before sending.")}</span></span></label>
-        {repeat && <section className="booking-card booking-section"><h2>{t("book.weekdays", "Days each week")}</h2><div className="booking-weekdays">{DAYS.map((day) => <button key={day} type="button" aria-pressed={weekdays.includes(day)} onClick={() => toggleDay(day)}>{t(`day.${day.toLowerCase()}`, day)}</button>)}</div>{!weekdays.length && <p className="booking-error">{t("book.chooseDay", "Choose at least one day.")}</p>}{clashes.length > 0 ? <p className="booking-error" role="alert">{t("book.availabilityClash", "Not listed as available: {days}.", { days: clashes.join(", ") })}</p> : <p className="booking-meta">{scheduleKnown ? t("book.availabilityClear", "No listed conflicts for these days. The carer still needs to accept.") : t("book.availabilityUnknown", "No weekly schedule is shared yet. The carer will need to check these days.")}</p>}</section>}
+        <label className="booking-repeat"><input type="checkbox" checked={repeat} onChange={(event) => setRepeat(event.target.checked)} /><span><b>{t("book.repeatWeekly", "Repeat weekly")}</b><br /><span className="booking-meta">{t("book.repeatInfo", "Choose days. We send separate requests for the next twelve weeks.")}</span></span></label>
+        {repeat && <section className="booking-card booking-section">
+          <h2>{t("book.weekdays", "Days each week")}</h2>
+          <label>{t("book.repeatThrough", "Repeat through")}<input type="date" min={date} max={addDateDays(date, 83)} value={endDate} onChange={(event) => setEndDate(event.target.value)} /></label>
+          <div className="booking-weekdays">{DAYS.map((day) => <button key={day} type="button" aria-pressed={weekdays.includes(day)} onClick={() => toggleDay(day)}>{t(`day.${day.toLowerCase()}`, day)}</button>)}</div>
+          {!weekdays.length && <p className="booking-error">{t("book.chooseDay", "Choose at least one day.")}</p>}
+          {hasInvalidRepeatRange && <p className="booking-error">{t("book.repeatRangeError", "Choose at least one day and an end date within twelve weeks.")}</p>}
+          {availabilityClashes.length > 0 && <p className="booking-note" role="status">{t("book.availabilityClash", "Not listed as available: {days}. You can still send the request.", { days: availabilityClashes.join(", ") })}</p>}
+          {!availabilityClashes.length && <p className="booking-meta">{scheduleKnown ? t("book.availabilityClear", "No schedule conflict is listed. The carer still needs to accept.") : t("book.availabilityUnknown", "No weekly schedule is shared yet. The carer will check these days.")}</p>}
+        </section>}
+        {overlapClashes.length > 0 && <p className="booking-note" role="status">{t("book.conflictWarning", "Conflict warning: {count} overlapping booking or weekly series. You can still send; the carer decides.", { count: overlapClashes.length })}</p>}
         {carer.card.instantBook === true && <div className="booking-note">{familyComplete ? t("book.instantEligible", "This carer allows instant booking for eligible families. Your profile may qualify, but this request is still sent as requested; only the server can accept it.") : t("book.instantNeedsProfile", "This carer allows instant booking for eligible families. A completed family profile is needed; this request still needs carer acceptance.")}</div>}
         <div className="booking-note"><b>{t("book.cancellationTitle", "Cancellation policy")}</b><p>{t("book.cancellationPolicy", CANCEL_POLICY)}</p></div>
         {message && <p className="booking-error" role="alert">{message}</p>}
       </>}
       {sent && <section className="booking-card booking-empty"><Bunny mood="rest" size={100} /><h2>{t("book.requestSentTitle", "Request sent")}</h2><p>{t("book.requestSentBody", "Your request is waiting for the carer to accept.")}</p><Button onClick={nav.back}>{t("book.backToProfile", "Back to profile")}</Button></section>}
     </div></div>
-    {carer && !sent && <div className="booking-bottom single"><p className="booking-policy-line">{t("book.cancellationPolicy", CANCEL_POLICY)}</p><Button onClick={() => void sendRequest()} disabled={!family || !validRate || estimate == null || !date || (repeat && (!weekdays.length || clashes.length > 0)) || sending}>{sending ? t("book.sending", "Sending request…") : t("book.send", "Send request")}</Button></div>}
+    {carer && !sent && <div className="booking-bottom single"><p className="booking-policy-line">{t("book.cancellationPolicy", CANCEL_POLICY)}</p><Button onClick={() => void sendRequest()} disabled={!family || !validRate || estimate == null || !date || endsBeforeNow || (repeat && (!weekdays.length || hasInvalidRepeatRange)) || sending}>{sending ? t("book.sending", "Sending request…") : t("book.send", "Send request")}</Button></div>}
   </div>;
 }

@@ -1,9 +1,13 @@
 import "../lib/i18n";
 import { useEffect, useMemo, useState } from "react";
 import { BackBar, Chip, Empty, t, type ScreenProps, useAuth, useNav } from "@cc/core";
-import { calendarDaysForPeriod, decideTimeOffRequest, readCalendarForSpaces, shiftCalendarMonth, type CalendarEvent, type CalendarPeriod } from "../data/calendar";
+import { calendarDaysForPeriod, decideTimeOffRequest, readCalendarForSpaces, shiftCalendarMonth, type CalendarPeriod } from "../data/calendar";
+import { expandCalendarEventsForRange, type CalendarEventWithRecurrence } from "../data/events";
 import { listUserSpaces, type SpaceSummary } from "../data/spaces";
 import type { TimeOffAction } from "../lib/timeoff";
+import { canPost } from "../lib/permissions";
+import CalendarShiftForm from "./CalendarShiftForm";
+import Requests from "./Requests";
 
 type CalendarParams = { uid: string; spaceId?: string };
 type CalendarView = "mine" | "family" | "team";
@@ -12,10 +16,6 @@ const WEEKDAYS: Array<[string, string]> = [
   ["cs.calendar.week.wed", "Wed"], ["cs.calendar.week.thu", "Thu"], ["cs.calendar.week.fri", "Fri"], ["cs.calendar.week.sat", "Sat"],
 ];
 const dayKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-const sameDay = (value: string, day: string) => {
-  const date = new Date(value);
-  return !Number.isNaN(date.getTime()) && dayKey(date) === day;
-};
 const eventTime = (value: string) => new Date(value).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 
 export default function Screen({ params }: ScreenProps<CalendarParams>) {
@@ -23,7 +23,7 @@ export default function Screen({ params }: ScreenProps<CalendarParams>) {
   const { user } = useAuth();
   const uid = params.uid || user?.uid || "";
   const [spaces, setSpaces] = useState<SpaceSummary[]>([]);
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [events, setEvents] = useState<CalendarEventWithRecurrence[]>([]);
   const [view, setView] = useState<CalendarView>(() => params.spaceId ? "family" : "mine");
   const [period, setPeriod] = useState<CalendarPeriod>("month");
   const [familyId, setFamilyId] = useState(params.spaceId ?? "");
@@ -33,6 +33,8 @@ export default function Screen({ params }: ScreenProps<CalendarParams>) {
   const [online, setOnline] = useState(typeof navigator === "undefined" || navigator.onLine);
   const [notice, setNotice] = useState("");
   const [busyId, setBusyId] = useState("");
+  const [showShiftForm, setShowShiftForm] = useState(false);
+  const [showRequests, setShowRequests] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -72,12 +74,12 @@ export default function Screen({ params }: ScreenProps<CalendarParams>) {
     return true;
   }), [events, familyId, uid, view]);
 
-  const monthEvents = useMemo(() => filtered.filter((event) => {
-    const date = new Date(event.start);
-    return date.getFullYear() === month.getFullYear() && date.getMonth() === month.getMonth();
-  }), [filtered, month]);
-  const selectedEvents = useMemo(() => filtered.filter((event) => sameDay(event.start, selectedDay))
-    .sort((left, right) => left.start.localeCompare(right.start)), [filtered, selectedDay]);
+  const monthEvents = useMemo(() => expandCalendarEventsForRange(
+    filtered,
+    dayKey(new Date(month.getFullYear(), month.getMonth(), 1)),
+    dayKey(new Date(month.getFullYear(), month.getMonth() + 1, 0)),
+  ), [filtered, month]);
+  const selectedEvents = useMemo(() => expandCalendarEventsForRange(filtered, selectedDay, selectedDay), [filtered, selectedDay]);
   const cells = useMemo(() => {
     const first = new Date(month.getFullYear(), month.getMonth(), 1).getDay();
     const count = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
@@ -85,9 +87,9 @@ export default function Screen({ params }: ScreenProps<CalendarParams>) {
   }, [month]);
   const periodDays = useMemo(() => calendarDaysForPeriod(selectedDay, period), [period, selectedDay]);
   const periodEvents = useMemo(() => {
-    const days = new Set(periodDays.map((day) => day.key));
-    return filtered.filter((event) => days.has(dayKey(new Date(event.start))))
-      .sort((left, right) => left.start.localeCompare(right.start));
+    const firstDay = periodDays[0]?.key;
+    const lastDay = periodDays.at(-1)?.key;
+    return firstDay && lastDay ? expandCalendarEventsForRange(filtered, firstDay, lastDay) : [];
   }, [filtered, periodDays]);
   const periodLabel = period === "week"
     ? `${periodDays[0]?.date.toLocaleDateString(undefined, { month: "short", day: "numeric" }) ?? ""} – ${periodDays.at(-1)?.date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) ?? ""}`
@@ -111,7 +113,7 @@ export default function Screen({ params }: ScreenProps<CalendarParams>) {
     setMonth(new Date(date.getFullYear(), date.getMonth(), 1));
   }
 
-  async function decide(event: CalendarEvent, action: TimeOffAction) {
+  async function decide(event: CalendarEventWithRecurrence, action: TimeOffAction) {
     const space = spaces.find((entry) => entry.id === event.spaceId);
     if (!space || space.role !== "admin" || busyId) return;
     setBusyId(event.id);
@@ -125,19 +127,21 @@ export default function Screen({ params }: ScreenProps<CalendarParams>) {
     finally { setBusyId(""); }
   }
 
-  function renderEvent(event: CalendarEvent, showDate = false) {
+  function renderEvent(event: CalendarEventWithRecurrence, showDate = false) {
     const space = spaces.find((entry) => entry.id === event.spaceId);
     const pending = event.kind === "timeoff" && event.state === "requested";
     const start = new Date(event.start);
     const end = new Date(event.end);
     const allDay = start.getHours() === 0 && start.getMinutes() === 0 && end.getHours() === 23 && end.getMinutes() === 59;
     const dateLabel = showDate ? `${start.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })} · ` : "";
-    return <article key={`${event.spaceId}-${event.id}`} className="card" style={{ padding: 14 }}>
+    const repeatDays = event.recurring?.weekdays.map((day) => t(`cs.calendar.week.${day.toLowerCase()}`, day)).join(", ");
+    return <article key={`${event.spaceId}-${event.id}-${event.occurrenceDate ?? event.start}`} className="card" style={{ padding: 14 }}>
       <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start" }}>
         <div style={{ minWidth: 0 }}><strong>{event.title}</strong><p className="muted" style={{ margin: "4px 0 0" }}>{event.spaceName ?? space?.name ?? ""}</p></div>
         <span className="tag" style={{ background: event.kind === "timeoff" ? "var(--blush)" : "var(--soft)", whiteSpace: "nowrap", fontSize: 17 }}>{t(`cs.calendar.kind.${event.kind}`, event.kind === "timeoff" ? "Time off" : event.kind)}</span>
       </div>
       <p style={{ margin: "8px 0 0" }}>{dateLabel}{allDay ? t("cs.calendar.allDay", "All day") : `${eventTime(event.start)} – ${eventTime(event.end)}`} · {t(`cs.calendar.state.${event.state}`, event.state)}{event.queued ? ` · ${t("cs.offline.waiting", "Waiting to sync")}` : ""}</p>
+      {event.recurring && <p className="muted" style={{ margin: "8px 0 0" }}>{t("cs.calendar.shift.repeats", "Repeats on {days} until {until}", { days: repeatDays ?? "", until: event.recurring.until })}</p>}
       {pending && space?.role === "admin" && <div className="row" style={{ marginTop: 10, gap: 8 }}>
         <button type="button" className="chip" disabled={busyId === event.id} onClick={() => void decide(event, "approve")}>{t("cs.calendar.approve", "Approve")}</button>
         <button type="button" className="chip" disabled={busyId === event.id} onClick={() => void decide(event, "decline")}>{t("cs.calendar.decline", "Decline")}</button>
@@ -150,6 +154,7 @@ export default function Screen({ params }: ScreenProps<CalendarParams>) {
 
   const monthLabel = month.toLocaleDateString(undefined, { month: "long", year: "numeric" });
   const visibleEvents = period === "month" ? selectedEvents : periodEvents;
+  if (showRequests) return <Requests params={{ uid, spaceId: familyId }} onBack={() => setShowRequests(false)} />;
   return <div className="app">
     <BackBar title={t("cs.calendar.title", "Calendar")} onBack={nav.back} right={<button type="button" className="chip" onClick={() => nav.push("notifications", { uid })}>{t("cs.calendar.bell", "Notifications")}</button>} />
     <div className="scroll" style={{ paddingTop: 8 }}>
@@ -187,7 +192,7 @@ export default function Screen({ params }: ScreenProps<CalendarParams>) {
           {cells.map((date, index) => {
             if (!date) return <span key={`blank-${index}`} />;
             const key = dayKey(date);
-            const hasEvents = monthEvents.some((event) => sameDay(event.start, key));
+            const hasEvents = monthEvents.some((event) => event.occurrenceDate === key);
             return <button key={key} type="button" className={`chip${selectedDay === key ? " on" : ""}`} onClick={() => setSelectedDay(key)} aria-pressed={selectedDay === key}
               aria-label={`${date.toLocaleDateString(undefined, { dateStyle: "full" })}${hasEvents ? `, ${t("cs.calendar.hasEvents", "has events")}` : ""}`}
               style={{ justifyContent: "center", minHeight: 44, minWidth: 44, padding: 0, borderRadius: 12, fontSize: 17 }}>
@@ -196,10 +201,18 @@ export default function Screen({ params }: ScreenProps<CalendarParams>) {
           })}
         </div>
       </section>}
-      <div className="row" style={{ gap: 8, marginBottom: 14 }}>
-        <button type="button" className="btn alt" disabled={!spaces.length} onClick={() => nav.push("event-edit", { uid, spaceId: familyId || spaces[0]?.id })}>{t("cs.calendar.add", "Add event")}</button>
-        <button type="button" className="btn" disabled={!spaces.length} onClick={() => nav.push("timeoff", { uid, spaceId: familyId || spaces[0]?.id })}>{t("cs.calendar.timeoff", "Request time off")}</button>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8, marginBottom: 14 }}>
+        <button type="button" className="btn alt" disabled={!spaces.length} onClick={() => nav.push("event-edit", { uid, spaceId: familyId || spaces[0]?.id })} style={{ minHeight: 44 }}>{t("cs.calendar.add", "Add event")}</button>
+        <button type="button" className="btn" disabled={!spaces.length} onClick={() => nav.push("timeoff", { uid, spaceId: familyId || spaces[0]?.id })} style={{ minHeight: 44 }}>{t("cs.calendar.timeoff", "Request time off")}</button>
+        <button type="button" className="btn alt" disabled={!spaces.some((space) => canPost(space.role))} onClick={() => setShowShiftForm((current) => !current)} style={{ minHeight: 44 }}>{t("cs.calendar.shift.add", "Add shift")}</button>
+        <button type="button" className="chip" disabled={!spaces.length} onClick={() => setShowRequests(true)} style={{ minHeight: 44 }}>{t("cs.calendar.requests.open", "Requests")}</button>
       </div>
+      {showShiftForm && <CalendarShiftForm uid={uid} spaces={spaces} events={events} initialSpaceId={familyId || spaces.find((space) => canPost(space.role))?.id || ""}
+        onCancel={() => setShowShiftForm(false)} onSaved={(event) => {
+          setEvents((current) => [...current, event]);
+          setShowShiftForm(false);
+          setNotice(event.queued ? t("cs.offline.queued", "Saved here. It will sync when you're back online.") : t("cs.calendar.shift.saved", "Shift saved."));
+        }} />}
       {notice && <p role="status" className="muted">{notice}</p>}
       <h2 style={{ fontSize: 24, margin: "4px 0 10px" }}>{period === "month" ? new Date(`${selectedDay}T12:00:00`).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) : periodLabel}</h2>
       {visibleEvents.length ? <div style={{ display: "grid", gap: 10 }}>

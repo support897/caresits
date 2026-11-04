@@ -4,6 +4,8 @@ import { DEMO_CHILDREN, DEMO_SPACES, loadCareSpaces, loadChildren, saveSpaceInve
 import { ACTIVITIES } from "../content/activities";
 import { filterActivities, missingMaterials } from "../lib/activities";
 import { CareEmpty, DemoNotice } from "./care/common";
+import WeeklyPlan from "./WeeklyPlan";
+import Approvals from "./Approvals";
 import "./care/care.css";
 
 type Params = { uid?: string; demo?: boolean };
@@ -26,6 +28,8 @@ export default function Activities({ params }: ScreenProps<Params>) {
   const [ownedOnly, setOwnedOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [panel, setPanel] = useState<"activities" | "weekly" | "approvals">("activities");
+  const [approvalReturnsToWeekly, setApprovalReturnsToWeekly] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -70,16 +74,30 @@ export default function Activities({ params }: ScreenProps<Params>) {
     catch { setError(t("care.inventorySaveError", "Could not save the family’s materials. Try again.")); }
   }
 
+  if (space && panel === "weekly") return <div className="scroll"><WeeklyPlan
+    uid={uid} space={space} children={children} demo={demo}
+    onBack={() => setPanel("activities")}
+    onOpenApprovals={() => { setApprovalReturnsToWeekly(true); setPanel("approvals"); }}
+  /></div>;
+  if (space && panel === "approvals") return <div className="scroll"><Approvals
+    uid={uid} space={space} demo={demo}
+    onBack={() => setPanel(approvalReturnsToWeekly ? "weekly" : "activities")}
+  /></div>;
+
   return <div className="scroll"><div className="care-wrap">
     <div className="care-head"><div><h1>{t("care.activitiesTitle", "Activities")}</h1><p>{t("care.activitiesSubtitle", "Ideas shaped around a child’s age, interests, and family materials.")}</p></div></div>
     <div className="care-alert" role="note">{t("care.activityInspirationNotice", "These ideas are starting points for play, not fixed learning labels or promises about development. Adapt them to the child’s abilities and supervise every activity.")}</div>
     {demo && <DemoNotice />}
     {error && <div className="care-info care-warning" role="alert">{error}</div>}
     {!space ? <section className="care-section">
-      {spaces.map((item) => <button className="care-space-card" key={item.id} onClick={() => setSpace(item)}><span className="care-badge">{item.name.slice(0, 1)}</span><span className="care-card-copy"><b>{item.name}</b><p>{t("care.chooseSpaceActivities", "Pick activities for this family only.")}</p></span><span aria-hidden="true" className="flip">›</span></button>)}
+      {spaces.map((item) => <button className="care-space-card" key={item.id} onClick={() => { setPanel("activities"); setSpace(item); }}><span className="care-badge">{item.name.slice(0, 1)}</span><span className="care-card-copy"><b>{item.name}</b><p>{t("care.chooseSpaceActivities", "Pick activities for this family only.")}</p></span><span aria-hidden="true" className="flip">›</span></button>)}
       {!loading && !spaces.length && <CareEmpty title={t("care.noActivitySpaces", "No family space selected")} detail={t("care.noActivitySpacesHint", "Activities and family materials stay separate for every care space.")} />}
     </section> : <>
-      <div className="care-row"><Button alt onClick={() => { setSpace(null); setChildren([]); setChildId(""); }}>{t("care.changeSpace", "Change family")}</Button><span className="care-badge">{space.name}</span></div>
+      <div className="care-row"><Button alt onClick={() => { setSpace(null); setChildren([]); setChildId(""); setPanel("activities"); }}>{t("care.changeSpace", "Change family")}</Button><span className="care-badge">{space.name}</span></div>
+      <div className="care-row" style={{ marginTop: 10 }}>
+        <Button alt onClick={() => setPanel("weekly")}>{t("care.weekly.open", "Weekly plan")}</Button>
+        <Button alt onClick={() => { setApprovalReturnsToWeekly(false); setPanel("approvals"); }}>{t("care.approvals.open", "Approvals inbox")}</Button>
+      </div>
       <label className="care-field"><span>{t("care.selectChild", "Choose a child")}</span><select value={childId} onChange={(event) => setChildId(event.target.value)}>{children.map((item) => <option value={item.id} key={item.id}>{t("care.childAgeOption", "{name} · age {age}", { name: item.name, age: item.ageYears })}</option>)}</select></label>
       {child && <>
         <div className="care-card"><h2>{t("care.weHave", "We have")}</h2><p>{t("care.weHaveHint", "Choose what this family owns. This checklist is saved on the family space.")}</p>

@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { type Person, Bunny, t, useNav } from "@cc/core";
+import NotificationsInbox, { NotificationsLauncher } from "./Notifications";
 
 type Params = { me: Person; reload?: () => void };
 const CARE_TYPES: Record<string, string> = {
@@ -14,6 +16,8 @@ function scheduleDays(value: unknown): string[] {
 export default function Me({ params }: { params: Params }) {
   const nav = useNav();
   const { me } = params;
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  if (notificationsOpen) return <NotificationsInbox params={{ uid: me.uid, onBack: () => setNotificationsOpen(false) }} />;
   const headline = typeof me.card.headline === "string" ? me.card.headline : "";
   const location = [me.card.suburb, me.postcode].filter((part): part is string => typeof part === "string" && Boolean(part)).join(" · ");
   const careTypes = strings(me.card.careTypes).map((value) => CARE_TYPES[value] ?? value);
@@ -54,6 +58,7 @@ export default function Me({ params }: { params: Params }) {
       <button className="btn" type="button" onClick={() => nav.push("edit-profile", { edit: true })}>{t("me.edit", "Edit profile")}</button>
     </section>
     <nav aria-label={t("me.account.links", "Account links")} style={{ display: "grid", gap: 10, marginBlockStart: 14 }}>
+      <NotificationsLauncher uid={me.uid} onOpen={() => setNotificationsOpen(true)} />
       {links.map((item) => <button key={item.title} type="button" className="card" onClick={item.action} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, minHeight: 72, textAlign: "start" }}>
         <span><strong style={{ display: "block" }}>{item.title}</strong><span className="muted">{item.body}</span></span><span className="flip" aria-hidden="true">›</span>
       </button>)}

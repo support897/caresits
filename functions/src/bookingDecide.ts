@@ -1,5 +1,7 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { onDocumentCreated } from "firebase-functions/v2/firestore";
+import { findBookingConflicts, type BookingSlot } from "../../packages/core/src/schemas/availability.js";
 import { bookingDecisionSchema } from "../../packages/core/src/schemas/index.js";
 import { adminDb } from "./admin.js";
 import { enforceRateLimit } from "./rateLimit.js";
@@ -11,6 +13,51 @@ export interface BookingRecord {
   familyUid: string;
   carerUid: string;
   state: BookingStatus;
+}
+
+export type InstantBookProfile = {
+  side?: unknown;
+  card?: unknown;
+} | null | undefined;
+export type InstantBookCarerCard = Record<string, unknown> | null | undefined;
+export type InstantBookRequest = Pick<BookingSlot, "date" | "from" | "to"> & { id?: string };
+
+function record(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+function minuteOfDay(value: string): number | null {
+  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(value);
+  return match ? Number(match[1]) * 60 + Number(match[2]) : null;
+}
+
+function validRequest(request: InstantBookRequest): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(request.date)) return false;
+  const day = new Date(`${request.date}T00:00:00.000Z`);
+  const from = minuteOfDay(request.from);
+  const to = minuteOfDay(request.to);
+  return Number.isFinite(day.getTime()) && day.toISOString().slice(0, 10) === request.date
+    && from !== null && to !== null && to > from;
+}
+
+function hasCompleteFamilyProfile(profile: InstantBookProfile): boolean {
+  if (!profile || profile.side !== "family") return false;
+  const kids = record(profile.card)?.kids;
+  return Array.isArray(kids) && kids.length > 0 && kids.every((value) => {
+    const age = record(value)?.ageYears;
+    return typeof age === "number" && Number.isFinite(age) && age >= 0 && age <= 18;
+  });
+}
+
+/** Accept only when opt-in, a family has child ages, and the slot has no active clash. */
+export function bookingDecide(
+  carerCard: InstantBookCarerCard,
+  familyProfile: InstantBookProfile,
+  existingBookings: readonly BookingSlot[],
+  request: InstantBookRequest,
+): "accept" | "leave" {
+  if (record(carerCard)?.instantBook !== true || !hasCompleteFamilyProfile(familyProfile) || !validRequest(request)) return "leave";
+  return findBookingConflicts(request, existingBookings).length === 0 ? "accept" : "leave";
 }
 
 export type BookingPatch = { state: BookingDecision; decidedAt?: unknown };
@@ -61,7 +108,7 @@ export async function applyBookingDecision(
   return patch;
 }
 
-export const bookingDecide = onCall({ enforceAppCheck: true }, async (request) => {
+export const bookingDecisionCallable = onCall({ enforceAppCheck: true }, async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "Sign in first.");
   const parsed = bookingDecisionSchema.safeParse(request.data);
@@ -118,3 +165,72 @@ export const bookingDecide = onCall({ enforceAppCheck: true }, async (request) =
     throw error;
   }
 });
+
+function bookingSlotFromSnapshot(id: string, value: Record<string, unknown>): BookingSlot {
+  const knownStates = new Set(["requested", "accepted", "declined", "cancelled", "completed"]);
+  const rawState = typeof value.state === "string" && knownStates.has(value.state) ? value.state : "completed";
+  return {
+    id,
+    date: typeof value.date === "string" ? value.date : "",
+    from: typeof value.from === "string" ? value.from : "",
+    to: typeof value.to === "string" ? value.to : "",
+    state: rawState as BookingSlot["state"],
+  };
+}
+
+/** Trusted Firestore trigger applies instant booking after a family request is committed. */
+export const instantBookOnRequestCreated = onDocumentCreated(
+  "relationships/{pairId}/bookings/{bookingId}",
+  async (event) => {
+    const { pairId, bookingId } = event.params;
+    const db = adminDb();
+    const bookingRef = db.doc(`relationships/${pairId}/bookings/${bookingId}`);
+    const relationshipRef = db.doc(`relationships/${pairId}`);
+
+    await db.runTransaction(async (transaction) => {
+      const current = await transaction.get(bookingRef);
+      if (!current.exists) return;
+      const booking = current.data();
+      if (!booking || booking.state !== "requested" || typeof booking.familyUid !== "string" || typeof booking.carerUid !== "string") return;
+      const familyUid = booking.familyUid;
+      const carerUid = booking.carerUid;
+      if (familyUid === carerUid) return;
+
+      const relationshipSnapshot = await transaction.get(relationshipRef);
+      const familyProfileSnapshot = await transaction.get(db.doc(`profiles/${familyUid}`));
+      const carerProfileSnapshot = await transaction.get(db.doc(`profiles/${carerUid}`));
+      const familyBlock = await transaction.get(db.doc(`users/${familyUid}/blocks/${carerUid}`));
+      const carerBlock = await transaction.get(db.doc(`users/${carerUid}/blocks/${familyUid}`));
+      const existingSnapshot = await transaction.get(db.collection(`relationships/${pairId}/bookings`));
+      if (!relationshipSnapshot.exists || familyBlock.exists || carerBlock.exists) return;
+
+      const relationship = relationshipSnapshot.data();
+      const members = relationship?.members;
+      if (!relationship || !Array.isArray(members) || !members.includes(familyUid) || !members.includes(carerUid)
+        || relationship.familyUid !== familyUid || relationship.carerUid !== carerUid
+        || !["pending", "contact", "hired"].includes(String(relationship.state))) return;
+
+      const familyProfile = familyProfileSnapshot.exists ? familyProfileSnapshot.data() : null;
+      const carerProfile = carerProfileSnapshot.exists ? carerProfileSnapshot.data() : null;
+      if (!carerProfile || carerProfile.side !== "carer") return;
+      const existingBookings = existingSnapshot.docs.map((snapshot) => bookingSlotFromSnapshot(snapshot.id, snapshot.data()));
+      const decision = bookingDecide(
+        record(carerProfile.card),
+        familyProfile ?? null,
+        existingBookings,
+        {
+          id: bookingId,
+          date: typeof booking.date === "string" ? booking.date : "",
+          from: typeof booking.from === "string" ? booking.from : "",
+          to: typeof booking.to === "string" ? booking.to : "",
+        },
+      );
+      if (decision !== "accept") return;
+
+      transaction.update(bookingRef, { state: "accepted", decidedAt: FieldValue.serverTimestamp() });
+      if (relationship.state === "pending" && relationship.createdBy === familyUid) {
+        transaction.update(relationshipRef, { state: "contact", contactBy: carerUid });
+      }
+    });
+  },
+);

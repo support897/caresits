@@ -3,12 +3,12 @@ import { useEffect, useMemo, useState } from "react";
 import { Avatar, Button, Chip, Empty, t, type ScreenProps, useAuth, useNav } from "@cc/core";
 import { readCalendar } from "../data/calendar";
 import { filterInboxRows, readSpaceChatPreview, type InboxFilter, type SpaceMessage } from "../data/chatSpace";
-import { loadChildren } from "../data/children";
-import { loadTeamMembers } from "../data/team";
+import { loadChildren, type ChildProfile } from "../data/children";
+import { loadTeamMembers, type TeamMember } from "../data/team";
 import { createCareSpace, listUserSpaces, type SpaceSummary } from "../data/spaces";
 
 type ChatsParams = { uid: string; name: string };
-type SpaceRow = { space: SpaceSummary; last: SpaceMessage | null; unread: number; hasRequest: boolean; childCount: number; memberCount: number };
+type SpaceRow = { space: SpaceSummary; last: SpaceMessage | null; unread: number; hasRequest: boolean; children: ChildProfile[]; members: TeamMember[] };
 const FILTERS: Array<[InboxFilter, string, string]> = [
   ["All", "cs.chats.filter.all", "All"],
   ["Families", "cs.chats.filter.families", "Families"],
@@ -36,6 +36,7 @@ export default function Screen({ params }: ScreenProps<ChatsParams>) {
   const name = params.name || user?.displayName || "";
   const [filter, setFilter] = useState<InboxFilter>("All");
   const [spaces, setSpaces] = useState<SpaceRow[]>([]);
+  const [activeSpaceId, setActiveSpaceId] = useState("");
   const [search, setSearch] = useState("");
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
@@ -58,11 +59,14 @@ export default function Screen({ params }: ScreenProps<ChatsParams>) {
           last: preview.last,
           unread: preview.unread,
           hasRequest: space.role === "admin" && calendar.events.some((event) => event.kind === "timeoff" && event.state === "requested" && event.ownerUid !== uid),
-          childCount: children.length,
-          memberCount: members.filter((member) => member.status === "active").length,
+          children,
+          members: members.filter((member) => member.status === "active"),
         };
       }));
-      if (alive) setSpaces(rows);
+      if (alive) {
+        setSpaces(rows);
+        setActiveSpaceId((current) => rows.some((row) => row.space.id === current) ? current : rows[0]?.space.id ?? "");
+      }
     })().catch(() => { if (alive) setSpaces([]); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
@@ -74,6 +78,7 @@ export default function Screen({ params }: ScreenProps<ChatsParams>) {
       !queryText || row.space.name.toLocaleLowerCase().includes(queryText),
     );
   }, [filter, search, spaces, uid]);
+  const activeHub = spaces.find((row) => row.space.id === activeSpaceId) ?? spaces[0] ?? null;
 
   async function newSpace() {
     if (!uid || creating) return;
@@ -108,12 +113,28 @@ export default function Screen({ params }: ScreenProps<ChatsParams>) {
         </button>
       </div>
     </header>
+    {activeHub && <section className="card" aria-label={t("cs.chats.hub.label", "Family hub")} style={{ display: "grid", gap: 10, padding: 14, marginBottom: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+        <div style={{ minWidth: 0 }}><p className="muted" style={{ margin: "0 0 2px" }}>{t("cs.chats.hub.kicker", "Family hub")}</p><h2 style={{ margin: 0, overflowWrap: "anywhere" }}>{activeHub.space.name}</h2></div>
+        <Button alt onClick={() => nav.push("space", { spaceId: activeHub.space.id })}>{t("cs.chats.hub.open", "Open family space")}</Button>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <div role="list" aria-label={t("cs.chats.hub.members", "Family member avatars")} style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {activeHub.members.slice(0, 6).map((member) => <span key={member.uid} role="listitem" aria-label={t("cs.chats.hub.member", "{name}", { name: member.displayName })}><Avatar name={member.displayName} url={member.photoUrl} size={40} /></span>)}
+          {activeHub.members.length > 6 && <span className="care-badge">{t("cs.chats.hub.moreMembers", "+{count}", { count: activeHub.members.length - 6 })}</span>}
+          {!activeHub.members.length && <span className="muted">{t("cs.chats.hub.noMembers", "No team members yet")}</span>}
+        </div>
+        <span className="muted">{activeHub.children.length
+          ? t("cs.chats.hub.children", "Children: {names}", { names: activeHub.children.map((child) => child.name).join(", ") })
+          : t("cs.chats.hub.noChildren", "No child profiles yet")}</span>
+      </div>
+    </section>}
     <p style={{ margin: "0 0 14px" }}>{t("cs.chats.subtitle", "Every family has its own private space.")}</p>
-    {spaces.length > 0 && <div role="list" aria-label={t("cs.chats.quick.label", "Quick access to care spaces")} style={{ display: "flex", flexWrap: "nowrap", gap: 10, overflowX: "auto", maxWidth: "100%", margin: "0 -16px 14px", padding: "2px 16px 8px" }}>
+    {spaces.length > 0 && <div role="list" aria-label={t("cs.chats.quick.label", "Choose a family hub")} style={{ display: "flex", flexWrap: "nowrap", gap: 10, overflowX: "auto", maxWidth: "100%", margin: "0 -16px 14px", padding: "2px 16px 8px" }}>
       {spaces.map((row) => <div key={row.space.id} role="listitem" style={{ flex: "0 0 84px" }}>
-        <button type="button" onClick={() => nav.push("space", { spaceId: row.space.id })}
-          aria-label={t("cs.chats.quick.open", "Open {name}", { name: row.space.name })}
-          style={{ width: "100%", minHeight: 84, display: "grid", justifyItems: "center", alignContent: "center", gap: 4, padding: 8, borderRadius: 16, background: "var(--card)", border: "1px solid var(--line)" }}>
+        <button type="button" onClick={() => setActiveSpaceId(row.space.id)} aria-pressed={activeHub?.space.id === row.space.id}
+          aria-label={t("cs.chats.quick.select", "Show {name} family hub", { name: row.space.name })}
+          style={{ width: "100%", minHeight: 84, display: "grid", justifyItems: "center", alignContent: "center", gap: 4, padding: 8, borderRadius: 16, background: "var(--card)", border: `2px solid ${activeHub?.space.id === row.space.id ? "var(--ink)" : "var(--line)"}` }}>
           <span className="av" aria-hidden="true" style={{ width: 44, height: 44, color: "var(--text)", background: spaceColor(row.space.colorIndex) }}>{row.space.name.slice(0, 1).toUpperCase()}</span>
           <span style={{ width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>{row.space.name}</span>
         </button>
@@ -132,8 +153,8 @@ export default function Screen({ params }: ScreenProps<ChatsParams>) {
       : shown.length ? <div style={{ display: "grid", gap: 10 }}>
         {shown.map((row) => {
           const side = row.space.ownerUid === uid ? t("cs.chats.tag.carer", "Carer") : t("cs.chats.tag.family", "Family");
-          const childCount = row.childCount === 1 ? t("cs.chats.count.oneChild", "1 child") : t("cs.chats.count.children", "{count} children", { count: row.childCount });
-          const memberCount = row.memberCount === 1 ? t("cs.chats.count.oneMember", "1 team member") : t("cs.chats.count.members", "{count} team members", { count: row.memberCount });
+          const childCount = row.children.length === 1 ? t("cs.chats.count.oneChild", "1 child") : t("cs.chats.count.children", "{count} children", { count: row.children.length });
+          const memberCount = row.members.length === 1 ? t("cs.chats.count.oneMember", "1 team member") : t("cs.chats.count.members", "{count} team members", { count: row.members.length });
           const summary = t("cs.chats.summary", "{children} · {members}", { children: childCount, members: memberCount });
           const unreadLabel = row.unread ? t("cs.chats.unread.count", "{count} unread messages", { count: row.unread }) : t("cs.chats.unread.none", "No unread messages");
           return <button key={row.space.id} type="button" className="card" onClick={() => nav.push("space", { spaceId: row.space.id })}

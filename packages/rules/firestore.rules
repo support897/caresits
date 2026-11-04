@@ -859,16 +859,24 @@ match /relationships/{pairId} {
 function bookingSeriesMatches(pairId, data) {
   return !("seriesId" in data)
     || (data.seriesId is string
-      && exists(/databases/$(database)/documents/relationships/$(pairId)/series/$(data.seriesId))
-      && get(/databases/$(database)/documents/relationships/$(pairId)/series/$(data.seriesId)).data.state == "active"
-      && get(/databases/$(database)/documents/relationships/$(pairId)/series/$(data.seriesId)).data.familyUid == data.familyUid
-      && get(/databases/$(database)/documents/relationships/$(pairId)/series/$(data.seriesId)).data.carerUid == data.carerUid
-      && get(/databases/$(database)/documents/relationships/$(pairId)/series/$(data.seriesId)).data.from == data.from
-      && get(/databases/$(database)/documents/relationships/$(pairId)/series/$(data.seriesId)).data.to == data.to
-      && get(/databases/$(database)/documents/relationships/$(pairId)/series/$(data.seriesId)).data.rate == data.rate
-      && data.date >= get(/databases/$(database)/documents/relationships/$(pairId)/series/$(data.seriesId)).data.startDate
-      && (!('endDate' in get(/databases/$(database)/documents/relationships/$(pairId)/series/$(data.seriesId)).data)
-          || data.date <= get(/databases/$(database)/documents/relationships/$(pairId)/series/$(data.seriesId)).data.endDate));
+      && existsAfter(/databases/$(database)/documents/relationships/$(pairId)/series/$(data.seriesId))
+      && getAfter(/databases/$(database)/documents/relationships/$(pairId)/series/$(data.seriesId)).data.state in ["requested", "active"]
+      && getAfter(/databases/$(database)/documents/relationships/$(pairId)/series/$(data.seriesId)).data.familyUid == data.familyUid
+      && getAfter(/databases/$(database)/documents/relationships/$(pairId)/series/$(data.seriesId)).data.carerUid == data.carerUid
+      && getAfter(/databases/$(database)/documents/relationships/$(pairId)/series/$(data.seriesId)).data.from == data.from
+      && getAfter(/databases/$(database)/documents/relationships/$(pairId)/series/$(data.seriesId)).data.to == data.to
+      && getAfter(/databases/$(database)/documents/relationships/$(pairId)/series/$(data.seriesId)).data.rate == data.rate
+      && data.date >= getAfter(/databases/$(database)/documents/relationships/$(pairId)/series/$(data.seriesId)).data.startDate
+      && (!('endDate' in getAfter(/databases/$(database)/documents/relationships/$(pairId)/series/$(data.seriesId)).data)
+          || data.date <= getAfter(/databases/$(database)/documents/relationships/$(pairId)/series/$(data.seriesId)).data.endDate));
+}
+
+function bookingScheduledEnd(data) {
+  let dateParts = data.date.split("-");
+  let timeParts = data.to.split(":");
+  return timestamp.date(int(dateParts[0]), int(dateParts[1]), int(dateParts[2]))
+    + duration.time(int(timeParts[0]), int(timeParts[1]), 0, 0)
+    - duration.value(8, "h");
 }
 
 match /relationships/{pairId}/bookings/{bookingId} {
@@ -877,7 +885,7 @@ match /relationships/{pairId}/bookings/{bookingId} {
     && request.auth.uid == bookingRelData(pairId).familyUid
     && request.resource.data.keys().hasOnly(
       ["familyUid", "carerUid", "date", "from", "to", "rate", "estimate", "recurring",
-       "weekdays", "note", "childIds", "shareAddress", "seriesId", "state", "createdBy", "createdAt"])
+       "weekdays", "note", "childIds", "shareAddress", "seriesId", "endAt", "state", "createdBy", "createdAt"])
     && request.resource.data.keys().hasAll(
       ["familyUid", "carerUid", "date", "from", "to", "rate", "estimate", "recurring",
        "weekdays", "state", "createdBy", "createdAt"])
@@ -887,8 +895,11 @@ match /relationships/{pairId}/bookings/{bookingId} {
     && request.resource.data.createdBy == request.auth.uid
     && request.resource.data.createdAt == request.time
     && request.resource.data.date.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
-    && request.resource.data.from.matches("^[0-9]{2}:[0-9]{2}$")
-    && request.resource.data.to.matches("^[0-9]{2}:[0-9]{2}$")
+    && request.resource.data.from.matches("^([01][0-9]|2[0-3]):[0-5][0-9]$")
+    && request.resource.data.to.matches("^([01][0-9]|2[0-3]):[0-5][0-9]$")
+    && (!('endAt' in request.resource.data) || (request.resource.data.endAt is timestamp
+      && request.resource.data.endAt == bookingScheduledEnd(request.resource.data)
+      && request.resource.data.endAt > request.time))
     && request.resource.data.rate is number && request.resource.data.rate >= 0
     && request.resource.data.estimate is number && request.resource.data.estimate >= 0
     && request.resource.data.recurring in ["none", "weekly"]
@@ -909,8 +920,8 @@ match /relationships/{pairId}/bookings/{bookingId} {
         || (resource.data.state == "accepted"
           && request.auth.uid == resource.data.carerUid
           && request.resource.data.state == "completed"
-          && resource.data.get("endAt", null) is timestamp
-          && resource.data.endAt <= request.time
+          && bookingScheduledEnd(resource.data) <= request.time
+          && (!("endAt" in resource.data) || (resource.data.endAt is timestamp && resource.data.endAt == bookingScheduledEnd(resource.data)))
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["state"]))
         || (resource.data.state in ["requested", "accepted"]
           && request.auth.uid in [resource.data.familyUid, resource.data.carerUid]
@@ -921,7 +932,7 @@ match /relationships/{pairId}/bookings/{bookingId} {
 
 match /relationships/{pairId}/series/{seriesId} {
   allow read: if bookingPairCanRead(pairId);
-  allow create: if bookingPairCanRead(pairId)
+  allow create: if bookingPairCanCreate(pairId)
     && request.auth.uid == bookingRelData(pairId).familyUid
     && request.resource.data.keys().hasOnly(["familyUid", "carerUid", "weekdays", "from", "to", "startDate", "endDate", "rate", "state", "createdAt"])
     && request.resource.data.familyUid == bookingRelData(pairId).familyUid
@@ -1469,6 +1480,9 @@ match /safetyReports/{reportId} {
         && validPlanDay(days, "Fri") && validPlanDay(days, "Sat")
         && validPlanDay(days, "Sun");
     }
+    function validChildStringList(value, maxItems) {
+      return value is list && value.size() <= maxItems;
+    }
     function validChildRoutine(value) {
       return value is map
         && value.keys().hasOnly(["wake", "bed", "naps"])
@@ -1480,12 +1494,14 @@ match /safetyReports/{reportId} {
       return data.keys().hasOnly(["name", "ageYears", "interests", "foodPreferences", "learningGoals", "milestones", "routine", "sections", "createdAt", "updatedAt"])
         && data.name is string && data.name.size() > 0 && data.name.size() <= 80
         && (!("ageYears" in data) || (data.ageYears is number && data.ageYears >= 0 && data.ageYears <= 18))
-        && (!("interests" in data) || (data.interests is list && data.interests.size() <= 30))
-        && (!("foodPreferences" in data) || (data.foodPreferences is list && data.foodPreferences.size() <= 30))
-        && (!("learningGoals" in data) || (data.learningGoals is list && data.learningGoals.size() <= 30))
+        && (!("interests" in data) || validChildStringList(data.interests, 30))
+        && (!("foodPreferences" in data) || validChildStringList(data.foodPreferences, 30))
+        && (!("learningGoals" in data) || validChildStringList(data.learningGoals, 30))
         && (!("milestones" in data) || (data.milestones is list && data.milestones.size() <= 100))
         && (!("routine" in data) || validChildRoutine(data.routine))
         && (!("sections" in data) || validChildSections(data.sections))
+        && (!("createdAt" in data) || data.createdAt is timestamp)
+        && (!("updatedAt" in data) || data.updatedAt is timestamp)
         && !("allergies" in data) && !("medication" in data);
     }
     function defaultMemberPerms(value, role) {
@@ -1689,16 +1705,20 @@ match /safetyReports/{reportId} {
       match /requests/{requestId} {
         allow read: if csMember(spaceId);
         allow create: if csMember(spaceId)
-          && csRole(spaceId) in ["admin", "regular", "limited"]
           && request.resource.data.keys().hasOnly(["kind", "by", "to", "text", "state", "at"])
           && request.resource.data.keys().hasAll(["kind", "by", "text", "state", "at"])
           && request.resource.data.kind in ["time-off", "photo", "meal", "shopping", "swap"]
           && request.resource.data.by == request.auth.uid
-          && (!("to" in request.resource.data) || request.resource.data.to is string)
-          && request.resource.data.text is string && request.resource.data.text.size() <= 600
+          && (!("to" in request.resource.data)
+              || (request.resource.data.to is string && request.resource.data.to.size() > 0
+                && request.resource.data.to.size() <= 128
+                && exists(/databases/$(database)/documents/careSpaces/$(spaceId)/members/$(request.resource.data.to))
+                && get(/databases/$(database)/documents/careSpaces/$(spaceId)/members/$(request.resource.data.to)).data.status == "active"))
+          && request.resource.data.text is string && request.resource.data.text.size() <= 300
           && request.resource.data.state == "open"
           && request.resource.data.at == request.time;
-        allow update: if csAdmin(spaceId)
+        allow update: if csMember(spaceId)
+          && (csAdmin(spaceId) || ("to" in resource.data && resource.data.to == request.auth.uid))
           && resource.data.state == "open"
           && request.resource.data.state in ["done", "declined"]
           && request.resource.data.kind == resource.data.kind
@@ -1709,22 +1729,28 @@ match /safetyReports/{reportId} {
       }
       match /plans/{weekId} {
         allow read: if csMember(spaceId);
-        allow create, update: if csAdmin(spaceId)
+        allow create: if csMember(spaceId)
           && request.resource.data.keys().hasOnly(["days", "approvedBy"])
           && request.resource.data.keys().hasAll(["days"])
           && validPlanDays(request.resource.data.days)
           && (!("approvedBy" in request.resource.data)
-              || request.resource.data.approvedBy == request.auth.uid);
+              || (csAdmin(spaceId) && request.resource.data.approvedBy == request.auth.uid));
+        allow update: if csMember(spaceId)
+          && request.resource.data.keys().hasOnly(["days", "approvedBy"])
+          && request.resource.data.keys().hasAll(["days"])
+          && validPlanDays(request.resource.data.days)
+          && (csAdmin(spaceId) || request.resource.data.diff(resource.data).affectedKeys().hasOnly(["days"]))
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(["approvedBy"])
+              || (csAdmin(spaceId) && request.resource.data.approvedBy == request.auth.uid));
         allow delete: if csAdmin(spaceId);
       }
       match /approvals/{approvalId} {
         allow read: if csMember(spaceId);
         allow create: if csMember(spaceId)
-          && csRole(spaceId) in ["admin", "regular", "limited"]
           && request.resource.data.keys().hasOnly(["kind", "ref", "state", "by", "decidedBy"])
           && request.resource.data.keys().hasAll(["kind", "ref", "state", "by"])
           && request.resource.data.kind in ["activity", "purchase", "meal"]
-          && request.resource.data.ref is string && request.resource.data.ref.size() <= 128
+          && request.resource.data.ref is string && request.resource.data.ref.size() > 0 && request.resource.data.ref.size() <= 128
           && request.resource.data.state == "pending"
           && request.resource.data.by == request.auth.uid
           && !("decidedBy" in request.resource.data);
@@ -1741,17 +1767,18 @@ match /safetyReports/{reportId} {
       match /gallery/{itemId} {
         allow read: if csMember(spaceId)
           && (csAdmin(spaceId) || !("childId" in resource.data) || resource.data.sharedByParent == true);
-        allow create: if csAdmin(spaceId)
+        allow create: if csMember(spaceId)
           && request.resource.data.keys().hasOnly(["key", "kind", "by", "at", "childId", "sharedByParent"])
           && request.resource.data.keys().hasAll(["key", "kind", "by", "at", "sharedByParent"])
-          && request.resource.data.key is string && request.resource.data.key.size() <= 500
+          && request.resource.data.key is string && request.resource.data.key.size() > 0 && request.resource.data.key.size() <= 500
           && request.resource.data.key.matches("^spaces/" + spaceId + "/.+$")
           && request.resource.data.kind in ["photo", "video"]
           && request.resource.data.by == request.auth.uid
           && request.resource.data.at == request.time
           && (!("childId" in request.resource.data)
-              || (request.resource.data.childId is string && request.resource.data.childId.size() <= 128))
-          && request.resource.data.sharedByParent is bool;
+              || (request.resource.data.childId is string && request.resource.data.childId.size() > 0 && request.resource.data.childId.size() <= 128))
+          && request.resource.data.sharedByParent is bool
+          && (csAdmin(spaceId) || request.resource.data.sharedByParent == false);
         allow update: if csAdmin(spaceId)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["sharedByParent"])
           && request.resource.data.sharedByParent is bool;
@@ -1813,7 +1840,7 @@ match /safetyReports/{reportId} {
         allow create, update, delete: if false;
         match /allergies/{recordId} {
           allow read: if csAdmin(spaceId) || csPerm(spaceId, "allergies");
-          allow create, update: if (csAdmin(spaceId) || csPerm(spaceId, "canEditAllergies"))
+          allow create, update: if csAdmin(spaceId)
             && request.resource.data.keys().hasOnly(["items", "updatedBy", "updatedAt", "alertId"])
             && request.resource.data.items is list && request.resource.data.items.size() <= 50
             && medicalRecordAlertMatches(spaceId, childId, "allergies", recordId);
@@ -1837,8 +1864,7 @@ match /safetyReports/{reportId} {
       }
       match /alerts/{alertId} {
         allow read: if csMember(spaceId);
-        allow create: if (csAdmin(spaceId)
-            || (csPerm(spaceId, "canEditAllergies") && request.resource.data.section == "allergies"))
+        allow create: if csAdmin(spaceId)
           && request.resource.data.keys().hasOnly(["kind", "by", "at", "summary", "childId", "section", "recordId"])
           && request.resource.data.kind == "medical-change"
           && request.resource.data.by == request.auth.uid

@@ -2,6 +2,9 @@ import { z } from "zod";
 import { ageGroupSchema, auPairHostSchema, auPairProfileSchema, householdPrefsSchema, profileEssentialsSchema, profileGalleryItemSchema, profileParentNamesSchema, reviewSummarySchema } from "./profile-extras.js";
 export * from "./profile-extras.js";
 export * from "./reviews.js";
+export * from "./notifications.js";
+export * from "./booking-extras.js";
+export * from "./space-extras.js";
 
 export const timestampSchema = z.union([
   z.date(),
@@ -493,31 +496,6 @@ export const shoppingItemSchema = z.object({
   reimbursed: z.boolean(),
 }).strict();
 
-export const notificationCategorySchema = z.enum([
-  "messages", "booking-reminders", "care-updates", "requests", "calendar-changes", "activity-reminders", "shopping", "allergy-changes",
-]);
-
-export const notificationSchema = z.object({
-  category: notificationCategorySchema,
-  title: z.string().min(1).max(120),
-  body: z.string().max(500),
-  at: timestampSchema,
-  read: z.boolean(),
-}).strict();
-
-export const notificationPrefsSchema = z.object({
-  mode: z.enum(["all", "key", "daily"]).default("all"),
-  messages: z.boolean().default(true),
-  bookings: z.boolean().default(true),
-  careUpdates: z.boolean().default(true),
-  requests: z.boolean().default(true),
-  calendar: z.boolean().default(true),
-  shopping: z.boolean().default(true),
-  allergyChanges: z.boolean().default(true),
-  muteNonUrgentWhileWorking: z.boolean().default(false),
-  dailyRecapTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
-}).strict();
-
 export type ProfileCard = z.infer<typeof profileCardSchema>;
 export type ProfileCardWrite = z.infer<typeof profileCardWriteSchema>;
 export type Profile = z.infer<typeof profileSchema>;
@@ -544,12 +522,9 @@ export type CareSpaceRequest = z.infer<typeof careSpaceRequestSchema>;
 export type WeeklyPlan = z.infer<typeof weeklyPlanSchema>;
 export type CareSpaceApproval = z.infer<typeof careSpaceApprovalSchema>;
 export type SpaceGalleryItem = z.infer<typeof spaceGalleryItemSchema>;
-export type AppNotification = z.infer<typeof notificationSchema>;
-export type NotificationCategory = z.infer<typeof notificationCategorySchema>;
 export type MedicalRecord = z.infer<typeof medicalRecordSchema>;
 export type EmergencyContacts = z.infer<typeof emergencyContactsSchema>;
 export type CareSpaceInvite = z.infer<typeof careSpaceInviteSchema>;
 export type UserSpaceIndex = z.infer<typeof userSpaceIndexSchema>;
 export type MealPlan = z.infer<typeof mealPlanSchema>;
 export type ShoppingItemData = z.infer<typeof shoppingItemSchema>;
-export type NotificationPrefs = z.infer<typeof notificationPrefsSchema>;

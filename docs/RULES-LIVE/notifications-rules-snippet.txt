@@ -1,0 +1,10 @@
+// Merge under the existing match /users/{uid} rules block.
+// Keep the broader users/{uid}/{collection}/{docId} rule excluding "notifications".
+match /users/{uid}/notifications/{notificationId} {
+  allow read: if signedIn() && request.auth.uid == uid && !isAnon();
+  allow create: if false; // Cloud Functions Admin SDK only.
+  allow update: if signedIn() && request.auth.uid == uid && !isAnon()
+    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["read"])
+    && request.resource.data.read == true;
+  allow delete: if false;
+}

@@ -1,13 +1,16 @@
 import "../lib/i18n";
 import { useEffect, useMemo, useState } from "react";
-import { BackBar, Bunny, t, type ScreenProps, useAuth, useNav } from "@cc/core";
-import { updateMemberPermissions, type TeamMember } from "../data/team";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { BackBar, Bunny, db, t, type ScreenProps, useAuth, useNav } from "@cc/core";
+import type { TeamMember } from "../data/team";
 import { listUserSpaces, type SpaceSummary } from "../data/spaces";
 import { PermissionEditor } from "./profile/PermissionEditor";
 import { requestMyDataExport } from "./profile/dataExport";
 import "./profile/profile.css";
 
 type PrivacyParams = { uid?: string; spaceId?: string };
+type ExtraMemberPermissions = { canInvite: boolean; canEditAllergies: boolean };
+const NO_EXTRA_PERMISSIONS: ExtraMemberPermissions = { canInvite: false, canEditAllergies: false };
 
 export default function PrivacyPerms({ params }: ScreenProps<PrivacyParams>) {
   const nav = useNav();
@@ -15,6 +18,9 @@ export default function PrivacyPerms({ params }: ScreenProps<PrivacyParams>) {
   const uid = params.uid || user?.uid || "";
   const [spaces, setSpaces] = useState<SpaceSummary[]>([]);
   const [members, setMembers] = useState<TeamMember[]>([]);
+  const [extraPerms, setExtraPerms] = useState<ExtraMemberPermissions>(NO_EXTRA_PERMISSIONS);
+  const [extraLoading, setExtraLoading] = useState(false);
+  const [extraLoadedFor, setExtraLoadedFor] = useState("");
   const [spaceId, setSpaceId] = useState(params.spaceId ?? "");
   const [memberUid, setMemberUid] = useState("");
   const [loading, setLoading] = useState(true);
@@ -24,7 +30,8 @@ export default function PrivacyPerms({ params }: ScreenProps<PrivacyParams>) {
   const [notice, setNotice] = useState("");
   const selectedSpace = spaces.find((space) => space.id === spaceId) ?? null;
   const selectedMember = members.find((member) => member.uid === memberUid) ?? null;
-  const canEdit = selectedSpace?.role === "admin" && selectedMember?.status === "active" && selectedMember.uid !== uid;
+  const extrasReady = extraLoadedFor === `${spaceId}:${memberUid}` && !extraLoading;
+  const canEdit = selectedSpace?.role === "admin" && selectedMember?.status === "active" && selectedMember.uid !== uid && extrasReady;
 
   useEffect(() => {
     let alive = true;
@@ -51,18 +58,69 @@ export default function PrivacyPerms({ params }: ScreenProps<PrivacyParams>) {
     return () => { alive = false; };
   }, [spaceId, spaces, uid]);
 
+  useEffect(() => {
+    let alive = true;
+    const key = `${spaceId}:${memberUid}`;
+    setExtraLoadedFor("");
+    if (!spaceId || !memberUid) {
+      setExtraPerms(NO_EXTRA_PERMISSIONS);
+      setExtraLoading(false);
+      return;
+    }
+    setExtraLoading(true);
+    void getDoc(doc(db, "careSpaces", spaceId, "members", memberUid)).then((snapshot) => {
+      if (!alive) return;
+      if (!snapshot.exists()) throw new Error("member-not-found");
+      const raw = snapshot.data().perms;
+      const permissions = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
+      setExtraPerms({ canInvite: permissions.canInvite === true, canEditAllergies: permissions.canEditAllergies === true });
+      if (selectedMember?.role === "viewer") {
+        setMembers((rows) => rows.map((member) => member.uid === memberUid ? { ...member, perms: {
+          ...member.perms,
+          allergies: typeof permissions.allergies === "boolean" ? permissions.allergies : false,
+          medication: typeof permissions.medication === "boolean" ? permissions.medication : false,
+          photos: typeof permissions.photos === "boolean" ? permissions.photos : true,
+          calendar: typeof permissions.calendar === "boolean" ? permissions.calendar : true,
+          privateMessages: false,
+        } } : member));
+      }
+      setExtraLoadedFor(key);
+    }).catch(() => {
+      if (alive) {
+        setExtraPerms(NO_EXTRA_PERMISSIONS);
+        setError(t("csPrivacy.loadExtraPermsError", "The extra permission settings could not load. Do not change them until access is restored."));
+      }
+    }).finally(() => { if (alive) setExtraLoading(false); });
+    return () => { alive = false; };
+  }, [spaceId, memberUid, selectedMember?.role]);
+
   const selectableMembers = useMemo(() => members.filter((member) => member.status === "active"), [members]);
 
-  async function savePermissions(next: TeamMember["perms"]) {
+  async function persistPermissions(nextBase: TeamMember["perms"], nextExtra: ExtraMemberPermissions) {
     if (!uid || !selectedSpace || !selectedMember || !canEdit || saving) return;
-    setMembers((rows) => rows.map((member) => member.uid === selectedMember.uid ? { ...member, perms: next } : member));
+    const previousBase = selectedMember.perms;
+    const previousExtra = extraPerms;
+    const permissions = { ...nextBase, ...nextExtra };
+    setMembers((rows) => rows.map((member) => member.uid === selectedMember.uid ? { ...member, perms: nextBase } : member));
+    setExtraPerms(nextExtra);
     setSaving(true); setError(""); setNotice("");
     try {
-      await updateMemberPermissions(selectedSpace.id, uid, selectedMember.uid, next);
+      await updateDoc(doc(db, "careSpaces", selectedSpace.id, "members", selectedMember.uid), { perms: permissions });
       setNotice(t("csPrivacy.saved", "Permissions saved."));
     } catch {
+      setMembers((rows) => rows.map((member) => member.uid === selectedMember.uid ? { ...member, perms: previousBase } : member));
+      setExtraPerms(previousExtra);
       setError(t("csPrivacy.saveError", "Permissions could not save. Check that you are a parent admin."));
     } finally { setSaving(false); }
+  }
+
+  async function savePermissions(next: TeamMember["perms"]) {
+    await persistPermissions(next, extraPerms);
+  }
+
+  async function saveExtraPermissions(next: ExtraMemberPermissions) {
+    if (!selectedMember) return;
+    await persistPermissions(selectedMember.perms, next);
   }
 
   async function requestExport() {
@@ -96,8 +154,17 @@ export default function PrivacyPerms({ params }: ScreenProps<PrivacyParams>) {
             {selectableMembers.map((member) => <option key={member.uid} value={member.uid}>{member.displayName}{member.uid === uid ? ` · ${t("csPrivacy.you", "You")}` : ""}</option>)}
           </select></label>}
           {selectedMember ? <>
-            <PermissionEditor role={selectedMember.role} value={selectedMember.perms} disabled={!canEdit || saving} onChange={(next) => void savePermissions(next as TeamMember["perms"])} />
-            {!canEdit && <p className="muted">{t("csPrivacy.adminOnly", "Only a parent admin can edit another member’s access.")}</p>}
+            <PermissionEditor
+              role={selectedMember.role}
+              value={selectedMember.perms}
+              extraValues={extraPerms}
+              disabled={!canEdit || saving || extraLoading || !extrasReady}
+              onChange={(next) => void savePermissions(next as TeamMember["perms"])}
+              onExtraChange={(next) => void saveExtraPermissions(next)}
+            />
+            {selectedSpace?.role !== "admin" || selectedMember.uid === uid
+              ? <p className="muted">{t("csPrivacy.adminOnly", "Only a parent admin can edit another member’s access.")}</p>
+              : !extrasReady && <p className="muted" role="status">{t("csPrivacy.loadingExtraPerms", "Loading permission details…")}</p>}
             {selectedMember.role === "admin" && <p className="muted">{t("csPrivacy.adminFull", "Parent admins keep full access to manage the family space.")}</p>}
           </> : <div className="empty"><Bunny mood="rest" size={72} /><p>{t("csPrivacy.noMembers", "No active team members to edit yet.")}</p></div>}
           {selectedSpace?.role === "admin" && <button type="button" className="profile-action" style={{ width: "100%", marginTop: 12 }} onClick={() => nav.push("team", { spaceId })}>{t("csPrivacy.openTeam", "Open Care Team")}</button>}

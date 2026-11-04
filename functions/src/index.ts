@@ -1,7 +1,8 @@
-export { bookingDecide } from "./bookingDecide.js";
+export { bookingDecisionCallable as bookingDecide, instantBookOnRequestCreated } from "./bookingDecide.js";
 export { verifyCarer } from "./verifyCarer.js";
 export { entitlementsWebhook } from "./entitlementsWebhook.js";
 export { pushOnDailyRecap } from "./dailyRecap.js";
+export { writeBookingReminders } from "./reminders.js";
 export { exportMyData } from "./exportMyData.js";
 export { deleteMyAccount } from "./deleteMyAccount.js";
 export {

@@ -15,7 +15,7 @@ import {
   type DocumentData,
   type QueryDocumentSnapshot,
 } from "firebase/firestore";
-import { auth, db, t } from "@cc/core";
+import { auth, db, schemas, t } from "@cc/core";
 import { loadEmergencyContacts as loadSafeEmergencyContacts } from "./safety";
 import {
   bookingAcceptanceRelationshipPatch,
@@ -41,12 +41,34 @@ export type BookingRecord = {
   estimate: number;
   recurring: "none" | "weekly";
   weekdays: string[];
+  childIds?: string[];
+  shareAddress?: boolean;
+  seriesId?: string;
+  endAt?: unknown;
   note?: string;
   state: BookingState;
   createdBy?: string;
   createdAt?: unknown;
   decidedAt?: unknown;
 };
+
+export type BookingSeriesState = "requested" | "active" | "paused" | "ended";
+export type BookingSeriesRecord = {
+  id: string;
+  pairId: string;
+  familyUid: string;
+  carerUid: string;
+  weekdays: string[];
+  from: string;
+  to: string;
+  startDate: string;
+  endDate?: string;
+  rate: number;
+  state: BookingSeriesState;
+  createdAt?: unknown;
+  decidedAt?: unknown;
+};
+export type FamilyChild = { id: string; name: string };
 
 export type BookingRequestInput = {
   familyUid: string;
@@ -59,6 +81,9 @@ export type BookingRequestInput = {
   estimate: number;
   recurring: "none" | "weekly";
   weekdays: string[];
+  endDate?: string;
+  childIds?: string[];
+  shareAddress?: boolean;
   note?: string;
 };
 
@@ -87,9 +112,32 @@ function asBooking(snap: QueryDocumentSnapshot<DocumentData>, pairId: string): B
     estimate: Number(value.estimate ?? 0),
     recurring: value.recurring === "weekly" ? "weekly" : "none",
     weekdays: Array.isArray(value.weekdays) ? value.weekdays.map(String) : [],
+    childIds: Array.isArray(value.childIds) ? value.childIds.map(String) : [],
+    shareAddress: value.shareAddress === true,
+    seriesId: typeof value.seriesId === "string" ? value.seriesId : undefined,
+    endAt: value.endAt,
     note: typeof value.note === "string" ? value.note : undefined,
     state: value.state as BookingState,
     createdBy: typeof value.createdBy === "string" ? value.createdBy : undefined,
+    createdAt: value.createdAt,
+    decidedAt: value.decidedAt,
+  };
+}
+
+function asSeries(snap: QueryDocumentSnapshot<DocumentData>, pairId: string): BookingSeriesRecord {
+  const value = snap.data();
+  return {
+    id: snap.id,
+    pairId,
+    familyUid: String(value.familyUid ?? ""),
+    carerUid: String(value.carerUid ?? ""),
+    weekdays: Array.isArray(value.weekdays) ? value.weekdays.map(String) : [],
+    from: String(value.from ?? ""),
+    to: String(value.to ?? ""),
+    startDate: String(value.startDate ?? ""),
+    endDate: typeof value.endDate === "string" ? value.endDate : undefined,
+    rate: Number(value.rate ?? 0),
+    state: value.state as BookingSeriesState,
     createdAt: value.createdAt,
     decidedAt: value.decidedAt,
   };
@@ -109,7 +157,36 @@ function dayString(value: unknown): string | undefined {
   return undefined;
 }
 
-export async function createBookingRequest(input: BookingRequestInput): Promise<{ bookingId: string; pairId: string }> {
+export function bookingEndAtMillis(dateValue: string, to: string): number | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateValue) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(to)) return null;
+  const wallTime = new Date(`${dateValue}T${to}:00.000Z`);
+  if (!Number.isFinite(wallTime.getTime()) || wallTime.toISOString().slice(0, 10) !== dateValue) return null;
+  // UTC+8 is the earliest Australian local offset. This stored cutoff is after the booking end across Australian time zones.
+  return wallTime.getTime() - 8 * 60 * 60 * 1000;
+}
+
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+const SERIES_HORIZON_DAYS = 83;
+
+function addDays(dateValue: string, days: number): string {
+  const date = new Date(`${dateValue}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function seriesDates(startDate: string, endDate: string, weekdays: string[]): string[] {
+  const selected = new Set(weekdays);
+  const dates: string[] = [];
+  const cursor = new Date(`${startDate}T12:00:00Z`);
+  const last = new Date(`${endDate}T12:00:00Z`);
+  for (; cursor <= last; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
+    const day = WEEKDAYS[(cursor.getUTCDay() + 6) % 7];
+    if (day && selected.has(day)) dates.push(cursor.toISOString().slice(0, 10));
+  }
+  return dates;
+}
+
+export async function createBookingRequest(input: BookingRequestInput): Promise<{ bookingId: string; bookingIds: string[]; pairId: string; seriesId?: string }> {
   const now = new Date();
   const pair = planContact({
     familyUid: input.familyUid,
@@ -121,47 +198,81 @@ export async function createBookingRequest(input: BookingRequestInput): Promise<
   });
   if (!pair.ok) throw new Error(pair.reason);
 
-  // Instant-book is never accepted by this client. A completed family profile may qualify for a future server decision, but only the server may accept; every client write stays requested.
+  const extras = schemas.bookingExtrasSchema.parse({ childIds: input.childIds ?? [], shareAddress: input.shareAddress ?? false });
+  const recurring = input.recurring === "weekly";
+  const weekdays = recurring ? [...new Set(input.weekdays)] : [];
+  if (recurring && !weekdays.length) throw new Error("repeat-days-required");
+  const endDate = recurring ? (input.endDate ?? addDays(input.date, SERIES_HORIZON_DAYS)) : undefined;
+  if (endDate && (endDate < input.date || endDate > addDays(input.date, SERIES_HORIZON_DAYS))) throw new Error("repeat-range-invalid");
+  const dates = recurring && endDate ? seriesDates(input.date, endDate, weekdays) : [input.date];
+  if (!dates.length) throw new Error("repeat-dates-empty");
+  if (dates.some((date) => bookingEndAtMillis(date, input.to) === null)) throw new Error("booking-time-invalid");
+
+  // The series is finite and visible: each weekly occurrence in the next twelve weeks is a separate request.
   const pairId = pairIdFor(input.familyUid, input.carerUid);
   const relationshipRef = doc(db, "relationships", pairId);
-  const bookingRef = doc(collection(db, "relationships", pairId, "bookings"));
-  const booking = {
+  const seriesRef = recurring ? doc(collection(db, "relationships", pairId, "series")) : null;
+  const bookingRefs = dates.map(() => doc(collection(db, "relationships", pairId, "bookings")));
+  const seriesData = recurring && seriesRef && endDate ? schemas.bookingSeriesSchema.parse({
     familyUid: input.familyUid,
     carerUid: input.carerUid,
-    date: input.date,
+    weekdays,
     from: input.from,
     to: input.to,
+    startDate: input.date,
+    endDate,
     rate: input.rate,
-    estimate: input.estimate,
-    recurring: input.recurring,
-    weekdays: input.recurring === "weekly" ? input.weekdays : [],
-    ...(input.note?.trim() ? { note: input.note.trim().slice(0, 1000) } : {}),
-    state: "requested" as const,
-    createdBy: input.familyUid,
-    createdAt: serverTimestamp(),
+    state: "requested",
+    createdAt: now,
+  }) : null;
+
+  const writes = async (createRelationship: boolean) => {
+    const batch = writeBatch(db);
+    if (createRelationship) batch.set(relationshipRef, pair.data);
+    if (seriesRef && seriesData) batch.set(seriesRef, { ...seriesData, createdAt: serverTimestamp() });
+    dates.forEach((date, index) => {
+      const bookingRef = bookingRefs[index];
+      if (!bookingRef) return;
+      batch.set(bookingRef, {
+        familyUid: input.familyUid,
+        carerUid: input.carerUid,
+        date,
+        from: input.from,
+        to: input.to,
+        endAt: Timestamp.fromDate(new Date(bookingEndAtMillis(date, input.to)!)),
+        rate: input.rate,
+        estimate: input.estimate,
+        recurring: recurring ? "weekly" : "none",
+        weekdays,
+        childIds: extras.childIds,
+        shareAddress: extras.shareAddress,
+        ...(seriesRef ? { seriesId: seriesRef.id } : {}),
+        ...(input.note?.trim() ? { note: input.note.trim().slice(0, 1000) } : {}),
+        state: "requested" as const,
+        createdBy: input.familyUid,
+        createdAt: serverTimestamp(),
+      });
+    });
+    await batch.commit();
   };
 
   const existing = await getDoc(relationshipRef).catch(() => null);
   if (existing?.exists()) {
-    if (!canRequestOnExistingRelationship(existing.data(), input.familyUid, input.carerUid)) {
-      throw new Error("relationship-not-available");
-    }
-    await setDoc(bookingRef, booking);
+    if (!canRequestOnExistingRelationship(existing.data(), input.familyUid, input.carerUid)) throw new Error("relationship-not-available");
+    await writes(false);
   } else {
     try {
-      // A missing relationship is not readable under the deployed rules. Write the first relationship and request together; rules verify both with getAfter().
-      const batch = writeBatch(db);
-      batch.set(relationshipRef, pair.data);
-      batch.set(bookingRef, booking);
-      await batch.commit();
+      // The first relationship, series, and generated requests commit together under the pair rules.
+      await writes(true);
     } catch (firstWriteError) {
-      // If another request created the relationship between the read and batch, only retry for an already-open, matching pair.
       const raced = await getDoc(relationshipRef).catch(() => null);
       if (!raced?.exists() || !canRequestOnExistingRelationship(raced.data(), input.familyUid, input.carerUid)) throw firstWriteError;
-      await setDoc(bookingRef, booking);
+      await writes(false);
     }
   }
-  return { bookingId: bookingRef.id, pairId };
+  const bookingId = bookingRefs[0]?.id;
+  if (!bookingId) throw new Error("booking-write-empty");
+  return { bookingId, bookingIds: bookingRefs.map((reference) => reference.id), pairId, ...(seriesRef ? { seriesId: seriesRef.id } : {}) };
 }
 
 export async function loadBookingsForUser(uid: string, side: BookingSide): Promise<BookingRecord[]> {
@@ -172,6 +283,41 @@ export async function loadBookingsForUser(uid: string, side: BookingSide): Promi
     return rows.docs.map((row) => asBooking(row, relationship.id));
   }));
   return nested.flat().sort((a, b) => `${a.date} ${a.from}`.localeCompare(`${b.date} ${b.from}`));
+}
+
+export async function loadBookingSeriesForUser(uid: string, side: BookingSide): Promise<BookingSeriesRecord[]> {
+  const field = side === "family" ? "familyUid" : "carerUid";
+  const relationships = await getDocs(query(collection(db, "relationships"), where(field, "==", uid)));
+  const nested = await Promise.all(relationships.docs.map(async (relationship) => {
+    const rows = await getDocs(collection(db, "relationships", relationship.id, "series"));
+    return rows.docs.map((row) => asSeries(row, relationship.id));
+  }));
+  return nested.flat().sort((a, b) => `${a.startDate} ${a.from}`.localeCompare(`${b.startDate} ${b.from}`));
+}
+
+export async function loadBookingContextForPair(familyUid: string, carerUid: string): Promise<{ bookings: BookingRecord[]; series: BookingSeriesRecord[] }> {
+  if (auth().currentUser?.uid !== familyUid) return { bookings: [], series: [] };
+  const pairId = pairIdFor(familyUid, carerUid);
+  const relationship = await getDoc(doc(db, "relationships", pairId));
+  if (!relationship.exists() || !canRequestOnExistingRelationship(relationship.data(), familyUid, carerUid)) return { bookings: [], series: [] };
+  const [bookingRows, seriesRows] = await Promise.all([
+    getDocs(collection(db, "relationships", pairId, "bookings")),
+    getDocs(collection(db, "relationships", pairId, "series")),
+  ]);
+  return {
+    bookings: bookingRows.docs.map((row) => asBooking(row, pairId)),
+    series: seriesRows.docs.map((row) => asSeries(row, pairId)),
+  };
+}
+
+export async function loadFamilyChildren(uid: string): Promise<FamilyChild[]> {
+  if (auth().currentUser?.uid !== uid) return [];
+  const rows = await getDocs(collection(db, "users", uid, "children"));
+  return rows.docs.map((row) => {
+    const value = row.data();
+    const name = String(value.name ?? value.nickname ?? value.firstName ?? t("book.childFallback", "Child"));
+    return { id: row.id, name };
+  });
 }
 
 export async function loadBookingById(uid: string, bookingId: string, pairId?: string): Promise<BookingRecord | null> {
@@ -198,13 +344,54 @@ export async function transitionBooking(pairId: string, bookingId: string, to: B
     const value = current.data();
     const expectedUid = actor === "family" ? value.familyUid : value.carerUid;
     if (expectedUid !== actorUid || !canTransitionBooking(value.state as BookingState, to, actor)) throw new Error("booking-transition-not-allowed");
+    const scheduledEnd = bookingEndAtMillis(String(value.date ?? ""), String(value.to ?? ""));
+    if (to === "completed" && (actor !== "carer" || scheduledEnd === null || scheduledEnd > Date.now())) {
+      throw new Error("booking-not-ended");
+    }
     const relationship = to === "accepted" && actor === "carer" ? await transaction.get(relationshipRef) : null;
     const relationshipPatch = relationship?.exists()
       ? bookingAcceptanceRelationshipPatch(relationship.data(), String(value.familyUid ?? ""), String(value.carerUid ?? ""), actorUid)
       : null;
-    transaction.update(bookingRef, bookingUpdateFor(to, serverTimestamp()));
+    const update = to === "completed" ? { state: to } : bookingUpdateFor(to, serverTimestamp());
+    transaction.update(bookingRef, update);
     if (relationshipPatch) transaction.update(relationshipRef, relationshipPatch);
   });
+}
+
+export async function transitionBookingSeries(pairId: string, seriesId: string, to: BookingSeriesState, actor: BookingSide, actorUid: string): Promise<void> {
+  const currentUid = auth().currentUser?.uid;
+  if (!currentUid || currentUid !== actorUid) throw new Error("sign-in-required");
+  const seriesRef = doc(db, "relationships", pairId, "series", seriesId);
+  const seriesSnap = await getDoc(seriesRef);
+  if (!seriesSnap.exists()) throw new Error("series-not-found");
+  const series = seriesSnap.data();
+  const expectedUid = actor === "family" ? series.familyUid : series.carerUid;
+  if (expectedUid !== actorUid) throw new Error("series-transition-not-allowed");
+  const deciding = series.state === "requested" && actor === "carer" && (to === "active" || to === "ended");
+  const managing = series.state === "active" && (to === "paused" || to === "ended")
+    || series.state === "paused" && (to === "active" || to === "ended");
+  if (!deciding && !managing) throw new Error("series-transition-not-allowed");
+
+  const batch = writeBatch(db);
+  batch.update(seriesRef, deciding ? { state: to, decidedAt: serverTimestamp() } : { state: to });
+  if (deciding) {
+    const rows = await getDocs(collection(db, "relationships", pairId, "bookings"));
+    rows.docs.forEach((row) => {
+      const booking = row.data();
+      if (booking.seriesId === seriesId && booking.state === "requested") {
+        batch.update(row.ref, { state: to === "active" ? "accepted" : "declined", decidedAt: serverTimestamp() });
+      }
+    });
+    if (to === "active") {
+      const relationshipRef = doc(db, "relationships", pairId);
+      const relationship = await getDoc(relationshipRef);
+      const patch = relationship.exists()
+        ? bookingAcceptanceRelationshipPatch(relationship.data(), String(series.familyUid ?? ""), String(series.carerUid ?? ""), actorUid)
+        : null;
+      if (patch) batch.update(relationshipRef, patch);
+    }
+  }
+  await batch.commit();
 }
 
 export async function writeCheckIn(pairId: string, bookingId: string, by: string, kind: "arrived" | "leaving" | "help"): Promise<void> {

@@ -3,6 +3,7 @@ import { BackBar, Bunny, Button, t, useNav, type ScreenProps } from "@cc/core";
 import { canReadAllergies, DEMO_CHILDREN, DEMO_SPACES, loadCareSpaces, loadChildren, saveChild, type CareSpace, type ChildProfile } from "../data/children";
 import { DEMO_MEDICAL, loadMedicalRecord } from "../data/medical";
 import { AllergyBanner, CareEmpty, DemoNotice } from "./care/common";
+import Gallery from "./Gallery";
 import "./care/care.css";
 
 type Params = { uid?: string; demo?: boolean };
@@ -19,6 +20,7 @@ export default function Care({ params }: ScreenProps<Params>) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [newChild, setNewChild] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
   const [name, setName] = useState("");
   const [age, setAge] = useState("3");
   const [interests, setInterests] = useState("");
@@ -61,13 +63,15 @@ export default function Care({ params }: ScreenProps<Params>) {
   async function createChild() {
     if (!space || !name.trim()) return;
     const ageYears = Math.max(0, Math.min(12, Number(age) || 0));
+    const child = { name: name.trim(), ageYears, interests: interests.split(",").map((value) => value.trim()).filter(Boolean), sections: SECTIONS, foodPreferences: [], learningGoals: [], milestones: [], routine: { naps: [] } };
     try {
-      const id = await saveChild(space.id, { name: name.trim(), ageYears, interests: interests.split(",").map((value) => value.trim()).filter(Boolean), sections: SECTIONS });
-      setChildren((current) => [...current, { id, name: name.trim(), ageYears, interests: interests.split(",").map((value) => value.trim()).filter(Boolean), sections: SECTIONS }]);
+      const id = demo ? `demo-child-${Date.now()}` : await saveChild(space.id, child);
+      setChildren((current) => [...current, { id, ...child }]);
       setName(""); setInterests(""); setAge("3"); setNewChild(false);
     } catch { setError(t("care.saveChildError", "Could not save this child profile. Check your access and try again.")); }
   }
 
+  if (galleryOpen && space) return <Gallery params={{ spaceId: space.id, uid, role: space.role, perms: space.perms, demo }} onBack={() => setGalleryOpen(false)} />;
   if (loading && !spaces.length) return <div className="scroll"><div className="care-wrap"><div className="sk" style={{ height: 150 }} /></div></div>;
   return <div className="scroll"><div className="care-wrap">
     {!space ? <>
@@ -84,6 +88,7 @@ export default function Care({ params }: ScreenProps<Params>) {
       {demo && <DemoNotice />}
       {error && <div className="care-info care-warning" role="alert">{error}</div>}
       <div className="care-head"><div><h1>{t("care.childrenTitle", "Children")}</h1><p>{t("care.childrenHint", "Open a profile to see the care notes and daily report.")}</p></div></div>
+      <Button alt onClick={() => setGalleryOpen(true)}>{t("care.galleryOpen", "Photos and videos")}</Button>
       {children.map((child) => <button className="care-child-card" key={child.id} onClick={() => nav.push("child", { spaceId: space.id, childId: child.id, childName: child.name, uid, role: space.role, perms: space.perms, ownerUid: space.ownerUid, demo })}>
         <span className="care-badge" aria-hidden="true">{child.name.slice(0, 1).toUpperCase()}</span>
         <span className="care-card-copy"><b>{child.name}</b><p>{t("care.age", "Age {age}", { age: child.ageYears })} · {child.interests.slice(0, 2).join(", ") || t("care.noInterests", "Interests not added")}</p></span>
