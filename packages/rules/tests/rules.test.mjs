@@ -152,21 +152,46 @@ test("live rules baseline and v2 security extensions", { concurrency: 1 }, async
 
     await t.test("admin cannot put allergies in child profile", () => assertFails(setDoc(doc(mom, "careSpaces/mom/children/c2"), { name: "Mia", allergies: ["peanut"] })));
 
-    await t.test("profile card accepts new approved keys", async () => {
+    await t.test("family card accepts parent, household, essentials, and gallery extras", async () => {
+      const owner = as("profile-family-extras");
       const card = {
-        headline: "Gentle and reliable carer",
-        rate: 34,
-        budgetMax: 75,
-        careTypes: ["babysitter", "nanny"],
-        kids: [{ name: "Mia", ageYears: 4 }],
-        videoKey: "users/profile-carer/intro.webm",
-        style: ["outdoors", "crafts"],
-        suburb: "West End",
-        instantBook: false,
-        lastActive: Date.now(),
-        weights: { experience: 25, personality: 20, availability: 20, budget: 15, location: 10, activities: 10 },
+        gallery: ["users/profile-family-extras/gallery/a.jpg"], mainPhotoIndex: 0,
+        parentNames: ["Ari", "Sam"],
+        householdPrefs: { pets: true, smoking: false, languagesAtHome: ["English"], houseRules: "Shoes off" },
+        essentials: { schedule: "essential", budget: "flexible", minAgeGroupsOk: true },
       };
-      await assertSucceeds(setDoc(doc(as("profile-carer"), "profiles/profile-carer"), profile("carer", card)));
+      await assertSucceeds(setDoc(doc(owner, "profiles/profile-family-extras"), profile("family", card)));
+    });
+    await t.test("family card accepts full au-pair host extras", async () => {
+      const owner = as("profile-family-host");
+      const card = {
+        auPairHost: { country: "Australia", room: "Private", accommodation: "Bedroom", meals: "Meals included", daysOff: ["Sat", "Sun"], location: { city: "Brisbane" }, expectations: "Shared meals", durationMonths: 12, pocketMoneyPerWeek: 320, hoursPerWeek: 25, childcareDuties: ["School pickup"], otherHousework: ["Own laundry"], languages: ["English"], visaSupport: true, visaHelp: true, infantCareNeeded: false },
+      };
+      await assertSucceeds(setDoc(doc(owner, "profiles/profile-family-host"), profile("family", card)));
+    });
+    await t.test("carer card accepts gallery, age groups, ideal family, and au-pair extras", async () => {
+      const owner = as("profile-carer");
+      const ref = doc(owner, "profiles/profile-carer");
+      const card = {
+        headline: "Gentle and reliable carer", rate: 34, careTypes: ["nanny", "au_pair"],
+        videoKey: "users/profile-carer/intro.webm", style: ["outdoors"], suburb: "West End",
+        gallery: ["users/profile-carer/gallery/a.jpg", "users/profile-carer/gallery/b.jpg"], mainPhotoIndex: 1,
+        ageGroups: ["infant", "toddler"], idealFamily: "Kind, clear communication",
+        auPair: { arrival: "2027-01", durationMonths: 12, ageGroups: ["infant"], expectations: "Respectful communication", accommodation: "Private room", pocketMoneyExpectation: "A$300 weekly", culturalInterests: ["Cooking"] },
+      };
+      await assertSucceeds(setDoc(ref, profile("carer", card)));
+      await assertFails(updateDoc(ref, { "card.reviewsSummary": { count: 1, avg: 5 } }));
+    });
+    await t.test("reviews summary stays server-only on sparse profile updates", async () => {
+      const owner = as("review-guard");
+      const ref = doc(owner, "profiles/review-guard");
+      await assertSucceeds(setDoc(ref, profile("carer")));
+      await assertFails(updateDoc(ref, { "card.reviewsSummary": { count: 1, avg: 5 } }));
+    });
+    await t.test("profile card denies invalid gallery, au-pair fields, and client reviews", async () => {
+      await assertFails(setDoc(doc(as("bad-gallery"), "profiles/bad-gallery"), profile("carer", { gallery: ["users/someone-else/photo.jpg"] })));
+      await assertFails(setDoc(doc(as("bad-aupair"), "profiles/bad-aupair"), profile("carer", { auPair: { durationMonths: 37 } })));
+      await assertFails(setDoc(doc(as("bad-review"), "profiles/bad-review"), profile("carer", { reviewsSummary: { count: 1, avg: 5 } })));
     });
     await t.test("profile card cannot store qualification claims", () => assertFails(setDoc(doc(as("bad-card"), "profiles/bad-card"), profile("carer", { qualifications: ["verified"] }))));
 

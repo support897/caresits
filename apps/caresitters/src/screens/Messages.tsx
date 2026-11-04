@@ -1,10 +1,42 @@
-import { useEffect, useMemo, useState } from "react";
-import { type Person, Bunny, t, useNav } from "@cc/core";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { db, loadPeople, type Person, Bunny, t, useNav } from "@cc/core";
+import { collection, doc, getDocs, setDoc } from "firebase/firestore";
+import { isProfileComplete, pairIdFor, planContact } from "../lib/booking";
+import { loadBookingsForUser } from "../data/bookings";
+import { loadSavedIds } from "../data/people";
 import { Bell } from "../../../../packages/core/src/notifications/Bell";
 import { filterChatsByTab, getUnreadCount, messagePreview, timeMs, type ChatFilter, type ChatMessage } from "../../../../packages/core/src/chat/merge";
 import { getChatSeenAt, loadChatPeople, loadRelationships, otherUidFor, subscribeToChatSeen, subscribeToMessages, type ChatPerson, type Relationship } from "../data/chat";
 
 type Params = { me: Person };
+type PickerInput = {
+  people: readonly Person[];
+  me: Pick<Person, "uid" | "side">;
+  savedIds?: readonly string[];
+  bookedIds?: readonly string[];
+  relationshipIds?: readonly string[];
+  blockedIds?: readonly string[];
+  search?: string;
+};
+
+export function filterMessagePickerPeople(input: PickerInput): Person[] {
+  const saved = new Set(input.savedIds ?? []);
+  const booked = new Set(input.bookedIds ?? []);
+  const related = new Set(input.relationshipIds ?? []);
+  const blocked = new Set(input.blockedIds ?? []);
+  const search = (input.search ?? "").trim().toLocaleLowerCase();
+  return [...new Map(input.people.map((person) => [person.uid, person])).values()]
+    .filter((person) => {
+      if (person.uid === input.me.uid || person.side === input.me.side || blocked.has(person.uid)) return false;
+      if (search && !person.name.toLocaleLowerCase().includes(search)) return false;
+      if (input.me.side === "family") {
+        return person.side === "carer" && (search.length > 0 || saved.has(person.uid) || booked.has(person.uid));
+      }
+      return person.side === "family" && related.has(person.uid);
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
 const FILTERS: ChatFilter[] = ["All", "Families", "Carers", "Unread", "Requests"];
 const labels: Record<ChatFilter, string> = {
   All: t("messages.filter.all", "All"), Families: t("messages.filter.families", "Families"), Carers: t("messages.filter.carers", "Carers"), Unread: t("messages.filter.unread", "Unread"), Requests: t("messages.filter.requests", "Requests"),
@@ -27,6 +59,17 @@ export default function Messages({ params }: { params: Params }) {
   const [unread, setUnread] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerSearch, setPickerSearch] = useState("");
+  const [pickerPeople, setPickerPeople] = useState<Person[]>([]);
+  const [pickerSavedIds, setPickerSavedIds] = useState<string[]>([]);
+  const [pickerBookedIds, setPickerBookedIds] = useState<string[]>([]);
+  const [pickerRelationshipIds, setPickerRelationshipIds] = useState<string[]>([]);
+  const [pickerBlockedIds, setPickerBlockedIds] = useState<string[]>([]);
+  const [pickerLoading, setPickerLoading] = useState(false);
+  const [pickerBusy, setPickerBusy] = useState(false);
+  const [pickerError, setPickerError] = useState("");
+  const pickerSearchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => subscribeToChatSeen(me.uid, (relId) => {
     setUnread((current) => ({ ...current, [relId]: 0 }));
@@ -59,6 +102,123 @@ export default function Messages({ params }: { params: Params }) {
     return () => { alive = false; stops.forEach((stop) => stop()); };
   }, [me.uid, me.side]);
 
+  useEffect(() => {
+    if (!pickerOpen) return undefined;
+    let alive = true;
+    setPickerLoading(true);
+    setPickerError("");
+    setPickerPeople([]);
+    void (async () => {
+      const blockedSnapshot = await getDocs(collection(db, "users", me.uid, "blocks"));
+      const blockedIds = new Set(blockedSnapshot.docs.map((row) => row.id));
+      relations.filter((rel) => rel.state === "blocked").forEach((rel) => blockedIds.add(otherUidFor(rel, me.uid)));
+      let candidates: Person[] = [];
+      let savedIds: string[] = [];
+      let bookedIds: string[] = [];
+      let relationshipIds: string[] = [];
+      if (me.side === "family") {
+        const [allPeople, saved, bookings] = await Promise.all([
+          loadPeople(me),
+          loadSavedIds(me.uid),
+          loadBookingsForUser(me.uid, "family").catch(() => []),
+        ]);
+        candidates = allPeople.filter((person) => person.side === "carer");
+        savedIds = saved;
+        bookedIds = bookings.map((booking) => booking.carerUid);
+      } else {
+        const familyRelationships = relations.filter((rel) => rel.state !== "blocked" && rel.state !== "ended");
+        const chatPeople = await loadChatPeople(familyRelationships, me.uid);
+        candidates = Object.values(chatPeople).flatMap((person) => person.profile?.side === "family" ? [person.profile] : []);
+        relationshipIds = familyRelationships.map((rel) => otherUidFor(rel, me.uid)).filter(Boolean);
+      }
+      if (!alive) return;
+      setPickerPeople(candidates);
+      setPickerSavedIds(savedIds);
+      setPickerBookedIds(bookedIds);
+      setPickerRelationshipIds(relationshipIds);
+      setPickerBlockedIds([...blockedIds].filter(Boolean));
+    })().catch(() => {
+      if (alive) setPickerError(t("messages.new.load.error", "People could not load. Check your connection and try again."));
+    }).finally(() => { if (alive) setPickerLoading(false); });
+    return () => { alive = false; };
+  }, [pickerOpen, me.uid, me.side, relations]);
+
+  useEffect(() => {
+    if (!pickerOpen) return undefined;
+    const frame = requestAnimationFrame(() => pickerSearchRef.current?.focus());
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setPickerOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => { cancelAnimationFrame(frame); window.removeEventListener("keydown", onKeyDown); };
+  }, [pickerOpen]);
+
+  const pickerRows = useMemo(() => filterMessagePickerPeople({
+    people: pickerPeople,
+    me,
+    savedIds: pickerSavedIds,
+    bookedIds: pickerBookedIds,
+    relationshipIds: pickerRelationshipIds,
+    blockedIds: pickerBlockedIds,
+    search: pickerSearch,
+  }), [pickerPeople, me.uid, me.side, pickerSavedIds, pickerBookedIds, pickerRelationshipIds, pickerBlockedIds, pickerSearch]);
+
+  async function startConversation(person: Person) {
+    if (pickerBusy) return;
+    setPickerBusy(true);
+    setPickerError("");
+    const relId = pairIdFor(me.uid, person.uid);
+    try {
+      const ownBlock = await getDocs(collection(db, "users", me.uid, "blocks"));
+      if (ownBlock.docs.some((row) => row.id === person.uid)) {
+        setPickerBlockedIds((current) => [...new Set([...current, person.uid])]);
+        return;
+      }
+      const existing = relations.find((rel) => rel.id === relId);
+      if (existing) {
+        if (["contact", "hired", "pending"].includes(existing.state)) {
+          setPickerOpen(false);
+          nav.push("chat", { relId, otherUid: person.uid });
+          return;
+        }
+        if (existing.state === "blocked") {
+          setPickerBlockedIds((current) => [...new Set([...current, person.uid])]);
+          setPickerError(t("messages.new.unavailable", "This person is not available for messaging."));
+          return;
+        }
+        setPickerError(t("messages.new.existing.error", "This conversation cannot be reopened."));
+        return;
+      }
+      const familyUid = me.side === "family" ? me.uid : person.uid;
+      const carerUid = me.side === "carer" ? me.uid : person.uid;
+      const plan = planContact({
+        familyUid,
+        carerUid,
+        createdBy: me.uid,
+        nowIso: new Date().toISOString(),
+        createdDay: new Date().toISOString().slice(0, 10),
+        profileComplete: isProfileComplete(me) && isProfileComplete(person),
+      });
+      if (!plan.ok) {
+        setPickerError(t("messages.new.profile.error", "A complete profile is needed before starting a conversation."));
+        return;
+      }
+      await setDoc(doc(db, "relationships", relId), { ...plan.data, state: "contact" });
+      setPickerOpen(false);
+      nav.push("chat", { relId, otherUid: person.uid });
+    } catch (cause) {
+      const code = String((cause as { code?: unknown })?.code ?? "");
+      if (code.includes("permission-denied")) {
+        setPickerBlockedIds((current) => [...new Set([...current, person.uid])]);
+        setPickerError(t("messages.new.unavailable", "This person is not available for messaging."));
+      } else {
+        setPickerError(t("messages.new.create.error", "The conversation could not open. Check your connection and try again."));
+      }
+    } finally {
+      setPickerBusy(false);
+    }
+  }
+
   const rows = useMemo(() => {
     const matched = filterChatsByTab(relations, tab, { uid: me.uid, side: me.side }, unread);
     return matched.map((rel) => {
@@ -90,6 +250,7 @@ export default function Messages({ params }: { params: Params }) {
       </div>
     </header>
     <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "8px 16px 24px" }}>
+      <button type="button" className="btn alt" onClick={() => { setPickerSearch(""); setPickerError(""); setPickerOpen(true); }} style={{ width: "100%", minHeight: 48, marginBlockEnd: 10, fontSize: 17 }}>{t("messages.new.button", "New message")}</button>
       <label htmlFor="messages-search" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clipPath: "inset(50%)" }}>{t("messages.search.label", "Search conversations")}</label>
       <input id="messages-search" className="field" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("messages.search.placeholder", "Search families, carers and chats")} style={{ minHeight: 50 }} />
       {quickPeople.length > 0 && <section aria-label={t("messages.circle.label", "Your care circle")} style={{ marginBlock: 16 }}>
@@ -117,5 +278,23 @@ export default function Messages({ params }: { params: Params }) {
       </div> : <div className="empty" style={{ paddingBlock: 22 }}><Bunny mood="hello" size={94} /><h2>{emptyTitle}</h2><p className="muted">{emptyBody}</p></div>}
       <p className="muted center" style={{ marginBlock: 18 }}>{t("messages.private.note", "Every family has its own private space.")}</p>
     </div>
+    {pickerOpen && <div onClick={(event) => { if (event.target === event.currentTarget && !pickerBusy) setPickerOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 1000, display: "grid", placeItems: "center", padding: 12, background: "color-mix(in srgb, var(--ink) 45%, transparent)" }}>
+      <section role="dialog" aria-modal="true" aria-labelledby="messages-new-title" aria-busy={pickerLoading || pickerBusy} style={{ width: "min(100%, 560px)", maxHeight: "min(86dvh, 720px)", overflowY: "auto", padding: 16, borderRadius: 20, color: "var(--text)", background: "var(--cream)", boxShadow: "0 16px 56px color-mix(in srgb, var(--ink) 25%, transparent)" }}>
+        <header style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+          <div style={{ minWidth: 0 }}><h2 id="messages-new-title" style={{ marginBlock: 0, fontSize: 22 }}>{t("messages.new.title", "New message")}</h2><p className="muted" style={{ marginBlock: "6px 12px", fontSize: 17 }}>{me.side === "family" ? t("messages.new.family.hint", "Choose a saved or booked carer, or search by name.") : t("messages.new.carer.hint", "Choose a family you have a care relationship with.")}</p></div>
+          <button type="button" className="chip" onClick={() => setPickerOpen(false)} aria-label={t("messages.new.close", "Close person picker")} style={{ flex: "0 0 48px", width: 48, height: 48, padding: 0, justifyContent: "center", fontSize: 22 }}>×</button>
+        </header>
+        <label htmlFor="messages-new-search" style={{ display: "block", marginBlockEnd: 6, fontSize: 17 }}>{t("messages.new.search.label", "Search by name")}</label>
+        <input ref={pickerSearchRef} id="messages-new-search" className="field" value={pickerSearch} onChange={(event) => setPickerSearch(event.target.value)} placeholder={t("messages.new.search.placeholder", "Type a name")} style={{ minHeight: 50, fontSize: 17 }} />
+        {pickerError && <p role="alert" style={{ color: "var(--danger)", fontSize: 17 }}>{pickerError}</p>}
+        {pickerLoading ? <p role="status" style={{ fontSize: 17 }}>{t("messages.new.loading", "Loading people…")}</p> : pickerRows.length ? <div role="group" aria-label={t("messages.new.results", "People to message")} style={{ display: "grid", marginBlockStart: 8 }}>
+          {pickerRows.map((person) => <button key={person.uid} type="button" onClick={() => void startConversation(person)} disabled={pickerBusy} aria-label={t("messages.new.open", "Start a conversation with {name}", { name: person.name })} style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, minHeight: 64, padding: "8px 4px", borderBlockEnd: "1px solid var(--line)", textAlign: "start" }}>
+            <span className="av" style={{ width: 48, height: 48, flex: "0 0 48px" }}>{person.photoUrl ? <img src={person.photoUrl} alt="" loading="lazy" /> : initials(person.name)}</span>
+            <span style={{ minWidth: 0, flex: 1, fontSize: 17, overflowWrap: "anywhere" }}>{person.name}</span>
+            {pickerBusy && <span className="muted" style={{ fontSize: 17 }}>{t("messages.new.opening", "Opening…")}</span>}
+          </button>)}
+        </div> : <div className="empty" style={{ paddingBlock: 18 }}><Bunny mood="think" size={80} /><h3>{t("messages.new.empty.title", "No people found")}</h3><p className="muted" style={{ fontSize: 17 }}>{pickerSearch.trim() ? t("messages.new.empty.search", "Try another name.") : me.side === "family" ? t("messages.new.empty.family", "Saved or booked carers will show here. Search by name to find another carer.") : t("messages.new.empty.carer", "Families with a care relationship will show here.")}</p></div>}
+      </section>
+    </div>}
   </div>;
 }

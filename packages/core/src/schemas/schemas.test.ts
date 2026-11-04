@@ -11,6 +11,8 @@ import {
   mealPlanSchema,
   notificationPrefsSchema,
   profileCardSchema,
+  profileSchema,
+  profileWriteSchema,
   shoppingItemSchema,
   userSpaceIndexSchema,
 } from "./index.js";
@@ -47,6 +49,35 @@ describe("shared Firestore schemas", () => {
       lastActive: 1_793_750_400_000,
       weights: { experience: 25, personality: 20, availability: 20, budget: 15, location: 10, activities: 10 },
     }).success).toBe(true);
+  });
+
+  it("validates family, carer, gallery, and au-pair profile extras", () => {
+    expect(profileCardSchema.safeParse({
+      parentNames: ["Ari", "Sam"],
+      householdPrefs: { pets: true, smoking: false, languagesAtHome: ["English"], houseRules: "Shoes off" },
+      essentials: { schedule: "essential", budget: "flexible", minAgeGroupsOk: true },
+      ageGroups: ["newborn", "school"],
+      idealFamily: "Clear, kind communication",
+      gallery: ["users/carer-1/gallery/one.jpg"],
+      mainPhotoIndex: 0,
+      auPair: {
+        destinations: ["Australia"], durationMonths: 12, preferredAges: ["infant"],
+        ageGroups: ["infant"], accommodation: "Private room", pocketMoneyExpectation: "A$300 weekly",
+        culturalInterests: ["Cooking"], expectations: "Respectful communication",
+      },
+      auPairHost: {
+        country: "Australia", room: "Private room", accommodation: "Private bedroom",
+        meals: "Meals included", daysOff: ["Sat", "Sun"], location: { city: "Brisbane" },
+        expectations: "Shared family meals", durationMonths: 12, pocketMoneyPerWeek: 320,
+        hoursPerWeek: 25, childcareDuties: ["School pickup"], otherHousework: ["Own laundry"],
+        languages: ["English"], visaSupport: true, visaHelp: true, infantCareNeeded: false,
+      },
+    }).success).toBe(true);
+    expect(profileCardSchema.safeParse({ parentNames: ["A", "B", "C", "D", "E"] }).success).toBe(false);
+    expect(profileCardSchema.safeParse({ gallery: ["spaces/space-1/photo.jpg"] }).success).toBe(false);
+    expect(profileSchema.safeParse({ side: "carer", displayName: "Carer", card: { gallery: ["users/carer-1/photo.jpg"], mainPhotoIndex: 1 } }).success).toBe(false);
+    expect(profileCardSchema.safeParse({ auPair: { durationMonths: 37 } }).success).toBe(false);
+    expect(profileWriteSchema.safeParse({ reviewsSummary: { count: 1, avg: 5 } }).success).toBe(false);
   });
 
   it("accepts au-pair host, second-side, and experience card data", () => {

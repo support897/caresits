@@ -1,15 +1,37 @@
 import { useEffect, useMemo, useState } from "react";
-import { auth, Button, Chip, loadProfile, Ring, saveProfile, t, useNav, type Person, type ScreenProps } from "@cc/core";
+import { auth, Button, Chip, loadProfile, Ring, saveProfile, schemas, t, useNav, type Person, type ScreenProps } from "@cc/core";
 import { extractPrefs, suggestIntro, type ExtractedPrefs } from "../lib/aiAssist";
 import { buildProfilePatch, CARER_STEP_KEYS, clearOnboardingDraft, createOnboardingDraft, FAMILY_STEP_KEYS, loadOnboardingDraft, loadOnboardingSide, profileCompletenessPercent, progressPercent, saveOnboardingDraft, type OnboardingDraft, type OnboardingSide } from "../data/onboarding";
 import { ChoiceCards, type Choice } from "./builder/ChoiceCards";
 import { PhotoStep } from "./builder/PhotoStep";
+import { ProfileExtrasStep } from "./builder/ProfileExtrasStep";
 import { VideoStep } from "./builder/VideoStep";
 import { QualificationsStep } from "./builder/QualificationsStep";
 import "./builder/builder.css";
 
 type BuilderParams = { onDone?: () => void; edit?: boolean; side?: OnboardingSide };
 type Loose = Record<string, unknown>;
+const PROFILE_EXTRA_KEYS = ["gallery", "mainPhotoIndex", "parentNames", "householdPrefs", "essentials", "ageGroups", "idealFamily", "auPair", "auPairHost"] as const;
+const extrasStorageKey = (uid: string, side: OnboardingSide) => `caresits-profile-extras:${uid}:${side}`;
+function cleanExtraValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(cleanExtraValue);
+  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value as Loose).filter(([, entry]) => entry !== undefined).map(([key, entry]) => [key, cleanExtraValue(entry)]));
+  return value;
+}
+function cleanProfileExtras(value: Loose): Loose {
+  const extras: Loose = {};
+  for (const key of PROFILE_EXTRA_KEYS) if (value[key] !== undefined) extras[key] = cleanExtraValue(value[key]);
+  if (Array.isArray(extras.parentNames)) extras.parentNames = extras.parentNames.map((name) => typeof name === "string" ? name.trim().split(/\s+/)[0] ?? "" : "").filter(Boolean).slice(0, 4);
+  return extras;
+}
+function loadProfileExtrasDraft(uid: string, side: OnboardingSide, profile: Person | null): Loose {
+  const base = cleanProfileExtras(asRecord(profile?.card));
+  try {
+    const saved = localStorage.getItem(extrasStorageKey(uid, side));
+    if (saved) return { ...base, ...cleanProfileExtras(JSON.parse(saved) as Loose) };
+  } catch { /* Ignore an unavailable or invalid local draft. */ }
+  return base;
+}
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const CARE_TYPES: Choice[] = [
   { value: "babysitter", label: "Babysitter", detail: "Occasional or short-term care" },
@@ -93,15 +115,16 @@ export default function Builder({ params }: ScreenProps) {
   const [profile, setProfile] = useState<Person | null>(null);
   const [side, setSide] = useState<OnboardingSide>(() => initialSide(requestedSide));
   const [draft, setDraft] = useState<OnboardingDraft>(() => createOnboardingDraft());
+  const [profileExtras, setProfileExtras] = useState<Loose>({});
   const [step, setStep] = useState(0);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [introSuggestion, setIntroSuggestion] = useState("");
   const [prefSuggestion, setPrefSuggestion] = useState<ExtractedPrefs | null>(null);
-  const steps = side === "family" ? FAMILY_STEP_KEYS : CARER_STEP_KEYS;
+  const steps = side === "family" ? [...FAMILY_STEP_KEYS, "profile-extras"] : [...CARER_STEP_KEYS, "profile-extras"];
   const progress = progressPercent(step, steps.length);
-  const stepName = steps[step] ?? steps[0];
+  const stepName = steps[step] ?? steps[0] ?? "profile-extras";
   const isSecondary = Boolean(profile && side !== profile.side);
 
   useEffect(() => {
@@ -118,7 +141,8 @@ export default function Builder({ params }: ScreenProps) {
       const freshDraft = createOnboardingDraft();
       freshDraft.displayName = user.displayName ?? "";
       setDraft(saved?.draft ?? (loaded ? profileDraft(loaded, chosenSide) : freshDraft));
-      setStep(Math.min(saved?.stepIndex ?? 0, (chosenSide === "family" ? FAMILY_STEP_KEYS.length : CARER_STEP_KEYS.length) - 1));
+      setProfileExtras(loadProfileExtrasDraft(user.uid, chosenSide, loaded));
+      setStep(Math.min(saved?.stepIndex ?? 0, chosenSide === "family" ? FAMILY_STEP_KEYS.length : CARER_STEP_KEYS.length));
       setReady(true);
     }).catch(() => { if (live) { setError(t("onb.loadError", "Could not load your profile. Try again.")); setReady(true); } });
     return () => { live = false; };
@@ -128,11 +152,16 @@ export default function Builder({ params }: ScreenProps) {
     if (uid && ready) saveOnboardingDraft(uid, side, draft, step);
   }, [uid, side, draft, step, ready]);
 
+  useEffect(() => {
+    if (!uid || !ready) return;
+    try { localStorage.setItem(extrasStorageKey(uid, side), JSON.stringify(cleanProfileExtras(profileExtras))); } catch { /* The profile still saves when the user continues. */ }
+  }, [uid, side, profileExtras, ready]);
+
   const update = (patch: Partial<OnboardingDraft>) => { setError(""); setDraft((current) => ({ ...current, ...patch })); };
   const title = useMemo(() => {
     const key = `onb.step.${side}.${stepName}`;
     const labels: Record<string, string> = {
-      family: "Your family", children: "Children", "care-type": "Care type", schedule: "Your schedule", budget: "Your budget", distance: "How far to look", values: "What matters to you?",
+      family: "Your family", children: "Children", "care-type": "Care type", schedule: "Your schedule", budget: "Your budget", distance: "How far to look", values: "What matters to you?", "profile-extras": side === "family" ? "Family preferences" : "Your care profile",
       profile: "Your profile", headline: "Your headline", intro: "A short introduction", video: "Video introduction", languages: "Languages", experience: "Childcare years", qualifications: "Qualifications", rate: "Your hourly rate", availability: "When you are free", "care-types": "Care you offer",
     };
     return t(key, labels[stepName] ?? "Your profile");
@@ -152,8 +181,16 @@ export default function Builder({ params }: ScreenProps) {
   async function persist(): Promise<void> {
     if (!uid) throw new Error(t("onb.signinRequired", "Sign in to save your profile."));
     const patch = buildProfilePatch(side, draft, profile?.side);
-    await saveProfile(uid, patch);
-    setProfile((current) => current ?? ({ uid, side, name: draft.displayName.trim() || "Member", firstName: draft.displayName.trim().split(/\s+/)[0] || "Member", postcode: draft.postcode.trim(), photoUrl: draft.photoKey || undefined, about: draft.intro.slice(0, 300), card: patch.card, looking: {}, raw: {} } as Person));
+    const extras = cleanProfileExtras(profileExtras);
+    const card = { ...patch.card, ...extras };
+    const gallery = Array.isArray(card.gallery) ? card.gallery : [];
+    const mainIndex = typeof card.mainPhotoIndex === "number" ? card.mainPhotoIndex : -1;
+    if (mainIndex >= 0 && mainIndex < gallery.length && typeof gallery[mainIndex] === "string") card.photoUrl = gallery[mainIndex];
+    const checked = schemas.profileCardSchema.safeParse(card);
+    if (!checked.success || (mainIndex >= 0 && mainIndex >= gallery.length)) throw new Error(t("onb.extras.invalid", "Check the profile details and photo choice before saving."));
+    const finalPatch = { ...patch, card, ...(mainIndex >= 0 && typeof gallery[mainIndex] === "string" ? { photoUrl: gallery[mainIndex] as string } : {}) };
+    await saveProfile(uid, finalPatch);
+    setProfile((current) => current ? { ...current, card: { ...current.card, ...card }, ...(finalPatch.photoUrl ? { photoUrl: finalPatch.photoUrl } : {}) } : ({ uid, side, name: draft.displayName.trim() || "Member", firstName: draft.displayName.trim().split(/\s+/)[0] || "Member", postcode: draft.postcode.trim(), photoUrl: finalPatch.photoUrl ?? (draft.photoKey || undefined), about: draft.intro.slice(0, 300), card, looking: {}, raw: {} } as Person));
   }
 
   async function advance() {
@@ -166,6 +203,7 @@ export default function Builder({ params }: ScreenProps) {
       if (step < steps.length - 1) setStep((current) => current + 1);
       else {
         clearOnboardingDraft(uid, side);
+        try { localStorage.removeItem(extrasStorageKey(uid, side)); } catch { /* Saved profile remains available on this device. */ }
         if (onDone) onDone(); else nav.back();
       }
     } catch (reason) { setError(reason instanceof Error ? reason.message : t("onb.saveError", "Could not save this step. Try again.")); }
@@ -180,7 +218,8 @@ export default function Builder({ params }: ScreenProps) {
     const saved = loadOnboardingDraft(uid, nextSide);
     setSide(nextSide);
     setDraft(saved?.draft ?? profileDraft(profile, nextSide));
-    setStep(saved?.stepIndex ?? 0);
+    setProfileExtras(loadProfileExtrasDraft(uid, nextSide, profile));
+    setStep(Math.min(saved?.stepIndex ?? 0, nextSide === "family" ? FAMILY_STEP_KEYS.length : CARER_STEP_KEYS.length));
     setError("");
   }
 
@@ -235,6 +274,7 @@ export default function Builder({ params }: ScreenProps) {
             <div className="row"><Button type="button" alt small onClick={() => setPrefSuggestion(null)}>{t("onb.ai.discard", "Discard")}</Button><Button type="button" small disabled={!prefSuggestion.matchedPhrases.length} onClick={() => { update({ style: [...new Set([...draft.style, ...(prefSuggestion.prefs.style ?? [])])], activities: [...new Set([...draft.activities, ...(prefSuggestion.prefs.activities ?? [])])], familyLanguages: [...new Set([...draft.familyLanguages, ...(prefSuggestion.prefs.languages ?? [])])] }); setPrefSuggestion(null); }}>{t("onb.ai.confirm", "Confirm")}</Button></div>
           </div>}
         </div>;
+        case "profile-extras": return <ProfileExtrasStep uid={uid} side="family" extras={profileExtras} familyAuPair={draft.familyCareTypes.includes("au_pair")} carerAuPair={false} onChange={setProfileExtras} />;
       }
     }
 
@@ -261,6 +301,7 @@ export default function Builder({ params }: ScreenProps) {
       case "rate": return <ChoiceCards items={AMOUNTS.map((amount) => ({ value: String(amount), label: t("onb.rate.amount", "A${amount}/hour", { amount }) }))} value={[String(draft.rate)]} onChange={(items) => { if (items[0]) update({ rate: Number(items[0]) }); }} />;
       case "availability": return <div className="onb-field-stack"><p className="muted onb-note">{t("onb.availability.help", "Choose the days and your usual time window.")}</p><ChoiceCards items={dayChoices()} value={draft.carerDays} onChange={(carerDays) => update({ carerDays })} multiple /><div className="onb-row"><label className="onb-field-stack"><span className="onb-label">{t("onb.schedule.from", "From")}</span><input className="field" type="time" value={draft.carerFrom} onChange={(event) => update({ carerFrom: event.target.value })} /></label><label className="onb-field-stack"><span className="onb-label">{t("onb.schedule.to", "To")}</span><input className="field" type="time" value={draft.carerTo} onChange={(event) => update({ carerTo: event.target.value })} /></label></div></div>;
       case "care-types": return <div className="onb-field-stack"><ChoiceCards items={careChoices()} value={draft.carerCareTypes} onChange={(carerCareTypes) => update({ carerCareTypes })} multiple /><Button type="button" alt onClick={requestIntroSuggestion}>{t("onb.ai.suggestIntro", "Suggest an introduction")}</Button>{renderIntroSuggestion()}</div>;
+      case "profile-extras": return <ProfileExtrasStep uid={uid} side="carer" extras={profileExtras} familyAuPair={false} carerAuPair={draft.carerCareTypes.includes("au_pair")} onChange={setProfileExtras} />;
       default: return null;
     }
   }

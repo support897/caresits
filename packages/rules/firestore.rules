@@ -460,91 +460,141 @@ service cloud.firestore {
 // elements cannot be type checked per element in rules; the
 // fence bounds the count (10), not each element.
 
+function validAuPairHostStrings(host) {
+  let country = host.get("country", "");
+  let room = host.get("room", "");
+  let accommodation = host.get("accommodation", "");
+  let meals = host.get("meals", "");
+  let expectations = host.get("expectations", "");
+  return country is string && country.size() <= 80
+    && room is string && room.size() <= 300
+    && accommodation is string && accommodation.size() <= 300
+    && meals is string && meals.size() <= 300
+    && expectations is string && expectations.size() <= 300;
+}
+function validAuPairHostLocation(host) {
+  let location = host.get("location", {});
+  let suburb = location.get("suburb", "");
+  let city = location.get("city", "");
+  return location is map && location.keys().hasOnly(["suburb", "city"])
+    && suburb is string && suburb.size() <= 80
+    && city is string && city.size() <= 80;
+}
+function validAuPairHostNumbers(host) {
+  let stayMonths = host.get("durationMonths", 1);
+  let pocketMoney = host.get("pocketMoneyPerWeek", null);
+  let hours = host.get("hoursPerWeek", null);
+  return stayMonths is int && stayMonths >= 1 && stayMonths <= 36
+    && (pocketMoney == null || (pocketMoney is number && pocketMoney >= 0))
+    && (hours == null || (hours is number && hours >= 0));
+}
+function validAuPairHostLists(host) {
+  let daysOff = host.get("daysOff", []);
+  let childcareDuties = host.get("childcareDuties", []);
+  let otherHousework = host.get("otherHousework", []);
+  let languages = host.get("languages", []);
+  return daysOff is list && daysOff.size() <= 7 && daysOff.hasOnly(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])
+    && childcareDuties is list && childcareDuties.size() <= 30
+    && otherHousework is list && otherHousework.size() <= 30
+    && languages is list && languages.size() <= 20;
+}
+function validAuPairHostFlags(host) {
+  let visaSupport = host.get("visaSupport", false);
+  let visaHelp = host.get("visaHelp", false);
+  let infantCareNeeded = host.get("infantCareNeeded", false);
+  return visaSupport is bool && visaHelp is bool && infantCareNeeded is bool;
+}
 function validAuPairHost(host) {
-  return (host is map)
-    ? (host.keys().hasOnly(["country", "room", "accommodation", "meals", "daysOff", "location", "expectations", "durationMonths", "visaSupport", "pocketMoneyPerWeek", "hoursPerWeek", "childcareDuties", "otherHousework", "languages", "visaHelp", "infantCareNeeded"])
-      ? ((!("country" in host) || (host.country is string && host.country.size() <= 80))
-        && (!("room" in host) || (host.room is string && host.room.size() <= 300))
-        && (!("accommodation" in host) || (host.accommodation is string && host.accommodation.size() <= 300))
-        && (!("meals" in host) || (host.meals is string && host.meals.size() <= 300))
-        && (!("daysOff" in host) || (host.daysOff is list && host.daysOff.size() <= 7 && host.daysOff.hasOnly(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])))
-        && (!("location" in host) || (host.location is map && host.location.keys().hasOnly(["suburb", "city"])
-          && (!("suburb" in host.location) || (host.location.suburb is string && host.location.suburb.size() <= 80))
-          && (!("city" in host.location) || (host.location.city is string && host.location.city.size() <= 80))))
-        && (!("expectations" in host) || (host.expectations is string && host.expectations.size() <= 300))
-        && (!("durationMonths" in host) || (host.durationMonths is int && host.durationMonths >= 1 && host.durationMonths <= 36))
-        && (!("visaSupport" in host) || host.visaSupport is bool)
-        && (!("pocketMoneyPerWeek" in host) || host.pocketMoneyPerWeek == null || (host.pocketMoneyPerWeek is number && host.pocketMoneyPerWeek >= 0))
-        && (!("hoursPerWeek" in host) || host.hoursPerWeek == null || (host.hoursPerWeek is number && host.hoursPerWeek >= 0))
-        && (!("childcareDuties" in host) || (host.childcareDuties is list && host.childcareDuties.size() <= 30))
-        && (!("otherHousework" in host) || (host.otherHousework is list && host.otherHousework.size() <= 30))
-        && (!("languages" in host) || (host.languages is list && host.languages.size() <= 20))
-        && (!("visaHelp" in host) || host.visaHelp is bool)
-        && (!("infantCareNeeded" in host) || host.infantCareNeeded is bool))
-      : false)
-    : false;
+  return host is map
+    && host.keys().hasOnly(["country", "room", "accommodation", "meals", "daysOff", "location", "expectations", "durationMonths", "visaSupport", "pocketMoneyPerWeek", "hoursPerWeek", "childcareDuties", "otherHousework", "languages", "visaHelp", "infantCareNeeded"])
+    && validAuPairHostNumbers(host)
+    && validAuPairHostLists(host)
+    && validAuPairHostFlags(host);
+}
+function validAuPairProfileText(pair) {
+  let arrival = pair.get("arrival", "");
+  let homeCountry = pair.get("homeCountry", "");
+  let english = pair.get("english", "");
+  let accommodation = pair.get("accommodation", "");
+  let pocketMoney = pair.get("pocketMoneyExpectation", "");
+  let expectations = pair.get("expectations", "");
+  let visaNotes = pair.get("visaNotes", "");
+  return arrival is string && arrival.size() <= 200
+    && homeCountry is string && homeCountry.size() <= 80
+    && english is string && english.size() <= 60
+    && accommodation is string && accommodation.size() <= 300
+    && pocketMoney is string && pocketMoney.size() <= 160
+    && expectations is string && expectations.size() <= 300
+    && visaNotes is string && visaNotes.size() <= 300;
+}
+function validAuPairProfileLists(pair) {
+  let destinations = pair.get("destinations", []);
+  let languages = pair.get("languages", []);
+  let preferredAges = pair.get("preferredAges", []);
+  let ageGroups = pair.get("ageGroups", []);
+  let interests = pair.get("culturalInterests", []);
+  return destinations is list && destinations.size() <= 20
+    && languages is list && languages.size() <= 20
+    && preferredAges is list && preferredAges.size() <= 5 && preferredAges.hasOnly(["newborn", "infant", "toddler", "preschool", "school"])
+    && ageGroups is list && ageGroups.size() <= 5 && ageGroups.hasOnly(["newborn", "infant", "toddler", "preschool", "school"])
+    && interests is list && interests.size() <= 30;
 }
 function validAuPairProfile(pair) {
+  let durationMonths = pair.get("durationMonths", 1);
   return pair is map
-    && pair.keys().hasOnly(["on", "arrival", "homeCountry", "english", "infant", "drives", "swim", "destinations", "languages", "preferredAges", "accommodation", "pocketMoneyExpectation", "culturalInterests", "visaNotes"])
-    && (!("on" in pair) || pair.on is bool)
-    && (!("arrival" in pair) || (pair.arrival is string && pair.arrival.size() <= 200))
-    && (!("homeCountry" in pair) || (pair.homeCountry is string && pair.homeCountry.size() <= 80))
-    && (!("english" in pair) || (pair.english is string && pair.english.size() <= 60))
-    && (!("infant" in pair) || pair.infant is bool)
-    && (!("drives" in pair) || pair.drives is bool)
-    && (!("swim" in pair) || pair.swim is bool)
-    && (!("destinations" in pair) || (pair.destinations is list && pair.destinations.size() <= 20))
-    && (!("languages" in pair) || (pair.languages is list && pair.languages.size() <= 20))
-    && (!("preferredAges" in pair) || (pair.preferredAges is list && pair.preferredAges.size() <= 5 && pair.preferredAges.hasOnly(["newborn", "infant", "toddler", "preschool", "school"])))
-    && (!("accommodation" in pair) || (pair.accommodation is string && pair.accommodation.size() <= 300))
-    && (!("pocketMoneyExpectation" in pair) || (pair.pocketMoneyExpectation is string && pair.pocketMoneyExpectation.size() <= 160))
-    && (!("culturalInterests" in pair) || (pair.culturalInterests is list && pair.culturalInterests.size() <= 30))
-    && (!("visaNotes" in pair) || (pair.visaNotes is string && pair.visaNotes.size() <= 300));
+    && pair.keys().hasOnly(["on", "arrival", "durationMonths", "homeCountry", "english", "infant", "drives", "swim", "destinations", "languages", "preferredAges", "ageGroups", "accommodation", "pocketMoneyExpectation", "culturalInterests", "expectations", "visaNotes"])
+    && durationMonths is int && durationMonths >= 1 && durationMonths <= 36
+    && validAuPairProfileLists(pair);
 }
 function validHouseholdPrefs(prefs) {
+  let languagesAtHome = prefs.get("languagesAtHome", []);
   return prefs is map
     && prefs.keys().hasOnly(["pets", "smoking", "languagesAtHome", "houseRules"])
-    && (!("pets" in prefs) || prefs.pets is bool)
-    && (!("smoking" in prefs) || prefs.smoking is bool)
-    && (!("languagesAtHome" in prefs) || (prefs.languagesAtHome is list && prefs.languagesAtHome.size() <= 20))
-    && (!("houseRules" in prefs) || (prefs.houseRules is string && prefs.houseRules.size() <= 300));
-}
-function validProfileEssentials(essentials) {
-  return essentials is map
-    && essentials.keys().hasOnly(["schedule", "budget", "minAgeGroupsOk"])
-    && (!("schedule" in essentials) || essentials.schedule in ["essential", "flexible"])
-    && (!("budget" in essentials) || essentials.budget in ["essential", "flexible"])
-    && (!("minAgeGroupsOk" in essentials) || essentials.minAgeGroupsOk is bool);
+    && languagesAtHome is list && languagesAtHome.size() <= 20;
 }
 function validProfileGallery(card) {
-  return (!("gallery" in card) || (card.gallery is list && card.gallery.size() <= 6
-      && (card.gallery.size() < 1 || (card.gallery[0] is string && card.gallery[0].size() <= 500 && card.gallery[0].matches("^users/" + request.auth.uid + "/.+$")))
-      && (card.gallery.size() < 2 || (card.gallery[1] is string && card.gallery[1].size() <= 500 && card.gallery[1].matches("^users/" + request.auth.uid + "/.+$")))
-      && (card.gallery.size() < 3 || (card.gallery[2] is string && card.gallery[2].size() <= 500 && card.gallery[2].matches("^users/" + request.auth.uid + "/.+$")))
-      && (card.gallery.size() < 4 || (card.gallery[3] is string && card.gallery[3].size() <= 500 && card.gallery[3].matches("^users/" + request.auth.uid + "/.+$")))
-      && (card.gallery.size() < 5 || (card.gallery[4] is string && card.gallery[4].size() <= 500 && card.gallery[4].matches("^users/" + request.auth.uid + "/.+$")))
-      && (card.gallery.size() < 6 || (card.gallery[5] is string && card.gallery[5].size() <= 500 && card.gallery[5].matches("^users/" + request.auth.uid + "/.+$"))))
-    && (!("mainPhotoIndex" in card) || (card.mainPhotoIndex is int && card.mainPhotoIndex >= 0 && card.mainPhotoIndex < 6 && "gallery" in card && card.mainPhotoIndex < card.gallery.size())));
+  let gallery = card.get("gallery", []);
+  let joinedGallery = gallery.join("|");
+  let hasMainPhoto = "mainPhotoIndex" in card;
+  let mainPhotoIndex = card.get("mainPhotoIndex", -1);
+  return gallery is list && gallery.size() <= 6
+    && (gallery.size() == 0 || (joinedGallery.size() <= gallery.size() * 501 - 1
+      && joinedGallery.matches("^users/" + request.auth.uid + "/[^|\\n]+([|]users/" + request.auth.uid + "/[^|\\n]+){0,5}$")))
+    && (!hasMainPhoto || (mainPhotoIndex is int && mainPhotoIndex >= 0 && mainPhotoIndex < gallery.size()));
+}
+function validAlsoSideText(other) {
+  let about = other.get("about", "");
+  let headline = other.get("headline", "");
+  let photoUrl = other.get("photoUrl", "");
+  let videoKey = other.get("videoKey", "");
+  let experienceYears = other.get("experienceYears", 0);
+  let rate = other.get("rate", 0);
+  let suburb = other.get("suburb", "");
+  let budgetMax = other.get("budgetMax", 0);
+  let maxDistanceKm = other.get("maxDistanceKm", 0);
+  return about is string && about.size() <= 300
+    && headline is string && headline.size() <= 80
+    && photoUrl is string && photoUrl.size() <= 2000
+    && videoKey is string && videoKey.size() <= 500
+    && experienceYears is number && experienceYears >= 0
+    && rate is number && rate >= 0
+    && suburb is string && suburb.size() <= 80
+    && budgetMax is number && budgetMax >= 0
+    && maxDistanceKm is number && maxDistanceKm >= 0;
+}
+function validAlsoSideLists(other) {
+  let careTypes = other.get("careTypes", []);
+  let kids = other.get("kids", []);
+  return careTypes is list && careTypes.size() <= 3 && careTypes.hasOnly(["babysitter", "nanny", "au_pair"])
+    && kids is list && kids.size() <= 8;
 }
 function validAlsoSide(other, primarySide) {
-  return (other is map)
-    ? (other.keys().hasOnly(["side", "about", "headline", "photoUrl", "videoKey", "experienceYears", "rate", "availability", "careTypes", "kids", "languages", "suburb", "scheduleNeed", "budgetMax", "maxDistanceKm", "style", "activities"])
-      ? (other.side in ["family", "carer"]
-        && other.side != primarySide
-        && (!("about" in other) || (other.about is string && other.about.size() <= 300))
-        && (!("headline" in other) || (other.headline is string && other.headline.size() <= 80))
-        && (!("photoUrl" in other) || (other.photoUrl is string && other.photoUrl.size() <= 2000))
-        && (!("videoKey" in other) || (other.videoKey is string && other.videoKey.size() <= 500))
-        && (!("experienceYears" in other) || (other.experienceYears is number && other.experienceYears >= 0))
-        && (!("rate" in other) || (other.rate is number && other.rate >= 0))
-        && (!("careTypes" in other) || (other.careTypes is list && other.careTypes.size() <= 3 && other.careTypes.hasOnly(["babysitter", "nanny", "au_pair"])))
-        && (!("kids" in other) || (other.kids is list && other.kids.size() <= 8))
-        && (!("suburb" in other) || (other.suburb is string && other.suburb.size() <= 80))
-        && (!("budgetMax" in other) || (other.budgetMax is number && other.budgetMax >= 0))
-        && (!("maxDistanceKm" in other) || (other.maxDistanceKm is number && other.maxDistanceKm >= 0)))
-      : false)
-    : false;
+  let side = other.get("side", "");
+  return other is map
+    && other.keys().hasOnly(["side", "about", "headline", "photoUrl", "videoKey", "experienceYears", "rate", "availability", "careTypes", "kids", "languages", "suburb", "scheduleNeed", "budgetMax", "maxDistanceKm", "style", "activities"])
+    && side in ["family", "carer"]
+    && side != primarySide
+    && validAlsoSideLists(other);
 }
 function validLearningPlan(plan) {
   return plan is map
@@ -563,75 +613,74 @@ function validLooking(looking) {
     && looking.prefs is map
     && looking.prefs.keys().hasOnly(["personality", "activities", "routineStyle", "nationality", "tasks", "cooking"]);
 }
+function validProfileCardCoreFields(card) {
+  let rate = card.get("rate", 0);
+  let careTypes = card.get("careTypes", []);
+  let kids = card.get("kids", []);
+  return rate >= 0
+    && careTypes is list && careTypes.size() <= 3 && careTypes.hasOnly(["babysitter", "nanny", "au_pair"])
+    && kids is list && kids.size() <= 8;
+}
+function validProfileCardMapFields(card) {
+  let scheduleNeed = card.get("scheduleNeed", {});
+  let availability = card.get("availability", {});
+  let experience = card.get("experience", {});
+  return scheduleNeed.keys().hasOnly(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])
+    && availability.keys().hasOnly(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])
+    && experience.keys().hasOnly(["0-1", "1-3", "3-5", "5-12", "12+"]);
+}
+function validProfileCardExtraFields(card) {
+  let style = card.get("style", []);
+  let weights = card.get("weights", {});
+  let parentNames = card.get("parentNames", []);
+  let householdPrefs = card.get("householdPrefs", {});
+  let essentials = card.get("essentials", {});
+  let ageGroups = card.get("ageGroups", []);
+  return style is list && style.size() <= 20
+    && weights is map && weights.keys().hasOnly(["experience", "personality", "availability", "budget", "location", "activities"])
+    && parentNames is list && parentNames.size() <= 4
+    && validHouseholdPrefs(householdPrefs)
+    && essentials is map && essentials.keys().hasOnly(["schedule", "budget", "minAgeGroupsOk"])
+    && ageGroups is list && ageGroups.size() <= 5 && ageGroups.hasOnly(["newborn", "infant", "toddler", "preschool", "school"]);
+}
 function validLegacyProfileCardFields(card) {
-  return (!("experienceYears" in card) || (card.experienceYears is number && card.experienceYears >= 0))
-    && (!("photoUrl" in card) || (card.photoUrl is string && card.photoUrl.size() <= 2000))
-    && (!("gallery" in card) || (card.gallery is list && card.gallery.size() <= 6))
-    && (!("latE2" in card) || card.latE2 is int)
-    && (!("lngE2" in card) || card.lngE2 is int)
-    && (!("scheduleNeed" in card) || card.scheduleNeed.keys().hasOnly(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]))
-    && (!("availability" in card) || card.availability.keys().hasOnly(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]))
-    && (!("experience" in card) || card.experience.keys().hasOnly(["0-1", "1-3", "3-5", "5-12", "12+"]))
-    && (!("headline" in card) || (card.headline is string && card.headline.size() <= 80))
-    && (!("rate" in card) || (card.rate is number && card.rate >= 0))
-    && (!("budgetMax" in card) || (card.budgetMax is number && card.budgetMax >= 0))
-    && (!("careTypes" in card) || (card.careTypes is list && card.careTypes.size() <= 3 && card.careTypes.hasOnly(["babysitter", "nanny", "au_pair"])))
-    && (!("kids" in card) || (card.kids is list && card.kids.size() <= 8))
-    && (!("videoKey" in card) || (card.videoKey is string && card.videoKey.size() <= 500))
-    && (!("style" in card) || (card.style is list && card.style.size() <= 20))
-    && (!("suburb" in card) || (card.suburb is string && card.suburb.size() <= 80))
-    && (!("instantBook" in card) || card.instantBook is bool)
-    && (!("lastActive" in card) || (card.lastActive is int && card.lastActive >= 0))
-    && (!("weights" in card) || (card.weights is map && card.weights.keys().hasOnly(["experience", "personality", "availability", "budget", "location", "activities"])))
-    && (!("parentNames" in card) || (card.parentNames is list && card.parentNames.size() <= 4))
-    && (!("householdPrefs" in card) || validHouseholdPrefs(card.householdPrefs))
-    && (!("essentials" in card) || validProfileEssentials(card.essentials))
-    && (!("ageGroups" in card) || (card.ageGroups is list && card.ageGroups.size() <= 5 && card.ageGroups.hasOnly(["newborn", "infant", "toddler", "preschool", "school"])))
-    && (!("idealFamily" in card) || (card.idealFamily is string && card.idealFamily.size() <= 300))
-    && (!("reviewsSummary" in card) || (card.reviewsSummary is map && card.reviewsSummary.keys().hasOnly(["count", "avg"])
-      && card.reviewsSummary.count is int && card.reviewsSummary.count >= 0
-      && card.reviewsSummary.avg is number && card.reviewsSummary.avg >= 0 && card.reviewsSummary.avg <= 5))
+  return validProfileCardCoreFields(card)
+    && validProfileCardExtraFields(card)
     && validProfileGallery(card);
 }
 function validProfileCardFields(card, primarySide) {
-  return (!("auPair" in card) || validAuPairProfile(card.auPair))
-    ? ((!("auPairHost" in card) || validAuPairHost(card.auPairHost))
-      ? ((!("alsoSide" in card) || validAlsoSide(card.alsoSide, primarySide))
-        ? validLegacyProfileCardFields(card)
-        : false)
-      : false)
-    : false;
+  return validAuPairProfile(card.get("auPair", {}))
+    && validAuPairHost(card.get("auPairHost", {}))
+    && (!("alsoSide" in card) || validAlsoSide(card.alsoSide, primarySide))
+    && validLegacyProfileCardFields(card);
 }
 function validProfileCard(card, primarySide) {
-  return (card is map)
-    ? (card.keys().hasOnly(["childrenBands", "languages", "pets", "smokerHousehold", "scheduleNeed", "payOffered", "age", "nationality", "cultureOffer", "smoker", "experience", "checksLevel", "availability", "drives", "ownCar", "cooking", "tasks", "tasksRefused", "activities", "personality", "routineStyle", "agesAccepted", "agesPreferred", "petsOk", "smokerHouseholdOk", "nonSmokerHousehold", "specialNeeds", "payFloor", "maxDistanceKm", "latE2", "lngE2", "gallery", "auPair", "headline", "rate", "budgetMax", "careTypes", "kids", "videoKey", "style", "suburb", "instantBook", "lastActive", "weights", "auPairHost", "alsoSide", "experienceYears", "photoUrl", "parentNames", "householdPrefs", "essentials", "ageGroups", "idealFamily", "mainPhotoIndex", "reviewsSummary"])
-      ? validProfileCardFields(card, primarySide)
-      : false)
-    : false;
+  return card is map
+    && card.keys().hasOnly(["childrenBands", "languages", "pets", "smokerHousehold", "scheduleNeed", "payOffered", "age", "nationality", "cultureOffer", "smoker", "experience", "checksLevel", "availability", "drives", "ownCar", "cooking", "tasks", "tasksRefused", "activities", "personality", "routineStyle", "agesAccepted", "agesPreferred", "petsOk", "smokerHouseholdOk", "nonSmokerHousehold", "specialNeeds", "payFloor", "maxDistanceKm", "latE2", "lngE2", "gallery", "auPair", "headline", "rate", "budgetMax", "careTypes", "kids", "videoKey", "style", "suburb", "instantBook", "lastActive", "weights", "auPairHost", "alsoSide", "experienceYears", "photoUrl", "parentNames", "householdPrefs", "essentials", "ageGroups", "idealFamily", "mainPhotoIndex", "reviewsSummary"])
+    && validProfileCardFields(card, primarySide);
 }
 function validProfileWrite(data) {
+  let about = data.get("about", "");
+  let level = data.get("level", "explore");
+  let learningPlan = data.get("learningPlan", {});
+  let card = data.get("card", {});
+  let looking = data.get("looking", {});
   return data.keys().hasOnly(["side", "displayName", "postcode", "photoUrl", "card", "looking", "updatedAt", "level", "learningPlan", "about"])
-    ? (((!("about" in data) || (data.about is string && data.about.size() <= 300))
-        && (!("level" in data) || data.level in ["explore", "quick", "better", "full"]))
-      ? ((!("learningPlan" in data) || validLearningPlan(data.learningPlan))
-        ? (validProfileCard(data.card, data.side)
-          ? validLooking(data.looking)
-          : false)
-        : false)
-      : false)
-    : false;
+    && about is string && about.size() <= 300
+    && level in ["explore", "quick", "better", "full"]
+    && (!("learningPlan" in data) || validLearningPlan(learningPlan))
+    && validProfileCard(card, data.side)
+    && validLooking(looking);
 }
 
 match /profiles/{uid} {
   allow read: if signedIn() && (!isAnon() || demoUnlocked());
-  allow create: if signedIn() && !isAnon()
+  allow create, update: if signedIn() && !isAnon()
     && request.auth.uid == uid
     && validProfileWrite(request.resource.data)
-    && !("reviewsSummary" in request.resource.data.card);
-  allow update: if signedIn() && !isAnon()
-    && request.auth.uid == uid
-    && validProfileWrite(request.resource.data)
-    && request.resource.data.card.get("reviewsSummary", null) == resource.data.card.get("reviewsSummary", null);
+    && (resource == null
+      ? !("reviewsSummary" in request.resource.data.card)
+      : !request.resource.data.card.diff(resource.data.card).affectedKeys().hasAny(["reviewsSummary"]));
   allow delete: if signedIn() && request.auth.uid == uid;
 }
 
@@ -969,7 +1018,7 @@ match /relationships/{pairId}/checkins/{checkinId} {
 
     // Marketplace reviews are one immutable record per completed booking.
     match /reviews/{reviewId} {
-      allow read: if signedIn() && !isAnon();
+      allow read: if signedIn();
       allow create: if signedIn() && !isAnon()
         && request.resource.data.keys().hasOnly(["relId", "bookingId", "familyUid", "carerUid", "rating", "text", "at"])
         && request.resource.data.keys().hasAll(["relId", "bookingId", "familyUid", "carerUid", "rating", "text", "at"])
@@ -980,6 +1029,8 @@ match /relationships/{pairId}/checkins/{checkinId} {
         && exists(/databases/$(database)/documents/relationships/$(request.resource.data.relId))
         && get(/databases/$(database)/documents/relationships/$(request.resource.data.relId)).data.familyUid == request.resource.data.familyUid
         && get(/databases/$(database)/documents/relationships/$(request.resource.data.relId)).data.carerUid == request.resource.data.carerUid
+        && get(/databases/$(database)/documents/relationships/$(request.resource.data.relId)).data.members is list
+        && request.auth.uid in get(/databases/$(database)/documents/relationships/$(request.resource.data.relId)).data.members
         && exists(/databases/$(database)/documents/relationships/$(request.resource.data.relId)/bookings/$(request.resource.data.bookingId))
         && get(/databases/$(database)/documents/relationships/$(request.resource.data.relId)/bookings/$(request.resource.data.bookingId)).data.state == "completed"
         && get(/databases/$(database)/documents/relationships/$(request.resource.data.relId)/bookings/$(request.resource.data.bookingId)).data.familyUid == request.auth.uid
@@ -990,7 +1041,7 @@ match /relationships/{pairId}/checkins/{checkinId} {
       allow update, delete: if false;
 
       match /replies/{replyId} {
-        allow read: if signedIn() && !isAnon();
+        allow read: if signedIn();
         allow create: if signedIn() && !isAnon()
           && exists(/databases/$(database)/documents/reviews/$(reviewId))
           && request.auth.uid == get(/databases/$(database)/documents/reviews/$(reviewId)).data.carerUid

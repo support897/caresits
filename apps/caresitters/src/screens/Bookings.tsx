@@ -3,6 +3,7 @@ import { CANCEL_POLICY, type Person, type ScreenProps, BackBar, Button, Empty, a
 import { createBookingRequest, loadBookingsForUser, transitionBooking, type BookingRecord } from "../data/bookings";
 import { checkAvailability, estimateCost, isProfileComplete } from "../lib/booking";
 import { SafetyCheckin } from "./booking/SafetyCheckin";
+import { LeaveReview } from "./Reviews";
 import { dateLabel, moneyLabel } from "./booking/format";
 import "./booking/booking.css";
 
@@ -148,6 +149,7 @@ export default function Bookings({ params }: ScreenProps<Params>) {
       {me.side === "family" && booking.state === "accepted" && <Button small onClick={() => nav.push("accepted", { bookingId: booking.id, pairId: booking.pairId })}>{t("bookings.openAccepted", "View accepted booking")}</Button>}
       {allowCancel && (booking.state === "requested" || booking.state === "accepted") && <div className="booking-section"><p className="booking-meta">{t("bookings.cancelPolicy", "Cancellation policy: {policy}", { policy: CANCEL_POLICY })}</p><Button small alt onClick={() => void changeState(booking, "cancelled")} disabled={busyId === booking.id}>{busyId === booking.id ? t("bookings.updating", "Updating…") : t("bookings.cancel", "Cancel")}</Button></div>}
       {booking.state === "accepted" && booking.date === today && <SafetyCheckin booking={booking} uid={me.uid} />}
+      {me.side === "family" && booking.state === "completed" && <LeaveReview relId={booking.pairId} bookingId={booking.id} familyUid={booking.familyUid} carerUid={booking.carerUid} />}
     </article>;
   }
 
