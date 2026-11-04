@@ -1,10 +1,13 @@
-import { collection, deleteDoc, doc, getDoc, getDocs, serverTimestamp, setDoc } from "firebase/firestore";
-import { db, loadPeople, loadProfile, type Person } from "@cc/core";
+import { collection, deleteDoc, doc, getDoc, getDocs, limit, onSnapshot, query, serverTimestamp, setDoc } from "firebase/firestore";
+import { db, fromDoc, loadPeople, loadProfile, type Person } from "@cc/core";
 
 export type DiscoveryPerson = Person & { verifiedLevel?: string; verifiedAt?: number };
 export type VerifiedRecordReader = (uid: string) => Promise<Record<string, unknown> | null>;
 
 export function verifiedLevelFromRecord(record: Record<string, unknown> | null): string | undefined {
+  const status = typeof record?.status === "string" ? record.status.trim().toLowerCase() : "";
+  if (status && status !== "verified") return undefined;
+  if (status === "verified") return "verified";
   const value = record?.level ?? record?.checksLevel ?? record?.checkLevel;
   if (typeof value !== "string" || !value.trim()) return undefined;
   return value.trim().toLowerCase();
@@ -55,9 +58,37 @@ export async function loadDiscoveryPeople(me: Person, max = 200): Promise<Discov
   return enrichWithVerifiedLevels(await loadPeople(me, max));
 }
 
+export function subscribeDiscoveryPeople(
+  me: Person,
+  onPeople: (people: DiscoveryPerson[]) => void,
+  onError: (error: Error) => void,
+  max = 200,
+): () => void {
+  let generation = 0;
+  const stop = onSnapshot(query(collection(db, "profiles"), limit(max)), (snapshot) => {
+    const current = ++generation;
+    const people = snapshot.docs
+      .filter((item) => item.id !== me.uid)
+      .map((item) => fromDoc(item.id, item.data()))
+      .filter((person) => person.side !== me.side);
+    void enrichWithVerifiedLevels(people).then((enriched) => {
+      if (current === generation) onPeople(enriched);
+    }).catch((error: unknown) => {
+      if (current === generation) onError(error instanceof Error ? error : new Error("Could not read profiles"));
+    });
+  }, onError);
+  return () => { generation += 1; stop(); };
+}
+
 export async function loadSavedIds(uid: string): Promise<string[]> {
   const snapshot = await getDocs(collection(db, "users", uid, "saved"));
   return snapshot.docs.map((item) => item.id);
+}
+
+export function subscribeSavedIds(uid: string, onIds: (ids: string[]) => void, onError: (error: Error) => void): () => void {
+  return onSnapshot(collection(db, "users", uid, "saved"), (snapshot) => {
+    onIds(snapshot.docs.map((item) => item.id));
+  }, onError);
 }
 
 export async function loadSavedPeople(me: Person): Promise<DiscoveryPerson[]> {

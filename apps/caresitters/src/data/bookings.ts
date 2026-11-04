@@ -9,14 +9,18 @@ import {
   runTransaction,
   serverTimestamp,
   setDoc,
-  updateDoc,
+  Timestamp,
   where,
   writeBatch,
   type DocumentData,
   type QueryDocumentSnapshot,
 } from "firebase/firestore";
-import { auth, db } from "@cc/core";
+import { auth, db, t } from "@cc/core";
+import { loadEmergencyContacts as loadSafeEmergencyContacts } from "./safety";
 import {
+  bookingAcceptanceRelationshipPatch,
+  bookingUpdateFor,
+  canRequestOnExistingRelationship,
   canTransitionBooking,
   pairIdFor,
   planContact,
@@ -68,8 +72,6 @@ export type QualificationRecord = {
 };
 
 export type EmergencyContact = { name: string; phone: string; relation?: string };
-
-type RelDoc = { id: string; familyUid: string; carerUid: string; members: string[] };
 
 function asBooking(snap: QueryDocumentSnapshot<DocumentData>, pairId: string): BookingRecord {
   const value = snap.data();
@@ -139,19 +141,26 @@ export async function createBookingRequest(input: BookingRequestInput): Promise<
     createdAt: serverTimestamp(),
   };
 
-  await runTransaction(db, async (transaction) => {
-    const existing = await transaction.get(relationshipRef);
-    if (existing.exists()) {
-      const old = existing.data();
-      const members = Array.isArray(old.members) ? old.members.map(String) : [];
-      if (!members.includes(input.familyUid) || !members.includes(input.carerUid) || old.state === "blocked") {
-        throw new Error("relationship-not-available");
-      }
-    } else {
-      transaction.set(relationshipRef, pair.data);
+  const existing = await getDoc(relationshipRef).catch(() => null);
+  if (existing?.exists()) {
+    if (!canRequestOnExistingRelationship(existing.data(), input.familyUid, input.carerUid)) {
+      throw new Error("relationship-not-available");
     }
-    transaction.set(bookingRef, booking);
-  });
+    await setDoc(bookingRef, booking);
+  } else {
+    try {
+      // A missing relationship is not readable under the deployed rules. Write the first relationship and request together; rules verify both with getAfter().
+      const batch = writeBatch(db);
+      batch.set(relationshipRef, pair.data);
+      batch.set(bookingRef, booking);
+      await batch.commit();
+    } catch (firstWriteError) {
+      // If another request created the relationship between the read and batch, only retry for an already-open, matching pair.
+      const raced = await getDoc(relationshipRef).catch(() => null);
+      if (!raced?.exists() || !canRequestOnExistingRelationship(raced.data(), input.familyUid, input.carerUid)) throw firstWriteError;
+      await setDoc(bookingRef, booking);
+    }
+  }
   return { bookingId: bookingRef.id, pairId };
 }
 
@@ -182,12 +191,20 @@ export async function transitionBooking(pairId: string, bookingId: string, to: B
   const currentUid = auth().currentUser?.uid;
   if (!currentUid || currentUid !== actorUid) throw new Error("sign-in-required");
   const bookingRef = doc(db, "relationships", pairId, "bookings", bookingId);
-  const current = await getDoc(bookingRef);
-  if (!current.exists()) throw new Error("booking-not-found");
-  const value = current.data();
-  const expectedUid = actor === "family" ? value.familyUid : value.carerUid;
-  if (expectedUid !== actorUid || !canTransitionBooking(value.state as BookingState, to, actor)) throw new Error("booking-transition-not-allowed");
-  await updateDoc(bookingRef, { state: to, decidedAt: serverTimestamp() });
+  const relationshipRef = doc(db, "relationships", pairId);
+  await runTransaction(db, async (transaction) => {
+    const current = await transaction.get(bookingRef);
+    if (!current.exists()) throw new Error("booking-not-found");
+    const value = current.data();
+    const expectedUid = actor === "family" ? value.familyUid : value.carerUid;
+    if (expectedUid !== actorUid || !canTransitionBooking(value.state as BookingState, to, actor)) throw new Error("booking-transition-not-allowed");
+    const relationship = to === "accepted" && actor === "carer" ? await transaction.get(relationshipRef) : null;
+    const relationshipPatch = relationship?.exists()
+      ? bookingAcceptanceRelationshipPatch(relationship.data(), String(value.familyUid ?? ""), String(value.carerUid ?? ""), actorUid)
+      : null;
+    transaction.update(bookingRef, bookingUpdateFor(to, serverTimestamp()));
+    if (relationshipPatch) transaction.update(relationshipRef, relationshipPatch);
+  });
 }
 
 export async function writeCheckIn(pairId: string, bookingId: string, by: string, kind: "arrived" | "leaving" | "help"): Promise<void> {
@@ -201,8 +218,7 @@ export async function writeCheckIn(pairId: string, bookingId: string, by: string
 
 export async function loadEmergencyContacts(uid: string): Promise<EmergencyContact[]> {
   if (auth().currentUser?.uid !== uid) return [];
-  const docs = await getDocs(collection(db, "users", uid, "emergencyContacts"));
-  return docs.docs.slice(0, 3).map((row) => row.data()).filter((row) => typeof row.name === "string" && typeof row.phone === "string").map((row) => ({ name: String(row.name), phone: String(row.phone), relation: typeof row.relation === "string" ? row.relation : undefined }));
+  return loadSafeEmergencyContacts(uid);
 }
 
 export async function loadVerifiedQualifications(uid: string): Promise<QualificationRecord[]> {
@@ -222,7 +238,7 @@ export async function loadVerifiedQualifications(uid: string): Promise<Qualifica
     if (status === "needs_renewal" && expires && expires < today) status = "expired";
     return {
       id: String(record.id ?? `${uid}-check-${index}`),
-      label: String(record.label ?? record.name ?? record.kind ?? "Check"),
+      label: String(record.label ?? record.name ?? record.kind ?? t("booking.checkLabel", "Check")),
       status,
       ...(checkedOn ? { checkedOn } : {}),
       ...(typeof record.verifiedBy === "string" ? { verifiedBy: record.verifiedBy } : {}),
@@ -241,39 +257,91 @@ export async function isPersonSaved(uid: string, personUid: string): Promise<boo
   return (await getDoc(doc(db, "users", uid, "saved", personUid))).exists();
 }
 
+const HANDOFF_INVITE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+const HANDOFF_INVITE_DAYS = 7;
+
+function makeHandoffInviteCode(): string {
+  const cryptoApi = globalThis.crypto;
+  if (!cryptoApi?.getRandomValues) throw new Error("secure-random-unavailable");
+  const values = new Uint32Array(8);
+  cryptoApi.getRandomValues(values);
+  return [...values].map((value) => HANDOFF_INVITE_ALPHABET[Math.floor((value / 0x1_0000_0000) * HANDOFF_INVITE_ALPHABET.length)]!).join("");
+}
+
 export async function createCareSpaceInvite(input: { familyUid: string; familyName: string; carerUid: string; bookingId?: string }): Promise<string> {
   if (auth().currentUser?.uid !== input.familyUid) throw new Error("family-owner-sign-in-required");
+  if (!input.bookingId || !input.carerUid || input.carerUid === input.familyUid) throw new Error("accepted-booking-required");
   const spaceId = input.familyUid;
-  const batch = writeBatch(db);
+  const relationshipId = pairIdFor(input.familyUid, input.carerUid);
+  const relationshipRef = doc(db, "relationships", relationshipId);
+  const bookingRef = doc(db, "relationships", relationshipId, "bookings", input.bookingId);
   const spaceRef = doc(db, "careSpaces", spaceId);
   const familyMemberRef = doc(db, "careSpaces", spaceId, "members", input.familyUid);
-  const inviteRef = doc(db, "careSpaces", spaceId, "invites", input.carerUid);
-  const [existingSpace, existingFamilyMember] = await Promise.all([getDoc(spaceRef), getDoc(familyMemberRef)]);
-  const existingSpaceName = existingSpace.data()?.name;
-  batch.set(spaceRef, {
-    ownerUid: input.familyUid,
-    name: typeof existingSpaceName === "string" && existingSpaceName ? existingSpaceName : `${input.familyName}'s care space`,
-    ...(!existingSpace.exists() ? { createdAt: serverTimestamp() } : {}),
-  }, { merge: true });
-  batch.set(familyMemberRef, {
-    role: "admin",
-    status: "active",
-    perms: { allergies: true, medication: true, photos: true, calendar: true, privateMessages: true },
-    displayName: input.familyName,
-    ...(!existingFamilyMember.exists() ? { joinedAt: serverTimestamp() } : {}),
-    invitedBy: input.familyUid,
-  }, { merge: true });
-  // DATA-MODEL v2 has no invite path. Keep the pending invitation owner-controlled at careSpaces/{familyUid}/invites/{carerUid}; a rules/backend owner must accept it into members/{uid}.
-  batch.set(inviteRef, {
-    toUid: input.carerUid,
-    role: "regular",
-    status: "invited",
-    invitedBy: input.familyUid,
-    ...(input.bookingId ? { bookingId: input.bookingId } : {}),
-    createdAt: serverTimestamp(),
-  }, { merge: true });
-  await batch.commit();
-  return spaceId;
+  const indexRef = doc(db, "users", input.familyUid, "spaces", spaceId);
+  const displayName = input.familyName.trim() || "Family";
+  const expiry = new Date(Date.now() + HANDOFF_INVITE_DAYS * 24 * 60 * 60 * 1000);
+  const perms = { allergies: false, medication: false, photos: false, calendar: false, privateMessages: false };
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const inviteId = makeHandoffInviteCode();
+    const inviteRef = doc(db, "careSpaceInvites", inviteId);
+    try {
+      await runTransaction(db, async (transaction) => {
+        const [relationshipSnapshot, bookingSnapshot, memberSnapshot, inviteSnapshot] = await Promise.all([
+          transaction.get(relationshipRef), transaction.get(bookingRef), transaction.get(familyMemberRef), transaction.get(inviteRef),
+        ]);
+        if (inviteSnapshot.exists()) throw new Error("invite-code-collision");
+        if (!relationshipSnapshot.exists() || !bookingSnapshot.exists()) throw new Error("accepted-booking-required");
+        const relationship = relationshipSnapshot.data();
+        const booking = bookingSnapshot.data();
+        if (relationship.familyUid !== input.familyUid || relationship.carerUid !== input.carerUid
+          || relationship.state === "ended" || booking.familyUid !== input.familyUid
+          || booking.carerUid !== input.carerUid || booking.state !== "accepted") {
+          throw new Error("accepted-booking-required");
+        }
+        if (memberSnapshot.exists()) {
+          const member = memberSnapshot.data();
+          if (member.status !== "active" || member.role !== "admin") throw new Error("family-space-admin-required");
+        }
+        const existingSpace = memberSnapshot.exists() ? await transaction.get(spaceRef) : null;
+        if (existingSpace && !existingSpace.exists()) throw new Error("family-space-missing");
+        const existingName = existingSpace?.data()?.name;
+        const name = typeof existingName === "string" && existingName.trim()
+          ? existingName
+          : `${displayName}'s care space`;
+        transaction.set(spaceRef, {
+          ownerUid: input.familyUid,
+          name,
+          ...(!existingSpace ? { createdAt: serverTimestamp() } : {}),
+        }, { merge: true });
+        transaction.set(familyMemberRef, {
+          role: "admin",
+          status: "active",
+          perms: { allergies: true, medication: true, photos: true, calendar: true, privateMessages: true },
+          displayName,
+          ...(!memberSnapshot.exists() ? { joinedAt: serverTimestamp() } : {}),
+          invitedBy: input.familyUid,
+        }, { merge: true });
+        transaction.set(indexRef, { spaceId, name, memberRole: "admin", joinedAt: serverTimestamp() }, { merge: true });
+        transaction.set(inviteRef, {
+          spaceId,
+          role: "regular",
+          createdBy: input.familyUid,
+          createdAt: serverTimestamp(),
+          expiresAt: Timestamp.fromDate(expiry),
+          usedBy: null,
+          perms,
+          targetUid: input.carerUid,
+          bookingId: input.bookingId,
+        });
+      });
+      return spaceId;
+    } catch (error) {
+      if (error instanceof Error && error.message === "invite-code-collision") continue;
+      throw error;
+    }
+  }
+  throw new Error("invite-code-unavailable");
 }
 
 export type MediaSigner = (key: string) => Promise<string | null>;

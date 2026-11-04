@@ -89,11 +89,11 @@ export default function Quals({ params }: { params: Params }) {
         <p className="muted">{t("quals.state.intro", "Each place has its own child-safety check. Choose where you work to see the official name and guide.")}</p>
         <label>{t("quals.state.label", "State or territory")}<select className="field" value={state} onChange={(event) => setState(event.target.value as AustralianStateCode | "")}>
           <option value="">{t("quals.state.choose", "Choose a state or territory")}</option>
-          {AUSTRALIAN_CHILD_CHECKS.map((check) => <option key={check.code} value={check.code}>{check.state}</option>)}
+          {AUSTRALIAN_CHILD_CHECKS.map((check) => <option key={check.code} value={check.code}>{t(`quals.stateName.${check.code}`, check.state)}</option>)}
         </select></label>
         {selected ? <div style={{ marginBlockStart: 12, padding: 13, background: "var(--soft)", borderRadius: 14 }}>
-          <strong>{selected.name}</strong><p>{selected.guidance}</p><p className="muted">{t("quals.state.validity", "Typical validity")}: {selected.validity}</p>
-          <a href={selected.officialUrl} target="_blank" rel="noreferrer">{t("quals.state.official", "Open the official government guide")}</a>
+          <strong>{t(`quals.checkName.${selected.code}`, selected.name)}</strong><p>{t(`quals.guidance.${selected.code}`, selected.guidance)}</p><p className="muted">{t("quals.state.validity", "Typical validity")}: {t(`quals.validity.${selected.code}`, selected.validity)}</p>
+          <a href={selected.officialUrl} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", minHeight: 44, color: "var(--text)" }}>{t("quals.state.official", "Open the official government guide")}</a>
           <p className="muted">{t("quals.state.checked", "Official wording last checked")}: {dateLabel(selected.lastChecked)}</p>
         </div> : <p className="muted">{t("quals.state.help", "Queensland uses a Blue Card. Other states and territories use their own check or registration. Follow the official guide for your role.")}</p>}
       </section>
@@ -103,7 +103,7 @@ export default function Quals({ params }: { params: Params }) {
         <p className="muted">{t("quals.upload.warning", "Uploading a document never makes you verified.")}</p>
         {loading ? <div className="sk" aria-busy="true" style={{ height: 86 }} /> : rows.length ? <div className="stack" style={{ marginBlock: 12 }}>
           {rows.map((row) => <article key={row.id} style={{ background: "var(--soft)", borderRadius: 14, padding: 14 }}>
-            <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start" }}><h3 style={{ overflowWrap: "anywhere" }}>{row.label}</h3><span className="tag" style={{ ...statusStyle(row.status), minHeight: 36, display: "inline-flex", alignItems: "center", paddingInline: 10 }}>{statusCopy[row.status]}</span></div>
+            <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start" }}><h3 style={{ overflowWrap: "anywhere" }}>{row.label}</h3><span className="tag" style={{ ...statusStyle(row.status), minHeight: 44, display: "inline-flex", alignItems: "center", paddingInline: 10, fontSize: 17 }}>{statusCopy[row.status]}</span></div>
             <p className="muted">{t("quals.date.checked", "Date checked")}: {dateLabel(row.checkedOn)}</p><p className="muted">{t("quals.date.expires", "Expiry date")}: {dateLabel(row.expiresOn)}</p>
           </article>)}
         </div> : <div className="empty"><Bunny mood="think" size={76} /><p>{t("quals.empty", "No qualifications added yet.")}</p></div>}

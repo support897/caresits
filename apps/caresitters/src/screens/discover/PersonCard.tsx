@@ -4,7 +4,7 @@ import { Button, t } from "@cc/core";
 import type { Person } from "@cc/core";
 import type { DiscoveryPerson } from "../../data/people";
 import type { MatchResult } from "../../../../../packages/core/src/match/types";
-import { availabilitySummary, introOf, rateOf, reviewsOf, suburbOf, verifiedBadgeText } from "./helpers";
+import { availabilitySummary, experienceYearsOf, introOf, rateOf, reviewsOf, suburbOf, verifiedBadgeText } from "./helpers";
 
 type Props = {
   person: DiscoveryPerson;
@@ -33,6 +33,7 @@ export function PersonCard({ person, km, result, saved, onSave, onWhy, onOpen }:
   const availability = availabilitySummary(person);
   const suburb = suburbOf(person);
   const age = ageOf(person);
+  const experienceYears = experienceYearsOf(person);
   const description = introOf(person);
   const distance = km === null ? t("disc.distanceUnknown", "Distance not stated") : t("disc.distanceKm", "{km} km away", { km: km.toFixed(1) });
 
@@ -40,11 +41,11 @@ export function PersonCard({ person, km, result, saved, onSave, onWhy, onOpen }:
     <button type="button" onClick={onOpen} aria-label={t("disc.openProfile", "Open {name}'s profile", { name: person.firstName })} style={{ display: "block", width: "100%", textAlign: "start" }}>
       <div style={{ position: "relative", width: "100%", aspectRatio: "1.42", background: "var(--soft)", display: "grid", placeItems: "center", overflow: "hidden" }}>
         {person.photoUrl ? <img src={person.photoUrl} alt={t("disc.photoAlt", "{name}'s profile photo", { name: person.firstName })} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span aria-hidden="true" style={{ fontFamily: "Newsreader,serif", fontSize: 68, color: "var(--muted)" }}>{person.firstName.charAt(0).toUpperCase()}</span>}
-        {badge && <span className="tag good" style={{ position: "absolute", insetInlineStart: 12, insetBlockStart: 12 }}>{t(badge === "Verified" ? "disc.verified" : "disc.idSighted", badge)}</span>}
+        {badge && <span className="tag good" style={{ position: "absolute", insetInlineStart: 12, insetBlockStart: 12, fontSize: 17, background: "var(--good)", color: "var(--cream)" }}>{t(badge === "Verified" ? "disc.verified" : "disc.idSighted", badge)}</span>}
       </div>
       <div style={{ padding: 16, display: "grid", gap: 8 }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
-          <h3>{person.firstName}</h3>{age && <span className="muted">{t("disc.age", "{age} years old", { age })}</span>}
+          <h3>{person.firstName}</h3>{age && <span className="muted">{t("disc.age", "{age} years old", { age })}</span>}{experienceYears !== undefined && <span className="muted">{t(experienceYears === 1 ? "disc.experienceYear" : "disc.experienceYears", experienceYears === 1 ? "1 year of experience" : "{years} years of experience", { years: experienceYears })}</span>}
         </div>
         <div className="muted">{suburb ? `${suburb} · ` : ""}{distance}</div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>

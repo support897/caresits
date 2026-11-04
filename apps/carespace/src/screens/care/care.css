@@ -1,4 +1,4 @@
-.care-wrap{width:100%;max-width:760px;margin-inline:auto;min-width:0}
+.care-wrap{width:100%;max-width:760px;margin-inline:auto;min-width:0;overflow-wrap:anywhere}
 .care-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:4px 0 16px}
 .care-head p{margin:6px 0 0;color:var(--muted)}
 .care-section{display:grid;gap:12px;margin:16px 0}
@@ -7,7 +7,7 @@
 .care-space-card,.care-child-card{display:flex;width:100%;min-height:68px;align-items:center;gap:12px;text-align:start;padding:14px;background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow)}
 .care-space-card:hover,.care-child-card:hover{border-color:var(--sage)}
 .care-card-copy{flex:1;min-width:0}
-.care-card-copy p{margin:4px 0 0;color:var(--muted)}
+.care-card-copy p{margin:4px 0 0;color:var(--muted);overflow-wrap:anywhere}
 .care-badge{display:inline-flex;align-items:center;min-height:32px;padding:4px 10px;border-radius:99px;background:var(--soft);font-weight:700}
 .care-alert{display:grid;gap:6px;padding:14px 16px;background:var(--soft);border:2px solid var(--danger);border-inline-start-width:7px;border-radius:16px;margin:10px 0;color:var(--text)}
 .care-alert strong{font-size:18px}
@@ -42,6 +42,19 @@
 .care-print-actions{display:flex;gap:8px;flex-wrap:wrap}
 .care-print-actions>*{flex:1}
 @media(max-width:360px){.care-grid{grid-template-columns:1fr}.care-card{padding:13px}.care-actions{grid-template-columns:1fr}.care-head{flex-direction:column}.care-print-actions{flex-direction:column}}
+.tabs{width:calc(100% - 8px);max-width:100%;min-width:0;margin-inline:4px;padding-inline:2px}
+.tabs .tab{display:block;min-width:0;min-height:52px;text-align:center;font-size:17px;line-height:1.2;overflow-wrap:anywhere;word-break:break-all;white-space:normal;padding-inline:0}
+.tabs .tab>svg{display:block;margin:0 auto 2px;flex:none}
+.tabs .pip{font-size:17px;min-width:22px;min-height:22px;height:auto}
+.app>.row{min-width:0;flex-wrap:wrap;gap:8px}
+.app>.row>button{flex:none}
+.app>.row>b{flex:1 1 10ch;min-width:0;text-align:center;overflow-wrap:anywhere;font-size:clamp(17px,5vw,20px)!important}
+.app>.row>span{flex:0 1 auto;min-width:0!important;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+.app>.row>span>*{max-width:100%;white-space:normal;overflow-wrap:anywhere}
+.app>.row .btn.sm{min-height:48px}
+.care-wrap a{color:var(--ink);text-underline-offset:2px}
+.care-list a,.care-section-card a{display:inline-flex;align-items:center;min-width:44px;min-height:44px;padding-inline:4px}
+
 @media print{
   body *{visibility:hidden!important}
   .emergency-print,.emergency-print *{visibility:visible!important}

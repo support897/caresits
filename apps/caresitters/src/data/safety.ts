@@ -1,13 +1,13 @@
 import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
-import { auth, db } from "@cc/core";
+import { auth, db, t } from "@cc/core";
 
 export const REPORT_CATEGORIES = [
-  ["spam_scam", "Spam or scam"],
-  ["rude_abusive", "Rude or abusive"],
-  ["fake_profile", "Fake profile"],
-  ["child_safety", "Child safety"],
-  ["inappropriate", "Inappropriate"],
-  ["other", "Other"],
+  ["spam_scam", t("safety.category.spamScam", "Spam or scam")],
+  ["rude_abusive", t("safety.category.rudeAbusive", "Rude or abusive")],
+  ["fake_profile", t("safety.category.fakeProfile", "Fake profile")],
+  ["child_safety", t("safety.category.childSafety", "Child safety")],
+  ["inappropriate", t("safety.category.inappropriate", "Inappropriate")],
+  ["other", t("safety.category.other", "Other")],
 ] as const;
 export type ReportCategory = (typeof REPORT_CATEGORIES)[number][0];
 export type EmergencyContact = { name: string; phone: string; relation?: string };

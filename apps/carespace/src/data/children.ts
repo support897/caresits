@@ -49,8 +49,8 @@ function spaceFrom(id: string, data: Record<string, unknown>, role: CareRole, pe
   return { id, name: typeof data.name === "string" ? data.name : "Family care space", ownerUid: typeof data.ownerUid === "string" ? data.ownerUid : undefined, role, perms, inventory: Array.isArray(data.inventory) ? data.inventory.map(String) : [] };
 }
 
-export function canReadMedical(space: Pick<CareSpace, "role" | "perms">): boolean {
-  return space.role === "admin" || (space.perms.allergies && space.perms.medication);
+export function canReadAllergies(space: Pick<CareSpace, "role" | "perms">): boolean {
+  return space.role === "admin" || space.perms.allergies;
 }
 
 export function canEditMedical(role: CareRole): boolean {

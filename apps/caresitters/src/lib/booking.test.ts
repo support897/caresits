@@ -5,6 +5,9 @@ import {
   canTransitionBooking,
   checkAvailability,
   estimateCost,
+  bookingAcceptanceRelationshipPatch,
+  bookingUpdateFor,
+  canRequestOnExistingRelationship,
   pairIdFor,
   planContact,
 } from "./booking";
@@ -37,9 +40,32 @@ describe("booking logic", () => {
     expect(canTransitionBooking("completed", "accepted", "carer")).toBe(false);
   });
 
+  it("keeps cancellation writes within the Firestore rule allowlist", () => {
+    expect(bookingUpdateFor("cancelled", "server-time")).toEqual({ state: "cancelled" });
+    expect(bookingUpdateFor("accepted", "server-time")).toEqual({ state: "accepted", decidedAt: "server-time" });
+    expect(bookingUpdateFor("declined", "server-time")).toEqual({ state: "declined", decidedAt: "server-time" });
+  });
+
   it("keeps the profile-to-request path within five taps", () => {
     expect(BOOKING_REQUEST_TAP_STEPS).toHaveLength(5);
     expect(BOOKING_REQUEST_TAP_STEPS.length).toBeLessThanOrEqual(MAX_PROFILE_TO_REQUEST_TAPS);
+  });
+
+  it("allows another booking only on a matching, open relationship", () => {
+    const relationship = { familyUid: "family", carerUid: "carer", members: ["family", "carer"], state: "contact" };
+    expect(canRequestOnExistingRelationship(relationship, "family", "carer")).toBe(true);
+    expect(canRequestOnExistingRelationship({ ...relationship, state: "pending" }, "family", "carer")).toBe(false);
+    expect(canRequestOnExistingRelationship({ ...relationship, state: "ended" }, "family", "carer")).toBe(false);
+    expect(canRequestOnExistingRelationship({ ...relationship, members: ["family"] }, "family", "carer")).toBe(false);
+    expect(canRequestOnExistingRelationship({ ...relationship, carerUid: "other" }, "family", "carer")).toBe(false);
+  });
+
+  it("opens the relationship only when the carer accepts the family's first request", () => {
+    const pending = { familyUid: "family", carerUid: "carer", members: ["family", "carer"], state: "pending", createdBy: "family" };
+    expect(bookingAcceptanceRelationshipPatch(pending, "family", "carer", "carer")).toEqual({ state: "contact", contactBy: "carer" });
+    expect(bookingAcceptanceRelationshipPatch(pending, "family", "carer", "family")).toBeNull();
+    expect(bookingAcceptanceRelationshipPatch({ ...pending, createdBy: "carer" }, "family", "carer", "carer")).toBeNull();
+    expect(bookingAcceptanceRelationshipPatch({ ...pending, state: "contact" }, "family", "carer", "carer")).toBeNull();
   });
 
   it("ports sorted relationship ids and the contact plan", () => {

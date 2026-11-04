@@ -2,7 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { BackBar, Button, t, useNav, type ScreenProps } from "@cc/core";
 import { DEMO_CHILDREN, DEMO_SPACES, loadCareSpace, loadCareSpaces, loadChildren, type CarePerms, type CareRole, type CareSpace, type ChildProfile } from "../data/children";
 import { addShoppingItems, loadShoppingItems, shoppingItemsForSpace, updateShoppingItem, type ShoppingItem } from "../data/shopping";
-import { CareEmpty, DemoNotice } from "./care/common";
+import { canReadAllergies, DEMO_MEDICAL, loadMedicalRecord } from "../data/medical";
+import { checkAllergy } from "../lib/allergy";
+import { canEditShopping } from "../lib/permissions";
+import { AllergyBanner, AllergyCheckNotice, CareEmpty, DemoNotice } from "./care/common";
 import "./care/care.css";
 
 type Params = { spaceId?: string; childId?: string; uid?: string; ownerUid?: string; role?: CareRole; perms?: CarePerms; demo?: boolean };
@@ -16,6 +19,7 @@ export default function Shopping({ params }: ScreenProps<Params>) {
   const [space, setSpace] = useState<CareSpace | null>(null);
   const [items, setItems] = useState<ShoppingItem[]>([]);
   const [children, setChildren] = useState<ChildProfile[]>([]);
+  const [allergiesByChild, setAllergiesByChild] = useState<Record<string, string[]> | null>(null);
   const [itemName, setItemName] = useState("");
   const [childId, setChildId] = useState(params.childId ?? "");
   const [buyer, setBuyer] = useState("");
@@ -42,25 +46,49 @@ export default function Shopping({ params }: ScreenProps<Params>) {
   useEffect(() => {
     if (!space) return;
     let live = true;
-    setLoading(true); setError("");
-    if (demo) {
-      const sample: ShoppingItem[] = [
-        { id: "demo-shop-1", spaceId: space.id, item: "Paper", source: "activity", sourceId: "paper-bridge", childId: "demo-mila", buyer: "demo-parent", due: "", bought: false, reimbursed: false },
-        { id: "demo-shop-2", spaceId: space.id, item: "Apple", source: "meal", sourceId: "apple-oat-porridge", childId: "demo-mila", buyer: "", due: "", bought: true, reimbursed: false },
-      ];
-      setItems(sample); setChildren(DEMO_CHILDREN); setLoading(false); return () => { live = false; };
-    }
-    Promise.all([loadShoppingItems(space.id), loadChildren(space.id)]).then(([shopping, childList]) => {
+    setLoading(true); setError(""); setAllergiesByChild(null);
+    const load = async () => {
+      if (demo) {
+        const sample: ShoppingItem[] = [
+          { id: "demo-shop-1", spaceId: space.id, item: "Paper", source: "activity", sourceId: "paper-bridge", childId: "demo-mila", buyer: "demo-parent", due: "", bought: false, reimbursed: false },
+          { id: "demo-shop-2", spaceId: space.id, item: "Apple", source: "meal", sourceId: "apple-oat-porridge", childId: "demo-mila", buyer: "", due: "", bought: true, reimbursed: false },
+        ];
+        if (live) {
+          setItems(sample); setChildren(DEMO_CHILDREN);
+          setAllergiesByChild(Object.fromEntries(DEMO_CHILDREN.map((child) => [child.id, DEMO_MEDICAL[child.id]?.allergies?.map((item) => item.name) ?? []])));
+          setLoading(false);
+        }
+        return;
+      }
+      const [shopping, childList] = await Promise.all([loadShoppingItems(space.id), loadChildren(space.id)]);
       if (!live) return;
       setItems(shoppingItemsForSpace(space.id, shopping)); setChildren(childList);
-    }).catch(() => { if (live) setError(t("care.shoppingLoadError", "Could not load this family’s list.")); }).finally(() => { if (live) setLoading(false); });
+      if (!canReadAllergies(space)) return;
+      let failed = false;
+      const allergyRows = await Promise.all(childList.map(async (child) => {
+        try {
+          const record = await loadMedicalRecord(space.id, child.id, space);
+          if (!record || record.allergies === null) failed = true;
+          return [child.id, record?.allergies?.map((item) => item.name) ?? []] as const;
+        } catch { failed = true; return [child.id, []] as const; }
+      }));
+      if (live) setAllergiesByChild(failed ? null : Object.fromEntries(allergyRows));
+    };
+    void load().catch(() => { if (live) setError(t("care.shoppingLoadError", "Could not load this family’s list.")); })
+      .finally(() => { if (live) setLoading(false); });
     return () => { live = false; };
   }, [space, demo]);
 
   const visible = useMemo(() => space ? shoppingItemsForSpace(space.id, items) : [], [space, items]);
+  const allergyReadable = !!space && canReadAllergies(space);
+  const canManageShopping = !!space && canEditShopping(space.role);
+  const knownAllergyNames = allergiesByChild ? [...new Set(Object.values(allergiesByChild).flat())] : [];
+  const allergiesForItem = (item: ShoppingItem) => item.childId
+    ? allergiesByChild?.[item.childId] ?? []
+    : Object.values(allergiesByChild ?? {}).flat();
 
   async function addManualItem() {
-    if (!space || !itemName.trim()) return;
+    if (!space || !canManageShopping || !itemName.trim()) return;
     setBusy(true); setError(""); setNotice("");
     try {
       const newItem: ShoppingItem = { id: `local-${Date.now()}`, spaceId: space.id, item: itemName.trim(), childId: childId || undefined, source: "manual", buyer: buyer || undefined, due: due || undefined, bought: false, reimbursed: false };
@@ -74,7 +102,7 @@ export default function Shopping({ params }: ScreenProps<Params>) {
   }
 
   async function updateItem(item: ShoppingItem, patch: Partial<Pick<ShoppingItem, "buyer" | "due" | "bought" | "reimbursed">>) {
-    if (!space) return;
+    if (!space || !canManageShopping) return;
     setError("");
     const next = visible.map((current) => current.id === item.id ? { ...current, ...patch } : current);
     setItems(next);
@@ -90,28 +118,33 @@ export default function Shopping({ params }: ScreenProps<Params>) {
       {demo && <DemoNotice />}
       {error && <div className="care-info care-warning" role="alert">{error}</div>}
       {notice && <div className="care-status" role="status">{notice}</div>}
+      {space && !allergyReadable && <div className="care-alert" role="alert"><strong>{t("care.shoppingAllergyNoAccess", "Allergy details are not available to you.")}</strong><p>{t("care.shoppingAllergyNoAccessHint", "Meal ingredients are not checked for this family. Ask a parent before buying or serving food.")}</p></div>}
+      {allergyReadable && allergiesByChild === null && !loading && <div className="care-alert" role="alert"><strong>{t("care.shoppingAllergyUnknown", "Allergy details could not be confirmed.")}</strong><p>{t("care.shoppingAllergyUnknownHint", "Ask a parent before buying or serving food.")}</p></div>}
+      {knownAllergyNames.length > 0 && <AllergyBanner names={knownAllergyNames} />}
       {!space ? <section className="care-section">
         <h1>{t("care.shoppingTitle", "Shopping")}</h1>
         <p>{t("care.shoppingSeparate", "Each family keeps its own shopping list. Choose one space to continue.")}</p>
-        {spaces.map((item) => <button className="care-space-card" key={item.id} onClick={() => setSpace(item)}><span className="care-badge">{item.name.slice(0, 1)}</span><span className="care-card-copy"><b>{item.name}</b><p>{t("care.shoppingOpenSpace", "Open this family list")}</p></span><span aria-hidden="true">›</span></button>)}
+        {spaces.map((item) => <button className="care-space-card" key={item.id} onClick={() => setSpace(item)}><span className="care-badge">{item.name.slice(0, 1)}</span><span className="care-card-copy"><b>{item.name}</b><p>{t("care.shoppingOpenSpace", "Open this family list")}</p></span><span aria-hidden="true" className="flip">›</span></button>)}
         {!loading && !spaces.length && <CareEmpty title={t("care.noShoppingSpaces", "No family lists yet")} detail={t("care.noShoppingSpacesHint", "Shopping items never combine across families.")} />}
       </section> : <>
         <div className="care-info"><b>{t("care.familyList", "{family} family list", { family: space.name })}</b><p>{t("care.shoppingIsolation", "Only items from this family space appear here.")}</p></div>
-        <section className="care-card care-section">
+        {canManageShopping ? <section className="care-card care-section">
           <h2>{t("care.addShoppingItem", "Add an item")}</h2>
           <label className="care-field"><span>{t("care.shoppingItem", "Item")}</span><input value={itemName} onChange={(event) => setItemName(event.target.value)} /></label>
           <label className="care-field"><span>{t("care.forChild", "For child")}</span><select value={childId} onChange={(event) => setChildId(event.target.value)}><option value="">{t("care.allChildren", "Family")}</option>{children.map((child) => <option value={child.id} key={child.id}>{child.name}</option>)}</select></label>
           <label className="care-field"><span>{t("care.whoBuys", "Who buys it?")}</span><select value={buyer} onChange={(event) => setBuyer(event.target.value)}><option value="">{t("care.unassigned", "Not assigned")}</option>{uid && <option value={uid}>{t("care.buyerMe", "Me")}</option>}{space.ownerUid && space.ownerUid !== uid && <option value={space.ownerUid}>{t("care.buyerParent", "Family admin")}</option>}</select></label>
           <label className="care-field"><span>{t("care.dueDate", "Needed by")}</span><input type="date" value={due} onChange={(event) => setDue(event.target.value)} /></label>
           <Button onClick={() => void addManualItem()} disabled={!itemName.trim() || busy}>{t("care.addToList", "Add to list")}</Button>
-        </section>
+        </section> : <div className="care-info" role="status">{t("care.shoppingReadOnly", "Only a family admin or regular carer can edit this list. You can still view it.")}</div>}
         <section className="care-section">
           <h2>{t("care.shoppingItems", "Items")}</h2>
           {loading ? <div className="sk" style={{ height: 120 }} /> : visible.map((item) => <article className="care-card care-section" key={item.id}>
-            <div className="care-head"><div><h3 style={{ textDecoration: item.bought ? "line-through" : undefined }}>{item.item}</h3><p>{t("care.shoppingMeta", "{family} · {child} · from {source}", { family: space.name, child: children.find((child) => child.id === item.childId)?.name ?? t("care.allChildren", "Family"), source: t(`care.source.${item.source}`, item.source) })}</p></div><label className="care-check"><input type="checkbox" checked={item.bought} onChange={(event) => void updateItem(item, { bought: event.target.checked })} /><span>{t("care.bought", "Bought")}</span></label></div>
-            <label className="care-field"><span>{t("care.whoBuys", "Who buys it?")}</span><select value={item.buyer ?? ""} onChange={(event) => void updateItem(item, { buyer: event.target.value || undefined })}><option value="">{t("care.unassigned", "Not assigned")}</option>{uid && <option value={uid}>{t("care.buyerMe", "Me")}</option>}{space.ownerUid && space.ownerUid !== uid && <option value={space.ownerUid}>{t("care.buyerParent", "Family admin")}</option>}{item.buyer && item.buyer !== uid && item.buyer !== space.ownerUid && <option value={item.buyer}>{item.buyer}</option>}</select></label>
-            <label className="care-field"><span>{t("care.dueDate", "Needed by")}</span><input type="date" value={item.due ?? ""} onChange={(event) => void updateItem(item, { due: event.target.value || undefined })} /></label>
-            <label className="care-check"><input type="checkbox" checked={item.reimbursed} disabled={!item.bought} onChange={(event) => void updateItem(item, { reimbursed: event.target.checked })} /><span>{t("care.reimbursed", "Reimbursed")}</span></label>
+            <div className="care-head"><div><h3 style={{ textDecoration: item.bought ? "line-through" : undefined }}>{item.item}</h3><p>{t("care.shoppingMeta", "{family} · {child} · from {source}", { family: space.name, child: children.find((child) => child.id === item.childId)?.name ?? t("care.allChildren", "Family"), source: t(`care.source.${item.source}`, item.source) })}</p></div><label className="care-check"><input type="checkbox" checked={item.bought} disabled={!canManageShopping} onChange={(event) => void updateItem(item, { bought: event.target.checked })} /><span>{t("care.bought", "Bought")}</span></label></div>
+            {item.source === "meal" && (allergyReadable && allergiesByChild !== null ? <AllergyCheckNotice result={checkAllergy(item.item, allergiesForItem(item))} /> : <div className="care-alert" role="alert">{t("care.shoppingMealNotChecked", "This meal ingredient is not checked against the child’s allergies. Ask a parent before using it.")}</div>)}
+            {item.source === "activity" && <p className="care-muted">{t("care.shoppingActivityAllergyHint", "Check activity materials for allergy or contact risks with the family.")}</p>}
+            <label className="care-field"><span>{t("care.whoBuys", "Who buys it?")}</span><select value={item.buyer ?? ""} disabled={!canManageShopping} onChange={(event) => void updateItem(item, { buyer: event.target.value || undefined })}><option value="">{t("care.unassigned", "Not assigned")}</option>{uid && <option value={uid}>{t("care.buyerMe", "Me")}</option>}{space.ownerUid && space.ownerUid !== uid && <option value={space.ownerUid}>{t("care.buyerParent", "Family admin")}</option>}{item.buyer && item.buyer !== uid && item.buyer !== space.ownerUid && <option value={item.buyer}>{item.buyer}</option>}</select></label>
+            <label className="care-field"><span>{t("care.dueDate", "Needed by")}</span><input type="date" value={item.due ?? ""} disabled={!canManageShopping} onChange={(event) => void updateItem(item, { due: event.target.value || undefined })} /></label>
+            <label className="care-check"><input type="checkbox" checked={item.reimbursed} disabled={!canManageShopping || !item.bought} onChange={(event) => void updateItem(item, { reimbursed: event.target.checked })} /><span>{t("care.reimbursed", "Reimbursed")}</span></label>
           </article>)}
           {!loading && !visible.length && <CareEmpty title={t("care.emptyShopping", "Nothing to buy yet")} detail={t("care.emptyShoppingHint", "Approved meal ingredients and activity materials will appear here.")} />}
         </section>

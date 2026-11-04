@@ -67,11 +67,32 @@ describe("matching engine", () => {
   });
 
   it("checks accepted child ages and strict maximum budget", () => {
-    const viewer: MatchProfile = { side: "family", card: { kids: [{ ageYears: 2 }], budgetMax: 30 } };
+    const viewer: MatchProfile = { side: "family", card: { kids: [{ ageYears: 2 }], budgetMax: 30, maxBudgetStrict: true } };
     const good: MatchProfile = { side: "carer", card: { agesAccepted: ["toddler"], rate: 30 } };
     expect(scoreMatch({ viewer, candidate: good }).eligible).toBe(true);
     expect(scoreMatch({ viewer, candidate: { ...good, card: { ...good.card, rate: 30.01 } } }).unmetEssentials).toContain("Rate: $30.01/hr is above the $30/hr maximum.");
     expect(scoreMatch({ viewer, candidate: { ...good, card: { ...good.card, agesAccepted: ["school age"] } } }).eligible).toBe(false);
+  });
+
+  it("treats a flexible budget as a preference, not an essential", () => {
+    const viewer: MatchProfile = { side: "family", card: { budgetMax: 30 } };
+    const candidate: MatchProfile = { side: "carer", card: { rate: 35 } };
+    const result = scoreMatch({ viewer, candidate });
+    expect(result.eligible).toBe(true);
+    expect(result.criteria.find((criterion) => criterion.id === "budget")?.fit).toBe(0);
+
+    const strict = scoreMatch({ viewer: { ...viewer, looking: { musts: { maxBudget: 30, maxBudgetStrict: true } } }, candidate });
+    expect(strict.eligible).toBe(false);
+    expect(strict.unmetEssentials).toContain("Rate: $35/hr is above the $30/hr maximum.");
+  });
+
+  it("checks family requirements when the carer is the viewer", () => {
+    const carerViewer: MatchProfile = { side: "carer", verifiedLevel: "sighted", card: { payFloor: 28, availability: { Fri: true }, agesAccepted: ["toddler"] } };
+    const familyCandidate: MatchProfile = { side: "family", card: { payOffered: 30, kids: [{ ageYears: 2 }], scheduleNeed: { Fri: true } }, looking: { musts: { requiredChecksLevel: "register" } } };
+    const result = scoreMatch({ viewer: carerViewer, candidate: familyCandidate });
+    expect(result.eligible).toBe(false);
+    expect(result.unmetEssentials).toContain("Required checks: sighted is below the required register level.");
+    expect(scoreMatch({ viewer: { ...carerViewer, verifiedLevel: "register" }, candidate: familyCandidate }).eligible).toBe(true);
   });
 
   it("matches families to a carer's rate, area, schedule, and style", () => {
@@ -106,5 +127,18 @@ describe("matching engine", () => {
     expect(confirmed.childAges).toEqual([2]);
     expect(confirmed.availability?.[0]).toMatchObject({ day: "Fri", from: "16:00" });
     expect(confirmed.activities).toBeUndefined();
+  });
+
+  it("parses hyphenated ages and keeps flexible budgets as preferences", () => {
+    const age = parseNeeds("an experienced carer for a 2-year-old");
+    expect(age.map((item) => item.id)).toEqual(["child-age-2", "experience-age-2"]);
+
+    const flexible = parseNeeds("budget of $35 per hour")[0];
+    expect(flexible?.kind).toBe("preference");
+    expect(flexible?.value.maxBudgetStrict).toBe(false);
+    const strict = parseNeeds("maximum $35 per hour")[0];
+    expect(strict?.kind).toBe("essential");
+    expect(strict?.value.maxBudgetStrict).toBe(true);
+    expect(requirementsFromSuggestions([strict!], [strict!.id]).maxBudgetStrict).toBe(true);
   });
 });

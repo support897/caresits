@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BackBar, getLang, isBunnyCalm, LANGS, setBunnyCalm, setLang, signOutUser, t, useLang, useNav, type Person } from "@cc/core";
+import { BackBar, isBunnyCalm, setBunnyCalm, setLang, signOutUser, t, useLang, useNav, type Person } from "@cc/core";
 import { DEFAULT_NOTIFICATION_PREFS, NOTIFICATION_CATEGORIES, notificationCategoryLabel, type NotificationPrefs } from "../../../../packages/core/src/notifications/prefs";
 import { loadNotificationPrefs, saveNotificationPrefs } from "../../../../packages/core/src/notifications/store";
 import { requestAccountDeletion, requestDataExport } from "../data/safety";
@@ -19,7 +19,6 @@ export default function Settings({ params }: { params: Params }) {
   const nav = useNav();
   useLang();
   const { me } = params;
-  const [language, setLanguage] = useState(() => getLang());
   const [calm, setCalm] = useState(isBunnyCalm);
   const [theme, setTheme] = useState<ThemeMode>(readThemeMode);
   const [prefs, setPrefs] = useState<NotificationPrefs>({ ...DEFAULT_NOTIFICATION_PREFS, muted: {} });
@@ -30,6 +29,7 @@ export default function Settings({ params }: { params: Params }) {
   const [dataError, setDataError] = useState("");
   const [deleteText, setDeleteText] = useState("");
 
+  useEffect(() => { setLang("en"); }, []);
   useEffect(() => {
     let live = true;
     void loadNotificationPrefs(me.uid, "caresitters").then((next) => { if (live) setPrefs(next); }).catch(() => { if (live) setPrefsMessage(t("settings.notify.loadError", "Notification choices could not load.")); });
@@ -75,10 +75,8 @@ export default function Settings({ params }: { params: Params }) {
 
       <section className="card" aria-labelledby="settings-language-title">
         <h2 id="settings-language-title">{t("settings.language.title", "Language")}</h2>
-        <label>{t("settings.language.label", "Choose a language")}<select className="field" value={language} onChange={(event) => { const next = event.target.value as typeof language; setLanguage(next); setLang(next); }}>
-          {LANGS.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
-        </select></label>
-        <p className="muted">{t("settings.language.rtl", "Arabic displays from right to left.")}</p>
+        <p style={{ marginBlockEnd: 0 }}>{t("settings.language.english", "English")}</p>
+        <p className="muted">{t("settings.language.off", "English is the only language available right now.")}</p>
       </section>
 
       <section className="card" aria-labelledby="settings-bunny-title">
@@ -111,7 +109,7 @@ export default function Settings({ params }: { params: Params }) {
 
       <section className="card" aria-labelledby="settings-privacy-title">
         <h2 id="settings-privacy-title">{t("settings.privacy.title", "Privacy and account")}</h2>
-        <p className="muted">{t("settings.privacy.note", "Your profile and child details stay private until you share them.")}</p>
+        <p className="muted">{t("settings.privacy.note", "Exact addresses and child photos stay private until you choose to share them.")}</p>
         <button className="btn alt" type="button" onClick={() => nav.push("safety", { uid: me.uid })}>{t("settings.privacy.safety", "Open safety tools")}</button>
         <button className="btn alt" type="button" onClick={() => void downloadData()} disabled={Boolean(dataBusy)} style={{ marginBlockStart: 8 }}>{dataBusy === "export" ? t("settings.export.sending", "Sending request…") : t("settings.export.button", "Download my data")}</button>
         <label style={{ display: "block", marginBlockStart: 10 }}>{t("settings.delete.confirm.label", "Type DELETE to confirm account deletion")}<input className="field" value={deleteText} onChange={(event) => setDeleteText(event.target.value)} autoComplete="off" /></label>
@@ -121,7 +119,7 @@ export default function Settings({ params }: { params: Params }) {
       </section>
 
       <button className="btn alt" type="button" onClick={() => void signOutUser()}>{t("settings.signOut", "Sign out")}</button>
-      <p className="muted center">{t("settings.lang.current", "Current display: {direction}", { direction: language === "ar" ? "RTL" : "LTR" })}</p>
+      <p className="muted center">{t("settings.lang.direction", "Layout follows your device's reading direction.")}</p>
     </div>
   </div>;
 }

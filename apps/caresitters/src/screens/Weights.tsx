@@ -52,7 +52,7 @@ export default function Weights({ params }: ScreenProps) {
           <span style={{ display: "flex", justifyContent: "space-between", gap: 12 }}><b>{t(`weights.${id}`, LABELS[id])}</b><b aria-live="polite">{weights[id]}%</b></span>
           <input type="range" min={0} max={100} step={1} value={weights[id]} aria-label={t(`weights.${id}`, LABELS[id])} aria-valuetext={`${weights[id]} percent`} onChange={(event) => changeWeight(id, Number(event.target.value))} style={{ width: "100%", minHeight: 44, accentColor: "var(--ink)" }} />
         </label>)}
-        <div role="status" aria-live="polite" className="tag" style={{ justifySelf: "start" }}>{t("weights.total", "Total: {total}%", { total: Object.values(weights).reduce((sum, value) => sum + value, 0) })}</div>
+        <div role="status" aria-live="polite" className="tag" style={{ justifySelf: "start", fontSize: 17 }}>{t("weights.total", "Total: {total}%", { total: Object.values(weights).reduce((sum, value) => sum + value, 0) })}</div>
         <div className="row"><Button type="button" alt small onClick={() => { setWeights({ ...DEFAULT_WEIGHTS }); setSaved(false); }}>{t("weights.reset", "Reset defaults")}</Button><Button type="button" small disabled={saving} onClick={() => void save()}>{saving ? t("weights.saving", "Saving…") : t("weights.save", "Save weights")}</Button></div>
         {saved && <div role="status" className="row" style={{ alignItems: "center" }}><Bunny mood="celebrate" size={68} caption={t("weights.saved", "Weights saved to your profile.")} /><p style={{ margin: 0 }}>{t("weights.saved", "Weights saved to your profile.")}</p></div>}
         {error && <p role="alert" style={{ margin: 0, color: "var(--danger)" }}>{t("weights.error", "Could not save weights. Try again.")}</p>}

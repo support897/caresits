@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { containsExifBytes, resizeDimensions, stripExif } from "./exif";
-import { getVideoReasons, mediaKeyFor } from "./upload";
-import { MAX_VIDEO_BYTES } from "./config";
+import { getVideoReasons, mediaAttachmentKind, mediaKeyFor } from "./upload";
+import { MAX_ATTACHMENT_BYTES, MAX_VIDEO_BYTES } from "./config";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -30,6 +30,15 @@ describe("private media helpers", () => {
     expect(mediaKeyFor({ uid: "u_1", spaceId: "s_1", kind: "child", id: "x1", extension: "jpg" })).toBe("users/u_1/children/child-x1.jpg");
     expect(mediaKeyFor({ uid: "u_1", spaceId: "s_1", shareWithSpace: true, kind: "child", id: "x1", extension: "jpg" })).toBe("spaces/s_1/children/child-x1.jpg");
     expect(mediaKeyFor({ uid: "u/1", kind: "avatar", id: "x1", extension: "jpg" })).toBeNull();
+  });
+
+  it("keeps chat attachments private, typed, and within the upload limit", () => {
+    expect(MAX_ATTACHMENT_BYTES).toBe(5 * 1024 * 1024);
+    expect(mediaKeyFor({ uid: "u_1", kind: "attachment", id: "x1", extension: "pdf" })).toBe("users/u_1/attachments/attachment-x1.pdf");
+    expect(mediaAttachmentKind("users/u_1/attachments/attachment-x1.pdf")).toBe("pdf");
+    expect(mediaAttachmentKind("users/u_1/gallery/photo-x1.jpg")).toBe("image");
+    expect(mediaAttachmentKind("https://example.invalid/child.jpg")).toBeNull();
+    expect(mediaAttachmentKind("users/u_1/../../photo.jpg")).toBeNull();
   });
 
   it("applies the 60 second and 50 MB video limits", () => {

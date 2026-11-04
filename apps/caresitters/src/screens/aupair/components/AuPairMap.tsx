@@ -6,6 +6,7 @@ type Props = { selected: string; onSelect: (country: string) => void };
 const countryName = (code: string, english: string) => t(`aupair.country.${code.toLocaleLowerCase()}`, english);
 
 export function AuPairMap({ selected, onSelect }: Props) {
+  const selectedCountry = AUPAIR_DESTINATIONS.find((country) => selected === country.country);
   return <section className="ap-atlas" aria-labelledby="ap-atlas-title">
     <div className="ap-section-heading">
       <div>
@@ -26,16 +27,16 @@ export function AuPairMap({ selected, onSelect }: Props) {
         <path className="ap-map-gridline" d="M80 280H920M500 45V515" />
       </svg>
       <div className="ap-map-pins">
-        {AUPAIR_DESTINATIONS.map((country) => <button
-          className={`ap-map-pin${selected === country.country ? " is-selected" : ""}`}
-          key={country.code}
+        {selectedCountry ? <button
+          className="ap-map-pin is-selected"
+          key={selectedCountry.code}
           type="button"
-          style={{ left: `${country.x}%`, top: `${country.y}%` }}
-          onClick={() => onSelect(country.country)}
-          aria-label={t("aupair.selectCountry", "Select {country}", { country: countryName(country.code, country.country) })}
-          aria-pressed={selected === country.country}
-          title={countryName(country.code, country.country)}
-        >{country.flag}</button>)}
+          style={{ left: `${selectedCountry.x}%`, top: `${selectedCountry.y}%` }}
+          onClick={() => onSelect(selectedCountry.country)}
+          aria-label={t("aupair.selectCountry", "Select {country}", { country: countryName(selectedCountry.code, selectedCountry.country) })}
+          aria-pressed="true"
+          title={countryName(selectedCountry.code, selectedCountry.country)}
+        >{selectedCountry.flag}</button> : <p className="ap-map-empty">{t("aupair.mapChooseFirst", "Choose a country below to add its pin to the map.")}</p>}
       </div>
     </div>
     <p className="ap-map-caption">{t("aupair.mapCaption", "Map is a simple guide. Choose a country on the map or in the list.")}</p>
@@ -46,7 +47,7 @@ export function AuPairMap({ selected, onSelect }: Props) {
         type="button"
         onClick={() => onSelect(country.country)}
         aria-pressed={selected === country.country}
-      ><span className="ap-country-flag" aria-hidden="true">{country.flag}</span><span>{countryName(country.code, country.country)}</span><span className="ap-country-arrow" aria-hidden="true">›</span></button>)}
+      ><span className="ap-country-flag" aria-hidden="true">{country.flag}</span><span>{countryName(country.code, country.country)}</span><span className="ap-country-arrow flip" aria-hidden="true">›</span></button>)}
     </div>
   </section>;
 }

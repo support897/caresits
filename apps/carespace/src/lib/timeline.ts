@@ -23,9 +23,18 @@ export type TimelineItem = {
 
 export type TimelineDay<T extends TimelineItem = TimelineItem> = { day: string; items: T[] };
 
+export function appendVoiceTranscript(current: string, transcript: string): string {
+  const words = transcript.trim();
+  return words ? [current.trim(), words].filter(Boolean).join(" ") : current;
+}
+
 function timestamp(value: string | number): number {
   const result = typeof value === "number" ? value : Date.parse(value);
   return Number.isFinite(result) ? result : 0;
+}
+
+export function timelineItemsForChild<T extends TimelineItem>(items: readonly T[], childId: string): T[] {
+  return items.filter((item) => !item.childId || item.childId === childId);
 }
 
 export function groupTimelineByDay<T extends TimelineItem>(items: readonly T[]): TimelineDay<T>[] {

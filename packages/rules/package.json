@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "firebase emulators:exec --only firestore --project demo-cc \"node --test tests/rules.test.mjs\""
+    "test": "firebase emulators:exec --only firestore --project demo-cc \"node --test --test-concurrency=1 tests/*.test.mjs\""
   },
   "dependencies": {
     "@firebase/rules-unit-testing": "^3.0.4",

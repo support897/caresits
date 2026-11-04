@@ -30,13 +30,21 @@ export type OnboardingDraft = {
 };
 
 export const FAMILY_STEP_KEYS = ["family", "children", "care-type", "schedule", "budget", "distance", "values"] as const;
-export const CARER_STEP_KEYS = ["photo", "headline", "intro", "video", "languages", "experience", "qualifications", "rate", "availability", "care-types"] as const;
+export const CARER_STEP_KEYS = ["profile", "headline", "intro", "values", "video", "languages", "experience", "qualifications", "rate", "availability", "care-types"] as const;
 
 export function progressPercent(stepIndex: number, totalSteps: number): number {
   if (!Number.isFinite(totalSteps) || totalSteps <= 0) return 0;
   const lastIndex = Math.max(0, Math.floor(totalSteps) - 1);
   const index = Math.max(0, Math.min(lastIndex, Number.isFinite(stepIndex) ? Math.floor(stepIndex) : 0));
   return Math.round(((index + 1) / Math.floor(totalSteps)) * 100);
+}
+
+export function profileCompletenessPercent(draft: OnboardingDraft, side: OnboardingSide): number {
+  const childAdded = draft.kids.some((kid) => kid.name.trim() && kid.ageYears.trim() !== "" && Number.isFinite(Number(kid.ageYears)));
+  const checks = side === "family"
+    ? [Boolean(draft.displayName.trim()), Boolean(draft.suburb.trim() || draft.postcode.trim()), childAdded, draft.familyCareTypes.length > 0, draft.familyDays.length > 0, draft.budgetMax > 0, draft.distanceKm > 0, draft.style.length + draft.activities.length + draft.familyLanguages.length > 0, Boolean(draft.photoKey), Boolean(draft.intro.trim())]
+    : [Boolean(draft.displayName.trim()), Boolean(draft.suburb.trim() || draft.postcode.trim()), Boolean(draft.photoKey), Boolean(draft.headline.trim()), Boolean(draft.intro.trim()), draft.style.length + draft.activities.length > 0, draft.languages.length > 0, draft.experienceYears !== "", draft.qualifications.length > 0, draft.rate > 0, draft.carerDays.length > 0, draft.carerCareTypes.length > 0];
+  return Math.round(checks.filter(Boolean).length / checks.length * 100);
 }
 
 export function createOnboardingDraft(): OnboardingDraft {
@@ -113,7 +121,8 @@ export function buildProfilePatch(side: OnboardingSide, draft: OnboardingDraft, 
   };
   const roleCard: Record<string, unknown> = side === "family" ? {
     ...sharedLocation,
-    kids: draft.kids.filter((kid) => kid.name.trim() && Number.isFinite(Number(kid.ageYears))).map((kid) => ({ name: firstName(kid.name), ageYears: Math.max(0, Math.min(18, Number(kid.ageYears))) })),
+    ...(primarySide && side !== primarySide && draft.photoKey ? { photoUrl: draft.photoKey } : {}),
+    kids: draft.kids.filter((kid) => kid.name.trim() && kid.ageYears.trim() !== "" && Number.isFinite(Number(kid.ageYears))).map((kid) => ({ name: firstName(kid.name), ageYears: Math.max(0, Math.min(18, Number(kid.ageYears))) })),
     careTypes: [...draft.familyCareTypes],
     scheduleNeed: daySchedule(draft.familyDays, draft.familyFrom, draft.familyTo),
     budgetMax: finiteNumber(draft.budgetMax, 30),
@@ -127,8 +136,11 @@ export function buildProfilePatch(side: OnboardingSide, draft: OnboardingDraft, 
     ...(draft.photoKey ? { photoUrl: draft.photoKey } : {}),
     ...(draft.videoKey ? { videoKey: draft.videoKey } : {}),
     languages: [...draft.languages],
+    style: [...draft.style],
+    activities: [...draft.activities],
     ...(finiteNumber(draft.experienceYears) !== undefined ? { experienceYears: finiteNumber(draft.experienceYears) } : {}),
     ...(finiteNumber(draft.rate) !== undefined ? { rate: finiteNumber(draft.rate) } : {}),
+    maxDistanceKm: finiteNumber(draft.distanceKm, 10),
     availability: daySchedule(draft.carerDays, draft.carerFrom, draft.carerTo),
     careTypes: [...draft.carerCareTypes],
   };

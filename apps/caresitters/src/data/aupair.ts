@@ -283,30 +283,29 @@ function personCountry(person: Person): string {
 
 export function matchesPlacementDestination(person: Person, mode: PlacementMode, destination: string): boolean {
   if (!destination.trim()) return true;
+  const wanted = destinationByName(destination);
+  if (!wanted) return false;
   if (mode === "host") {
-    const country = personCountry(person);
-    return !country || country.toLocaleLowerCase() === destination.trim().toLocaleLowerCase() || destinationByName(country)?.code === destinationByName(destination)?.code;
+    const country = destinationByName(personCountry(person));
+    return Boolean(country && country.code === wanted.code);
   }
   const preferred = parseAuPairArrival(person.card.auPair?.arrival).destinations;
-  const code = destinationByName(destination)?.code;
-  return !preferred.length || !code || preferred.includes(code);
+  return preferred.includes(wanted.code);
 }
 
-/** Returns a score only when at least three shared, non-visa facts can be compared. */
-export function placementCompatibility(viewer: Person, candidate: Person): number | null {
+export type PlacementCompatibilityFact = { id: "destination" | "languages" | "infant"; matches: boolean };
+export function placementCompatibilityFacts(viewer: Person, candidate: Person): PlacementCompatibilityFact[] {
   const host = viewer.side === "family" ? viewer : candidate.side === "family" ? candidate : null;
   const auPair = viewer.side === "carer" ? viewer : candidate.side === "carer" ? candidate : null;
-  if (!host || !auPair || host.side === auPair.side) return null;
-
-  const checks: boolean[] = [];
-  const hostCountry = personCountry(host);
+  if (!host || !auPair || host.side === auPair.side) return [];
+  const facts: PlacementCompatibilityFact[] = [];
+  const hostCode = destinationByName(personCountry(host))?.code;
   const desired = parseAuPairArrival(auPair.card.auPair?.arrival).destinations;
-  const hostCode = destinationByName(hostCountry)?.code;
-  if (hostCode && desired.length) checks.push(desired.includes(hostCode));
+  if (hostCode && desired.length) facts.push({ id: "destination", matches: desired.includes(hostCode) });
 
   const hostLanguages = personLanguages(host);
   const auPairLanguages = personLanguages(auPair);
-  if (hostLanguages.length && auPairLanguages.length) checks.push(hostLanguages.some((language) => auPairLanguages.includes(language)));
+  if (hostLanguages.length && auPairLanguages.length) facts.push({ id: "languages", matches: hostLanguages.some((language) => auPairLanguages.includes(language)) });
 
   const hostChildren = Array.isArray(host.card.kids) ? host.card.kids : [];
   const infantNeed = host.card.auPairHost?.infantCareNeeded === true || hostChildren.some((child: unknown) => {
@@ -314,10 +313,15 @@ export function placementCompatibility(viewer: Person, candidate: Person): numbe
     const age = Number((child as { ageYears?: unknown }).ageYears);
     return Number.isFinite(age) && age < 2;
   });
-  const hasInfantFact = typeof auPair.card.auPair?.infant === "boolean";
-  if (infantNeed && hasInfantFact) checks.push(auPair.card.auPair.infant === true);
+  const infantFact = auPair.card.auPair?.infant;
+  if (infantNeed && typeof infantFact === "boolean") facts.push({ id: "infant", matches: infantFact });
+  return facts;
+}
 
-  return checks.length >= 3 ? Math.round((checks.filter(Boolean).length / checks.length) * 100) : null;
+/** Returns a score only when at least three shared, non-visa facts can be compared. */
+export function placementCompatibility(viewer: Person, candidate: Person): number | null {
+  const facts = placementCompatibilityFacts(viewer, candidate);
+  return facts.length >= 3 ? Math.round((facts.filter((fact) => fact.matches).length / facts.length) * 100) : null;
 }
 
 export function targetSide(mode: PlacementMode): "family" | "carer" {

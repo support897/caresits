@@ -8,3 +8,12 @@ export function checkRecipe(recipe: Pick<Recipe, "ingredients">, allergies: read
 export function recipeIngredientText(recipe: Pick<Recipe, "ingredients">): string {
   return recipe.ingredients.join(", ");
 }
+
+export function canApproveMealPlan(
+  role: string,
+  labelsChecked: boolean,
+  allergyVerified: boolean,
+  result: Pick<AllergyCheck, "status"> | null,
+): boolean {
+  return role === "admin" && labelsChecked && allergyVerified && result?.status === "no-match-found";
+}

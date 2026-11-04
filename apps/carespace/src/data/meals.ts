@@ -3,6 +3,8 @@ import { db } from "@cc/core";
 import type { CareRole } from "./children";
 import type { Recipe } from "../content/recipes";
 import type { NewShoppingItem } from "./shopping";
+import type { AllergyStatus } from "../lib/allergy";
+import { canApproveMealPlan } from "../lib/recipes";
 
 export type MealPlanEntry = { childId: string; name: string; ingredients: string[] };
 
@@ -24,9 +26,12 @@ export async function approveMealPlanItem(input: {
   recipe: Recipe;
   role: CareRole;
   labelsChecked: boolean;
+  allergyVerified: boolean;
+  allergyStatus: AllergyStatus;
 }): Promise<void> {
-  if (input.role !== "admin") throw new Error("Only an admin can approve a meal plan.");
-  if (!input.labelsChecked) throw new Error("Check the full labels and confirm with the parent before approving.");
+  if (!canApproveMealPlan(input.role, input.labelsChecked, input.allergyVerified, { status: input.allergyStatus })) {
+    throw new Error("Confirm allergy details, check full labels, and resolve all ingredient warnings before approving.");
+  }
   const batch = writeBatch(db);
   const mealRef = doc(db, "careSpaces", input.spaceId, "mealPlan", input.day);
   batch.set(mealRef, { meals: arrayUnion({ childId: input.childId, name: input.recipe.name, ingredients: input.recipe.ingredients }) }, { merge: true });

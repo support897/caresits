@@ -143,7 +143,7 @@ export async function createCareSpace(uid: string, displayName: string): Promise
     joinedAt: now,
     invitedBy: uid,
   });
-  batch.set(doc(db, "users", uid, "spaces", spaceId), { spaceId, name, role: "admin", joinedAt: now });
+  batch.set(doc(db, "users", uid, "spaces", spaceId), { spaceId, name, memberRole: "admin", joinedAt: now });
   await batch.commit();
   return { spaceId, created: true };
 }
@@ -154,7 +154,7 @@ export async function recordSpaceJoin(uid: string, spaceId: string, name: string
   await setDoc(doc(db, "users", uid, "spaces", spaceId), {
     spaceId,
     name,
-    role,
+    memberRole: role,
     joinedAt: new Date().toISOString(),
   }, { merge: true });
 }

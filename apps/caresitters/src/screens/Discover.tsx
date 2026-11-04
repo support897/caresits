@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Bunny, Button, Chip, Empty, haptic, t, useNav, type ScreenProps } from "@cc/core";
 import type { Person } from "@cc/core";
-import { loadDiscoveryPeople, loadSavedIds, removeSavedPerson, savePerson, type DiscoveryPerson } from "../data/people";
+import { removeSavedPerson, savePerson, subscribeDiscoveryPeople, subscribeSavedIds, type DiscoveryPerson } from "../data/people";
 import { PersonCard } from "./discover/PersonCard";
 import { WhyMatchSheet } from "./discover/WhyMatchSheet";
-import { distanceKmBetween, isAvailableThisWeek, lastActiveTime, suburbOf } from "./discover/helpers";
+import { approximateMapPins, deleteDiscoverSearch, distanceKmBetween, isAvailableOnDate, isAvailableThisWeek, lastActiveTime, loadSavedSearches, saveDiscoverSearch, suburbOf, type SavedDiscoverSearch } from "./discover/helpers";
 import { parseNeeds, requirementsFromSuggestions, scoreMatch, type MatchRequirements, type MatchResult, type MatchWeights, type RequirementSuggestion } from "../../../../packages/core/src/match";
 
 type ScreenParams = ScreenProps["params"] & { me: Person; people?: DiscoveryPerson[]; savedUids?: string[] };
@@ -22,6 +22,11 @@ export default function Discover({ params }: ScreenProps) {
   const [radiusKm, setRadiusKm] = useState(25);
   const [suburb, setSuburb] = useState("");
   const [searchText, setSearchText] = useState("");
+  const [searchDate, setSearchDate] = useState("");
+  const [timeFrom, setTimeFrom] = useState("");
+  const [timeTo, setTimeTo] = useState("");
+  const [dateError, setDateError] = useState(false);
+  const [savedSearches, setSavedSearches] = useState<SavedDiscoverSearch[]>([]);
   const [suggestions, setSuggestions] = useState<RequirementSuggestion[]>([]);
   const [selectedSuggestions, setSelectedSuggestions] = useState<Set<string>>(new Set());
   const [confirmedSuggestions, setConfirmedSuggestions] = useState<RequirementSuggestion[]>([]);
@@ -34,26 +39,25 @@ export default function Discover({ params }: ScreenProps) {
   const [savedCelebration, setSavedCelebration] = useState(false);
 
   useEffect(() => {
-    let current = true;
+    setSavedSearches(loadSavedSearches(me.uid));
     if (fakePeople) {
       setPeople(fakePeople);
+      setSavedIds(new Set(fakeSaved ?? []));
       setLoading(false);
-      return () => { current = false; };
+      return;
     }
     setLoading(true);
     setLoadError(false);
-    void Promise.all([loadDiscoveryPeople(me), loadSavedIds(me.uid).catch(() => [])]).then(([loaded, saved]) => {
-      if (!current) return;
+    const stopPeople = subscribeDiscoveryPeople(me, (loaded) => {
       setPeople(loaded);
-      setSavedIds(new Set(saved));
       setLoading(false);
-    }).catch(() => {
-      if (!current) return;
+    }, () => {
       setLoadError(true);
       setLoading(false);
     });
-    return () => { current = false; };
-  }, [fakePeople, me, me.uid]);
+    const stopSaved = subscribeSavedIds(me.uid, (saved) => setSavedIds(new Set(saved)), () => setSaveError(true));
+    return () => { stopPeople(); stopSaved(); };
+  }, [fakePeople, fakeSaved, me, me.uid]);
 
   useEffect(() => {
     const onWeightsSaved = (event: Event) => {
@@ -73,7 +77,8 @@ export default function Discover({ params }: ScreenProps) {
   const radiusRows = rows.filter((row) => (radiusKm <= 0 || (row.km !== null && row.km <= radiusKm)) && matchesSuburb(row.person));
   const eligibleRows = radiusRows.filter((row) => row.result.eligible).sort((a, b) => (b.result.score ?? -1) - (a.result.score ?? -1));
   const needsReviewRows = radiusRows.filter((row) => !row.result.eligible);
-  const availableRows = eligibleRows.filter((row) => isAvailableThisWeek(row.person));
+  const activeSearchDate = requirements.availability?.find((need) => need.date)?.date;
+  const availableRows = eligibleRows.filter((row) => activeSearchDate ? isAvailableOnDate(row.person, activeSearchDate) : isAvailableThisWeek(row.person));
   const verifiedRows = eligibleRows.filter((row) => row.person.verifiedLevel === "register" || row.person.verifiedLevel === "verified").sort((a, b) => (b.person.verifiedAt ?? 0) - (a.person.verifiedAt ?? 0)).slice(0, 12);
   const activeRows = eligibleRows.filter((row) => lastActiveTime(row.person) !== undefined).sort((a, b) => (lastActiveTime(b.person) ?? 0) - (lastActiveTime(a.person) ?? 0)).slice(0, 12);
   const savedRows = radiusRows.filter((row) => savedIds.has(row.person.uid));
@@ -108,6 +113,40 @@ export default function Discover({ params }: ScreenProps) {
     setSelectedSuggestions(new Set());
     setConfirmedSuggestions([]);
     setSearchText("");
+    setSearchDate("");
+    setTimeFrom("");
+    setTimeTo("");
+    setDateError(false);
+  }
+  function addDateTimeNeed() {
+    if (!searchDate || Boolean(timeFrom) !== Boolean(timeTo)) { setDateError(true); return; }
+    const need = { date: searchDate, ...(timeFrom ? { from: timeFrom, to: timeTo } : {}) };
+    setRequirements((previous) => ({ ...previous, availability: [...(previous.availability ?? []).filter((item) => item.date !== searchDate), need] }));
+    setDateError(false);
+    haptic();
+  }
+  function saveCurrentSearch() {
+    const label = searchDate ? t("disc.savedSearchDate", "{date} search", { date: searchDate }) : suburb.trim() || t("disc.savedSearchGeneric", "{radius} km search", { radius: radiusKm || t("disc.anyDistance", "Any distance") });
+    setSavedSearches(saveDiscoverSearch(me.uid, { label, radiusKm, suburb: suburb.trim(), requirements, date: searchDate, from: timeFrom, to: timeTo }));
+    haptic();
+  }
+  function applySavedSearch(search: SavedDiscoverSearch) {
+    setRadiusKm(search.radiusKm);
+    setSuburb(search.suburb);
+    setSearchText("");
+    setRequirements(search.requirements && typeof search.requirements === "object" && !Array.isArray(search.requirements) ? search.requirements as MatchRequirements : {});
+    setSearchDate(search.date);
+    setTimeFrom(search.from);
+    setTimeTo(search.to);
+    setSuggestions([]);
+    setSelectedSuggestions(new Set());
+    setConfirmedSuggestions([]);
+    setDateError(false);
+    haptic();
+  }
+  function removeSearch(search: SavedDiscoverSearch) {
+    setSavedSearches(deleteDiscoverSearch(me.uid, search.id));
+    haptic();
   }
   async function toggleSave(row: Row) {
     const wasSaved = savedIds.has(row.person.uid);
@@ -156,6 +195,8 @@ export default function Discover({ params }: ScreenProps) {
     ? t("disc.nearest", "Nearest: {people}", { people: nearest.map((row) => `${row.person.firstName}, ${(row.km ?? 0).toFixed(1)} km`).join(" · ") })
     : t("disc.noneNearby", "No profiles with a known distance are within this radius.");
   const currentDeckCard = bestMatches[deckIndex];
+  const mapRows = availableRows.slice(0, 12);
+  const mapPins = approximateMapPins(mapRows.map((row) => row.person));
   const title = me.side === "family" ? t("disc.titleFamily", "Discover care") : t("disc.titleCarer", "Find families");
 
   return <div className="app">
@@ -164,6 +205,7 @@ export default function Discover({ params }: ScreenProps) {
         <h1 style={{ fontSize: 30 }}>{title}</h1>
         <Button type="button" alt small onClick={() => nav.push("weights", { me })} aria-label={t("disc.editWeights", "Change match weights")}>{t("disc.weights", "Weights")}</Button>
       </div>
+      <div className="row"><Button type="button" alt small onClick={() => nav.push("aupair", { me })}>{t("disc.auPairWorld", "Au pair world")}</Button></div>
       <div style={{ display: "grid", gridTemplateColumns: "minmax(100px, 0.8fr) minmax(130px, 1.2fr)", gap: 8 }}>
         <label style={{ display: "grid", gap: 4 }}><span>{t("disc.radius", "Radius")}</span>
           <select className="field" aria-label={t("disc.radius", "Radius")} value={radiusKm} onChange={(event) => setRadiusKm(Number(event.target.value))} style={{ paddingInline: 10 }}>
@@ -188,6 +230,23 @@ export default function Discover({ params }: ScreenProps) {
           <div className="row"><Button type="button" alt small disabled={!selectedSuggestions.size} onClick={confirmRequirements}>{t("disc.applyNeeds", "Apply confirmed needs")}</Button><Button type="button" alt small onClick={clearRequirements}>{t("disc.clearNeeds", "Clear")}</Button></div>
         </div>}
         {confirmedSuggestions.length > 0 && <p role="status" className="muted" style={{ margin: 0 }}>{t("disc.confirmed", "Confirmed for this search: {needs}", { needs: confirmedSuggestions.map((item) => item.label).join(" · ") })}</p>}
+        <div style={{ display: "grid", gap: 10, borderTop: "1px solid var(--line)", paddingBlockStart: 12 }}>
+          <div><h3 style={{ fontSize: 19 }}>{t("disc.dateSearchTitle", "Search by date and time")}</h3><p className="muted" style={{ margin: "4px 0 0" }}>{t("disc.dateSearchHelp", "Choose a date and optional time window. Add it to use it as an essential.")}</p></div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))", gap: 8 }}>
+            <label style={{ display: "grid", gap: 4 }}><span>{t("disc.date", "Date")}</span><input className="field" type="date" value={searchDate} onChange={(event) => setSearchDate(event.target.value)} aria-label={t("disc.date", "Date")} /></label>
+            <label style={{ display: "grid", gap: 4 }}><span>{t("disc.from", "From")}</span><input className="field" type="time" value={timeFrom} onChange={(event) => setTimeFrom(event.target.value)} aria-label={t("disc.from", "From")} /></label>
+            <label style={{ display: "grid", gap: 4 }}><span>{t("disc.to", "To")}</span><input className="field" type="time" value={timeTo} onChange={(event) => setTimeTo(event.target.value)} aria-label={t("disc.to", "To")} /></label>
+          </div>
+          <div className="row"><Button type="button" alt small onClick={addDateTimeNeed} disabled={!searchDate}>{t("disc.addDateNeed", "Add date and time")}</Button><Button type="button" alt small onClick={saveCurrentSearch}>{t("disc.saveSearch", "Save this search")}</Button></div>
+          {dateError && <p role="alert" style={{ margin: 0, color: "var(--danger)" }}>{t("disc.dateError", "Choose a date and enter both times, or leave both times blank.")}</p>}
+          {activeSearchDate && <p role="status" className="muted" style={{ margin: 0 }}>{t("disc.dateApplied", "Date requirement added: {date}", { date: activeSearchDate })}</p>}
+        </div>
+        <div style={{ display: "grid", gap: 8, borderTop: "1px solid var(--line)", paddingBlockStart: 12 }}>
+          <h3 style={{ fontSize: 19 }}>{t("disc.savedSearches", "Saved searches")}</h3>
+          {savedSearches.length ? savedSearches.map((search) => <div key={search.id} className="row" style={{ alignItems: "center", justifyContent: "space-between" }}>
+            <span>{search.label}</span><div className="row"><Button type="button" alt small onClick={() => applySavedSearch(search)}>{t("disc.applySearch", "Apply")}</Button><Button type="button" alt small onClick={() => removeSearch(search)} aria-label={t("disc.deleteSearch", "Delete saved search: {label}", { label: search.label })}>{t("disc.delete", "Delete")}</Button></div>
+          </div>) : <p className="muted" style={{ margin: 0 }}>{t("disc.noSavedSearches", "Saved searches stay on this device until you remove them.")}</p>}
+        </div>
       </section>
 
       {loading && <div style={{ paddingBlock: 24 }}><Empty mood="rest" title={t("disc.loading", "Finding profiles…")} /></div>}
@@ -210,7 +269,18 @@ export default function Discover({ params }: ScreenProps) {
 
         {!deckMode && <>
           {eligibleRows.length > 0 ? section(t("disc.best", "Best matches"), t("disc.bestHint", "Profiles that meet stated essentials"), bestMatches, t("disc.noBest", "No profiles match all confirmed essentials yet.")) : <Empty mood="point" title={t("disc.noMatches", "No matches in this area yet")} body={nearestText} />}
-          {eligibleRows.length > 0 && section(t("disc.available", "Available this week"), t("disc.availableHint", "From shared schedules"), availableRows, t("disc.noAvailability", "No matching availability is listed for this week."))}
+          {eligibleRows.length > 0 && section(t("disc.available", activeSearchDate ? "Available on this date" : "Available this week"), t("disc.availableHint", "From shared schedules"), availableRows, t("disc.noAvailability", "No matching availability is listed for this week."))}
+          <section className="card" aria-labelledby="disc-map-title" style={{ display: "grid", gap: 10, padding: 14, marginBlock: 20 }}>
+            <div><h2 id="disc-map-title" style={{ fontSize: 22 }}>{t("disc.mapTitle", "Availability nearby")}</h2><p className="muted" style={{ margin: "4px 0 0" }}>{t("disc.mapPrivacy", "Pins show only an approximate area, never an exact address.")}</p></div>
+            <div role="group" aria-label={t("disc.mapPins", "Approximate available profile locations")} style={{ position: "relative", minHeight: 210, border: "1px solid var(--line)", borderRadius: 18, overflow: "hidden", backgroundColor: "var(--soft)", backgroundImage: "linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px)", backgroundSize: "32px 32px" }}>
+              {mapPins.length ? mapPins.map((pin) => {
+                const row = mapRows.find((item) => item.person.uid === pin.uid);
+                if (!row) return null;
+                return <button key={pin.uid} type="button" onClick={() => openPerson(row)} aria-label={t("disc.mapOpenProfile", "Open {name}, {distance} km away", { name: row.person.firstName, distance: (row.km ?? 0).toFixed(1) })} style={{ position: "absolute", insetInlineStart: `${pin.inlineStart}%`, insetBlockStart: `${pin.blockStart}%`, transform: "translate(-50%, -50%)", width: 48, height: 48, borderRadius: 99, border: "2px solid var(--card)", background: "var(--ink)", color: "var(--cream)", fontWeight: 700, boxShadow: "var(--shadow)" }}>{row.person.firstName.charAt(0).toUpperCase()}</button>;
+              }) : <p className="muted" style={{ padding: 14 }}>{t("disc.mapNoPins", "No available profiles with a shared approximate location yet.")}</p>}
+            </div>
+            <p className="muted" style={{ margin: 0 }}>{t("disc.mapCount", "Showing {count} available profiles. Tap a pin to open the profile.", { count: mapPins.length })}</p>
+          </section>
           {eligibleRows.length > 0 && section(t("disc.newVerified", "New verified"), t("disc.verifiedHint", "Real check records only"), verifiedRows, t("disc.noVerified", "No verified profiles in this area yet."))}
           {activeRows.length > 0 && section(t("disc.recentlyActive", "Recently active"), t("disc.activeHint", "Based on profile timestamps"), activeRows, "")}
           {section(t("disc.savedSection", "Saved"), t("disc.savedHint", "Profiles you hearted"), savedRows, t("disc.noSaved", "Saved profiles appear here."))}

@@ -44,7 +44,8 @@ export function qualificationDates(docValue: Record<string, unknown>): { checked
   };
 }
 
-export function qualificationStatus(docValue: Record<string, unknown>, today = new Date()): QualificationStatus {
+export function qualificationStatus(docValue: Record<string, unknown>, today = new Date(), serverWritten = false): QualificationStatus {
+  if (!serverWritten) return "submitted";
   const { checkedOn, expiresOn } = qualificationDates(docValue);
   const todayDay = qualificationDateDay(today) || new Date().toISOString().slice(0, 10);
   const expiresDay = qualificationDateDay(expiresOn);
@@ -64,17 +65,17 @@ function recordArray(value: unknown): Record<string, unknown>[] {
   if (value && typeof value === "object") return Object.entries(value as Record<string, unknown>).map(([id, row]) => ({ ...(row && typeof row === "object" ? row as Record<string, unknown> : {}), id }));
   return [];
 }
-function mapQualification(id: string, value: Record<string, unknown>): Qualification {
-  const dates = qualificationDates(value);
+function mapQualification(id: string, value: Record<string, unknown>, serverWritten = false): Qualification {
+  const dates: { checkedOn?: unknown; expiresOn?: unknown } = serverWritten ? qualificationDates(value) : {};
   return {
     id,
     label: String(value.label ?? value.name ?? value.kind ?? value.qualification ?? "Qualification"),
-    status: qualificationStatus(value),
+    status: qualificationStatus(value, new Date(), serverWritten),
     ...(typeof value.state === "string" ? { state: value.state } : {}),
     ...(dates.checkedOn != null ? { checkedOn: dates.checkedOn } : {}),
     ...(dates.expiresOn != null ? { expiresOn: dates.expiresOn } : {}),
     ...(typeof value.fileKey === "string" ? { fileKey: value.fileKey } : {}),
-    ...(typeof value.verifiedBy === "string" ? { verifiedBy: value.verifiedBy } : {}),
+    ...(serverWritten && typeof value.verifiedBy === "string" ? { verifiedBy: value.verifiedBy } : {}),
   };
 }
 
@@ -91,12 +92,16 @@ export async function loadQualifications(uid: string): Promise<Qualification[]> 
   const result: Qualification[] = [];
   for (const docRow of docs) {
     const server = serverRows.find((row) => row.documentId === docRow.id || row.id === docRow.id);
-    result.push(mapQualification(docRow.id, server ? { ...docRow.value, ...server } : docRow.value));
+    result.push(mapQualification(docRow.id, server ? { ...docRow.value, ...server } : docRow.value, Boolean(server)));
     seen.add(docRow.id);
+    if (server) {
+      if (typeof server.id === "string") seen.add(server.id);
+      if (typeof server.documentId === "string") seen.add(server.documentId);
+    }
   }
   for (const [index, row] of serverRows.entries()) {
     const id = String(row.id ?? row.documentId ?? `server-${index}`);
-    if (!seen.has(id)) result.push(mapQualification(id, row));
+    if (!seen.has(id) && !seen.has(String(row.documentId ?? ""))) result.push(mapQualification(id, row, true));
   }
   return result;
 }

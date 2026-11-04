@@ -18,6 +18,7 @@ function timeLabel(value: unknown): string {
 export default function Messages({ params }: { params: Params }) {
   const nav = useNav();
   const { me } = params;
+  const accountName = me.firstName || me.name || t("messages.account.name", "Your account");
   const [tab, setTab] = useState<ChatFilter>("All");
   const [search, setSearch] = useState("");
   const [relations, setRelations] = useState<Relationship[]>([]);
@@ -36,6 +37,10 @@ export default function Messages({ params }: { params: Params }) {
     const stops: Array<() => void> = [];
     setLoading(true);
     setError("");
+    setLatest({});
+    setUnread({});
+    setRelations([]);
+    setPeople({});
     void loadRelationships(me.uid, me.side).then(async (rows) => {
       if (!alive) return;
       setRelations(rows);
@@ -62,7 +67,10 @@ export default function Messages({ params }: { params: Params }) {
       const last = latest[rel.id] ?? null;
       const request = rel.state === "pending";
       const preview = request ? (rel.createdBy === me.uid ? t("messages.request.waiting", "Waiting for a reply") : t("messages.request.incoming", "Connection request")) : messagePreview(last);
-      return { rel, otherUid, person, last, preview, unread: unread[rel.id] ?? 0 };
+      const statusLabel = request
+        ? rel.createdBy === me.uid ? t("messages.status.sentRequest", "Request sent") : t("messages.status.newRequest", "New request")
+        : rel.state === "hired" ? t("messages.status.workingTogether", "Working together") : t("messages.status.connected", "Connected");
+      return { rel, otherUid, person, last, preview, statusLabel, unread: unread[rel.id] ?? 0 };
     }).filter((row) => `${row.person.name} ${row.preview}`.toLowerCase().includes(search.trim().toLowerCase()))
       .sort((a, b) => timeMs(b.last?.at ?? b.rel.createdAt) - timeMs(a.last?.at ?? a.rel.createdAt));
   }, [relations, tab, me.uid, me.side, unread, people, latest, search]);
@@ -73,8 +81,13 @@ export default function Messages({ params }: { params: Params }) {
 
   return <div style={{ height: "100%", minHeight: 0, display: "flex", flexDirection: "column", background: "var(--cream)" }}>
     <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 16px 8px" }}>
-      <div><p className="muted" style={{ margin: 0 }}>{t("messages.kicker", "Your care circle")}</p><h1>{t("messages.title", "Messages")}</h1></div>
-      <Bell uid={me.uid} side={me.side} app="caresitters" />
+      <div style={{ minWidth: 0 }}><p className="muted" style={{ margin: 0 }}>{t("messages.kicker", "Your care circle")}</p><h1>{t("messages.title", "Messages")}</h1></div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flex: "0 0 auto" }}>
+        <Bell uid={me.uid} side={me.side} app="caresitters" />
+        <button type="button" onClick={() => nav.push("settings", { me })} aria-label={t("messages.account.open", "Open account settings for {name}", { name: accountName })} style={{ display: "grid", placeItems: "center", width: 48, height: 48, borderRadius: 24, background: "var(--soft)" }}>
+          <span className="av" style={{ width: 40, height: 40 }}>{me.photoUrl ? <img src={me.photoUrl} alt="" loading="lazy" /> : initials(accountName)}</span>
+        </button>
+      </div>
     </header>
     <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "8px 16px 24px" }}>
       <label htmlFor="messages-search" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clipPath: "inset(50%)" }}>{t("messages.search.label", "Search conversations")}</label>
@@ -82,7 +95,7 @@ export default function Messages({ params }: { params: Params }) {
       {quickPeople.length > 0 && <section aria-label={t("messages.circle.label", "Your care circle")} style={{ marginBlock: 16 }}>
         <p className="muted" style={{ margin: "0 0 8px" }}>{t("messages.circle.title", "Your care circle")}</p>
         <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBlock: 3 }}>
-          {quickPeople.map(({ rel, otherUid, person, unread: count }) => <button key={rel.id} type="button" onClick={() => nav.push("chat", { relId: rel.id, otherUid })} aria-label={`${person.name}${count ? `, ${count} unread` : ""}`} style={{ flex: "0 0 72px", display: "grid", justifyItems: "center", gap: 5, minHeight: 78 }}>
+          {quickPeople.map(({ rel, otherUid, person, unread: count }) => <button key={rel.id} type="button" onClick={() => nav.push("chat", { relId: rel.id, otherUid })} aria-label={count ? t("messages.quick.unread", "Open {name}, {count} unread", { name: person.name, count }) : t("messages.quick.open", "Open chat with {name}", { name: person.name })} style={{ flex: "0 0 72px", display: "grid", justifyItems: "center", gap: 5, minHeight: 78 }}>
             <span className="av" style={{ width: 54, height: 54, position: "relative" }}>{person.photoUrl ? <img src={person.photoUrl} alt="" loading="lazy" /> : initials(person.name)}{count > 0 && <span style={{ position: "absolute", insetInlineEnd: -2, insetBlockStart: -2, width: 16, height: 16, borderRadius: 50, background: "var(--danger)", border: "2px solid var(--cream)" }} />}</span>
             <span style={{ maxWidth: 72, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{person.name}</span>
           </button>)}
@@ -93,11 +106,12 @@ export default function Messages({ params }: { params: Params }) {
       </nav>
       {error && <p role="alert" style={{ color: "var(--danger)" }}>{error}</p>}
       {loading ? <div aria-busy="true" className="stack"><div className="sk" style={{ height: 86 }} /><div className="sk" style={{ height: 86 }} /></div> : rows.length ? <div style={{ display: "grid" }}>
-        {rows.map(({ rel, otherUid, person, last, preview, unread: count }) => <button key={rel.id} type="button" onClick={() => nav.push("chat", { relId: rel.id, otherUid })} aria-label={`${person.name}. ${preview}${count ? `, ${count} unread` : ""}`} style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 82, padding: "10px 4px", textAlign: "start", borderBlockEnd: "1px solid var(--line)" }}>
+        {rows.map(({ rel, otherUid, person, last, preview, statusLabel, unread: count }) => <button key={rel.id} type="button" onClick={() => nav.push("chat", { relId: rel.id, otherUid })} aria-label={count ? t("messages.row.unread", "{name}. {preview}. {status}. {count} unread", { name: person.name, preview, status: statusLabel, count }) : t("messages.row.label", "{name}. {preview}. {status}", { name: person.name, preview, status: statusLabel })} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", minWidth: 0, minHeight: 82, padding: "10px 4px", textAlign: "start", borderBlockEnd: "1px solid var(--line)", overflow: "hidden" }}>
           <span className="av" style={{ width: 54, height: 54 }}>{person.photoUrl ? <img src={person.photoUrl} alt="" loading="lazy" /> : initials(person.name)}</span>
           <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}><strong style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{person.name}</strong><time className="muted" style={{ flex: "0 0 auto", fontSize: 15 }}>{last ? timeLabel(last.at) : rel.state === "pending" ? t("messages.request.label", "Request") : ""}</time></span>
-            <span style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}><span className="muted" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{preview}</span>{count > 0 && <span className="pip" aria-label={`${count} unread`}>{count > 99 ? "99+" : count}</span>}</span>
+            <span style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, minWidth: 0 }}><strong style={{ flex: "1 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{person.name}</strong><time className="muted" style={{ flex: "0 1 auto", minWidth: 0, fontSize: 17, whiteSpace: "normal", textAlign: "end" }}>{last ? timeLabel(last.at) : rel.state === "pending" ? t("messages.request.label", "Request") : ""}</time></span>
+            <span className="muted" style={{ display: "block", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{preview}</span>
+            <span style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, minWidth: 0, marginBlockStart: 4 }}><span className="tag" style={{ flex: "0 1 auto", minWidth: 0, maxWidth: count > 0 ? "calc(100% - 36px)" : "100%", overflowWrap: "anywhere", whiteSpace: "normal", textAlign: "start", fontSize: 17, color: "var(--text)", background: "var(--soft)" }}>{statusLabel}</span>{count > 0 && <span className="pip" aria-label={t("messages.unread.count", "{count} unread", { count })} style={{ position: "static", flex: "0 0 auto", minWidth: 28, height: 28, padding: "0 6px", display: "grid", placeItems: "center", fontSize: 17, color: "var(--cream)" }}>{count > 99 ? "99+" : count}</span>}</span>
           </span>
         </button>)}
       </div> : <div className="empty" style={{ paddingBlock: 22 }}><Bunny mood="hello" size={94} /><h2>{emptyTitle}</h2><p className="muted">{emptyBody}</p></div>}

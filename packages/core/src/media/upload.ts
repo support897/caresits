@@ -1,9 +1,9 @@
 import { auth } from "../auth";
 import { t } from "../i18n";
 import { containsExifBytes, stripExif } from "./exif";
-import { MEDIA_GATEKEEPER_BASE_URL, MAX_PHOTO_BYTES, MAX_VIDEO_BYTES, MAX_VIDEO_SECONDS, PRESIGNED_LINK_SECONDS } from "./config";
+import { MEDIA_GATEKEEPER_BASE_URL, MAX_ATTACHMENT_BYTES, MAX_PHOTO_BYTES, MAX_VIDEO_BYTES, MAX_VIDEO_SECONDS, PRESIGNED_LINK_SECONDS } from "./config";
 
-export type MediaKind = "avatar" | "child" | "gallery" | "video";
+export type MediaKind = "avatar" | "child" | "gallery" | "video" | "attachment";
 export type UploadProgress = { stage: "prepare" | "link" | "upload" | "confirm" | "done"; percent: number };
 export type MediaUploadOptions = { uid?: string; spaceId?: string; shareWithSpace?: boolean; file: File; kind: MediaKind; onProgress?: (progress: UploadProgress) => void };
 export type DocumentUploadOptions = { uid?: string; file: File; onProgress?: (progress: UploadProgress) => void };
@@ -39,6 +39,18 @@ export function mediaKeyFor({ uid, spaceId, shareWithSpace = false, kind, id, ex
   }
   if (kind === "video" && ["mp4", "mov", "webm"].includes(ext)) return `users/${uid}/videos/intro-${id}.${ext}`;
   if (kind === "document" && ["pdf", "jpg"].includes(ext)) return `users/${uid}/documents/qual-${id}.${ext}`;
+  if (kind === "attachment" && ["pdf", "jpg"].includes(ext)) return `users/${uid}/attachments/attachment-${id}.${ext}`;
+  return null;
+}
+
+export function mediaAttachmentKind(key: string): "image" | "pdf" | null {
+  if (typeof key !== "string" || key.includes("..")) return null;
+  const segments = key.split("/");
+  if (segments.length < 4 || !["users", "spaces"].includes(segments[0] ?? "")
+    || !segments.every((segment) => /^[A-Za-z0-9_.-]{1,180}$/.test(segment))) return null;
+  const extension = segments.at(-1)?.split(".").pop()?.toLowerCase();
+  if (["jpg", "jpeg", "png", "webp"].includes(extension ?? "")) return "image";
+  if (extension === "pdf") return "pdf";
   return null;
 }
 
@@ -166,6 +178,21 @@ export async function uploadMediaFile({ uid, spaceId, shareWithSpace = false, fi
     if (!ext) throw new Error(t("media.videoFormat", "Choose an MP4, MOV, or WebM video."));
     extension = ext;
     mediaClass = "video-intros";
+  } else if (kind === "attachment") {
+    report(onProgress, "prepare", 0);
+    const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+    if (isPdf) {
+      if (file.size > MAX_ATTACHMENT_BYTES) throw new Error(t("media.fileTooLarge", "File must be 5 MB or smaller."));
+      if (await file.slice(0, 5).text() !== "%PDF-") throw new Error(t("media.attachment.format", "Choose a real PDF or photo file."));
+      extension = "pdf";
+    } else if (file.type.startsWith("image/")) {
+      blob = await stripExif(file);
+      if (blob.size <= 0 || blob.size > MAX_PHOTO_BYTES) throw new Error(t("media.photoTooLarge", "Photo must be 5 MB or smaller."));
+      if (containsExifBytes(await blob.arrayBuffer())) throw new Error(t("media.exifNotStripped", "Photo details could not be removed. Choose another photo."));
+      extension = "jpg";
+    } else {
+      throw new Error(t("media.attachment.format", "Choose a real PDF or photo file."));
+    }
   } else {
     if (!file.type.startsWith("image/")) throw new Error(t("media.choosePhoto", "Choose a photo first."));
     report(onProgress, "prepare", 0);

@@ -1,2 +1,9 @@
-type H = { impact(o: { style: string }): void };
-export function haptic(s: "light" | "heavy" = "light") { try { const h = (window as unknown as { Capacitor?: { Plugins?: { Haptics?: H } } }).Capacitor?.Plugins?.Haptics; h?.impact({ style: s === "heavy" ? "HEAVY" : "LIGHT" }); } catch { /* none */ } }
+import { Capacitor } from "@capacitor/core";
+import { Haptics, ImpactStyle } from "@capacitor/haptics";
+
+export function haptic(s: "light" | "heavy" = "light"): void {
+  try {
+    if (!Capacitor.isNativePlatform()) return;
+    void Haptics.impact({ style: s === "heavy" ? ImpactStyle.Heavy : ImpactStyle.Light }).catch(() => {});
+  } catch { /* unavailable */ }
+}

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { getPrivateMediaUrl, t, uploadMediaFile } from "@cc/core";
+import { Button, getPrivateMediaUrl, t, uploadMediaFile } from "@cc/core";
 
-export function PhotoStep({ uid, photoKey, onSaved }: { uid: string; photoKey: string; onSaved: (key: string) => void }) {
+export function PhotoStep({ uid, photoKey, onSaved, label = t("onb.photo.label", "Choose a profile photo"), help = t("onb.photo.help", "Choose a clear photo of yourself. Your photo is saved securely.") }: { uid: string; photoKey: string; onSaved: (key: string) => void; label?: string; help?: string }) {
   const [preview, setPreview] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -24,10 +24,11 @@ export function PhotoStep({ uid, photoKey, onSaved }: { uid: string; photoKey: s
   }
   return <div className="onb-media-step">
     <div className="onb-photo-frame">{preview ? <img src={preview} alt={t("onb.photo.previewAlt", "Preview of your profile photo")} /> : <span aria-hidden="true">♡</span>}</div>
-    <label className="onb-file-label">{t("onb.photo.label", "Choose a profile photo")}
+    <label className="onb-file-label">{label}
       <input className="field" type="file" accept="image/*" aria-label={t("onb.photo.input", "Choose a profile photo file")} disabled={busy} onChange={(event) => void choose(event.currentTarget.files?.[0])} />
     </label>
-    <p className="muted onb-note">{busy ? t("onb.photo.uploading", "Saving your photo…") : t("onb.photo.help", "Choose a clear photo of yourself. Your photo is saved securely.")}</p>
+    <p className="muted onb-note">{busy ? t("onb.photo.uploading", "Saving your photo…") : help}</p>
+    {photoKey && <Button type="button" alt small disabled={busy} onClick={() => { setPreview(""); onSaved(""); }}>{t("onb.photo.remove", "Remove photo")}</Button>}
     {error && <p role="alert" className="onb-error">{error}</p>}
   </div>;
 }

@@ -1,4 +1,4 @@
-import { doc, setDoc, updateDoc } from "firebase/firestore";
+import { doc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "@cc/core";
 import {
   enqueueWrite,
@@ -47,10 +47,19 @@ export function readSnapshot<T>(key: string, storage = browserStorage()): { save
   } catch { return null; }
 }
 
+function firestoreData(write: QueuedWrite): Record<string, unknown> {
+  const parts = write.path.split("/");
+  if (write.method === "set" && parts[0] === "careSpaces" && parts[2] === "messages" && parts.length === 4) {
+    return { ...write.data, at: serverTimestamp() };
+  }
+  return write.data;
+}
+
 async function sendToFirestore(write: QueuedWrite): Promise<void> {
   const ref = doc(db, write.path);
-  if (write.method === "update") await updateDoc(ref, write.data);
-  else await setDoc(ref, write.data, { merge: write.merge ?? false });
+  const data = firestoreData(write);
+  if (write.method === "update") await updateDoc(ref, data);
+  else await setDoc(ref, data, { merge: write.merge ?? false });
 }
 
 export function isConnectivityError(error: unknown): boolean {

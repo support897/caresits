@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Bunny } from "../Bunny";
 import { t, useLang } from "../i18n";
-import { NOTIFICATION_CATEGORIES, notificationCategoryLabel, type NotificationPrefs } from "./prefs";
+import { NOTIFICATION_CATEGORIES, notificationCategoryLabel, type NotificationFrequency, type NotificationPrefs } from "./prefs";
 import { loadNotificationPrefs, markAllNotificationsRead, markNotificationRead, saveNotificationPrefs, useNotificationFeed, type NotificationApp } from "./store";
 
 export type BellProps = { uid: string; side: "family" | "carer"; app?: NotificationApp };
@@ -27,20 +27,31 @@ export function Bell({ uid, side, app = "caresitters" }: BellProps) {
   }
 
   return <div style={{ position: "relative", zIndex: 1 }}>
-    <button type="button" aria-label={t("notify.open", "Notifications") + (unread ? `, ${unread} unread` : "")} aria-expanded={open} onClick={() => setOpen((value) => !value)} style={{ position: "relative", width: 48, height: 48, borderRadius: 24, display: "grid", placeItems: "center", background: "var(--soft)", border: "1px solid var(--line)" }}>
+    <button type="button" aria-label={unread ? t("notify.open.unread", "Notifications, {count} unread", { count: unread }) : t("notify.open", "Notifications")} aria-expanded={open} onClick={() => setOpen((value) => !value)} style={{ position: "relative", width: 48, height: 48, borderRadius: 24, display: "grid", placeItems: "center", background: "var(--soft)", border: "1px solid var(--line)" }}>
       <svg aria-hidden="true" viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" /><path d="M10 21h4" /></svg>
-      {unread > 0 && <span aria-label={`${unread} unread`} style={{ position: "absolute", insetBlockStart: 0, insetInlineEnd: 0, minWidth: 20, height: 20, paddingInline: 4, borderRadius: 99, background: "var(--danger)", color: "var(--cream)", fontSize: 13, fontWeight: 700, display: "grid", placeItems: "center" }}>{unread > 99 ? "99+" : unread}</span>}
+      {unread > 0 && <span aria-hidden="true" style={{ position: "absolute", insetBlockStart: 0, insetInlineEnd: 0, minWidth: 20, height: 20, paddingInline: 4, borderRadius: 99, background: "var(--danger)", color: "var(--cream)", fontSize: 13, fontWeight: 700, display: "grid", placeItems: "center" }}>{unread > 99 ? "99+" : unread}</span>}
     </button>
     {open && <>
       <button type="button" aria-label={t("notify.close", "Close notifications")} onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 10, cursor: "default" }} />
       <section aria-label={t("notify.panel", "Notifications")} style={{ position: "fixed", zIndex: 11, insetBlockStart: "calc(12px + env(safe-area-inset-top))", insetInline: "max(12px, calc((100vw - 360px) / 2))", width: "min(360px, calc(100vw - 24px))", maxHeight: "min(78vh, 700px)", overflowY: "auto", marginInlineStart: "auto", padding: 16, borderRadius: 22, background: "var(--cream)", color: "var(--text)", boxShadow: "var(--shadow)", border: "1px solid var(--line)" }}>
-        <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-          <div><p className="muted" style={{ margin: 0 }}>{t("notify.kicker", "Your care updates")}</p><h2 style={{ fontSize: 24 }}>{t("notify.title", "Notifications")}</h2></div>
-          <button type="button" className="chip" onClick={() => markAllNotificationsRead(uid, app)}>{t("notify.markRead", "Mark read")}</button>
+        <header style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 8 }}>
+          <div style={{ minWidth: 0 }}><p className="muted" style={{ margin: 0, overflowWrap: "anywhere" }}>{t("notify.kicker", "Your care updates")}</p><h2 style={{ fontSize: 24, overflowWrap: "anywhere" }}>{t("notify.title", "Notifications")}</h2></div>
+          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "flex-end", gap: 6, minWidth: 0, maxWidth: "100%" }}>
+            <button type="button" className="chip" onClick={() => markAllNotificationsRead(uid, app)} style={{ maxWidth: "100%", whiteSpace: "normal", overflowWrap: "anywhere" }}>{t("notify.markRead", "Mark read")}</button>
+            <button type="button" className="chip" aria-label={t("notify.close", "Close notifications")} onClick={() => setOpen(false)} style={{ maxWidth: "100%", whiteSpace: "normal", overflowWrap: "anywhere" }}>{t("notify.close.button", "Close")}</button>
+          </div>
         </header>
         {saveError && <p role="alert" style={{ color: "var(--danger)" }}>{saveError}</p>}
         <fieldset style={{ margin: "14px 0", padding: 0, border: 0 }}>
           <legend style={{ fontWeight: 700, marginBlockEnd: 6 }}>{t("notify.categories", "Categories")}</legend>
+          {side === "family" && <label style={{ display: "grid", gap: 6, marginBlock: "6px 12px" }}>
+            <span>{t("notify.frequency.label", "Care update frequency")}</span>
+            <select className="field" value={prefs.frequency} onChange={(event) => void update({ ...prefs, frequency: event.currentTarget.value as NotificationFrequency })}>
+              <option value="every">{t("notify.frequency.every", "Every update")}</option>
+              <option value="key">{t("notify.frequency.key", "Key events")}</option>
+              <option value="daily">{t("notify.frequency.daily", "Daily recap")}</option>
+            </select>
+          </label>}
           <div style={{ display: "grid", gap: 2 }}>
             {NOTIFICATION_CATEGORIES.map((category) => {
               const cannotMute = category.id === "allergyChanges";
@@ -60,7 +71,7 @@ export function Bell({ uid, side, app = "caresitters" }: BellProps) {
           {items.length ? items.map((item) => {
             const label = notificationCategoryLabel(item.category);
             return <button key={item.id} type="button" onClick={() => markNotificationRead(uid, app, item.id)} style={{ minHeight: 56, padding: 12, borderRadius: 14, textAlign: "start", background: item.read ? "var(--soft)" : "var(--card)", border: "1px solid var(--line)" }}>
-              <span style={{ display: "block", fontSize: 15, color: "var(--muted)" }}>{label} · {new Date(item.at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</span>
+              <span style={{ display: "block", fontSize: 17, color: "var(--muted)" }}>{label} · {new Date(item.at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</span>
               <strong>{item.title ?? label}</strong>{item.body && <span style={{ display: "block", overflowWrap: "anywhere" }}>{item.body}</span>}
             </button>;
           }) : <div className="empty"><Bunny mood="rest" size={72} /><p>{t("notify.empty", "Care updates will show here.")}</p></div>}

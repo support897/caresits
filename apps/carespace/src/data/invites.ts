@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, runTransaction, serverTimestamp, Timestamp } from "firebase/firestore";
+import { doc, getDoc, runTransaction, serverTimestamp, Timestamp } from "firebase/firestore";
 import { db } from "@cc/core";
 import {
   defaultPermissionsForRole, effectivePermissions, isMemberActive,
@@ -11,7 +11,16 @@ export const INVITE_CODE_LENGTH = 8;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 type TimeValue = { toMillis?: () => number; toDate?: () => Date } | Date | number | string | null | undefined;
-export type InviteAccess = { role: SpaceRole; perms?: MemberPermissions; createdBy?: string; expiresAt?: TimeValue; usedBy?: string };
+export type InviteAccess = {
+  spaceId?: string;
+  role: SpaceRole;
+  perms?: MemberPermissions;
+  createdBy?: string;
+  expiresAt?: TimeValue;
+  usedBy?: string | null;
+  targetUid?: string;
+  bookingId?: string;
+};
 export type JoinTarget = { spaceId: string; code: string };
 
 export function cleanInviteCode(value: string): string {
@@ -24,10 +33,20 @@ export function isInviteCode(value: string): boolean {
 }
 
 /** Reuses the existing Caresitters invite alphabet: no visually ambiguous I, L, O, 0, or 1. */
-export function makeInviteCode(random: () => number = Math.random): string {
+function secureRandomUnit(): number {
+  const cryptoApi = globalThis.crypto;
+  if (!cryptoApi?.getRandomValues) throw new Error("secure-random-unavailable");
+  const value = new Uint32Array(1);
+  cryptoApi.getRandomValues(value);
+  return value[0]! / 0x1_0000_0000;
+}
+
+export function makeInviteCode(random: () => number = secureRandomUnit): string {
   let code = "";
   for (let index = 0; index < INVITE_CODE_LENGTH; index += 1) {
-    const pick = Math.min(INVITE_CODE_ALPHABET.length - 1, Math.floor(random() * INVITE_CODE_ALPHABET.length));
+    const sample = random();
+    if (!Number.isFinite(sample) || sample < 0 || sample >= 1) throw new Error("invalid-random-source");
+    const pick = Math.floor(sample * INVITE_CODE_ALPHABET.length);
     code += INVITE_CODE_ALPHABET[pick];
   }
   return code;
@@ -89,17 +108,21 @@ export async function createSpaceInvite(
   expiresInDays = 7,
 ): Promise<{ code: string; expiresAt: Date }> {
   await requireActiveAdmin(spaceId, createdBy);
+  if (role === "admin") throw new Error("admin-invites-not-allowed");
   const safeDays = Math.max(1, Math.min(30, Math.floor(expiresInDays)));
   const expiresAt = new Date(Date.now() + safeDays * DAY_MS);
   const inviteData = {
+    spaceId,
     role,
     perms: effectivePermissions(role, perms),
     createdBy,
+    createdAt: serverTimestamp(),
     expiresAt: Timestamp.fromDate(expiresAt),
+    usedBy: null,
   };
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const code = makeInviteCode();
-    const inviteRef = doc(db, "careSpaces", spaceId, "invites", code);
+    const inviteRef = doc(db, "careSpaceInvites", code);
     try {
       await runTransaction(db, async (transaction) => {
         const existing = await transaction.get(inviteRef);
@@ -121,21 +144,25 @@ export async function joinCareSpaceWithInvite(
   displayName: string,
 ): Promise<{ role: SpaceRole; spaceName: string }> {
   if (!uid || !target.spaceId || !isInviteCode(target.code)) throw new Error("invite-invalid");
-  const spaceRef = doc(db, "careSpaces", target.spaceId);
-  const inviteRef = doc(db, "careSpaces", target.spaceId, "invites", cleanInviteCode(target.code));
-  const memberRef = doc(db, "careSpaces", target.spaceId, "members", uid);
+  const inviteRef = doc(db, "careSpaceInvites", cleanInviteCode(target.code));
   const result = await runTransaction(db, async (transaction) => {
-    const [inviteSnapshot, spaceSnapshot, memberSnapshot] = await Promise.all([
-      transaction.get(inviteRef), transaction.get(spaceRef), transaction.get(memberRef),
-    ]);
-    if (!inviteSnapshot.exists() || !spaceSnapshot.exists()) throw new Error("invite-not-found");
+    const inviteSnapshot = await transaction.get(inviteRef);
+    if (!inviteSnapshot.exists()) throw new Error("invite-not-found");
     const invite = inviteSnapshot.data() as InviteAccess;
     if (!canAcceptInvite(invite)) throw new Error(invite.usedBy ? "invite-used" : "invite-expired");
+    const spaceId = invite.spaceId ?? "";
+    if (!spaceId || spaceId !== target.spaceId) throw new Error("invite-not-found");
     if (invite.createdBy === uid) throw new Error("invite-own-space");
+    if (invite.targetUid && invite.targetUid !== uid) throw new Error("invite-not-for-you");
+    const memberRef = doc(db, "careSpaces", spaceId, "members", uid);
+    const memberSnapshot = await transaction.get(memberRef);
     if (memberSnapshot.exists() && isMemberActive(memberSnapshot.data().status)) throw new Error("already-a-member");
-    const role: SpaceRole = invite.role === "admin" || invite.role === "regular" || invite.role === "limited" || invite.role === "viewer" ? invite.role : "viewer";
-    const perms = effectivePermissions(role, invite.perms);
-    const spaceName = typeof spaceSnapshot.data().name === "string" ? spaceSnapshot.data().name : "Family care space";
+    if (invite.role !== "regular" && invite.role !== "limited" && invite.role !== "viewer") throw new Error("invite-invalid");
+    const role = invite.role;
+    const perms = invite.perms
+      ? effectivePermissions(role, invite.perms)
+      : { allergies: false, medication: false, photos: false, calendar: false, privateMessages: false };
+    transaction.update(inviteRef, { usedBy: uid });
     transaction.set(memberRef, {
       role,
       status: "active",
@@ -143,10 +170,18 @@ export async function joinCareSpaceWithInvite(
       displayName: displayName.trim() || "Care team member",
       joinedAt: serverTimestamp(),
       invitedBy: invite.createdBy ?? "",
+      inviteId: cleanInviteCode(target.code),
     });
-    transaction.update(inviteRef, { usedBy: uid });
-    return { role, spaceName };
+    transaction.set(doc(db, "users", uid, "spaces", spaceId), {
+      spaceId,
+      name: "Family care space",
+      memberRole: role,
+      joinedAt: serverTimestamp(),
+    }, { merge: true });
+    return { role, spaceId };
   });
-  await recordSpaceJoin(uid, target.spaceId, result.spaceName, result.role);
-  return result;
+  const spaceSnapshot = await getDoc(doc(db, "careSpaces", result.spaceId));
+  const spaceName = typeof spaceSnapshot.data()?.name === "string" ? spaceSnapshot.data()?.name as string : "Family care space";
+  await recordSpaceJoin(uid, result.spaceId, spaceName, result.role);
+  return { role: result.role, spaceName };
 }

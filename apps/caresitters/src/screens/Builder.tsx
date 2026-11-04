@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { auth, Button, Chip, loadProfile, Ring, saveProfile, t, useNav, type Person, type ScreenProps } from "@cc/core";
 import { extractPrefs, suggestIntro, type ExtractedPrefs } from "../lib/aiAssist";
-import { buildProfilePatch, CARER_STEP_KEYS, clearOnboardingDraft, createOnboardingDraft, FAMILY_STEP_KEYS, loadOnboardingDraft, loadOnboardingSide, progressPercent, saveOnboardingDraft, type OnboardingDraft, type OnboardingSide } from "../data/onboarding";
+import { buildProfilePatch, CARER_STEP_KEYS, clearOnboardingDraft, createOnboardingDraft, FAMILY_STEP_KEYS, loadOnboardingDraft, loadOnboardingSide, profileCompletenessPercent, progressPercent, saveOnboardingDraft, type OnboardingDraft, type OnboardingSide } from "../data/onboarding";
 import { ChoiceCards, type Choice } from "./builder/ChoiceCards";
 import { PhotoStep } from "./builder/PhotoStep";
 import { VideoStep } from "./builder/VideoStep";
@@ -16,7 +16,7 @@ const CARE_TYPES: Choice[] = [
   { value: "nanny", label: "Nanny", detail: "Regular care at home" },
   { value: "au_pair", label: "Au pair", detail: "Live-in cultural exchange" },
 ];
-const STYLE = ["Montessori", "gentle parenting", "calm routines", "child-led play", "structured routines"];
+const STYLE = ["caring", "patient", "calm", "energetic", "playful", "independent", "organized", "communicative", "reliable", "creative", "safety focused", "Montessori", "gentle parenting", "calm routines", "child-led play", "structured routines"];
 const ACTIVITIES = ["outdoor play", "reading", "arts and crafts", "cooking", "music", "nature walks", "park visits"];
 const LANGUAGES = ["English", "Spanish", "Mandarin", "Cantonese", "Hindi", "Vietnamese", "Arabic"];
 const AMOUNTS = [20, 25, 30, 35, 40, 45, 50, 60];
@@ -69,7 +69,7 @@ function profileDraft(profile: Person, side: OnboardingSide): OnboardingDraft {
     style: asList(source.style),
     activities: asList(source.activities),
     familyLanguages: side === "family" ? asList(source.languages) : [],
-    photoKey: asString(side === profile.side ? profile.photoUrl : source.photoUrl),
+    photoKey: asString(side === profile.side ? profile.photoUrl : (source.photoUrl ?? profile.photoUrl)),
     headline: asString(source.headline),
     intro: asString(source.about) || (side === profile.side ? profile.about ?? "" : ""),
     videoKey: asString(source.videoKey),
@@ -115,7 +115,9 @@ export default function Builder({ params }: ScreenProps) {
       const chosenSide = edit && loaded ? loadOnboardingSide(user.uid) ?? loaded.side : initialSide(requestedSide);
       setSide(chosenSide);
       const saved = loadOnboardingDraft(user.uid, chosenSide);
-      setDraft(saved?.draft ?? (loaded ? profileDraft(loaded, chosenSide) : createOnboardingDraft()));
+      const freshDraft = createOnboardingDraft();
+      freshDraft.displayName = user.displayName ?? "";
+      setDraft(saved?.draft ?? (loaded ? profileDraft(loaded, chosenSide) : freshDraft));
       setStep(Math.min(saved?.stepIndex ?? 0, (chosenSide === "family" ? FAMILY_STEP_KEYS.length : CARER_STEP_KEYS.length) - 1));
       setReady(true);
     }).catch(() => { if (live) { setError(t("onb.loadError", "Could not load your profile. Try again.")); setReady(true); } });
@@ -131,16 +133,18 @@ export default function Builder({ params }: ScreenProps) {
     const key = `onb.step.${side}.${stepName}`;
     const labels: Record<string, string> = {
       family: "Your family", children: "Children", "care-type": "Care type", schedule: "Your schedule", budget: "Your budget", distance: "How far to look", values: "What matters to you?",
-      photo: "Your photo", headline: "Your headline", intro: "A short introduction", video: "Video introduction", languages: "Languages", experience: "Childcare years", qualifications: "Qualifications", rate: "Your hourly rate", availability: "When you are free", "care-types": "Care you offer",
+      profile: "Your profile", headline: "Your headline", intro: "A short introduction", video: "Video introduction", languages: "Languages", experience: "Childcare years", qualifications: "Qualifications", rate: "Your hourly rate", availability: "When you are free", "care-types": "Care you offer",
     };
     return t(key, labels[stepName] ?? "Your profile");
   }, [side, stepName]);
 
   function validate(): string {
     if (side === "family" && stepName === "family" && (!draft.displayName.trim() || (!draft.postcode.trim() && !draft.suburb.trim()))) return t("onb.family.required", "Add your name and a postcode or suburb to continue.");
+    if (side === "carer" && stepName === "profile" && (!draft.displayName.trim() || (!draft.postcode.trim() && !draft.suburb.trim()))) return t("onb.carer.profile.required", "Add your name and a postcode or suburb to continue.");
     if (side === "family" && stepName === "children" && draft.kids.some((kid) => kid.name.trim() && (!kid.ageYears || !Number.isFinite(Number(kid.ageYears))))) return t("onb.child.required", "Add an age for each child, or remove that child.");
     if (side === "family" && stepName === "care-type" && !draft.familyCareTypes.length) return t("onb.care.required", "Choose at least one care type.");
     if (side === "carer" && stepName === "headline" && !draft.headline.trim()) return t("onb.headline.required", "Add a short headline to continue.");
+    if (side === "carer" && stepName === "availability" && !draft.carerDays.length) return t("onb.availability.required", "Choose at least one day to add your availability.");
     if (side === "carer" && stepName === "care-types" && !draft.carerCareTypes.length) return t("onb.carerCare.required", "Choose at least one kind of care.");
     return "";
   }
@@ -198,9 +202,12 @@ export default function Builder({ params }: ScreenProps) {
     if (side === "family") {
       switch (stepName) {
         case "family": return <div className="onb-field-stack">
+          <PhotoStep uid={uid} photoKey={draft.photoKey} onSaved={(photoKey) => update({ photoKey })} label={t("onb.family.photo", "Family photo (optional)")} help={t("onb.family.photo.help", "Optional. Use a parent photo, not a child's photo.")} />
           <label className="onb-label" htmlFor="onb-family-name">{t("onb.family.name", "Your name")}</label>
           <input id="onb-family-name" className="field" autoComplete="name" maxLength={80} value={draft.displayName} onChange={(event) => update({ displayName: event.target.value })} placeholder={t("onb.family.namePlaceholder", "First name or family name")} />
           <div className="onb-row"><label className="onb-field-stack"><span className="onb-label">{t("onb.family.suburb", "Suburb")}</span><input className="field" autoComplete="address-level2" maxLength={80} value={draft.suburb} onChange={(event) => update({ suburb: event.target.value })} placeholder={t("onb.family.suburbPlaceholder", "For example, New Farm")} /></label><label className="onb-field-stack"><span className="onb-label">{t("onb.family.postcode", "Postcode")}</span><input className="field" inputMode="numeric" autoComplete="postal-code" maxLength={10} value={draft.postcode} onChange={(event) => update({ postcode: event.target.value })} placeholder={t("onb.family.postcodePlaceholder", "4005")} /></label></div>
+          <label className="onb-field-stack"><span className="onb-label">{t("onb.family.intro", "A little about your family")}</span><textarea className="field" maxLength={300} value={draft.intro} onChange={(event) => update({ intro: event.target.value })} placeholder={t("onb.family.intro.placeholder", "Share what you would like a carer to know.")} /></label>
+          <p className="muted onb-note">{t("onb.family.intro.count", "{count}/300 characters", { count: draft.intro.length })}</p>
           <p className="onb-privacy">{t("onb.family.privacy", "Exact address and child photos stay private until the parent shares.")}</p>
         </div>;
         case "children": return <div className="onb-field-stack">
@@ -218,13 +225,13 @@ export default function Builder({ params }: ScreenProps) {
         case "budget": return <ChoiceCards items={AMOUNTS.map((amount) => ({ value: String(amount), label: t("onb.budget.amount", "A${amount}/hour", { amount }) }))} value={[String(draft.budgetMax)]} onChange={(items) => { if (items[0]) update({ budgetMax: Number(items[0]) }); }} />;
         case "distance": return <ChoiceCards items={DISTANCES.map((distance) => ({ value: String(distance), label: t("onb.distance.km", "{distance} km", { distance }) }))} value={[String(draft.distanceKm)]} onChange={(items) => { if (items[0]) update({ distanceKm: Number(items[0]) }); }} />;
         case "values": return <div className="onb-field-stack">
-          <div><p className="onb-label">{t("onb.values.style", "Care style")}</p><div className="onb-chip-row">{STYLE.map((value) => <Chip key={value} on={draft.style.includes(value)} aria-pressed={draft.style.includes(value)} onClick={() => toggleList("style", value)}>{t(`onb.style.${value.toLowerCase().replaceAll(" ", "-")}`, value)}</Chip>)}</div></div>
+          <div><p className="onb-label">{t("onb.values.style", "Care traits and approach")}</p><div className="onb-chip-row">{STYLE.map((value) => <Chip key={value} on={draft.style.includes(value)} aria-pressed={draft.style.includes(value)} onClick={() => toggleList("style", value)}>{t(`onb.style.${value.toLowerCase().replaceAll(" ", "-")}`, value)}</Chip>)}</div></div>
           <div><p className="onb-label">{t("onb.values.activities", "Activities")}</p><div className="onb-chip-row">{ACTIVITIES.map((value) => <Chip key={value} on={draft.activities.includes(value)} aria-pressed={draft.activities.includes(value)} onClick={() => toggleList("activities", value)}>{t(`onb.activity.${value.toLowerCase().replaceAll(" ", "-")}`, value)}</Chip>)}</div></div>
           <div><p className="onb-label">{t("onb.values.languages", "Languages you would like")}</p><div className="onb-chip-row">{LANGUAGES.map((value) => <Chip key={value} on={draft.familyLanguages.includes(value)} aria-pressed={draft.familyLanguages.includes(value)} onClick={() => toggleList("familyLanguages", value)}>{t(`onb.language.${value.toLowerCase()}`, value)}</Chip>)}</div></div>
           <label className="onb-field-stack"><span className="onb-label">{t("onb.values.freeText", "Or write what matters to you")}</span><textarea className="field" maxLength={400} value={draft.freeText} onChange={(event) => update({ freeText: event.target.value })} placeholder={t("onb.values.placeholder", "For example, outdoor play and Spanish-speaking care")} /></label>
           <Button type="button" alt onClick={() => setPrefSuggestion(extractPrefs(draft.freeText))}>{t("onb.ai.suggestPrefs", "Suggest preferences")}</Button>
           {prefSuggestion && <div className="onb-prompt"><p className="onb-suggest-label">{t("onb.ai.suggested", "Suggested - edit before saving")}</p>
-            {prefSuggestion.matchedPhrases.length ? <><p className="onb-note">{t("onb.ai.matched", "Words found in your note:")}</p><div className="onb-chip-row">{prefSuggestion.matchedPhrases.map((phrase) => <span className="onb-matched" key={phrase}>{phrase}</span>)}</div></> : <p className="onb-note">{t("onb.ai.noPrefs", "No listed preferences found in that note.")}</p>}
+            {prefSuggestion.matchedPhrases.length ? <><p className="onb-note">{t("onb.ai.matched", "Words found in your note:")}</p><div className="onb-chip-row">{prefSuggestion.matchedPhrases.map((phrase) => <span className="onb-matched" key={phrase}>{t(`onb.preference.${phrase.toLowerCase().replaceAll(" ", "-")}`, phrase)}</span>)}</div></> : <p className="onb-note">{t("onb.ai.noPrefs", "No listed preferences found in that note.")}</p>}
             <div className="row"><Button type="button" alt small onClick={() => setPrefSuggestion(null)}>{t("onb.ai.discard", "Discard")}</Button><Button type="button" small disabled={!prefSuggestion.matchedPhrases.length} onClick={() => { update({ style: [...new Set([...draft.style, ...(prefSuggestion.prefs.style ?? [])])], activities: [...new Set([...draft.activities, ...(prefSuggestion.prefs.activities ?? [])])], familyLanguages: [...new Set([...draft.familyLanguages, ...(prefSuggestion.prefs.languages ?? [])])] }); setPrefSuggestion(null); }}>{t("onb.ai.confirm", "Confirm")}</Button></div>
           </div>}
         </div>;
@@ -232,9 +239,21 @@ export default function Builder({ params }: ScreenProps) {
     }
 
     switch (stepName) {
-      case "photo": return <PhotoStep uid={uid} photoKey={draft.photoKey} onSaved={(photoKey) => update({ photoKey })} />;
+      case "profile": return <div className="onb-field-stack">
+        <PhotoStep uid={uid} photoKey={draft.photoKey} onSaved={(photoKey) => update({ photoKey })} label={t("onb.profile.photo", "Choose your profile photo")} help={t("onb.profile.photo.help", "Use a clear photo of yourself. Do not upload photos of children you cared for.")} />
+        <label className="onb-label" htmlFor="onb-carer-name">{t("onb.profile.name", "Your name")}</label>
+        <input id="onb-carer-name" className="field" autoComplete="name" maxLength={80} value={draft.displayName} onChange={(event) => update({ displayName: event.target.value })} placeholder={t("onb.profile.namePlaceholder", "First name or preferred name")} />
+        <div className="onb-row"><label className="onb-field-stack"><span className="onb-label">{t("onb.profile.suburb", "Suburb")}</span><input className="field" autoComplete="address-level2" maxLength={80} value={draft.suburb} onChange={(event) => update({ suburb: event.target.value })} placeholder={t("onb.family.suburbPlaceholder", "For example, New Farm")} /></label><label className="onb-field-stack"><span className="onb-label">{t("onb.profile.postcode", "Postcode")}</span><input className="field" inputMode="numeric" autoComplete="postal-code" maxLength={10} value={draft.postcode} onChange={(event) => update({ postcode: event.target.value })} placeholder={t("onb.family.postcodePlaceholder", "4005")} /></label></div>
+        <p className="onb-privacy">{t("onb.profile.locationPrivacy", "Your profile shows a general area, not your exact address.")}</p>
+      </div>;
       case "headline": return <div className="onb-field-stack"><label className="onb-label" htmlFor="onb-headline">{t("onb.headline.label", "A few words about your care")}</label><input id="onb-headline" className="field" maxLength={80} value={draft.headline} onChange={(event) => update({ headline: event.target.value })} placeholder={t("onb.headline.placeholder", "For example, Calm after-school care")} /><p className="muted onb-note">{t("onb.headline.count", "{count}/80 characters", { count: draft.headline.length })}</p></div>;
-      case "intro": return <div className="onb-field-stack"><label className="onb-label" htmlFor="onb-intro">{t("onb.intro.label", "Tell families about your care")}</label><textarea id="onb-intro" className="field" maxLength={300} value={draft.intro} onChange={(event) => update({ intro: event.target.value })} placeholder={t("onb.intro.placeholder", "Write in your own words, or try a suggestion.")} /><p className="muted onb-note">{t("onb.intro.count", "{count}/300 characters", { count: draft.intro.length })}</p><Button type="button" alt onClick={requestIntroSuggestion}>{t("onb.ai.suggestIntro", "Suggest an introduction")}</Button>{renderIntroSuggestion()}</div>;
+      case "intro": return <div className="onb-field-stack"><label className="onb-label" htmlFor="onb-intro">{t("onb.intro.label", "Tell families about your care")}</label><textarea id="onb-intro" className="field" maxLength={300} value={draft.intro} onChange={(event) => update({ intro: event.target.value })} placeholder={t("onb.intro.placeholder", "Write about your care and the families you work best with.")} /><p className="muted onb-note">{t("onb.intro.count", "{count}/300 characters", { count: draft.intro.length })}</p><Button type="button" alt onClick={requestIntroSuggestion}>{t("onb.ai.suggestIntro", "Suggest an introduction")}</Button>{renderIntroSuggestion()}</div>;
+      case "values": return <div className="onb-field-stack">
+        <p className="muted onb-note">{t("onb.carer.values.help", "Choose the care styles and activities that describe your work. These are preferences, not safety checks.")}</p>
+        <div><p className="onb-label">{t("onb.carer.values.style", "Your care style")}</p><ChoiceCards items={STYLE.map((value) => ({ value, label: t(`onb.style.${value.toLowerCase().replaceAll(" ", "-")}`, value) }))} value={draft.style} onChange={(style) => update({ style })} multiple /></div>
+        <div><p className="onb-label">{t("onb.carer.values.activities", "Activities you enjoy")}</p><ChoiceCards items={ACTIVITIES.map((value) => ({ value, label: t(`onb.activity.${value.toLowerCase().replaceAll(" ", "-")}`, value) }))} value={draft.activities} onChange={(activities) => update({ activities })} multiple /></div>
+        <div><p className="onb-label">{t("onb.carer.values.distance", "How far you can travel")}</p><ChoiceCards items={DISTANCES.map((distance) => ({ value: String(distance), label: t("onb.distance.km", "{distance} km", { distance }) }))} value={[String(draft.distanceKm)]} onChange={(items) => { if (items[0]) update({ distanceKm: Number(items[0]) }); }} /></div>
+      </div>;
       case "video": return <VideoStep uid={uid} videoKey={draft.videoKey} onSaved={(videoKey) => update({ videoKey: videoKey ?? "" })} />;
       case "languages": return <div className="onb-field-stack"><p className="muted onb-note">{t("onb.languages.help", "Choose the languages you can use with families.")}</p><ChoiceCards items={LANGUAGES.map((language) => ({ value: language, label: t(`onb.language.${language.toLowerCase()}`, language) }))} value={draft.languages} onChange={(languages) => update({ languages })} multiple /></div>;
       case "experience": return <div className="onb-field-stack"><p className="muted onb-note">{t("onb.experience.help", "Choose the number of years you have entered for childcare.")}</p><ChoiceCards items={YEARS.map((years) => ({ value: String(years), label: t("onb.experience.years", "{years} years", { years }) }))} value={draft.experienceYears ? [draft.experienceYears] : []} onChange={(items) => update({ experienceYears: items[0] ?? "" })} /></div>;
@@ -251,6 +270,7 @@ export default function Builder({ params }: ScreenProps) {
     ? t("onb.also.return", "Return to your {side} profile", { side: profile?.side === "family" ? t("onb.side.family", "family") : t("onb.side.carer", "carer") })
     : side === "family" ? t("onb.also.carer", "Also set up as a carer") : t("onb.also.family", "Also set up as a family");
   const currentStep = step + 1;
+  const completeness = profileCompletenessPercent(draft, side);
   return <main className="onb-screen">
     <div className="onb-scroll">
       <header className="onb-top">
@@ -260,6 +280,31 @@ export default function Builder({ params }: ScreenProps) {
       {profile && <button type="button" className="chip" onClick={switchRole}>{alternateLabel}</button>}
       <section className="onb-heading"><p className="onb-kicker">{t(`onb.side.${side}`, side === "family" ? "Family profile" : "Carer profile")}</p><h1>{title}</h1></section>
       <div className="onb-content">{renderStep()}</div>
+      <section className="onb-completeness" aria-label={t("onb.complete.label", "Profile completeness")}>
+        <div className="onb-completeness-heading"><span>{t("onb.complete.label", "Profile completeness")}</span><strong>{completeness}%</strong></div>
+        <div className="onb-completeness-track" role="progressbar" aria-label={t("onb.complete.label", "Profile completeness")} aria-valuemin={0} aria-valuemax={100} aria-valuenow={completeness}><span style={{ width: `${completeness}%` }} /></div>
+        <p className="muted onb-note">{t("onb.complete.note", "Optional details can help people understand your profile. You can still finish now.")}</p>
+      </section>
+      <details className="onb-preview">
+        <summary>{t("onb.preview.toggle", "Preview your profile")}</summary>
+        <div className="onb-preview-card">
+          <p className="onb-kicker">{t(`onb.side.${side}`, side === "family" ? "Family profile" : "Carer profile")}</p>
+          <h2>{draft.displayName.trim() || t(side === "family" ? "onb.preview.familyName" : "onb.preview.carerName", side === "family" ? "Your family" : "Your name")}</h2>
+          {(draft.suburb.trim() || draft.postcode.trim()) && <p className="muted">{[draft.suburb.trim(), draft.postcode.trim()].filter(Boolean).join(" · ")}</p>}
+          {side === "family" ? <>
+            {draft.intro.trim() && <p>{draft.intro}</p>}
+            {draft.kids.some((kid) => kid.name.trim()) && <p>{t("onb.preview.children", "Children: {names}", { names: draft.kids.filter((kid) => kid.name.trim()).map((kid) => kid.ageYears.trim() ? `${kid.name.split(/\s+/)[0]} (${kid.ageYears})` : kid.name.split(/\s+/)[0]).join(", ") })}</p>}
+            {draft.familyCareTypes.length > 0 && <p>{t("onb.preview.careTypes", "Care: {types}", { types: draft.familyCareTypes.join(", ") })}</p>}
+          </> : <>
+            {draft.headline.trim() && <h3>{draft.headline}</h3>}
+            {draft.intro.trim() && <p>{draft.intro}</p>}
+            <p>{t("onb.preview.rate", "A${rate} per hour", { rate: draft.rate })}</p>
+            {draft.languages.length > 0 && <p>{t("onb.preview.languages", "Languages: {languages}", { languages: draft.languages.join(", ") })}</p>}
+            {draft.carerCareTypes.length > 0 && <p>{t("onb.preview.careTypes", "Care offered: {types}", { types: draft.carerCareTypes.join(", ") })}</p>}
+          </>}
+          <p className="muted onb-note">{t("onb.preview.privacy", "Exact addresses and children's photos are not shown here.")}</p>
+        </div>
+      </details>
       {error && <p role="alert" className="onb-error">{error}</p>}
       <div className="onb-actions">
         {step > 0 ? <Button type="button" alt onClick={goBack}>{t("onb.back", "Back")}</Button> : edit ? <Button type="button" alt onClick={() => nav.back()}>{t("onb.cancel", "Cancel")}</Button> : <span />}

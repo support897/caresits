@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { Avatar, BackBar, Button, Empty, auth, loadProfile, saveProfile, t, useNav, type Person, type ScreenProps } from "@cc/core";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@cc/core";
-import { AUPAIR_DESTINATIONS, CHILDCARE_DUTIES, OTHER_HOUSEWORK, PASSPORT_COUNTRIES, destinationByName, packAuPairArrival, parseAuPairArrival, personLanguages, placementCompatibility, type PlacementMode } from "../../data/aupair";
+import { AUPAIR_DESTINATIONS, CHILDCARE_DUTIES, OTHER_HOUSEWORK, PASSPORT_COUNTRIES, destinationByName, packAuPairArrival, parseAuPairArrival, personLanguages, placementCompatibility, placementCompatibilityFacts, type PlacementMode } from "../../data/aupair";
 import { hasHighHouseworkShare, houseworkShare, visaChipLabel, visaSourceFor } from "../../lib/visa";
 import "./components/aupair.css";
 
@@ -99,6 +99,13 @@ export default function AuPairProfile({ params }: ScreenProps<Params>) {
   }, [uid, params.me, params.person, params.editing, params.passport]);
 
   useEffect(() => {
+    if (loading || !person || error) return;
+    const screens = document.querySelectorAll<HTMLElement>(".aupair-screen");
+    const current = screens[screens.length - 1];
+    current?.querySelector<HTMLButtonElement>('button[aria-label="Back"]')?.focus();
+  }, [loading, person, error]);
+
+  useEffect(() => {
     if (!person) return;
     setHostForm(makeHostForm(person));
     setAuPairForm(makeAuPairForm(person));
@@ -106,11 +113,18 @@ export default function AuPairProfile({ params }: ScreenProps<Params>) {
 
   const isOwner = Boolean(auth().currentUser?.uid === uid);
   const title = mode === "host" ? t("aupair.hostProfile", "Host family profile") : t("aupair.auPairProfile", "Au pair profile");
-  const viewCountry = mode === "host" ? asString(hostData(person).country) : asString(pairData(person).homeCountry);
+  const viewCountryRaw = mode === "host" ? asString(hostData(person).country) : asString(pairData(person).homeCountry);
+  const viewCountryCode = destinationByName(viewCountryRaw)?.code;
+  const viewCountry = viewCountryCode ? countryName(viewCountryCode, destinationByName(viewCountryRaw)?.country ?? viewCountryRaw) : viewCountryRaw;
   const visaDestination = mode === "host" ? (asString(hostData(person).country) || params.destination || "") : (params.destination || "");
   const source = visaSourceFor(visaDestination);
+  const sourceKey = visaDestination.toLocaleLowerCase().replace(/[^a-z0-9]+/g, ".");
+  const sourceSummary = source ? t(`aupair.visaSummary.${sourceKey}`, source.summary) : "";
+  const destinationCountry = destinationByName(visaDestination);
+  const visaDestinationLabel = destinationCountry ? countryName(destinationCountry.code, destinationCountry.country) : visaDestination;
   const visaLabel = visaChipLabel(source, passport);
   const compatibility = viewer && person && viewer.uid !== person.uid ? placementCompatibility(viewer, person) : null;
+  const compatibilityFacts = viewer && person && viewer.uid !== person.uid ? placementCompatibilityFacts(viewer, person) : [];
   const languages = useMemo(() => person ? personLanguages(person) : [], [person]);
   const dutiesShare = houseworkShare(hostForm.childcareDuties, hostForm.otherHousework);
   const highHousework = hasHighHouseworkShare(hostForm.childcareDuties, hostForm.otherHousework);
@@ -273,7 +287,7 @@ export default function AuPairProfile({ params }: ScreenProps<Params>) {
           <dl className="ap-facts">
             {viewCountry && <div className="ap-fact"><dt>{t("aupair.country", "Country")}</dt><dd>{viewCountry}</dd></div>}
             <div className="ap-fact"><dt>{t("aupair.room", "Room")}</dt><dd>{asString(hostData(person).room) || t("aupair.notShared", "Not shared")}</dd></div>
-            <div className="ap-fact"><dt>{t("aupair.pocketMoney", "Pocket money per week")}</dt><dd>{hostData(person).pocketMoneyPerWeek != null ? `${hostData(person).pocketMoneyPerWeek} ${currencyFor(viewCountry)}` : t("aupair.notShared", "Not shared")}</dd></div>
+            <div className="ap-fact"><dt>{t("aupair.pocketMoney", "Pocket money per week")}</dt><dd>{hostData(person).pocketMoneyPerWeek != null ? `${hostData(person).pocketMoneyPerWeek} ${currencyFor(viewCountryRaw)}` : t("aupair.notShared", "Not shared")}</dd></div>
             <div className="ap-fact"><dt>{t("aupair.hoursPerWeek", "Hours per week")}</dt><dd>{hostData(person).hoursPerWeek ?? t("aupair.notShared", "Not shared")}</dd></div>
             <div className="ap-fact"><dt>{t("aupair.languages", "Languages")}</dt><dd>{joinedLanguages(hostData(person).languages) || languages.join(", ") || t("aupair.notShared", "Not shared")}</dd></div>
             <div className="ap-fact"><dt>{t("aupair.visaHelp", "Visa help offered")}</dt><dd>{hostData(person).visaHelp === true ? t("aupair.yes", "Yes") : t("aupair.notShared", "Not shared")}</dd></div>
@@ -310,8 +324,21 @@ export default function AuPairProfile({ params }: ScreenProps<Params>) {
         })()}
       </>}
 
-      {compatibility !== null && <div className="ap-status-row"><span className="ap-status-chip ap-compatibility">{t("aupair.compatibilityPercent", "Compatibility · {score}%", { score: compatibility })}</span><span className={`ap-status-chip${visaLabel === "Unknown" ? " is-unknown" : " is-guidance"}`}>{t(`aupair.visaChip.${visaLabel === "Unknown" ? "unknown" : "guidance"}`, visaLabel)}</span></div>}
-      {visaDestination && <section className="ap-visa-note"><h2>{t("aupair.visaGuideTitle", "Visa guidance for {country}", { country: visaDestination })}</h2><p>{source?.summary ?? t("aupair.noVisaSource", "No official page has been checked for this destination yet.")}</p><p>{passport ? t("aupair.visaUnknown", "Unknown for your passport - check the official site") : t("aupair.visaChoosePassport", "Choose your passport country to see the right official guidance.")}</p><Button alt onClick={() => nav.push("aupair-visa", { destination: visaDestination, passport })}>{t("aupair.openVisa", "Open visa guide")}</Button></section>}
+      {viewer && person && viewer.uid !== person.uid && <section className="ap-section-card" aria-labelledby="ap-compatibility-title">
+        <div className="ap-status-row">
+          {compatibility !== null && <span className="ap-status-chip ap-compatibility">{t("aupair.compatibilityPercent", "Compatibility · {score}%", { score: compatibility })}</span>}
+          <span className={`ap-status-chip${visaLabel === "Unknown" ? " is-unknown" : " is-guidance"}`}>{t(`aupair.visaChip.${visaLabel === "Unknown" ? "unknown" : "guidance"}`, visaLabel)}</span>
+        </div>
+        <h2 id="ap-compatibility-title" className="ap-section-title">{t("aupair.profileMatchReasons", "Why this compatibility view")}</h2>
+        <div className="ap-match-reasons">
+          {compatibilityFacts.length ? compatibilityFacts.map((fact) => {
+            const label = fact.id === "destination" ? t("aupair.factDestination", "Destination") : fact.id === "languages" ? t("aupair.factLanguages", "Languages") : t("aupair.factInfant", "Infant care");
+            return <span key={fact.id} className={`ap-match-reason${fact.matches ? " is-match" : " is-mismatch"}`}><b>{label}:</b> {fact.matches ? t("aupair.factMatches", "matches stated details") : t("aupair.factDoesNotMatch", "does not match stated details")}</span>;
+          }) : <p className="ap-form-help">{t("aupair.compatibilityNoDetails", "More shared details are needed to compare this placement. Visa status is not a match signal.")}</p>}
+        </div>
+        <p className="ap-form-help">{t("aupair.visaNotMatch", "Visa status is separate from compatibility. Only the government decides permission to enter or work.")}</p>
+      </section>}
+      {visaDestination && <section className="ap-visa-note"><h2>{t("aupair.visaGuideTitle", "Visa guidance for {country}", { country: visaDestinationLabel })}</h2><p>{source ? sourceSummary : t("aupair.noVisaSource", "No official page has been checked for this destination yet.")}</p><p>{passport ? t("aupair.visaUnknown", "Unknown for your passport - check the official site") : t("aupair.visaChoosePassport", "Choose your passport country to see the right official guidance.")}</p><Button alt onClick={() => nav.push("aupair-visa", { destination: visaDestination, passport })}>{t("aupair.openVisa", "Open visa guide")}</Button></section>}
     </div></div>
   </div>;
 }

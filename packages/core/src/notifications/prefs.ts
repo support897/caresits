@@ -6,6 +6,7 @@ export const NOTIFICATION_CATEGORIES = [
   { id: "careUpdates", key: "notify.category.care", english: "Care updates" },
   { id: "requests", key: "notify.category.requests", english: "Requests" },
   { id: "calendarChanges", key: "notify.category.calendar", english: "Calendar changes" },
+  { id: "activityReminders", key: "notify.category.activities", english: "Activity reminders" },
   { id: "shopping", key: "notify.category.shopping", english: "Shopping" },
   { id: "allergyChanges", key: "notify.category.allergies", english: "Allergy changes" },
 ] as const;

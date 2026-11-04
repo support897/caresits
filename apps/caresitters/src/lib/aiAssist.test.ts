@@ -32,6 +32,12 @@ describe("onboarding AI suggestions", () => {
     expect(result.matchedPhrases).toEqual(["outdoor play", "Spanish"]);
   });
 
+  it("extracts only supported care traits found in the family's own words", () => {
+    const result = extractPrefs("We need someone caring, patient, creative and safety focused.");
+    expect(result.prefs.style).toEqual(["caring", "patient", "creative", "safety focused"]);
+    expect(result.matchedPhrases).toEqual(["caring", "patient", "creative", "safety focused"]);
+  });
+
   it("returns no preferences for unrelated text", () => {
     expect(extractPrefs("A kind person would be lovely.")).toEqual({ prefs: {}, matchedPhrases: [] });
   });

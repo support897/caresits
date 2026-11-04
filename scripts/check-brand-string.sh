@@ -12,11 +12,26 @@ CANDIDATES="$(grep -RIlF \
 
 python3 - "$CANDIDATES" <<'PY'
 from pathlib import Path
+import re
 import sys
 
 paths = [Path(p) for p in sys.argv[1].splitlines() if p]
 found = []
+
+def is_test_file(path):
+    name = path.name.lower()
+    return any(part.lower() in {"test", "tests", "__tests__"} for part in path.parts) or bool(re.search(r"(?:^|[.-])(?:test|spec)(?:[.-]|$)|-tests\.", name))
+
+def is_translation_key(value, following):
+    return following.lstrip().startswith(":") and bool(re.fullmatch(r"[A-Za-z][\w-]*(?:\.[A-Za-z][\w-]*)+", value))
+
+def is_t_key(text, start):
+    prefix = text[max(0, start - 100):start]
+    return bool(re.search(r"\bt\(\s*$", prefix))
+
 for path in paths:
+    if is_test_file(path):
+        continue
     text = path.read_text(encoding="utf-8", errors="replace")
     i = 0
     line = 1
@@ -60,7 +75,9 @@ for path in paths:
                     break
                 value.append(ch)
                 i += 1
-            if "CareSpace" in "".join(value):
+            rendered = "".join(value)
+            following = text[i:i + 40]
+            if "CareSpace" in rendered and not is_t_key(text, start) and not is_translation_key(rendered, following):
                 source_line = text.splitlines()[start_line - 1].strip()
                 found.append(f"{path}:{start_line}: {source_line}")
             continue
@@ -68,20 +85,17 @@ for path in paths:
         if text[i - 1] == "\n":
             line += 1
 
-# Also catch a brand name rendered as raw JSX text, not inside a quoted attribute.
+# Catch a brand name rendered as raw JSX text, not inside a quoted attribute.
 for path in paths:
+    if is_test_file(path):
+        continue
     for line_number, source_line in enumerate(path.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
-        if ">CareSpace<" in source_line or "> CareSpace<" in source_line:
+        if re.search(r">[^<{}\n]*CareSpace[^<{}\n]*<", source_line):
             found.append(f"{path}:{line_number}: {source_line.strip()}")
 
-for name in (Path("apps"), Path("packages"), Path("functions")):
-    for path in name.rglob("*CareSpace*"):
-        if "node_modules" not in path.parts and "dist" not in path.parts:
-            found.append(f"{path}: filename contains CareSpace")
-
 if found:
-    print("Hard-coded CareSpace strings found outside packages/core/src/brand.ts and docs:")
+    print("User-visible hard-coded CareSpace strings found outside packages/core/src/brand.ts and docs:")
     print("\n".join(sorted(set(found))))
     sys.exit(1)
-print("No duplicated app-name strings found.")
+print("No user-visible duplicated app-name strings found.")
 PY

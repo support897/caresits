@@ -21,6 +21,8 @@ describe("discovery people checks", () => {
 
   it("accepts the server record's level field only", () => {
     expect(verifiedLevelFromRecord({ level: "sighted" })).toBe("sighted");
+    expect(verifiedLevelFromRecord({ status: "verified", checkedOn: "2026-11-01", qualifications: { "blue-card": { status: "verified" } } })).toBe("verified");
+    expect(verifiedLevelFromRecord({ status: "expired", level: "register" })).toBeUndefined();
     expect(verifiedLevelFromRecord({ card: { checksLevel: "register" } })).toBeUndefined();
     expect(verifiedLevelFromRecord(null)).toBeUndefined();
     expect(verifiedAtFromRecord({ checkedOn: "2026-11-01" })).toBe(Date.parse("2026-11-01"));

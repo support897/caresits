@@ -16,6 +16,7 @@ export type CalendarEvent = CalendarEventRecord & {
   state: "active" | "requested" | "approved" | "declined" | "swap";
   spaceId?: string;
   spaceName?: string;
+  queued?: boolean;
 };
 export type CalendarRead = { events: CalendarEvent[]; fromCache: boolean };
 const calendarKey = (spaceId: string) => `calendar:${spaceId}`;
@@ -50,10 +51,10 @@ export async function readCalendarForSpaces(spaces: readonly SpaceSummary[]): Pr
 }
 
 export async function saveCalendarEvent(spaceId: string, event: CalendarEvent): Promise<{ queued: boolean }> {
-  const { id, spaceId: _spaceId, spaceName: _spaceName, ...data } = event;
+  const { id, spaceId: _spaceId, spaceName: _spaceName, queued: _queued, ...data } = event;
+  const result = await writeSpaceDocument({ path: `careSpaces/${spaceId}/calendar/${id}`, method: "set", data });
   const cached = readSnapshot<CalendarEvent[]>(calendarKey(spaceId));
   saveSnapshot(calendarKey(spaceId), [...(cached?.data ?? []).filter((entry) => entry.id !== id), event]);
-  const result = await writeSpaceDocument({ path: `careSpaces/${spaceId}/calendar/${id}`, method: "set", data });
   if (typeof window !== "undefined") window.dispatchEvent(new Event("carespace:calendar-changed"));
   return result;
 }
@@ -75,8 +76,8 @@ export async function createCalendarEvent(
   event: NewCalendarEvent,
 ): Promise<CalendarEvent> {
   const next: CalendarEvent = { ...event, id: event.id ?? makeId(), spaceId };
-  await saveCalendarEvent(spaceId, next);
-  return next;
+  const result = await saveCalendarEvent(spaceId, next);
+  return { ...next, queued: result.queued };
 }
 
 export async function createTimeOffRequest(input: {
@@ -104,8 +105,8 @@ export async function decideTimeOffRequest(
   swap?: { start: string; end: string },
 ): Promise<CalendarEvent> {
   const next = transitionTimeOff(event, action, role, swap) as CalendarEvent;
-  await saveCalendarEvent(spaceId, next);
-  return next;
+  const result = await saveCalendarEvent(spaceId, next);
+  return { ...next, queued: result.queued };
 }
 
 export async function getCalendarEvent(spaceId: string, eventId: string): Promise<CalendarEvent | null> {
@@ -118,6 +119,35 @@ export function eventsForDay(events: readonly CalendarEvent[], day: string): Cal
     .sort((left, right) => left.start.localeCompare(right.start));
 }
 
+export type CalendarPeriod = "day" | "week" | "month";
+export type CalendarDay = { key: string; date: Date };
+
+export function localDateKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+export function calendarDaysForPeriod(selectedDay: string, period: CalendarPeriod): CalendarDay[] {
+  const anchor = new Date(`${selectedDay}T12:00:00`);
+  if (Number.isNaN(anchor.getTime())) return [];
+  const first = period === "week"
+    ? new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() - anchor.getDay())
+    : new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
+  const count = period === "week" ? 7 : 1;
+  return Array.from({ length: count }, (_, index) => {
+    const date = new Date(first.getFullYear(), first.getMonth(), first.getDate() + index);
+    return { key: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`, date };
+  });
+}
+
 export function monthKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+export function shiftCalendarMonth(selectedDay: string, direction: -1 | 1): string {
+  const selected = new Date(`${selectedDay}T12:00:00`);
+  if (Number.isNaN(selected.getTime())) return selectedDay;
+  const next = new Date(selected.getFullYear(), selected.getMonth() + direction, 1);
+  const lastDay = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+  next.setDate(Math.min(selected.getDate(), lastDay));
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}-${String(next.getDate()).padStart(2, "0")}`;
 }

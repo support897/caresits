@@ -1,4 +1,4 @@
-import type { Person } from "@cc/core";
+import { t, type Person } from "@cc/core";
 
 export const BOOKING_REQUEST_TAP_STEPS = ["open-book", "choose-date", "choose-from", "choose-to", "send-request"] as const;
 export const MAX_PROFILE_TO_REQUEST_TAPS = 5;
@@ -66,6 +66,31 @@ export function canTransitionBooking(from: BookingState, to: BookingTargetState,
   return false;
 }
 
+export function bookingUpdateFor(to: BookingTargetState, decisionTime: unknown): { state: BookingTargetState; decidedAt?: unknown } {
+  return to === "cancelled" ? { state: to } : { state: to, decidedAt: decisionTime };
+}
+
+export type BookingRelationship = { familyUid?: unknown; carerUid?: unknown; members?: unknown; state?: unknown; createdBy?: unknown };
+
+export function canRequestOnExistingRelationship(relationship: BookingRelationship, familyUid: string, carerUid: string): boolean {
+  const members = Array.isArray(relationship.members) ? relationship.members.map(String) : [];
+  return relationship.familyUid === familyUid
+    && relationship.carerUid === carerUid
+    && members.includes(familyUid)
+    && members.includes(carerUid)
+    && (relationship.state === "contact" || relationship.state === "hired");
+}
+
+export function bookingAcceptanceRelationshipPatch(relationship: BookingRelationship, familyUid: string, carerUid: string, actorUid: string): { state: "contact"; contactBy: string } | null {
+  return relationship.state === "pending"
+    && relationship.createdBy === familyUid
+    && relationship.familyUid === familyUid
+    && relationship.carerUid === carerUid
+    && actorUid === carerUid
+    ? { state: "contact", contactBy: actorUid }
+    : null;
+}
+
 export type ContactPlanInput = {
   familyUid: string;
   carerUid: string;
@@ -115,17 +140,19 @@ export function explainMatchAdapter(family: Person, carer: Person): string[] {
   const familyStyles = list(family.card.style ?? family.card.personality ?? family.card.careStyle).map(norm);
   const carerStyles = list(carer.card.style ?? carer.card.personality ?? carer.card.careStyle).map(norm);
   const sharedStyles = familyStyles.filter((style) => carerStyles.includes(style));
-  if (sharedStyles.length) reasons.push(`You both value ${sharedStyles.slice(0, 3).join(", ")}.`);
+  if (sharedStyles.length) reasons.push(t("booking.match.sharedStyles", "You both value {styles}.", { styles: sharedStyles.slice(0, 3).join(", ") }));
 
   const wantedDays = Object.entries(family.card.scheduleNeed ?? {}).filter(([, value]) => isAvailable(value)).map(([day]) => day);
   const offeredDays = Object.entries(carer.card.availability ?? {}).filter(([, value]) => isAvailable(value)).map(([day]) => day);
   const sharedDays = wantedDays.filter((day) => offeredDays.some((offered) => norm(offered).slice(0, 3) === norm(day).slice(0, 3)));
-  if (sharedDays.length) reasons.push(`Your listed schedules overlap on ${sharedDays.slice(0, 3).join(", ")}.`);
+  if (sharedDays.length) reasons.push(t("booking.match.sharedDays", "Your listed schedules overlap on {days}.", { days: sharedDays.slice(0, 3).join(", ") }));
 
   const rate = Number(carer.card.rate ?? carer.card.payFloor ?? carer.card.hourlyRate);
   const budget = Number(family.card.budgetMax ?? family.card.maxBudget ?? family.card.payOffered);
   if (Number.isFinite(rate) && rate > 0 && Number.isFinite(budget) && budget > 0) {
-    reasons.push(rate <= budget ? `The A$${rate}/hour rate is within your A$${budget}/hour budget.` : `The A$${rate}/hour rate is above your A$${budget}/hour budget.`);
+    reasons.push(rate <= budget
+      ? t("booking.match.withinBudget", "The A${rate}/hour rate is within your A${budget}/hour budget.", { rate, budget })
+      : t("booking.match.aboveBudget", "The A${rate}/hour rate is above your A${budget}/hour budget.", { rate, budget }));
   }
-  return reasons.length ? reasons : ["Not enough shared profile details yet to explain this match."];
+  return reasons.length ? reasons : [t("booking.match.unknown", "Not enough shared profile details yet to explain this match.")];
 }

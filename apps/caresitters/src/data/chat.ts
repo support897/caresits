@@ -1,5 +1,7 @@
-import { addDoc, collection, doc, getDocs, onSnapshot, orderBy, query, serverTimestamp, where, type DocumentData, type QueryDocumentSnapshot } from "firebase/firestore";
+import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, orderBy, query, serverTimestamp, where, type DocumentData, type QueryDocumentSnapshot } from "firebase/firestore";
 import { auth, db, loadProfile, t, type Person } from "@cc/core";
+import type { BookingRecord } from "./bookings";
+import { mediaAttachmentKind } from "../../../../packages/core/src/media/upload";
 import { filterChatsByTab, getUnreadCount, mergeMessageStreams, messageCollectionPath, timeMs, type ChatFilter, type ChatMessage, type RelationshipRow } from "../../../../packages/core/src/chat/merge";
 
 export type Relationship = RelationshipRow & { members: string[]; state: string; [key: string]: unknown };
@@ -10,7 +12,60 @@ const OUTBOX_EVENT = "caresits-chat-outbox-change";
 const CHAT_SEEN_EVENT = "caresits-chat-seen-change";
 const ACTIVE_STATES = new Set(["contact", "hired"]);
 const FLUSHING_UIDS = new Set<string>();
-type QueuedMessage = { id: string; meUid: string; relId: string; text: string; queuedAt: number };
+export function canSendChat(state: string, blocked: boolean, blockStatusReady: boolean): boolean {
+  return blockStatusReady && !blocked && ACTIVE_STATES.has(state);
+}
+export type QueuedMessage = { id: string; meUid: string; relId: string; text: string; queuedAt: number };
+const SAFE_UID = /^[A-Za-z0-9_-]{1,128}$/;
+const SAFE_REL_ID = /^[A-Za-z0-9_-]{1,128}$/;
+const SAFE_QUEUE_ID = /^[A-Za-z0-9_-]{1,160}$/;
+const BOOKING_STATES = new Set(["requested", "accepted", "declined", "cancelled", "completed"]);
+
+export function isSafeChatMediaKey(key: string, uid: string): boolean {
+  if (!SAFE_UID.test(uid) || !mediaAttachmentKind(key)) return false;
+  const ownerPrefix = `users/${uid}/`;
+  if (!key.startsWith(ownerPrefix)) return false;
+  return /^users\/[A-Za-z0-9_-]{1,128}\/gallery\/photo-[A-Za-z0-9_-]{1,80}\.jpg$/.test(key)
+    || /^users\/[A-Za-z0-9_-]{1,128}\/attachments\/attachment-[A-Za-z0-9_-]{1,80}\.(?:jpg|pdf)$/.test(key);
+}
+
+export function normalizeChatOutbox(value: unknown): QueuedMessage[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item): QueuedMessage[] => {
+    if (!item || typeof item !== "object") return [];
+    const row = item as Partial<QueuedMessage>;
+    if (typeof row.id !== "string" || !SAFE_QUEUE_ID.test(row.id)
+      || typeof row.meUid !== "string" || !SAFE_UID.test(row.meUid)
+      || typeof row.relId !== "string" || !SAFE_REL_ID.test(row.relId)
+      || typeof row.text !== "string" || !row.text.trim() || row.text.length > 1000
+      || typeof row.queuedAt !== "number" || !Number.isFinite(row.queuedAt) || row.queuedAt <= 0) return [];
+    return [{ id: row.id, meUid: row.meUid, relId: row.relId, text: row.text, queuedAt: row.queuedAt }];
+  }).slice(0, 100);
+}
+
+export function mapChatBooking(id: string, pairId: string, value: Record<string, unknown>): BookingRecord {
+  const rawState = String(value.state ?? "requested");
+  const parsedRate = Number(value.rate ?? 0);
+  const parsedEstimate = Number(value.estimate ?? 0);
+  return {
+    id,
+    pairId,
+    familyUid: String(value.familyUid ?? ""),
+    carerUid: String(value.carerUid ?? ""),
+    date: String(value.date ?? ""),
+    from: String(value.from ?? ""),
+    to: String(value.to ?? ""),
+    rate: Number.isFinite(parsedRate) ? parsedRate : 0,
+    estimate: Number.isFinite(parsedEstimate) ? parsedEstimate : 0,
+    recurring: value.recurring === "weekly" ? "weekly" : "none",
+    weekdays: Array.isArray(value.weekdays) ? value.weekdays.map(String).slice(0, 7) : [],
+    ...(typeof value.note === "string" ? { note: value.note.slice(0, 1000) } : {}),
+    state: BOOKING_STATES.has(rawState) ? rawState as BookingRecord["state"] : "requested",
+    ...(typeof value.createdBy === "string" ? { createdBy: value.createdBy } : {}),
+    createdAt: value.createdAt,
+    decidedAt: value.decidedAt,
+  };
+}
 
 function asRelationship(snap: QueryDocumentSnapshot<DocumentData>): Relationship {
   const value = snap.data();
@@ -24,12 +79,10 @@ export function otherUidFor(rel: RelationshipRow, uid: string): string {
 
 export async function loadRelationships(uid: string, side: "family" | "carer"): Promise<Relationship[]> {
   if (!uid) return [];
-  const paths = await Promise.all([
-    getDocs(query(collection(db, "relationships"), where(`${side}Uid`, "==", uid))),
-    getDocs(query(collection(db, "relationships"), where("members", "array-contains", uid))),
-  ]);
+  // Rules can prove membership from the role-specific field, but not from a members-only query.
+  const path = await getDocs(query(collection(db, "relationships"), where(`${side}Uid`, "==", uid)));
   const byId = new Map<string, Relationship>();
-  for (const snap of paths.flatMap((path) => path.docs)) byId.set(snap.id, asRelationship(snap));
+  for (const snap of path.docs) byId.set(snap.id, asRelationship(snap));
   return [...byId.values()].sort((a, b) => timeMs(b.createdAt) - timeMs(a.createdAt));
 }
 
@@ -64,17 +117,37 @@ export function watchRelationship(relId: string, onState: (state: string) => voi
   return onSnapshot(doc(db, "relationships", relId), (snapshot) => onState(snapshot.exists() ? String(snapshot.data().state ?? "unknown") : "missing"), (error) => onError(error));
 }
 
+export async function loadRelationshipBookings(uid: string, otherUid: string, relId: string): Promise<BookingRecord[]> {
+  if (!SAFE_UID.test(uid) || auth().currentUser?.uid !== uid || !SAFE_UID.test(otherUid) || uid === otherUid || !SAFE_REL_ID.test(relId)) return [];
+  const relationship = await getDoc(doc(db, "relationships", relId));
+  if (!relationship.exists()) return [];
+  const data = relationship.data();
+  const members = Array.isArray(data.members) ? data.members.map(String) : [String(data.familyUid ?? ""), String(data.carerUid ?? "")];
+  const pair = [String(data.familyUid ?? ""), String(data.carerUid ?? "")];
+  if (!members.includes(uid) || !members.includes(otherUid) || !pair.includes(uid) || !pair.includes(otherUid)) return [];
+  const rows = await getDocs(collection(db, "relationships", relId, "bookings"));
+  return rows.docs.map((row) => mapChatBooking(row.id, relId, row.data())).filter((row) => row.familyUid === pair[0] && row.carerUid === pair[1])
+    .sort((a, b) => `${b.date} ${b.from}`.localeCompare(`${a.date} ${a.from}`));
+}
+
+export function watchBlockedPerson(uid: string, otherUid: string, callback: (blocked: boolean | null) => void): () => void {
+  if (!SAFE_UID.test(uid) || !SAFE_UID.test(otherUid) || uid === otherUid || auth().currentUser?.uid !== uid) { callback(null); return () => {}; }
+  return onSnapshot(doc(db, "users", uid, "blocks", otherUid), (snapshot) => callback(snapshot.exists()), () => callback(null));
+}
+
 function readOutbox(): QueuedMessage[] {
-  try { const value: unknown = JSON.parse(localStorage.getItem(OUTBOX_KEY) ?? "[]"); return Array.isArray(value) ? value as QueuedMessage[] : []; }
+  try { const value: unknown = JSON.parse(localStorage.getItem(OUTBOX_KEY) ?? "[]"); return normalizeChatOutbox(value); }
   catch { return []; }
 }
-function writeOutbox(rows: QueuedMessage[]) {
-  try { localStorage.setItem(OUTBOX_KEY, JSON.stringify(rows)); } catch { /* keep the screen usable if local storage is full */ }
+function writeOutbox(rows: QueuedMessage[]): boolean {
+  try { localStorage.setItem(OUTBOX_KEY, JSON.stringify(normalizeChatOutbox(rows))); }
+  catch { return false; }
   try { globalThis.dispatchEvent(new Event(OUTBOX_EVENT)); } catch { /* browser event target is optional */ }
+  return true;
 }
-function queueText(uid: string, relId: string, text: string): ChatMessage {
+function queueText(uid: string, relId: string, text: string): ChatMessage | null {
   const item: QueuedMessage = { id: globalThis.crypto?.randomUUID?.() ?? `msg-${Date.now()}-${Math.random().toString(36).slice(2)}`, meUid: uid, relId, text, queuedAt: Date.now() };
-  writeOutbox([...readOutbox(), item]);
+  if (!writeOutbox([...readOutbox(), item])) return null;
   return { id: item.id, from: uid, relId, kind: "text", text, at: item.queuedAt, queued: true } as ChatMessage;
 }
 export function getQueuedMessages(uid: string, relId?: string): ChatMessage[] {
@@ -117,29 +190,34 @@ export function subscribeToChatSeen(uid: string, callback: (relId: string) => vo
 }
 
 export async function sendChatMessage(uid: string, relId: string, message: { text?: string; kind?: "text" | "photo"; img?: string }): Promise<{ ok: boolean; queued?: boolean; message?: ChatMessage }> {
-  if (!uid || !relId || relId.includes("/")) return { ok: false };
+  if (!SAFE_UID.test(uid) || !SAFE_REL_ID.test(relId)) return { ok: false };
   const kind = message.kind ?? "text";
   const text = String(message.text ?? "").trim();
-  if (kind === "text" && (!text || text.length > 1000)) return { ok: false };
-  if (kind === "photo" && !message.img) return { ok: false };
+  if (text.length > 1000 || (kind === "text" && !text)) return { ok: false };
+  if (kind === "photo" && (!message.img || !isSafeChatMediaKey(message.img, uid))) return { ok: false };
   if (auth().currentUser?.uid !== uid) return { ok: false };
   if (typeof navigator !== "undefined" && !navigator.onLine) {
-    if (kind === "text") return { ok: true, queued: true, message: queueText(uid, relId, text) };
+    if (kind === "text") {
+      const queuedMessage = queueText(uid, relId, text);
+      return queuedMessage ? { ok: true, queued: true, message: queuedMessage } : { ok: false };
+    }
     return { ok: false };
   }
   try {
     const saved = await addDoc(collection(db, "relationships", relId, "messages"), {
       from: uid,
       kind,
-      ...(text ? { text } : {}),
+      text,
       ...(message.img ? { img: message.img } : {}),
       at: serverTimestamp(),
     });
-    return { ok: true, message: { id: saved.id, from: uid, kind, ...(text ? { text } : {}), ...(message.img ? { img: message.img } : {}), at: Date.now(), pending: true } };
+    return { ok: true, message: { id: saved.id, from: uid, kind, text, ...(message.img ? { img: message.img } : {}), at: Date.now(), pending: true } };
   } catch (error) {
     const code = String((error as { code?: string }).code ?? "");
     if ((typeof navigator !== "undefined" && !navigator.onLine) || ["unavailable", "deadline-exceeded", "network-request-failed"].some((part) => code.includes(part))) {
-      return kind === "text" ? { ok: true, queued: true, message: queueText(uid, relId, text) } : { ok: false };
+      if (kind !== "text") return { ok: false };
+      const queuedMessage = queueText(uid, relId, text);
+      return queuedMessage ? { ok: true, queued: true, message: queuedMessage } : { ok: false };
     }
     return { ok: false };
   }

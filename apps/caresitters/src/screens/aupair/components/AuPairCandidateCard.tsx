@@ -1,5 +1,5 @@
 import { Avatar, t, type Person } from "@cc/core";
-import { destinationByName, placementCompatibility, type PlacementMode } from "../../../data/aupair";
+import { destinationByName, placementCompatibility, placementCompatibilityFacts, type PlacementMode } from "../../../data/aupair";
 import { visaChipLabel, visaSourceFor } from "../../../lib/visa";
 import "./aupair.css";
 
@@ -19,6 +19,7 @@ const CURRENCY: Record<string, string> = { AU: "AUD", NZ: "NZD", UK: "GBP", IE: 
 
 export function AuPairCandidateCard({ person, me, mode, destination, passport, onOpen }: Props) {
   const compatibility = placementCompatibility(me, person);
+  const compatibilityFacts = placementCompatibilityFacts(me, person);
   const source = visaSourceFor(destination);
   const visaStatus = visaChipLabel(source, passport);
   const host = mode === "host" ? hostData(person) : null;
@@ -26,6 +27,8 @@ export function AuPairCandidateCard({ person, me, mode, destination, passport, o
   const languageValue = host ? host.languages : person.card.languages ?? person.raw.languages;
   const languages = Array.isArray(languageValue) ? languageValue.join(", ") : text(languageValue);
   const country = mode === "host" ? text(host?.country) || destination : text(auPair?.homeCountry);
+  const countryDestination = destinationByName(country);
+  const countryLabel = countryDestination ? t(`aupair.country.${countryDestination.code.toLocaleLowerCase()}`, countryDestination.country) : country;
   const hours = Number(host?.hoursPerWeek);
   const money = Number(host?.pocketMoneyPerWeek);
   const currency = CURRENCY[String(host?.countryCode ?? "").toUpperCase()] ?? CURRENCY[destinationByName(String(host?.country ?? destination))?.code ?? ""] ?? "";
@@ -33,14 +36,22 @@ export function AuPairCandidateCard({ person, me, mode, destination, passport, o
   return <article className="ap-candidate card">
     <button type="button" className="ap-candidate-heading" onClick={onOpen} aria-label={t("aupair.openProfile", "Open {name}'s profile", { name: person.name })}>
       <Avatar name={person.firstName} url={person.photoUrl} size={58} />
-      <span className="ap-candidate-title"><b>{person.name}</b><span>{country || t("aupair.countryNotShared", "Country not shared")}</span></span>
-      <span className="ap-candidate-chevron" aria-hidden="true">›</span>
+      <span className="ap-candidate-title"><b>{person.name}</b><span>{countryLabel || t("aupair.countryNotShared", "Country not shared")}</span></span>
+      <span className="ap-candidate-chevron flip" aria-hidden="true">›</span>
     </button>
     <div className="ap-status-row" aria-label={t("aupair.matchAndVisa", "Compatibility and visa status are separate")}>
       <span className="ap-status-chip ap-compatibility">{compatibility === null
         ? t("aupair.compatibilityIncomplete", "Compatibility · more details needed")
         : t("aupair.compatibilityPercent", "Compatibility · {score}%", { score: compatibility })}</span>
       <span className={`ap-status-chip${visaStatus === "Unknown" ? " is-unknown" : " is-guidance"}`}>{t(`aupair.visaChip.${visaStatus === "Unknown" ? "unknown" : "guidance"}`, visaStatus)}</span>
+    </div>
+    <div className="ap-match-reasons" aria-label={t("aupair.matchReasons", "Compatibility reasons, separate from visa guidance")}>
+      {compatibilityFacts.length ? compatibilityFacts.map((fact) => {
+        const label = fact.id === "destination" ? t("aupair.factDestination", "Destination") : fact.id === "languages" ? t("aupair.factLanguages", "Languages") : t("aupair.factInfant", "Infant care");
+        return <span key={fact.id} className={`ap-match-reason${fact.matches ? " is-match" : " is-mismatch"}`}>
+          <b>{label}:</b> {fact.matches ? t("aupair.factMatches", "matches stated details") : t("aupair.factDoesNotMatch", "does not match stated details")}
+        </span>;
+      }) : <p className="ap-form-help">{t("aupair.compatibilityNoDetails", "More shared details are needed to compare this placement. Visa status is not a match signal.")}</p>}
     </div>
     {mode === "host" && host && <div className="ap-candidate-facts">
       {text(host.room) && <span>{t("aupair.roomFact", "Room: {room}", { room: text(host.room) })}</span>}

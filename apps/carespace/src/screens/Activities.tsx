@@ -72,10 +72,11 @@ export default function Activities({ params }: ScreenProps<Params>) {
 
   return <div className="scroll"><div className="care-wrap">
     <div className="care-head"><div><h1>{t("care.activitiesTitle", "Activities")}</h1><p>{t("care.activitiesSubtitle", "Ideas shaped around a child’s age, interests, and family materials.")}</p></div></div>
+    <div className="care-alert" role="note">{t("care.activityInspirationNotice", "These ideas are starting points for play, not fixed learning labels or promises about development. Adapt them to the child’s abilities and supervise every activity.")}</div>
     {demo && <DemoNotice />}
     {error && <div className="care-info care-warning" role="alert">{error}</div>}
     {!space ? <section className="care-section">
-      {spaces.map((item) => <button className="care-space-card" key={item.id} onClick={() => setSpace(item)}><span className="care-badge">{item.name.slice(0, 1)}</span><span className="care-card-copy"><b>{item.name}</b><p>{t("care.chooseSpaceActivities", "Pick activities for this family only.")}</p></span><span aria-hidden="true">›</span></button>)}
+      {spaces.map((item) => <button className="care-space-card" key={item.id} onClick={() => setSpace(item)}><span className="care-badge">{item.name.slice(0, 1)}</span><span className="care-card-copy"><b>{item.name}</b><p>{t("care.chooseSpaceActivities", "Pick activities for this family only.")}</p></span><span aria-hidden="true" className="flip">›</span></button>)}
       {!loading && !spaces.length && <CareEmpty title={t("care.noActivitySpaces", "No family space selected")} detail={t("care.noActivitySpacesHint", "Activities and family materials stay separate for every care space.")} />}
     </section> : <>
       <div className="care-row"><Button alt onClick={() => { setSpace(null); setChildren([]); setChildId(""); }}>{t("care.changeSpace", "Change family")}</Button><span className="care-badge">{space.name}</span></div>
@@ -95,7 +96,7 @@ export default function Activities({ params }: ScreenProps<Params>) {
             return <button className="care-child-card" key={activity.id} onClick={() => nav.push("activity", { activityId: activity.id, spaceId: space.id, childId: child.id, childName: child.name, uid, ownerUid: space.ownerUid, role: space.role, perms: space.perms, demo })}>
               <span className="care-badge">{t("care.minutesShort", "{minutes} min", { minutes: activity.minutes })}</span>
               <span className="care-card-copy"><b>{t(`care.activity.${activity.id}.title`, activity.title)}</b><p>{t("care.activityLength", "{minutes} minutes · {goal}", { minutes: activity.minutes, goal: t(`care.activity.${activity.id}.goal`, activity.learningGoal) })}</p><p>{missing.length ? t("care.materialsMissing", "Needs: {items}", { items: missing.map(materialLabel).join(", ") }) : t("care.materialsReady", "Ready with what this family has")}</p></span>
-              <span aria-hidden="true">›</span>
+              <span aria-hidden="true" className="flip">›</span>
             </button>;
           })}
           {!ideas.length && <CareEmpty title={t("care.noActivitiesMatch", "No activity matches these choices")} detail={t("care.noActivitiesMatchHint", "Try turning off the materials filter or add more family materials.")} />}

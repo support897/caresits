@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { BackBar, Button, t, useNav, type ScreenProps } from "@cc/core";
-import { addChildMemory, canReadMedical, DEMO_CHILDREN, loadChildren, saveChildSection, type CarePerms, type CareRole, type ChildProfile, type ChildSectionId } from "../data/children";
-import { DEMO_MEDICAL, loadMedicalRecord, type MedicalRecord } from "../data/medical";
+import { addChildMemory, canReadAllergies, DEMO_CHILDREN, loadChildren, saveChildSection, type CarePerms, type CareRole, type ChildProfile, type ChildSectionId } from "../data/children";
+import { canReadEmergencyRecord, canReadMedicalRecord, DEMO_MEDICAL, loadMedicalRecord, type MedicalRecord } from "../data/medical";
 import { AllergyBanner, CareEmpty, DemoNotice } from "./care/common";
 import "./care/care.css";
 
@@ -25,6 +25,7 @@ export default function Child({ params }: ScreenProps<Params>) {
   const perms = params.perms ?? { allergies: false, medication: false, photos: false, calendar: false, privateMessages: false };
   const [child, setChild] = useState<ChildProfile | null>(null);
   const [medical, setMedical] = useState<MedicalRecord | null>(null);
+  const [medicalLoaded, setMedicalLoaded] = useState(false);
   const [drafts, setDrafts] = useState<Partial<Record<ChildSectionId, string>>>({});
   const [memoryDraft, setMemoryDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -33,16 +34,17 @@ export default function Child({ params }: ScreenProps<Params>) {
 
   useEffect(() => {
     let live = true;
+    setMedical(null); setMedicalLoaded(false);
     if (!spaceId || !childId) return;
     const childrenRequest = demo ? Promise.resolve(DEMO_CHILDREN) : loadChildren(spaceId);
     childrenRequest.then(async (items) => {
       const found = items.find((item) => item.id === childId) ?? null;
       if (live) setChild(found);
-      if (!canReadMedical({ role, perms })) return;
+      if (!canReadMedicalRecord({ role, perms })) return;
       try {
         const result = demo ? DEMO_MEDICAL[childId] ?? null : await loadMedicalRecord(spaceId, childId, { role, perms });
-        if (live) setMedical(result);
-      } catch { if (live) setError(t("care.childMedicalError", "Medical details could not be read. Check access with a parent.")); }
+        if (live) { setMedical(result); setMedicalLoaded(true); }
+      } catch { if (live) { setMedicalLoaded(true); setError(t("care.childMedicalError", "Medical details could not be read. Check access with a parent.")); } }
     }).catch(() => { if (live) setError(t("care.childLoadError", "Could not load this child profile.")); });
     return () => { live = false; };
   }, [spaceId, childId, demo, role, perms]);
@@ -73,20 +75,22 @@ export default function Child({ params }: ScreenProps<Params>) {
 
   if (!child) return <div className="app"><BackBar title={params.childName ?? t("care.childTitle", "Child profile")} onBack={nav.back} /><div className="scroll"><div className="care-wrap">{demo && <DemoNotice />}{error ? <div className="care-info care-warning" role="alert">{error}</div> : <CareEmpty title={t("care.childLoading", "Loading child profile…")} />}</div></div></div>;
 
-  const allergyNames = medical?.allergies.map((item) => item.name).filter(Boolean) ?? [];
+  const allergyNames = canReadAllergies({ role, perms }) ? medical?.allergies?.map((item) => item.name).filter(Boolean) ?? [] : [];
   return <div className="app">
     <BackBar title={child.name} onBack={nav.back} />
     <div className="scroll"><div className="care-wrap">
       {demo && <DemoNotice />}
       <AllergyBanner names={allergyNames} />
+      {!canReadAllergies({ role, perms }) && <div className="care-alert" role="alert"><strong>{t("care.allergyInfoMissing", "Allergy details are not available to you.")}</strong><p>{t("care.allergyInfoMissingHint", "Ask a parent before serving food.")}</p></div>}
+      {canReadAllergies({ role, perms }) && medicalLoaded && medical?.allergies === null && <div className="care-alert" role="alert"><strong>{t("care.allergyUnconfirmed", "Allergy details could not be confirmed.")}</strong><p>{t("care.allergyUnavailableHint", "Ask a parent to record and confirm this child’s allergies before serving food.")}</p></div>}
       {error && <div className="care-info care-warning" role="alert">{error}</div>}
       {notice && <div className="care-status" role="status">{notice}</div>}
       <div className="care-head"><div><h1>{child.name}</h1><p>{t("care.childAge", "Age {age} years", { age: child.ageYears })}</p></div><span className="care-badge">{t("care.profilePrivate", "Private family profile")}</span></div>
       <div className="care-row" aria-label={t("care.childActions", "Child actions")}>
         <Button onClick={() => nav.push("daily-report", { spaceId, childId, childName: child.name, uid: params.uid, role, perms, demo })}>{t("care.dailyReport", "Daily report")}</Button>
         <Button alt onClick={() => nav.push("meals", { spaceId, childId, childName: child.name, uid: params.uid, role, perms, demo })}>{t("care.planMeals", "Meals")}</Button>
-        {canReadMedical({ role, perms }) && <Button alt onClick={() => nav.push("medical", { spaceId, childId, childName: child.name, uid: params.uid, role, perms, demo })}>{t("care.medical", "Medical")}</Button>}
-        {canReadMedical({ role, perms }) && <Button alt onClick={() => nav.push("emergency", { spaceId, childId, childName: child.name, uid: params.uid, role, perms, demo })}>{t("care.emergencySheet", "Emergency sheet")}</Button>}
+        {canReadMedicalRecord({ role, perms }) && <Button alt onClick={() => nav.push("medical", { spaceId, childId, childName: child.name, uid: params.uid, role, perms, demo })}>{t("care.medical", "Medical")}</Button>}
+        {canReadEmergencyRecord({ role, perms }) && <Button alt onClick={() => nav.push("emergency", { spaceId, childId, childName: child.name, uid: params.uid, role, perms, demo })}>{t("care.emergencySheet", "Emergency sheet")}</Button>}
       </div>
       <section className="care-section" aria-label={t("care.sixSections", "Child care sections")}>
         {SECTIONS.map((section) => {

@@ -23,6 +23,7 @@ export type MatchRequirements = {
   requiredChecksLevel?: string;
   childAges?: Array<number | string>;
   maxBudget?: number;
+  maxBudgetStrict?: boolean;
   activities?: string[];
   experienceWithAges?: Array<number | string>;
   experienceYears?: number;

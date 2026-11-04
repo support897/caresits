@@ -4,13 +4,14 @@ import { canDeliverNotification, DEFAULT_NOTIFICATION_PREFS, hasManipulativeNoti
 describe("notification choices", () => {
   it("lists every care category in one place", () => {
     expect(NOTIFICATION_CATEGORIES.map((category) => category.id)).toEqual([
-      "messages", "bookingReminders", "careUpdates", "requests", "calendarChanges", "shopping", "allergyChanges",
+      "messages", "bookingReminders", "careUpdates", "requests", "calendarChanges", "activityReminders", "shopping", "allergyChanges",
     ]);
   });
 
   it("resolves category labels at render time", () => {
     expect(notificationCategoryLabel("messages")).toBe("Messages");
     expect(notificationCategoryLabel("allergyChanges")).toBe("Allergy changes");
+    expect(notificationCategoryLabel("activityReminders")).toBe("Activity reminders");
   });
 
   it("always delivers safety and allergy alerts", () => {

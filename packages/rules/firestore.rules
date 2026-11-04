@@ -163,6 +163,45 @@ service cloud.firestore {
         && (pairRel(pairId).state == "ended"
             || blockedEitherWay(pairRel(pairId).familyUid, pairRel(pairId).carerUid));
     }
+    function bookingRelPath(pairId) {
+      return /databases/$(database)/documents/relationships/$(pairId);
+    }
+    function bookingRelData(pairId) {
+      return exists(bookingRelPath(pairId))
+        ? get(bookingRelPath(pairId)).data
+        : getAfter(bookingRelPath(pairId)).data;
+    }
+    function pendingBookingPairMatches(pairId) {
+      let pair = getAfter(bookingRelPath(pairId)).data;
+      return pair.state == "pending"
+        && pair.createdBy == request.auth.uid
+        && pair.familyUid == request.auth.uid
+        && request.auth.uid in pair.members
+        && !blockedEitherWay(pair.familyUid, pair.carerUid);
+    }
+    function newPendingBookingPair(pairId) {
+      return signedIn() && !isAnon()
+        && !exists(bookingRelPath(pairId))
+        && existsAfter(bookingRelPath(pairId))
+        && pendingBookingPairMatches(pairId);
+    }
+    function bookingPairCanCreate(pairId) {
+      return pairOpen(pairId) || newPendingBookingPair(pairId);
+    }
+    function bookingPairCanRead(pairId) {
+      return pairOpen(pairId)
+        || (signedIn() && !isAnon() && pairMember(pairId) && !pairSevered(pairId));
+    }
+
+    function validBookingPrefs(data) {
+      return data.keys().hasOnly(["childIds", "shareAddress", "from", "to", "weekdays", "note"])
+        && (!("childIds" in data) || (data.childIds is list && data.childIds.size() <= 8))
+        && (!("shareAddress" in data) || data.shareAddress is bool)
+        && (!("from" in data) || (data.from is string && data.from.matches("^([01][0-9]|2[0-3]):[0-5][0-9]$")))
+        && (!("to" in data) || (data.to is string && data.to.matches("^([01][0-9]|2[0-3]):[0-5][0-9]$")))
+        && (!("weekdays" in data) || (data.weekdays is list && data.weekdays.size() <= 7 && data.weekdays.hasOnly(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])))
+        && (!("note" in data) || (data.note is string && data.note.size() <= 1000));
+    }
 
     match /users/{uid} {
       allow read: if signedIn() && request.auth.uid == uid
@@ -185,23 +224,23 @@ service cloud.firestore {
         && (!isAnon() || demoUnlocked());
     }
     match /users/{uid}/{collection}/{docId} {
-      allow read: if collection != 'documents' && collection != 'emergencyContacts' && signedIn()
+      allow read: if collection != 'documents' && collection != 'emergencyContacts' && collection != 'notifications' && collection != 'prefs' && signedIn()
         && request.auth.uid == uid && (!isAnon() || demoUnlocked());
-      allow create, update: if collection != 'documents' && collection != 'emergencyContacts' && signedIn()
+      allow create, update: if collection != 'documents' && collection != 'emergencyContacts' && collection != 'notifications' && collection != 'prefs' && signedIn()
         && request.auth.uid == uid && (!isAnon() || demoUnlocked())
         && !request.resource.data.keys()
              .hasAny(['plan', 'planSource', 'comp', 'role', 'owner']);
-      allow delete: if collection != 'documents' && collection != 'emergencyContacts' && signedIn()
+      allow delete: if collection != 'documents' && collection != 'emergencyContacts' && collection != 'notifications' && collection != 'prefs' && signedIn()
         && request.auth.uid == uid && (!isAnon() || demoUnlocked());
     }
     match /users/{uid}/{collection}/{docId}/{nested=**} {
-      allow read: if collection != 'documents' && collection != 'emergencyContacts' && signedIn()
+      allow read: if collection != 'documents' && collection != 'emergencyContacts' && collection != 'notifications' && collection != 'prefs' && signedIn()
         && request.auth.uid == uid && (!isAnon() || demoUnlocked());
-      allow create, update: if collection != 'documents' && collection != 'emergencyContacts' && signedIn()
+      allow create, update: if collection != 'documents' && collection != 'emergencyContacts' && collection != 'notifications' && collection != 'prefs' && signedIn()
         && request.auth.uid == uid && (!isAnon() || demoUnlocked())
         && !request.resource.data.keys()
              .hasAny(['plan', 'planSource', 'comp', 'role', 'owner']);
-      allow delete: if collection != 'documents' && collection != 'emergencyContacts' && signedIn()
+      allow delete: if collection != 'documents' && collection != 'emergencyContacts' && collection != 'notifications' && collection != 'prefs' && signedIn()
         && request.auth.uid == uid && (!isAnon() || demoUnlocked());
     }
     // Qualification evidence is client-created only in the submitted state.
@@ -220,15 +259,33 @@ service cloud.firestore {
         && resource.data.status == 'submitted';
     }
     match /users/{uid}/emergencyContacts/{docId} {
-      allow read: if docId == 'main' && signedIn() && request.auth.uid == uid
+      allow get: if docId == 'main' && signedIn() && request.auth.uid == uid
+        && (!isAnon() || demoUnlocked());
+      allow list: if signedIn() && request.auth.uid == uid
         && (!isAnon() || demoUnlocked());
       allow create, update: if docId == 'main' && signedIn() && request.auth.uid == uid
         && !isAnon()
-        && request.resource.data.keys().hasOnly(['contacts'])
+        && request.resource.data.keys().hasOnly(['contacts', 'updatedAt'])
         && request.resource.data.contacts is list
-        && request.resource.data.contacts.size() <= 3;
+        && request.resource.data.contacts.size() <= 3
+        && (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt == request.time);
       allow delete: if docId == 'main' && signedIn() && request.auth.uid == uid
         && (!isAnon() || demoUnlocked());
+    }
+    match /users/{uid}/prefs/{prefId} {
+      allow read: if signedIn() && request.auth.uid == uid && (!isAnon() || demoUnlocked());
+      allow create, update: if signedIn() && request.auth.uid == uid && (!isAnon() || demoUnlocked())
+        && (prefId == "booking" ? (!isAnon() && validBookingPrefs(request.resource.data))
+          : !request.resource.data.keys().hasAny(["plan", "planSource", "comp", "role", "owner"]));
+      allow delete: if signedIn() && request.auth.uid == uid && (!isAnon() || demoUnlocked());
+    }
+    match /users/{uid}/notifications/{notificationId} {
+      allow read: if signedIn() && request.auth.uid == uid && !isAnon();
+      allow create: if false;
+      allow update: if signedIn() && request.auth.uid == uid && !isAnon()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["read"])
+        && request.resource.data.read is bool;
+      allow delete: if false;
     }
 
 
@@ -403,91 +460,178 @@ service cloud.firestore {
 // elements cannot be type checked per element in rules; the
 // fence bounds the count (10), not each element.
 
+function validAuPairHost(host) {
+  return (host is map)
+    ? (host.keys().hasOnly(["country", "room", "accommodation", "meals", "daysOff", "location", "expectations", "durationMonths", "visaSupport", "pocketMoneyPerWeek", "hoursPerWeek", "childcareDuties", "otherHousework", "languages", "visaHelp", "infantCareNeeded"])
+      ? ((!("country" in host) || (host.country is string && host.country.size() <= 80))
+        && (!("room" in host) || (host.room is string && host.room.size() <= 300))
+        && (!("accommodation" in host) || (host.accommodation is string && host.accommodation.size() <= 300))
+        && (!("meals" in host) || (host.meals is string && host.meals.size() <= 300))
+        && (!("daysOff" in host) || (host.daysOff is list && host.daysOff.size() <= 7 && host.daysOff.hasOnly(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])))
+        && (!("location" in host) || (host.location is map && host.location.keys().hasOnly(["suburb", "city"])
+          && (!("suburb" in host.location) || (host.location.suburb is string && host.location.suburb.size() <= 80))
+          && (!("city" in host.location) || (host.location.city is string && host.location.city.size() <= 80))))
+        && (!("expectations" in host) || (host.expectations is string && host.expectations.size() <= 300))
+        && (!("durationMonths" in host) || (host.durationMonths is int && host.durationMonths >= 1 && host.durationMonths <= 36))
+        && (!("visaSupport" in host) || host.visaSupport is bool)
+        && (!("pocketMoneyPerWeek" in host) || host.pocketMoneyPerWeek == null || (host.pocketMoneyPerWeek is number && host.pocketMoneyPerWeek >= 0))
+        && (!("hoursPerWeek" in host) || host.hoursPerWeek == null || (host.hoursPerWeek is number && host.hoursPerWeek >= 0))
+        && (!("childcareDuties" in host) || (host.childcareDuties is list && host.childcareDuties.size() <= 30))
+        && (!("otherHousework" in host) || (host.otherHousework is list && host.otherHousework.size() <= 30))
+        && (!("languages" in host) || (host.languages is list && host.languages.size() <= 20))
+        && (!("visaHelp" in host) || host.visaHelp is bool)
+        && (!("infantCareNeeded" in host) || host.infantCareNeeded is bool))
+      : false)
+    : false;
+}
+function validAuPairProfile(pair) {
+  return pair is map
+    && pair.keys().hasOnly(["on", "arrival", "homeCountry", "english", "infant", "drives", "swim", "destinations", "languages", "preferredAges", "accommodation", "pocketMoneyExpectation", "culturalInterests", "visaNotes"])
+    && (!("on" in pair) || pair.on is bool)
+    && (!("arrival" in pair) || (pair.arrival is string && pair.arrival.size() <= 200))
+    && (!("homeCountry" in pair) || (pair.homeCountry is string && pair.homeCountry.size() <= 80))
+    && (!("english" in pair) || (pair.english is string && pair.english.size() <= 60))
+    && (!("infant" in pair) || pair.infant is bool)
+    && (!("drives" in pair) || pair.drives is bool)
+    && (!("swim" in pair) || pair.swim is bool)
+    && (!("destinations" in pair) || (pair.destinations is list && pair.destinations.size() <= 20))
+    && (!("languages" in pair) || (pair.languages is list && pair.languages.size() <= 20))
+    && (!("preferredAges" in pair) || (pair.preferredAges is list && pair.preferredAges.size() <= 5 && pair.preferredAges.hasOnly(["newborn", "infant", "toddler", "preschool", "school"])))
+    && (!("accommodation" in pair) || (pair.accommodation is string && pair.accommodation.size() <= 300))
+    && (!("pocketMoneyExpectation" in pair) || (pair.pocketMoneyExpectation is string && pair.pocketMoneyExpectation.size() <= 160))
+    && (!("culturalInterests" in pair) || (pair.culturalInterests is list && pair.culturalInterests.size() <= 30))
+    && (!("visaNotes" in pair) || (pair.visaNotes is string && pair.visaNotes.size() <= 300));
+}
+function validHouseholdPrefs(prefs) {
+  return prefs is map
+    && prefs.keys().hasOnly(["pets", "smoking", "languagesAtHome", "houseRules"])
+    && (!("pets" in prefs) || prefs.pets is bool)
+    && (!("smoking" in prefs) || prefs.smoking is bool)
+    && (!("languagesAtHome" in prefs) || (prefs.languagesAtHome is list && prefs.languagesAtHome.size() <= 20))
+    && (!("houseRules" in prefs) || (prefs.houseRules is string && prefs.houseRules.size() <= 300));
+}
+function validProfileEssentials(essentials) {
+  return essentials is map
+    && essentials.keys().hasOnly(["schedule", "budget", "minAgeGroupsOk"])
+    && (!("schedule" in essentials) || essentials.schedule in ["essential", "flexible"])
+    && (!("budget" in essentials) || essentials.budget in ["essential", "flexible"])
+    && (!("minAgeGroupsOk" in essentials) || essentials.minAgeGroupsOk is bool);
+}
+function validProfileGallery(card) {
+  return (!("gallery" in card) || (card.gallery is list && card.gallery.size() <= 6
+      && (card.gallery.size() < 1 || (card.gallery[0] is string && card.gallery[0].size() <= 500 && card.gallery[0].matches("^users/" + request.auth.uid + "/.+$")))
+      && (card.gallery.size() < 2 || (card.gallery[1] is string && card.gallery[1].size() <= 500 && card.gallery[1].matches("^users/" + request.auth.uid + "/.+$")))
+      && (card.gallery.size() < 3 || (card.gallery[2] is string && card.gallery[2].size() <= 500 && card.gallery[2].matches("^users/" + request.auth.uid + "/.+$")))
+      && (card.gallery.size() < 4 || (card.gallery[3] is string && card.gallery[3].size() <= 500 && card.gallery[3].matches("^users/" + request.auth.uid + "/.+$")))
+      && (card.gallery.size() < 5 || (card.gallery[4] is string && card.gallery[4].size() <= 500 && card.gallery[4].matches("^users/" + request.auth.uid + "/.+$")))
+      && (card.gallery.size() < 6 || (card.gallery[5] is string && card.gallery[5].size() <= 500 && card.gallery[5].matches("^users/" + request.auth.uid + "/.+$"))))
+    && (!("mainPhotoIndex" in card) || (card.mainPhotoIndex is int && card.mainPhotoIndex >= 0 && card.mainPhotoIndex < 6 && "gallery" in card && card.mainPhotoIndex < card.gallery.size()));
+}
+function validAlsoSide(other, primarySide) {
+  return (other is map)
+    ? (other.keys().hasOnly(["side", "about", "headline", "photoUrl", "videoKey", "experienceYears", "rate", "availability", "careTypes", "kids", "languages", "suburb", "scheduleNeed", "budgetMax", "maxDistanceKm", "style", "activities"])
+      ? (other.side in ["family", "carer"]
+        && other.side != primarySide
+        && (!("about" in other) || (other.about is string && other.about.size() <= 300))
+        && (!("headline" in other) || (other.headline is string && other.headline.size() <= 80))
+        && (!("photoUrl" in other) || (other.photoUrl is string && other.photoUrl.size() <= 2000))
+        && (!("videoKey" in other) || (other.videoKey is string && other.videoKey.size() <= 500))
+        && (!("experienceYears" in other) || (other.experienceYears is number && other.experienceYears >= 0))
+        && (!("rate" in other) || (other.rate is number && other.rate >= 0))
+        && (!("careTypes" in other) || (other.careTypes is list && other.careTypes.size() <= 3 && other.careTypes.hasOnly(["babysitter", "nanny", "au_pair"])))
+        && (!("kids" in other) || (other.kids is list && other.kids.size() <= 8))
+        && (!("suburb" in other) || (other.suburb is string && other.suburb.size() <= 80))
+        && (!("budgetMax" in other) || (other.budgetMax is number && other.budgetMax >= 0))
+        && (!("maxDistanceKm" in other) || (other.maxDistanceKm is number && other.maxDistanceKm >= 0)))
+      : false)
+    : false;
+}
+function validLearningPlan(plan) {
+  return plan is map
+    && plan.keys().hasOnly(["children", "areas", "styles", "languages", "otherLanguage", "step", "setupComplete", "updatedAt"])
+    && plan.children is list && plan.children.size() <= 20
+    && plan.areas is list && plan.areas.size() <= 10
+    && plan.styles is list && plan.styles.size() <= 10
+    && plan.languages is list && plan.languages.size() <= 20
+    && plan.otherLanguage is string && plan.otherLanguage.size() <= 60;
+}
+function validLooking(looking) {
+  return looking is map
+    && looking.keys().hasOnly(["musts", "prefs"])
+    && looking.musts is map
+    && looking.musts.keys().hasOnly(["languages", "checksLevel", "experience", "ageBand", "nationality", "nonSmoker", "drives", "ownCar", "cooking", "tasks", "specialNeeds", "petsOk", "maxDistanceKm"])
+    && looking.prefs is map
+    && looking.prefs.keys().hasOnly(["personality", "activities", "routineStyle", "nationality", "tasks", "cooking"]);
+}
+function validLegacyProfileCardFields(card) {
+  return (!("experienceYears" in card) || (card.experienceYears is number && card.experienceYears >= 0))
+    && (!("photoUrl" in card) || (card.photoUrl is string && card.photoUrl.size() <= 2000))
+    && (!("gallery" in card) || (card.gallery is list && card.gallery.size() <= 6))
+    && (!("latE2" in card) || card.latE2 is int)
+    && (!("lngE2" in card) || card.lngE2 is int)
+    && (!("scheduleNeed" in card) || card.scheduleNeed.keys().hasOnly(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]))
+    && (!("availability" in card) || card.availability.keys().hasOnly(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]))
+    && (!("experience" in card) || card.experience.keys().hasOnly(["0-1", "1-3", "3-5", "5-12", "12+"]))
+    && (!("headline" in card) || (card.headline is string && card.headline.size() <= 80))
+    && (!("rate" in card) || (card.rate is number && card.rate >= 0))
+    && (!("budgetMax" in card) || (card.budgetMax is number && card.budgetMax >= 0))
+    && (!("careTypes" in card) || (card.careTypes is list && card.careTypes.size() <= 3 && card.careTypes.hasOnly(["babysitter", "nanny", "au_pair"])))
+    && (!("kids" in card) || (card.kids is list && card.kids.size() <= 8))
+    && (!("videoKey" in card) || (card.videoKey is string && card.videoKey.size() <= 500))
+    && (!("style" in card) || (card.style is list && card.style.size() <= 20))
+    && (!("suburb" in card) || (card.suburb is string && card.suburb.size() <= 80))
+    && (!("instantBook" in card) || card.instantBook is bool)
+    && (!("lastActive" in card) || (card.lastActive is int && card.lastActive >= 0))
+    && (!("weights" in card) || (card.weights is map && card.weights.keys().hasOnly(["experience", "personality", "availability", "budget", "location", "activities"])))
+    && (!("parentNames" in card) || (card.parentNames is list && card.parentNames.size() <= 4))
+    && (!("householdPrefs" in card) || validHouseholdPrefs(card.householdPrefs))
+    && (!("essentials" in card) || validProfileEssentials(card.essentials))
+    && (!("ageGroups" in card) || (card.ageGroups is list && card.ageGroups.size() <= 5 && card.ageGroups.hasOnly(["newborn", "infant", "toddler", "preschool", "school"])))
+    && (!("idealFamily" in card) || (card.idealFamily is string && card.idealFamily.size() <= 300))
+    && (!("reviewsSummary" in card) || (card.reviewsSummary is map && card.reviewsSummary.keys().hasOnly(["count", "avg"])
+      && card.reviewsSummary.count is int && card.reviewsSummary.count >= 0
+      && card.reviewsSummary.avg is number && card.reviewsSummary.avg >= 0 && card.reviewsSummary.avg <= 5))
+    && validProfileGallery(card);
+}
+function validProfileCardFields(card, primarySide) {
+  return (!("auPair" in card) || validAuPairProfile(card.auPair))
+    ? ((!("auPairHost" in card) || validAuPairHost(card.auPairHost))
+      ? ((!("alsoSide" in card) || validAlsoSide(card.alsoSide, primarySide))
+        ? validLegacyProfileCardFields(card)
+        : false)
+      : false)
+    : false;
+}
+function validProfileCard(card, primarySide) {
+  return (card is map)
+    ? (card.keys().hasOnly(["childrenBands", "languages", "pets", "smokerHousehold", "scheduleNeed", "payOffered", "age", "nationality", "cultureOffer", "smoker", "experience", "checksLevel", "availability", "drives", "ownCar", "cooking", "tasks", "tasksRefused", "activities", "personality", "routineStyle", "agesAccepted", "agesPreferred", "petsOk", "smokerHouseholdOk", "nonSmokerHousehold", "specialNeeds", "payFloor", "maxDistanceKm", "latE2", "lngE2", "gallery", "auPair", "headline", "rate", "budgetMax", "careTypes", "kids", "videoKey", "style", "suburb", "instantBook", "lastActive", "weights", "auPairHost", "alsoSide", "experienceYears", "photoUrl", "parentNames", "householdPrefs", "essentials", "ageGroups", "idealFamily", "mainPhotoIndex", "reviewsSummary"])
+      ? validProfileCardFields(card, primarySide)
+      : false)
+    : false;
+}
+function validProfileWrite(data) {
+  return data.keys().hasOnly(["side", "displayName", "postcode", "photoUrl", "card", "looking", "updatedAt", "level", "learningPlan", "about"])
+    ? (((!("about" in data) || (data.about is string && data.about.size() <= 300))
+        && (!("level" in data) || data.level in ["explore", "quick", "better", "full"]))
+      ? ((!("learningPlan" in data) || validLearningPlan(data.learningPlan))
+        ? (validProfileCard(data.card, data.side)
+          ? validLooking(data.looking)
+          : false)
+        : false)
+      : false)
+    : false;
+}
+
 match /profiles/{uid} {
   allow read: if signedIn() && (!isAnon() || demoUnlocked());
-  allow create, update: if signedIn() && !isAnon()
+  allow create: if signedIn() && !isAnon()
     && request.auth.uid == uid
-    && request.resource.data.keys().hasOnly(
-      ["side", "displayName", "postcode", "photoUrl", "card", "looking", "updatedAt", "level", "learningPlan", "about"])
-    && (!("about" in request.resource.data)
-        || (request.resource.data.about is string && request.resource.data.about.size() <= 300))
-    && (!("level" in request.resource.data)
-        || request.resource.data.level in ["explore", "quick", "better", "full"])
-    && (!("learningPlan" in request.resource.data)
-        || (request.resource.data.learningPlan is map
-            && request.resource.data.learningPlan.keys().hasOnly(["children", "areas", "styles", "languages", "otherLanguage", "step", "setupComplete", "updatedAt"])
-            && request.resource.data.learningPlan.children is list
-            && request.resource.data.learningPlan.children.size() <= 20
-            && request.resource.data.learningPlan.areas is list
-            && request.resource.data.learningPlan.areas.size() <= 10
-            && request.resource.data.learningPlan.styles is list
-            && request.resource.data.learningPlan.styles.size() <= 10
-            && request.resource.data.learningPlan.languages is list
-            && request.resource.data.learningPlan.languages.size() <= 20
-            && request.resource.data.learningPlan.otherLanguage is string
-            && request.resource.data.learningPlan.otherLanguage.size() <= 60))
-    && request.resource.data.card.keys().hasOnly(
-      ["childrenBands", "languages", "pets", "smokerHousehold", "scheduleNeed",
-       "payOffered", "age", "nationality", "cultureOffer", "smoker", "experience", "checksLevel",
-       "availability", "drives", "ownCar", "cooking", "tasks", "tasksRefused",
-       "activities", "personality", "routineStyle", "agesAccepted",
-       "agesPreferred", "petsOk", "smokerHouseholdOk", "nonSmokerHousehold",
-       "specialNeeds", "payFloor", "maxDistanceKm", "latE2", "lngE2", "gallery", "auPair",
-      "headline", "rate", "budgetMax", "careTypes", "kids", "videoKey", "style",
-      "suburb", "instantBook", "lastActive", "weights"])
-    && (!("auPair" in request.resource.data.card)
-        || (request.resource.data.card.auPair is map
-            && request.resource.data.card.auPair.keys().hasOnly(["on", "arrival", "homeCountry", "english", "infant", "drives", "swim"])))
-    && request.resource.data.looking.keys().hasOnly(["musts", "prefs"])
-    && request.resource.data.looking.musts.keys().hasOnly(
-      ["languages", "checksLevel", "experience", "ageBand", "nationality",
-       "nonSmoker", "drives", "ownCar", "cooking", "tasks", "specialNeeds",
-       "petsOk", "maxDistanceKm"])
-    && request.resource.data.looking.prefs.keys().hasOnly(
-      ["personality", "activities", "routineStyle", "nationality", "tasks", "cooking"])
-    && (!("gallery" in request.resource.data.card)
-        || (request.resource.data.card.gallery is list
-            && request.resource.data.card.gallery.size() <= 4))
-    && (!("latE2" in request.resource.data.card)
-        || request.resource.data.card.latE2 is int)
-    && (!("lngE2" in request.resource.data.card)
-        || request.resource.data.card.lngE2 is int)
-    && (!("scheduleNeed" in request.resource.data.card)
-        || request.resource.data.card.scheduleNeed.keys().hasOnly(
-          ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]))
-    && (!("availability" in request.resource.data.card)
-        || request.resource.data.card.availability.keys().hasOnly(
-          ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]))
-    && (!("experience" in request.resource.data.card)
-        || request.resource.data.card.experience.keys().hasOnly(
-          ["0-1", "1-3", "3-5", "5-12", "12+"]))
-    && (!("headline" in request.resource.data.card)
-        || (request.resource.data.card.headline is string
-            && request.resource.data.card.headline.size() <= 80))
-    && (!("rate" in request.resource.data.card)
-        || (request.resource.data.card.rate is number && request.resource.data.card.rate >= 0))
-    && (!("budgetMax" in request.resource.data.card)
-        || (request.resource.data.card.budgetMax is number && request.resource.data.card.budgetMax >= 0))
-    && (!("careTypes" in request.resource.data.card)
-        || (request.resource.data.card.careTypes is list
-            && request.resource.data.card.careTypes.size() <= 3
-            && request.resource.data.card.careTypes.hasOnly(["babysitter", "nanny", "au_pair"])))
-    && (!("kids" in request.resource.data.card)
-        || (request.resource.data.card.kids is list && request.resource.data.card.kids.size() <= 8))
-    && (!("videoKey" in request.resource.data.card)
-        || (request.resource.data.card.videoKey is string && request.resource.data.card.videoKey.size() <= 500))
-    && (!("style" in request.resource.data.card)
-        || (request.resource.data.card.style is list && request.resource.data.card.style.size() <= 20))
-    && (!("suburb" in request.resource.data.card)
-        || (request.resource.data.card.suburb is string && request.resource.data.card.suburb.size() <= 80))
-    && (!("instantBook" in request.resource.data.card)
-        || request.resource.data.card.instantBook is bool)
-    && (!("lastActive" in request.resource.data.card)
-        || (request.resource.data.card.lastActive is int && request.resource.data.card.lastActive >= 0))
-    && (!("weights" in request.resource.data.card)
-        || (request.resource.data.card.weights is map
-            && request.resource.data.card.weights.keys().hasOnly(
-              ["experience", "personality", "availability", "budget", "location", "activities"])));
+    && validProfileWrite(request.resource.data)
+    && !("reviewsSummary" in request.resource.data.card);
+  allow update: if signedIn() && !isAnon()
+    && request.auth.uid == uid
+    && validProfileWrite(request.resource.data)
+    && request.resource.data.card.get("reviewsSummary", null) == resource.data.card.get("reviewsSummary", null);
   allow delete: if signedIn() && request.auth.uid == uid;
 }
 
@@ -597,17 +741,24 @@ match /profiles/{uid}/answers/{code} {
     }
 
 match /relationships/{pairId} {
-  allow read: if signedIn() && request.auth.uid in resource.data.members;
+  allow get: if signedIn()
+    && request.auth.uid in [resource.data.familyUid, resource.data.carerUid];
+  allow list: if signedIn()
+    && (request.auth.uid == resource.data.familyUid || request.auth.uid == resource.data.carerUid);
   allow create: if signedIn() && !isAnon()
     && request.resource.data.keys().hasOnly(
       ["members", "familyUid", "carerUid", "state", "createdBy", "createdAt", "createdDay", "learningPlan", "learningMatches"])
     && request.resource.data.familyUid != request.resource.data.carerUid
+    && !blockedEitherWay(request.resource.data.familyUid, request.resource.data.carerUid)
     && request.resource.data.members.size() == 2
     && request.resource.data.members.hasAll(
       [request.resource.data.familyUid, request.resource.data.carerUid])
     && request.auth.uid in request.resource.data.members
     && request.resource.data.createdBy == request.auth.uid
-    && request.resource.data.state == "pending"
+    && (request.resource.data.state == "pending"
+        || (request.resource.data.state == "contact"
+          && exists(/databases/$(database)/documents/profiles/$(request.resource.data.familyUid == request.auth.uid ? request.resource.data.carerUid : request.resource.data.familyUid))
+          && get(/databases/$(database)/documents/profiles/$(request.resource.data.familyUid == request.auth.uid ? request.resource.data.carerUid : request.resource.data.familyUid)).data.side == (request.resource.data.familyUid == request.auth.uid ? "carer" : "family")))
     && (!("learningPlan" in request.resource.data)
         || request.resource.data.learningPlan is map)
     && (!("learningMatches" in request.resource.data)
@@ -656,18 +807,33 @@ match /relationships/{pairId} {
   allow delete: if false;
 }
 
+function bookingSeriesMatches(pairId, data) {
+  return !("seriesId" in data)
+    || (data.seriesId is string
+      && exists(/databases/$(database)/documents/relationships/$(pairId)/series/$(data.seriesId))
+      && get(/databases/$(database)/documents/relationships/$(pairId)/series/$(data.seriesId)).data.state == "active"
+      && get(/databases/$(database)/documents/relationships/$(pairId)/series/$(data.seriesId)).data.familyUid == data.familyUid
+      && get(/databases/$(database)/documents/relationships/$(pairId)/series/$(data.seriesId)).data.carerUid == data.carerUid
+      && get(/databases/$(database)/documents/relationships/$(pairId)/series/$(data.seriesId)).data.from == data.from
+      && get(/databases/$(database)/documents/relationships/$(pairId)/series/$(data.seriesId)).data.to == data.to
+      && get(/databases/$(database)/documents/relationships/$(pairId)/series/$(data.seriesId)).data.rate == data.rate
+      && data.date >= get(/databases/$(database)/documents/relationships/$(pairId)/series/$(data.seriesId)).data.startDate
+      && (!('endDate' in get(/databases/$(database)/documents/relationships/$(pairId)/series/$(data.seriesId)).data)
+          || data.date <= get(/databases/$(database)/documents/relationships/$(pairId)/series/$(data.seriesId)).data.endDate));
+}
+
 match /relationships/{pairId}/bookings/{bookingId} {
-  allow read: if pairOpen(pairId);
-  allow create: if pairOpen(pairId)
-    && request.auth.uid == pairRel(pairId).familyUid
+  allow read: if bookingPairCanRead(pairId);
+  allow create: if bookingPairCanCreate(pairId)
+    && request.auth.uid == bookingRelData(pairId).familyUid
     && request.resource.data.keys().hasOnly(
       ["familyUid", "carerUid", "date", "from", "to", "rate", "estimate", "recurring",
-       "weekdays", "note", "state", "createdBy", "createdAt"])
+       "weekdays", "note", "childIds", "shareAddress", "seriesId", "state", "createdBy", "createdAt"])
     && request.resource.data.keys().hasAll(
       ["familyUid", "carerUid", "date", "from", "to", "rate", "estimate", "recurring",
        "weekdays", "state", "createdBy", "createdAt"])
-    && request.resource.data.familyUid == pairRel(pairId).familyUid
-    && request.resource.data.carerUid == pairRel(pairId).carerUid
+    && request.resource.data.familyUid == bookingRelData(pairId).familyUid
+    && request.resource.data.carerUid == bookingRelData(pairId).carerUid
     && request.resource.data.state == "requested"
     && request.resource.data.createdBy == request.auth.uid
     && request.resource.data.createdAt == request.time
@@ -680,14 +846,23 @@ match /relationships/{pairId}/bookings/{bookingId} {
     && request.resource.data.weekdays is list
     && request.resource.data.weekdays.size() <= 7
     && request.resource.data.weekdays.hasOnly(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])
+    && (!('childIds' in request.resource.data) || (request.resource.data.childIds is list && request.resource.data.childIds.size() <= 8))
+    && (!('shareAddress' in request.resource.data) || request.resource.data.shareAddress is bool)
+    && bookingSeriesMatches(pairId, request.resource.data)
     && (!("note" in request.resource.data)
         || (request.resource.data.note is string && request.resource.data.note.size() <= 1000));
-  allow update: if pairOpen(pairId)
+  allow update: if bookingPairCanRead(pairId)
     && ((resource.data.state == "requested"
           && request.auth.uid == resource.data.carerUid
           && request.resource.data.state in ["accepted", "declined"]
           && request.resource.data.decidedAt == request.time
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["state", "decidedAt"]))
+        || (resource.data.state == "accepted"
+          && request.auth.uid == resource.data.carerUid
+          && request.resource.data.state == "completed"
+          && resource.data.get("endAt", null) is timestamp
+          && resource.data.endAt <= request.time
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["state"]))
         || (resource.data.state in ["requested", "accepted"]
           && request.auth.uid in [resource.data.familyUid, resource.data.carerUid]
           && request.resource.data.state == "cancelled"
@@ -695,9 +870,38 @@ match /relationships/{pairId}/bookings/{bookingId} {
   allow delete: if false;
 }
 
+match /relationships/{pairId}/series/{seriesId} {
+  allow read: if bookingPairCanRead(pairId);
+  allow create: if bookingPairCanRead(pairId)
+    && request.auth.uid == bookingRelData(pairId).familyUid
+    && request.resource.data.keys().hasOnly(["familyUid", "carerUid", "weekdays", "from", "to", "startDate", "endDate", "rate", "state", "createdAt"])
+    && request.resource.data.familyUid == bookingRelData(pairId).familyUid
+    && request.resource.data.carerUid == bookingRelData(pairId).carerUid
+    && request.resource.data.weekdays is list && request.resource.data.weekdays.size() >= 1 && request.resource.data.weekdays.size() <= 7
+    && request.resource.data.weekdays.hasOnly(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])
+    && request.resource.data.from.matches("^([01][0-9]|2[0-3]):[0-5][0-9]$")
+    && request.resource.data.to.matches("^([01][0-9]|2[0-3]):[0-5][0-9]$")
+    && request.resource.data.to > request.resource.data.from
+    && request.resource.data.startDate.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+    && (!('endDate' in request.resource.data) || (request.resource.data.endDate.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}$") && request.resource.data.endDate >= request.resource.data.startDate))
+    && request.resource.data.rate is number && request.resource.data.rate >= 0
+    && request.resource.data.state == "requested"
+    && request.resource.data.createdAt == request.time;
+  allow update: if bookingPairCanRead(pairId)
+    && ((resource.data.state == "requested" && request.auth.uid == resource.data.carerUid
+        && request.resource.data.state in ["active", "ended"]
+        && request.resource.data.decidedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["state", "decidedAt"]))
+      || (resource.data.state in ["active", "paused"]
+        && request.auth.uid in [resource.data.familyUid, resource.data.carerUid]
+        && request.resource.data.state in ["active", "paused", "ended"]
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["state"])));
+  allow delete: if false;
+}
+
 match /relationships/{pairId}/checkins/{checkinId} {
-  allow read: if pairOpen(pairId);
-  allow create: if pairOpen(pairId)
+  allow read: if bookingPairCanRead(pairId);
+  allow create: if bookingPairCanRead(pairId)
     && request.resource.data.keys().hasOnly(["by", "kind", "bookingId", "at"])
     && request.resource.data.keys().hasAll(["by", "kind", "bookingId", "at"])
     && request.resource.data.by == request.auth.uid
@@ -705,7 +909,9 @@ match /relationships/{pairId}/checkins/{checkinId} {
     && request.resource.data.kind in ["arrived", "leaving", "help"]
     && request.resource.data.at == request.time
     && exists(/databases/$(database)/documents/relationships/$(pairId)/bookings/$(request.resource.data.bookingId))
-    && get(/databases/$(database)/documents/relationships/$(pairId)/bookings/$(request.resource.data.bookingId)).data.state == "accepted";
+    && get(/databases/$(database)/documents/relationships/$(pairId)/bookings/$(request.resource.data.bookingId)).data.state == "accepted"
+    && get(/databases/$(database)/documents/relationships/$(pairId)/bookings/$(request.resource.data.bookingId)).data.familyUid == pairRel(pairId).familyUid
+    && get(/databases/$(database)/documents/relationships/$(pairId)/bookings/$(request.resource.data.bookingId)).data.carerUid == pairRel(pairId).carerUid;
   allow update, delete: if false;
 }
 
@@ -724,22 +930,81 @@ match /relationships/{pairId}/checkins/{checkinId} {
     }
 
 
+    function validMessageMedia(data, prefix, maximumBytes) {
+      return data.mediaKey is string
+        && data.mediaKey.size() <= 500
+        && data.mediaKey.matches("^" + prefix + ".+$")
+        && data.mediaSize is int && data.mediaSize > 0 && data.mediaSize <= maximumBytes
+        && (!("mimeType" in data) || (data.mimeType is string && data.mimeType.size() <= 100));
+    }
+    function validMessagePayload(data, prefix) {
+      return data.keys().hasOnly(["from", "kind", "text", "img", "mediaKey", "mediaSize", "mimeType", "durationMs", "at"])
+        && data.keys().hasAll(["from", "kind", "text", "at"])
+        && data.from == request.auth.uid
+        && data.text is string && data.text.size() <= 1000
+        && data.at == request.time
+        && ((data.kind in ["text", "photoAsk"]
+              && !("img" in data) && !("mediaKey" in data) && !("mediaSize" in data) && !("mimeType" in data) && !("durationMs" in data))
+          || (data.kind == "photo"
+              && (("img" in data && data.img is string && data.img.size() <= 400000
+                    && !("mediaKey" in data) && !("mediaSize" in data) && !("mimeType" in data) && !("durationMs" in data))
+                  || (!("img" in data) && !("durationMs" in data) && validMessageMedia(data, prefix, 10485760))))
+          || (data.kind == "file" && !("img" in data) && validMessageMedia(data, prefix, 20971520)
+              && !("durationMs" in data))
+          || (data.kind == "video" && !("img" in data) && validMessageMedia(data, prefix, 52428800)
+              && data.durationMs is int && data.durationMs > 0 && data.durationMs <= 3600000)
+          || (data.kind == "voice" && !("img" in data) && validMessageMedia(data, prefix, 10485760)
+              && data.durationMs is int && data.durationMs > 0 && data.durationMs <= 600000));
+    }
+
     // Two way messages and photo updates (28 Oct 2026). One doc per
     // message under the pair. Only the two members read; a member
     // writes as themselves; photos are small pictures kept inline.
     match /relationships/{pairId}/messages/{msgId} {
       allow read: if pairOpen(pairId);
       allow create: if pairOpen(pairId)
-        && request.resource.data.keys().hasOnly(['from', 'kind', 'text', 'img', 'at'])
-        && request.resource.data.keys().hasAll(['from', 'kind', 'text', 'at'])
-        && request.resource.data.from == request.auth.uid
-        && request.resource.data.kind in ['text', 'photo', 'photoAsk']
-        && request.resource.data.text is string
-        && request.resource.data.text.size() <= 1000
-        && request.resource.data.at == request.time
-        && (!('img' in request.resource.data)
-            || (request.resource.data.img is string && request.resource.data.img.size() <= 400000));
+        && validMessagePayload(request.resource.data, "users/" + request.auth.uid + "/");
       allow update, delete: if false;
+    }
+
+    // Marketplace reviews are one immutable record per completed booking.
+    match /reviews/{reviewId} {
+      allow read: if signedIn() && !isAnon();
+      allow create: if signedIn() && !isAnon()
+        && request.resource.data.keys().hasOnly(["relId", "bookingId", "familyUid", "carerUid", "rating", "text", "at"])
+        && request.resource.data.keys().hasAll(["relId", "bookingId", "familyUid", "carerUid", "rating", "text", "at"])
+        && request.resource.data.familyUid == request.auth.uid
+        && request.resource.data.familyUid != request.resource.data.carerUid
+        && request.resource.data.relId == relId(request.resource.data.familyUid, request.resource.data.carerUid)
+        && reviewId == request.resource.data.relId + "_" + request.resource.data.bookingId
+        && exists(/databases/$(database)/documents/relationships/$(request.resource.data.relId))
+        && get(/databases/$(database)/documents/relationships/$(request.resource.data.relId)).data.familyUid == request.resource.data.familyUid
+        && get(/databases/$(database)/documents/relationships/$(request.resource.data.relId)).data.carerUid == request.resource.data.carerUid
+        && exists(/databases/$(database)/documents/relationships/$(request.resource.data.relId)/bookings/$(request.resource.data.bookingId))
+        && get(/databases/$(database)/documents/relationships/$(request.resource.data.relId)/bookings/$(request.resource.data.bookingId)).data.state == "completed"
+        && get(/databases/$(database)/documents/relationships/$(request.resource.data.relId)/bookings/$(request.resource.data.bookingId)).data.familyUid == request.auth.uid
+        && get(/databases/$(database)/documents/relationships/$(request.resource.data.relId)/bookings/$(request.resource.data.bookingId)).data.carerUid == request.resource.data.carerUid
+        && request.resource.data.rating is int && request.resource.data.rating >= 1 && request.resource.data.rating <= 5
+        && request.resource.data.text is string && request.resource.data.text.size() <= 600
+        && request.resource.data.at == request.time;
+      allow update, delete: if false;
+
+      match /replies/{replyId} {
+        allow read: if signedIn() && !isAnon();
+        allow create: if signedIn() && !isAnon()
+          && exists(/databases/$(database)/documents/reviews/$(reviewId))
+          && request.auth.uid == get(/databases/$(database)/documents/reviews/$(reviewId)).data.carerUid
+          && replyId == request.auth.uid
+          && request.resource.data.keys().hasOnly(["by", "text", "at"])
+          && request.resource.data.by == request.auth.uid
+          && request.resource.data.text is string && request.resource.data.text.size() <= 600
+          && request.resource.data.at == request.time;
+        allow update, delete: if false;
+      }
+    }
+    match /reviewSummaries/{carerUid} {
+      allow read: if true;
+      allow write: if false;
     }
 
     // Reviews and references (28 Oct 2026). A review lives under the
@@ -1074,30 +1339,176 @@ match /safetyReports/{reportId} {
     function csMember(spaceId) { return signedIn() && !isAnon() && exists(/databases/$(database)/documents/careSpaces/$(spaceId)/members/$(request.auth.uid)) && get(/databases/$(database)/documents/careSpaces/$(spaceId)/members/$(request.auth.uid)).data.status == "active"; }
     function csRole(spaceId) { return get(/databases/$(database)/documents/careSpaces/$(spaceId)/members/$(request.auth.uid)).data.role; }
     function csAdmin(spaceId) { return csMember(spaceId) && csRole(spaceId) == "admin"; }
+    function csOwnerWithoutMember(spaceId) {
+      return signedIn() && !isAnon()
+        && exists(/databases/$(database)/documents/careSpaces/$(spaceId))
+        && get(/databases/$(database)/documents/careSpaces/$(spaceId)).data.ownerUid == request.auth.uid
+        && !exists(/databases/$(database)/documents/careSpaces/$(spaceId)/members/$(request.auth.uid));
+    }
     function csPerm(spaceId, permission) {
       return csMember(spaceId)
         && get(/databases/$(database)/documents/careSpaces/$(spaceId)/members/$(request.auth.uid)).data.get("perms", {}).get(permission, false) == true;
     }
-    function noMemberPerms() {
-      return request.resource.data.perms is map
-        && request.resource.data.perms.keys().hasOnly(["allergies", "medication", "photos", "calendar", "privateMessages"])
-        && request.resource.data.perms.get("allergies", false) == false
-        && request.resource.data.perms.get("medication", false) == false
-        && request.resource.data.perms.get("photos", false) == false
-        && request.resource.data.perms.get("calendar", false) == false
-        && request.resource.data.perms.get("privateMessages", false) == false;
+    function csCanInvite(spaceId) { return csAdmin(spaceId) || csPerm(spaceId, "canInvite"); }
+    function validMemberPerms(value) {
+      return value is map
+        && value.keys().hasOnly(["allergies", "medication", "photos", "calendar", "privateMessages", "canInvite", "canEditAllergies"])
+        && (!("allergies" in value) || value.allergies is bool)
+        && (!("medication" in value) || value.medication is bool)
+        && (!("photos" in value) || value.photos is bool)
+        && (!("calendar" in value) || value.calendar is bool)
+        && (!("privateMessages" in value) || value.privateMessages is bool)
+        && (!("canInvite" in value) || value.canInvite is bool)
+        && (!("canEditAllergies" in value) || value.canEditAllergies is bool);
+    }
+    function validInvitePerms(value) {
+      return validMemberPerms(value)
+        && value.keys().hasAll(["allergies", "medication", "photos", "calendar", "privateMessages"]);
+    }
+    function bootstrapSpaceAdmin(spaceId) {
+      return signedIn() && !isAnon()
+        && !exists(/databases/$(database)/documents/careSpaces/$(spaceId)/members/$(request.auth.uid))
+        && existsAfter(/databases/$(database)/documents/careSpaces/$(spaceId))
+        && getAfter(/databases/$(database)/documents/careSpaces/$(spaceId)).data.ownerUid == request.auth.uid
+        && existsAfter(/databases/$(database)/documents/careSpaces/$(spaceId)/members/$(request.auth.uid))
+        && getAfter(/databases/$(database)/documents/careSpaces/$(spaceId)/members/$(request.auth.uid)).data.role == "admin"
+        && getAfter(/databases/$(database)/documents/careSpaces/$(spaceId)/members/$(request.auth.uid)).data.status == "active";
+    }
+    function validChildSections(value) {
+      return value is map
+        && value.keys().hasOnly(["health", "meals", "sleep", "mood", "learning", "memories"])
+        && (!("memories" in value) || (value.memories is list && value.memories.size() <= 50));
+    }
+    function validDayStory(data, spaceId) {
+      return data.keys().hasOnly(["childId", "day", "kind", "at", "text", "mood", "photoKey", "mediaKey", "mediaSize", "start", "end", "by", "asks"])
+        && data.keys().hasAll(["childId", "day", "kind", "at", "by"])
+        && data.childId is string && data.childId.size() <= 128
+        && data.day is string && data.day.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+        && data.kind in ["arrival", "meal", "drink", "nap", "activity", "mood", "photo", "pickup", "note", "voice"]
+        && data.by == request.auth.uid
+        && (!("text" in data) || (data.text is string && data.text.size() <= 2000))
+        && (!("mood" in data) || (data.mood is string && data.mood.size() <= 40))
+        && (!("photoKey" in data) || (data.photoKey is string && data.photoKey.size() <= 500))
+        && (!("asks" in data) || (data.asks is list && data.asks.size() <= 20))
+        && ((!("start" in data) && !("end" in data))
+            || (data.kind == "nap" && data.start is timestamp && data.end is timestamp && data.end > data.start))
+        && ((data.kind == "voice" && validMessageMedia(data, "spaces/" + spaceId + "/", 10485760))
+            || (data.kind != "voice" && !("mediaKey" in data) && !("mediaSize" in data)));
+    }
+    function validCalendarRecurrence(data) {
+      return !("recurring" in data)
+        || (data.recurring is map
+          && data.recurring.keys().hasOnly(["weekdays", "until"])
+          && data.recurring.keys().hasAll(["weekdays", "until"])
+          && data.recurring.weekdays is list
+          && data.recurring.weekdays.size() >= 1 && data.recurring.weekdays.size() <= 7
+          && data.recurring.weekdays.hasOnly(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])
+          && data.recurring.until is string
+          && data.recurring.until.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}$"));
+    }
+    function validPlanDay(days, day) {
+      return !(day in days) || (days[day] is list && days[day].size() <= 20);
+    }
+    function validPlanDays(days) {
+      return days is map
+        && days.keys().hasOnly(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])
+        && days.size() <= 7
+        && validPlanDay(days, "Mon") && validPlanDay(days, "Tue")
+        && validPlanDay(days, "Wed") && validPlanDay(days, "Thu")
+        && validPlanDay(days, "Fri") && validPlanDay(days, "Sat")
+        && validPlanDay(days, "Sun");
+    }
+    function validChildRoutine(value) {
+      return value is map
+        && value.keys().hasOnly(["wake", "bed", "naps"])
+        && (!("wake" in value) || (value.wake is string && value.wake.matches("^([01][0-9]|2[0-3]):[0-5][0-9]$")))
+        && (!("bed" in value) || (value.bed is string && value.bed.matches("^([01][0-9]|2[0-3]):[0-5][0-9]$")))
+        && (!("naps" in value) || (value.naps is list && value.naps.size() <= 10));
+    }
+    function validCareChild(data) {
+      return data.keys().hasOnly(["name", "ageYears", "interests", "foodPreferences", "learningGoals", "milestones", "routine", "sections", "createdAt", "updatedAt"])
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 80
+        && (!("ageYears" in data) || (data.ageYears is number && data.ageYears >= 0 && data.ageYears <= 18))
+        && (!("interests" in data) || (data.interests is list && data.interests.size() <= 30))
+        && (!("foodPreferences" in data) || (data.foodPreferences is list && data.foodPreferences.size() <= 30))
+        && (!("learningGoals" in data) || (data.learningGoals is list && data.learningGoals.size() <= 30))
+        && (!("milestones" in data) || (data.milestones is list && data.milestones.size() <= 100))
+        && (!("routine" in data) || validChildRoutine(data.routine))
+        && (!("sections" in data) || validChildSections(data.sections))
+        && !("allergies" in data) && !("medication" in data);
+    }
+    function defaultMemberPerms(value, role) {
+      return value is map
+        && validMemberPerms(value)
+        && value.get("allergies", false) == false
+        && value.get("medication", false) == false
+        && value.get("privateMessages", false) == false
+        && value.get("canInvite", false) == false
+        && value.get("canEditAllergies", false) == false
+        && value.get("photos", false) == (role == "viewer")
+        && value.get("calendar", false) == (role == "viewer");
+    }
+    function defaultInvitePerms(role) {
+      return defaultMemberPerms(request.resource.data.perms, role);
     }
     function invitedMember(spaceId) {
+      let invitePath = /databases/$(database)/documents/careSpaceInvites/$(request.resource.data.inviteId);
+      let invite = getAfter(invitePath).data;
       return ("inviteId" in request.resource.data)
-        && existsAfter(/databases/$(database)/documents/careSpaceInvites/$(request.resource.data.inviteId))
-        && getAfter(/databases/$(database)/documents/careSpaceInvites/$(request.resource.data.inviteId)).data.usedBy == request.auth.uid
-        && getAfter(/databases/$(database)/documents/careSpaceInvites/$(request.resource.data.inviteId)).data.spaceId == spaceId
-        && getAfter(/databases/$(database)/documents/careSpaceInvites/$(request.resource.data.inviteId)).data.role == request.resource.data.role
-        && getAfter(/databases/$(database)/documents/careSpaceInvites/$(request.resource.data.inviteId)).data.expiresAt > request.time
-        && getAfter(/databases/$(database)/documents/careSpaceInvites/$(request.resource.data.inviteId)).data.createdBy == request.resource.data.invitedBy
+        && existsAfter(invitePath)
+        && invite.usedBy == request.auth.uid
+        && invite.spaceId == spaceId
+        && invite.role == request.resource.data.role
+        && invite.expiresAt > request.time
+        && invite.createdBy == request.resource.data.invitedBy
+        && invite.createdBy != request.auth.uid
+        && (!("targetUid" in invite) || invite.targetUid == request.auth.uid)
         && request.resource.data.status == "active"
         && request.resource.data.joinedAt == request.time
-        && noMemberPerms();
+        && validMemberPerms(request.resource.data.perms)
+        && (("perms" in invite && request.resource.data.perms == invite.perms)
+            || (!("perms" in invite) && defaultInvitePerms(invite.role)));
+    }
+    function directSpaceCheckinAllowed(spaceId, bookingId) {
+      let space = get(/databases/$(database)/documents/careSpaces/$(spaceId)).data;
+      let ownerUid = space.ownerUid;
+      let relationshipId = relId(ownerUid, request.auth.uid);
+      let relationshipPath = /databases/$(database)/documents/relationships/$(relationshipId);
+      return request.auth.uid != ownerUid
+        && exists(relationshipPath)
+        && directSpaceCheckinMatches(relationshipPath, relationshipId, ownerUid, request.auth.uid, bookingId);
+    }
+    function directSpaceCheckinMatches(relationshipPath, relationshipId, ownerUid, carerUid, bookingId) {
+      let relationship = get(relationshipPath).data;
+      let bookingPath = /databases/$(database)/documents/relationships/$(relationshipId)/bookings/$(bookingId);
+      return relationship.familyUid == ownerUid
+        && relationship.carerUid == carerUid
+        && relationship.state in ["pending", "contact", "hired"]
+        && !blockedEitherWay(ownerUid, carerUid)
+        && exists(bookingPath)
+        && get(bookingPath).data.state == "accepted"
+        && get(bookingPath).data.familyUid == ownerUid
+        && get(bookingPath).data.carerUid == carerUid;
+    }
+    function acceptedBookingForInvite(spaceId, targetUid, bookingId) {
+      let spacePath = /databases/$(database)/documents/careSpaces/$(spaceId);
+      let space = exists(spacePath) ? get(spacePath).data : getAfter(spacePath).data;
+      let ownerUid = space.ownerUid;
+      let pairId = relId(ownerUid, targetUid);
+      let relationshipPath = /databases/$(database)/documents/relationships/$(pairId);
+      let bookingPath = /databases/$(database)/documents/relationships/$(pairId)/bookings/$(bookingId);
+      return (exists(spacePath) || existsAfter(spacePath))
+        && ownerUid == request.auth.uid
+        && targetUid != request.auth.uid
+        && exists(relationshipPath)
+        && get(relationshipPath).data.familyUid == ownerUid
+        && get(relationshipPath).data.carerUid == targetUid
+        && get(relationshipPath).data.state in ["pending", "contact", "hired"]
+        && !blockedEitherWay(ownerUid, targetUid)
+        && exists(bookingPath)
+        && get(bookingPath).data.familyUid == ownerUid
+        && get(bookingPath).data.carerUid == targetUid
+        && get(bookingPath).data.state == "accepted";
     }
     function medicalAlertMatches(spaceId, childId, section, recordId, alertId) {
       return alertId is string
@@ -1117,32 +1528,55 @@ match /safetyReports/{reportId} {
         && request.resource.data.updatedAt == request.time;
     }
     match /careSpaces/{spaceId} {
-      allow read: if csMember(spaceId);
+      allow read: if csMember(spaceId) || csOwnerWithoutMember(spaceId);
       allow create: if signedIn() && !isAnon()
         && request.resource.data.ownerUid == request.auth.uid
-        && request.resource.data.keys().hasOnly(["ownerUid", "name", "createdAt"]);
-      allow update, delete: if csAdmin(spaceId);
+        && request.resource.data.keys().hasOnly(["ownerUid", "name", "imageKey", "createdAt"])
+        && (!("imageKey" in request.resource.data)
+            || (request.resource.data.imageKey is string && request.resource.data.imageKey.size() <= 500
+                && request.resource.data.imageKey.matches("^spaces/" + spaceId + "/.+$")));
+      allow update: if csAdmin(spaceId)
+        || (csMember(spaceId) && csRole(spaceId) in ["regular", "limited"]
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["inventory"])
+            && request.resource.data.inventory is list
+            && request.resource.data.inventory.size() <= 100);
+      allow delete: if csAdmin(spaceId);
       match /members/{uid} {
-        allow read: if csMember(spaceId);
+        allow get: if csMember(spaceId) || (signedIn() && !isAnon() && uid == request.auth.uid);
+        allow list: if csMember(spaceId) || (signedIn() && !isAnon() && uid == request.auth.uid);
         allow create: if signedIn() && !isAnon()
           && request.resource.data.keys().hasOnly(["role", "status", "perms", "displayName", "joinedAt", "invitedBy", "inviteId"])
           && request.resource.data.role in ["admin", "regular", "limited", "viewer"]
           && request.resource.data.status in ["active", "removed"]
+          && (!("perms" in request.resource.data) || validMemberPerms(request.resource.data.perms))
           && ((csAdmin(spaceId) && uid != request.auth.uid)
               || (uid == request.auth.uid && request.resource.data.status == "active"
                   && request.resource.data.role == "admin"
                   && getAfter(/databases/$(database)/documents/careSpaces/$(spaceId)).data.ownerUid == request.auth.uid)
               || (uid == request.auth.uid && request.resource.data.role != "admin" && invitedMember(spaceId)));
-        allow update: if csAdmin(spaceId)
-          && request.resource.data.keys().hasOnly(["role", "status", "perms", "displayName", "joinedAt", "invitedBy", "inviteId"])
-          && request.resource.data.role in ["admin", "regular", "limited", "viewer"]
-          && request.resource.data.status in ["active", "removed"];
-        allow delete: if signedIn() && (uid == request.auth.uid || csAdmin(spaceId));
+        allow update: if (csAdmin(spaceId)
+            && request.resource.data.keys().hasOnly(["role", "status", "perms", "displayName", "joinedAt", "invitedBy", "inviteId"])
+            && request.resource.data.role in ["admin", "regular", "limited", "viewer"]
+            && request.resource.data.status in ["active", "removed"]
+            && (!("perms" in request.resource.data) || validMemberPerms(request.resource.data.perms)))
+          || (uid == request.auth.uid
+            && resource.data.status == "active"
+            && resource.data.role != "admin"
+            && request.resource.data.role == resource.data.role
+            && request.resource.data.status == "removed"
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status"]))
+          || (uid == request.auth.uid && resource.data.status == "removed"
+            && request.resource.data.role != "admin" && invitedMember(spaceId));
+        allow delete: if (csAdmin(spaceId) && uid != request.auth.uid)
+          || (signedIn() && uid == request.auth.uid && resource.data.role != "admin");
       }
       match /children/{id} {
         allow read: if csMember(spaceId);
         allow create, update: if csAdmin(spaceId)
-          && request.resource.data.keys().hasOnly(["name", "ageYears", "interests", "sections", "createdAt", "updatedAt"])
+          && validCareChild(request.resource.data);
+        allow update: if csMember(spaceId) && csRole(spaceId) in ["regular", "limited"]
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["sections"])
+          && validChildSections(request.resource.data.sections)
           && !("allergies" in request.resource.data)
           && !("medication" in request.resource.data);
         allow delete: if csAdmin(spaceId);
@@ -1150,38 +1584,169 @@ match /safetyReports/{reportId} {
       match /dayStory/{id} {
         allow read: if csMember(spaceId)
           && (!(resource.data.kind == "photo" || "photoKey" in resource.data) || csAdmin(spaceId) || csPerm(spaceId, "photos"));
-        allow create, update: if csMember(spaceId)
+        allow create: if csMember(spaceId)
           && csRole(spaceId) in ["admin", "regular", "limited"]
-          && request.resource.data.keys().hasOnly(["childId", "day", "kind", "at", "text", "mood", "photoKey", "by", "asks"])
-          && request.resource.data.by == request.auth.uid
+          && validDayStory(request.resource.data, spaceId)
           && (!(request.resource.data.kind == "photo" || "photoKey" in request.resource.data)
               || csAdmin(spaceId) || csPerm(spaceId, "photos"));
+        allow update: if (csMember(spaceId)
+            && csRole(spaceId) in ["admin", "regular", "limited"]
+            && validDayStory(request.resource.data, spaceId)
+            && (!(request.resource.data.kind == "photo" || "photoKey" in request.resource.data)
+                || csAdmin(spaceId) || csPerm(spaceId, "photos")))
+          || (csMember(spaceId)
+            && csRole(spaceId) in ["admin", "regular", "limited"]
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["asks"])
+            && request.resource.data.asks is list
+            && request.resource.data.asks.size() <= 20
+            && (csAdmin(spaceId) || csPerm(spaceId, "photos")));
         allow delete: if csAdmin(spaceId);
       }
       match /calendar/{id} {
         allow read: if csMember(spaceId) && (csAdmin(spaceId) || csPerm(spaceId, "calendar"));
         allow create: if csMember(spaceId)
           && csRole(spaceId) in ["admin", "regular", "limited"]
-          && request.resource.data.keys().hasOnly(["kind", "title", "start", "end", "childId", "ownerUid", "state", "swap", "bookingRef"])
+          && request.resource.data.keys().hasOnly(["kind", "title", "start", "end", "childId", "ownerUid", "state", "swap", "bookingRef", "recurring"])
           && request.resource.data.ownerUid == request.auth.uid
           && request.resource.data.kind in ["shift", "school", "activity", "pickup", "timeoff"]
+          && validCalendarRecurrence(request.resource.data)
           && ((request.resource.data.kind == "timeoff" && request.resource.data.state == "requested")
               || (request.resource.data.kind != "timeoff" && request.resource.data.state in ["active", "requested"]));
         allow update: if (csAdmin(spaceId)
-            && request.resource.data.state in ["active", "requested", "approved", "declined", "swap"]
+            && resource.data.kind == "timeoff"
+            && resource.data.state == "requested"
+            && request.resource.data.kind == "timeoff"
+            && request.resource.data.state in ["approved", "declined", "swap"]
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["state", "swap"])
+            && validCalendarRecurrence(request.resource.data))
+          || (csAdmin(spaceId)
+            && resource.data.kind != "timeoff" && resource.data.kind != "booking"
+            && request.resource.data.kind == resource.data.kind
+            && request.resource.data.state == resource.data.state
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
-              ["kind", "title", "start", "end", "childId", "ownerUid", "state", "swap", "bookingRef"]))
+              ["title", "start", "end", "childId", "ownerUid", "swap", "bookingRef", "recurring"])
+            && validCalendarRecurrence(request.resource.data))
           || (csMember(spaceId) && csRole(spaceId) in ["regular", "limited"]
             && resource.data.kind != "timeoff" && resource.data.kind != "booking"
             && resource.data.ownerUid == request.auth.uid
+            && request.resource.data.kind == resource.data.kind
             && request.resource.data.state == resource.data.state
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["title", "start", "end", "bookingRef"]));
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["title", "start", "end", "bookingRef", "recurring"])
+            && validCalendarRecurrence(request.resource.data));
         allow delete: if false;
+      }
+      match /requests/{requestId} {
+        allow read: if csMember(spaceId);
+        allow create: if csMember(spaceId)
+          && csRole(spaceId) in ["admin", "regular", "limited"]
+          && request.resource.data.keys().hasOnly(["kind", "by", "to", "text", "state", "at"])
+          && request.resource.data.keys().hasAll(["kind", "by", "text", "state", "at"])
+          && request.resource.data.kind in ["time-off", "photo", "meal", "shopping", "swap"]
+          && request.resource.data.by == request.auth.uid
+          && (!("to" in request.resource.data) || request.resource.data.to is string)
+          && request.resource.data.text is string && request.resource.data.text.size() <= 600
+          && request.resource.data.state == "open"
+          && request.resource.data.at == request.time;
+        allow update: if csAdmin(spaceId)
+          && resource.data.state == "open"
+          && request.resource.data.state in ["done", "declined"]
+          && request.resource.data.kind == resource.data.kind
+          && request.resource.data.by == resource.data.by
+          && request.resource.data.at == resource.data.at
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["state"]);
+        allow delete: if csAdmin(spaceId);
+      }
+      match /plans/{weekId} {
+        allow read: if csMember(spaceId);
+        allow create, update: if csAdmin(spaceId)
+          && request.resource.data.keys().hasOnly(["days", "approvedBy"])
+          && request.resource.data.keys().hasAll(["days"])
+          && validPlanDays(request.resource.data.days)
+          && (!("approvedBy" in request.resource.data)
+              || request.resource.data.approvedBy == request.auth.uid);
+        allow delete: if csAdmin(spaceId);
+      }
+      match /approvals/{approvalId} {
+        allow read: if csMember(spaceId);
+        allow create: if csMember(spaceId)
+          && csRole(spaceId) in ["admin", "regular", "limited"]
+          && request.resource.data.keys().hasOnly(["kind", "ref", "state", "by", "decidedBy"])
+          && request.resource.data.keys().hasAll(["kind", "ref", "state", "by"])
+          && request.resource.data.kind in ["activity", "purchase", "meal"]
+          && request.resource.data.ref is string && request.resource.data.ref.size() <= 128
+          && request.resource.data.state == "pending"
+          && request.resource.data.by == request.auth.uid
+          && !("decidedBy" in request.resource.data);
+        allow update: if csAdmin(spaceId)
+          && resource.data.state == "pending"
+          && request.resource.data.state in ["approved", "declined"]
+          && request.resource.data.kind == resource.data.kind
+          && request.resource.data.ref == resource.data.ref
+          && request.resource.data.by == resource.data.by
+          && request.resource.data.decidedBy == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["state", "decidedBy"]);
+        allow delete: if false;
+      }
+      match /gallery/{itemId} {
+        allow read: if csMember(spaceId)
+          && (csAdmin(spaceId) || !("childId" in resource.data) || resource.data.sharedByParent == true);
+        allow create: if csAdmin(spaceId)
+          && request.resource.data.keys().hasOnly(["key", "kind", "by", "at", "childId", "sharedByParent"])
+          && request.resource.data.keys().hasAll(["key", "kind", "by", "at", "sharedByParent"])
+          && request.resource.data.key is string && request.resource.data.key.size() <= 500
+          && request.resource.data.key.matches("^spaces/" + spaceId + "/.+$")
+          && request.resource.data.kind in ["photo", "video"]
+          && request.resource.data.by == request.auth.uid
+          && request.resource.data.at == request.time
+          && (!("childId" in request.resource.data)
+              || (request.resource.data.childId is string && request.resource.data.childId.size() <= 128))
+          && request.resource.data.sharedByParent is bool;
+        allow update: if csAdmin(spaceId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["sharedByParent"])
+          && request.resource.data.sharedByParent is bool;
+        allow delete: if csAdmin(spaceId);
       }
       match /shopping/{id} {
         allow read: if csMember(spaceId);
-        allow create, update: if csMember(spaceId) && csRole(spaceId) in ["admin", "regular"];
+        allow create: if csMember(spaceId) && csRole(spaceId) in ["admin", "regular"]
+          && request.resource.data.keys().hasOnly(["item", "childId", "source", "sourceId", "buyer", "due", "bought", "reimbursed"])
+          && request.resource.data.keys().hasAll(["item", "source", "bought", "reimbursed"])
+          && request.resource.data.item is string && request.resource.data.item.size() > 0 && request.resource.data.item.size() <= 200
+          && request.resource.data.source in ["meal", "activity", "manual"]
+          && request.resource.data.bought is bool && request.resource.data.reimbursed is bool
+          && (!("childId" in request.resource.data) || request.resource.data.childId is string)
+          && (!("sourceId" in request.resource.data) || request.resource.data.sourceId is string)
+          && (!("buyer" in request.resource.data) || request.resource.data.buyer is string)
+          && (!("due" in request.resource.data) || request.resource.data.due is string);
+        allow update: if csMember(spaceId) && csRole(spaceId) in ["admin", "regular"]
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["buyer", "due", "bought", "reimbursed"])
+          && (!("buyer" in request.resource.data) || request.resource.data.buyer is string)
+          && (!("due" in request.resource.data) || request.resource.data.due is string)
+          && (!("bought" in request.resource.data) || request.resource.data.bought is bool)
+          && (!("reimbursed" in request.resource.data) || request.resource.data.reimbursed is bool);
         allow delete: if csAdmin(spaceId);
+      }
+      match /mealPlan/{day} {
+        allow read: if csMember(spaceId);
+        allow create, update: if csAdmin(spaceId)
+          && request.resource.data.keys().hasOnly(["meals"])
+          && request.resource.data.meals is list
+          && request.resource.data.meals.size() <= 50;
+        allow delete: if csAdmin(spaceId);
+      }
+      match /checkins/{checkinId} {
+        allow read: if csMember(spaceId);
+        allow create: if csMember(spaceId)
+          && csRole(spaceId) in ["regular", "limited"]
+          && request.resource.data.keys().hasOnly(["by", "kind", "bookingId", "at"])
+          && request.resource.data.keys().hasAll(["by", "kind", "bookingId", "at"])
+          && request.resource.data.by == request.auth.uid
+          && request.resource.data.kind in ["arrived", "leaving", "help"]
+          && request.resource.data.at == request.time
+          && request.resource.data.bookingId is string
+          && request.resource.data.bookingId.size() <= 128
+          && directSpaceCheckinAllowed(spaceId, request.resource.data.bookingId);
+        allow update, delete: if false;
       }
       match /messages/{id} {
         allow read: if csMember(spaceId) && csRole(spaceId) != "viewer"
@@ -1189,13 +1754,7 @@ match /safetyReports/{reportId} {
         allow create: if csMember(spaceId) && csRole(spaceId) != "viewer"
           && csRole(spaceId) in ["admin", "regular", "limited"]
           && (csAdmin(spaceId) || csPerm(spaceId, "privateMessages"))
-          && request.resource.data.keys().hasOnly(["from", "text", "at", "kind", "img"])
-          && request.resource.data.from == request.auth.uid
-          && request.resource.data.text is string && request.resource.data.text.size() <= 1000
-          && request.resource.data.at == request.time
-          && request.resource.data.kind in ["text", "photo", "photoAsk"]
-          && (!("img" in request.resource.data)
-              || (request.resource.data.img is string && request.resource.data.img.size() <= 400000));
+          && validMessagePayload(request.resource.data, "spaces/" + spaceId + "/");
         allow update, delete: if false;
       }
       match /medical/{childId} {
@@ -1203,7 +1762,7 @@ match /safetyReports/{reportId} {
         allow create, update, delete: if false;
         match /allergies/{recordId} {
           allow read: if csAdmin(spaceId) || csPerm(spaceId, "allergies");
-          allow create, update: if csAdmin(spaceId)
+          allow create, update: if (csAdmin(spaceId) || csPerm(spaceId, "canEditAllergies"))
             && request.resource.data.keys().hasOnly(["items", "updatedBy", "updatedAt", "alertId"])
             && request.resource.data.items is list && request.resource.data.items.size() <= 50
             && medicalRecordAlertMatches(spaceId, childId, "allergies", recordId);
@@ -1227,7 +1786,8 @@ match /safetyReports/{reportId} {
       }
       match /alerts/{alertId} {
         allow read: if csMember(spaceId);
-        allow create: if csAdmin(spaceId)
+        allow create: if (csAdmin(spaceId)
+            || (csPerm(spaceId, "canEditAllergies") && request.resource.data.section == "allergies"))
           && request.resource.data.keys().hasOnly(["kind", "by", "at", "summary", "childId", "section", "recordId"])
           && request.resource.data.kind == "medical-change"
           && request.resource.data.by == request.auth.uid
@@ -1244,25 +1804,40 @@ match /safetyReports/{reportId} {
       allow get: if signedIn() && !isAnon();
       allow list: if false;
       allow create: if signedIn() && !isAnon()
-        && request.resource.data.keys().hasOnly(["spaceId", "role", "createdBy", "createdAt", "expiresAt", "usedBy"])
+        && request.resource.data.keys().hasOnly(["spaceId", "role", "createdBy", "createdAt", "expiresAt", "usedBy", "perms", "targetUid", "bookingId"])
         && request.resource.data.keys().hasAll(["spaceId", "role", "createdBy", "createdAt", "expiresAt", "usedBy"])
         && request.resource.data.spaceId is string
         && request.resource.data.spaceId.matches("^[^/]{1,128}$")
-        && csAdmin(request.resource.data.spaceId)
+        && (csCanInvite(request.resource.data.spaceId) || bootstrapSpaceAdmin(request.resource.data.spaceId))
         && request.resource.data.role in ["regular", "limited", "viewer"]
         && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.createdAt == request.time
         && request.resource.data.expiresAt > request.time
-        && request.resource.data.usedBy == null;
+        && request.resource.data.usedBy == null
+        && (!("perms" in request.resource.data) || validInvitePerms(request.resource.data.perms))
+        && (csAdmin(request.resource.data.spaceId)
+            || (!("perms" in request.resource.data)
+              || (!request.resource.data.perms.get("canInvite", false)
+                  && !request.resource.data.perms.get("canEditAllergies", false))))
+        && ((!("targetUid" in request.resource.data) && !("bookingId" in request.resource.data))
+            || (request.resource.data.targetUid is string
+                && request.resource.data.bookingId is string
+                && acceptedBookingForInvite(request.resource.data.spaceId, request.resource.data.targetUid, request.resource.data.bookingId)));
       allow update: if signedIn() && !isAnon()
         && resource.data.usedBy == null
         && resource.data.expiresAt > request.time
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["usedBy"])
         && request.resource.data.usedBy == request.auth.uid
+        && resource.data.createdBy != request.auth.uid
+        && (!("targetUid" in resource.data) || resource.data.targetUid == request.auth.uid)
         && existsAfter(/databases/$(database)/documents/careSpaces/$(resource.data.spaceId)/members/$(request.auth.uid))
         && getAfter(/databases/$(database)/documents/careSpaces/$(resource.data.spaceId)/members/$(request.auth.uid)).data.inviteId == inviteId
         && getAfter(/databases/$(database)/documents/careSpaces/$(resource.data.spaceId)/members/$(request.auth.uid)).data.role == resource.data.role
-        && getAfter(/databases/$(database)/documents/careSpaces/$(resource.data.spaceId)/members/$(request.auth.uid)).data.status == "active";
+        && getAfter(/databases/$(database)/documents/careSpaces/$(resource.data.spaceId)/members/$(request.auth.uid)).data.invitedBy == resource.data.createdBy
+        && getAfter(/databases/$(database)/documents/careSpaces/$(resource.data.spaceId)/members/$(request.auth.uid)).data.status == "active"
+        && (("perms" in resource.data && getAfter(/databases/$(database)/documents/careSpaces/$(resource.data.spaceId)/members/$(request.auth.uid)).data.perms == resource.data.perms)
+            || (!("perms" in resource.data)
+                && defaultMemberPerms(getAfter(/databases/$(database)/documents/careSpaces/$(resource.data.spaceId)/members/$(request.auth.uid)).data.perms, resource.data.role)));
       allow delete: if signedIn() && !isAnon() && resource.data.usedBy == null
         && csAdmin(resource.data.spaceId);
     }

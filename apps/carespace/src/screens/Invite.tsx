@@ -9,6 +9,7 @@ import "./profile/profile.css";
 
 type InviteParams = { spaceId: string };
 type InviteResult = { code: string; expiresAt: Date; link: string };
+const INVITABLE_ROLES: SpaceRole[] = ["regular", "limited", "viewer"];
 const ROLE_LABELS: Record<SpaceRole, [string, string]> = {
   admin: ["csInvite.role.admin", "Admin (parent)"],
   regular: ["csInvite.role.regular", "Regular carer"],
@@ -82,7 +83,7 @@ export default function Invite({ params }: ScreenProps<InviteParams>) {
       <section className="profile-card">
         <p>{t("csInvite.intro", "Share a private link or code with your nanny, grandparent or au pair. They do not need a marketplace profile.")}</p>
         <label className="profile-field"><span>{t("csInvite.roleLabel", "Choose their role")}</span><select value={role} disabled={!allowed} onChange={(event) => changeRole(event.currentTarget.value as SpaceRole)}>
-          {(Object.keys(ROLE_LABELS) as SpaceRole[]).map((item) => <option key={item} value={item}>{t(ROLE_LABELS[item][0], ROLE_LABELS[item][1])}</option>)}
+          {INVITABLE_ROLES.map((item) => <option key={item} value={item}>{t(ROLE_LABELS[item][0], ROLE_LABELS[item][1])}</option>)}
         </select></label>
         <PermissionEditor role={role} value={perms} disabled={!allowed} onChange={(next) => { setPerms(next as typeof perms); setResult(null); }} />
         <p className="muted">{t("csInvite.expiry", "Invites expire after 7 days and can be used once.")}</p>

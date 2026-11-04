@@ -1,3 +1,4 @@
+import { t } from "../i18n/base";
 import { MATCH_CRITERIA, type AvailabilityNeed, type MatchCriterion, type MatchProfile, type MatchRequirements, type MatchResult, type MatchWeights, type ScoreMatchOptions, type VisaStatus } from "./types";
 
 export { MATCH_CRITERIA } from "./types";
@@ -13,18 +14,18 @@ export const DEFAULT_WEIGHTS: MatchWeights = {
 };
 
 const LABELS: Record<keyof MatchWeights, string> = {
-  experience: "Experience",
-  personality: "Personality and care style",
-  availability: "Availability",
-  budget: "Budget",
-  location: "Location",
-  activities: "Activities",
+  experience: t("match.criterion.experience", "Experience"),
+  personality: t("match.criterion.personality", "Personality and care style"),
+  availability: t("match.criterion.availability", "Availability"),
+  budget: t("match.criterion.budget", "Budget"),
+  location: t("match.criterion.location", "Location"),
+  activities: t("match.criterion.activities", "Activities"),
 };
 const DAY_NAMES: Record<string, string> = {
   mon: "Mon", monday: "Mon", tue: "Tue", tues: "Tue", tuesday: "Tue", wed: "Wed", wednesday: "Wed",
   thu: "Thu", thur: "Thu", thurs: "Thu", thursday: "Thu", fri: "Fri", friday: "Fri", sat: "Sat", saturday: "Sat", sun: "Sun", sunday: "Sun",
 };
-const DAY_FULL: Record<string, string> = { Mon: "Monday", Tue: "Tuesday", Wed: "Wednesday", Thu: "Thursday", Fri: "Friday", Sat: "Saturday", Sun: "Sunday" };
+const DAY_FULL: Record<string, string> = { Mon: t("match.day.monday", "Monday"), Tue: t("match.day.tuesday", "Tuesday"), Wed: t("match.day.wednesday", "Wednesday"), Thu: t("match.day.thursday", "Thursday"), Fri: t("match.day.friday", "Friday"), Sat: t("match.day.saturday", "Saturday"), Sun: t("match.day.sunday", "Sunday") };
 const LEVEL_RANK: Record<string, number> = { none: 0, unchecked: 0, sighted: 1, "document sighted": 1, register: 2, verified: 2 };
 
 type RecordValue = Record<string, unknown>;
@@ -126,16 +127,13 @@ function slotsFrom(value: unknown): Slot[] {
 }
 function requiredNeeds(value: unknown): Slot[] { return slotsFrom(value); }
 function needsFor(viewer: MatchProfile, candidate: MatchProfile, requirements: MatchRequirements): Slot[] {
-  if (requirements.availability) return requiredNeeds(requirements.availability);
-  const musts = viewer.looking?.musts;
-  const mustNeed = record(musts)?.availability;
-  if (mustNeed !== undefined) return requiredNeeds(mustNeed);
-  if (viewer.side === "family") {
-    const card = cardOf(viewer);
-    return requiredNeeds(card.scheduleNeed ?? card.availabilityNeed);
-  }
-  const familyCard = cardOf(candidate);
-  return requiredNeeds(familyCard.scheduleNeed ?? familyCard.availabilityNeed);
+  const family = viewer.side === "family" ? viewer : candidate.side === "family" ? candidate : undefined;
+  if (!family) return requirements.availability ? requiredNeeds(requirements.availability) : [];
+  const mustNeed = record(family.looking?.musts)?.availability;
+  const familyNeed = mustNeed !== undefined ? requiredNeeds(mustNeed) : requiredNeeds(cardOf(family).scheduleNeed ?? cardOf(family).availabilityNeed);
+  if (!requirements.availability) return familyNeed;
+  const queryNeed = requiredNeeds(requirements.availability);
+  return viewer.side === "family" ? queryNeed : [...familyNeed, ...queryNeed];
 }
 function availableValue(viewer: MatchProfile, candidate: MatchProfile): unknown {
   return viewer.side === "family" ? cardOf(candidate).availability : cardOf(viewer).availability;
@@ -146,13 +144,13 @@ function slotDay(slot: Slot): string | undefined {
 }
 function needLabel(slot: Slot): string {
   const day = slot.date ? normalDay(slot.date) : normalDay(slot.day);
-  const dayText = (day ? DAY_FULL[day] : undefined) || slot.date || slot.day || "Required time";
+  const dayText = (day ? DAY_FULL[day] : undefined) || slot.date || slot.day || t("match.requiredTime", "Required time");
   const from = parseTime(slot.from);
   const to = parseTime(slot.to);
   if (from === undefined && to === undefined) return dayText;
-  if (from !== undefined && to !== undefined) return `${dayText} ${minutesToTime(from)}–${minutesToTime(to)}`;
-  if (from !== undefined) return `${dayText} from ${minutesToTime(from)}`;
-  return `${dayText} until ${minutesToTime(to as number)}`;
+  if (from !== undefined && to !== undefined) return t("match.timeRange", "{day} {from}–{to}", { day: dayText, from: minutesToTime(from), to: minutesToTime(to) });
+  if (from !== undefined) return t("match.timeFrom", "{day} from {time}", { day: dayText, time: minutesToTime(from) });
+  return t("match.timeUntil", "{day} until {time}", { day: dayText, time: minutesToTime(to as number) });
 }
 function slotCoverage(need: Slot, available: Slot): number | undefined {
   if (need.date && available.date && need.date !== available.date) return undefined;
@@ -182,11 +180,10 @@ function availabilityFit(needs: Slot[], available: Slot[]): number | null {
 }
 function availabilityEssentials(needs: Slot[], available: Slot[]): string[] {
   if (!needs.length) return [];
-  if (!available.length) return needs.map((need) => `Availability for ${needLabel(need)}: Not stated.`);
+  if (!available.length) return needs.map((need) => t("match.availabilityNotStated", "Availability for {need}: Not stated.", { need: needLabel(need) }));
   return needs.flatMap((need) => {
     const fits = available.map((slot) => slotCoverage(need, slot)).filter((value): value is number => value !== undefined);
-    if (!fits.length) return [`Availability: ${needLabel(need)} is not covered.`];
-    if (Math.max(...fits) < 1) return [`Availability: ${needLabel(need)} is not covered.`];
+    if (!fits.length || Math.max(...fits) < 1) return [t("match.availabilityNotCovered", "Availability: {need} is not covered.", { need: needLabel(need) })];
     return [];
   });
 }
@@ -242,26 +239,34 @@ function agesFromCard(card: RecordValue): Array<number | string> {
 }
 function acceptedAges(card: RecordValue): unknown[] { return list(card.agesAccepted ?? card.acceptedAges ?? card.acceptedChildAges); }
 function checkAges(viewer: MatchProfile, candidate: MatchProfile, requirements: MatchRequirements): string[] {
-  if (viewer.side === "family") {
-    const wanted = requirements.childAges?.length ? requirements.childAges : agesFromCard(cardOf(viewer));
-    if (!wanted.length) return [];
-    const accepted = acceptedAges(cardOf(candidate));
-    if (!accepted.length) return ["Accepted ages: Not stated."];
-    const missed = wanted.filter((age) => !matchesAge(age, accepted));
-    return missed.map((age) => `Child age ${age} is not in the carer's stated accepted ages.`);
-  }
-  const wanted = requirements.childAges?.length ? requirements.childAges : agesFromCard(cardOf(candidate));
-  const accepted = acceptedAges(cardOf(viewer));
-  if (!accepted.length) return [];
-  if (!wanted.length) return ["Children's ages: Not stated."];
+  const family = viewer.side === "family" ? viewer : candidate.side === "family" ? candidate : undefined;
+  const carer = viewer.side === "carer" ? viewer : candidate.side === "carer" ? candidate : undefined;
+  if (!family || !carer) return [];
+  const wanted = [...new Set([...agesFromCard(cardOf(family)), ...(requirements.childAges ?? [])])];
+  const accepted = acceptedAges(cardOf(carer));
+  if (!wanted.length) return [];
+  if (!accepted.length) return viewer.side === "family" ? [t("match.acceptedAgesNotStated", "Accepted ages: Not stated.")] : [];
   const missed = wanted.filter((age) => !matchesAge(age, accepted));
-  return missed.map((age) => `Child age ${age} is outside your stated accepted ages.`);
+  return missed.map((age) => viewer.side === "family"
+    ? t("match.childAgeNotAccepted", "Child age {age} is not in the carer's stated accepted ages.", { age })
+    : t("match.childAgeOutsideAccepted", "Child age {age} is outside your stated accepted ages.", { age }));
 }
 function rateOf(card: RecordValue): number | undefined { return finite(card.rate ?? card.payFloor ?? card.hourlyRate); }
 function budgetOf(viewer: MatchProfile, requirements: MatchRequirements): number | undefined {
   if (viewer.side !== "family") return undefined;
   const musts = record(viewer.looking?.musts);
   return finite(requirements.maxBudget ?? musts?.maxBudget ?? cardOf(viewer).budgetMax ?? cardOf(viewer).maxBudget);
+}
+function strictBudgetOf(viewer: MatchProfile, requirements: MatchRequirements): number | undefined {
+  if (viewer.side !== "family") return undefined;
+  const musts = record(viewer.looking?.musts);
+  const card = cardOf(viewer);
+  const strictValues = [
+    requirements.maxBudgetStrict === true ? finite(requirements.maxBudget) : undefined,
+    musts?.maxBudgetStrict === true ? finite(musts.maxBudget) : undefined,
+    card.maxBudgetStrict === true ? finite(card.budgetMax ?? card.maxBudget) : undefined,
+  ].filter((value): value is number => value !== undefined);
+  return strictValues.length ? Math.min(...strictValues) : undefined;
 }
 function payFloorOf(card: RecordValue): number | undefined { return finite(card.payFloor ?? card.rate ?? card.minimumRate); }
 function payOfferedOf(card: RecordValue): number | undefined { return finite(card.payOffered ?? card.rate ?? card.budgetMax ?? card.maxBudget); }
@@ -280,35 +285,48 @@ function budgetFit(viewer: MatchProfile, candidate: MatchProfile, requirements: 
 }
 function budgetEssentials(viewer: MatchProfile, candidate: MatchProfile, requirements: MatchRequirements): string[] {
   if (viewer.side === "family") {
-    const max = budgetOf(viewer, requirements);
+    const max = strictBudgetOf(viewer, requirements);
     if (max === undefined) return [];
     const rate = rateOf(cardOf(candidate));
-    if (rate === undefined) return ["Rate: Not stated."];
-    return rate > max ? [`Rate: $${rate}/hr is above the $${max}/hr maximum.`] : [];
+    if (rate === undefined) return [t("match.rateNotStated", "Rate: Not stated.")];
+    return rate > max ? [t("match.rateAboveMaximum", "Rate: ${rate}/hr is above the ${max}/hr maximum.", { rate, max })] : [];
   }
   const floor = payFloorOf(cardOf(viewer));
   if (floor === undefined) return [];
   const offer = payOfferedOf(cardOf(candidate));
-  if (offer === undefined) return ["Pay offered: Not stated."];
-  return offer < floor ? [`Pay offered: $${offer}/hr is below your $${floor}/hr minimum.`] : [];
+  if (offer === undefined) return [t("match.payNotStated", "Pay offered: Not stated.")];
+  return offer < floor ? [t("match.payBelowMinimum", "Pay offered: ${offer}/hr is below your ${floor}/hr minimum.", { offer, floor })] : [];
 }
-function requiredCheckLevel(viewer: MatchProfile, requirements: MatchRequirements): string | undefined {
-  if (viewer.side !== "family") return undefined;
-  const musts = record(viewer.looking?.musts);
-  const card = cardOf(viewer);
-  const raw = requirements.requiredChecksLevel ?? (text(musts?.requiredChecksLevel) || text(musts?.checksLevel) || text(musts?.requiredChecks) || text(card.requiredChecksLevel) || text(card.requiredChecks));
+function requiredCheckLevel(viewer: MatchProfile, candidate: MatchProfile, requirements: MatchRequirements): string | undefined {
+  const family = viewer.side === "family" ? viewer : candidate.side === "family" ? candidate : undefined;
+  if (!family) return undefined;
+  const musts = record(family.looking?.musts);
+  const card = cardOf(family);
+  const explicitLevel = viewer.side === "family" ? requirements.requiredChecksLevel : undefined;
+  const raw = explicitLevel ?? (text(musts?.requiredChecksLevel) || text(musts?.checksLevel) || text(musts?.requiredChecks) || text(card.requiredChecksLevel) || text(card.requiredChecks));
   return raw ? raw.toLowerCase() : undefined;
 }
 function checksEssentials(viewer: MatchProfile, candidate: MatchProfile, requirements: MatchRequirements): string[] {
-  const required = requiredCheckLevel(viewer, requirements);
+  const required = requiredCheckLevel(viewer, candidate, requirements);
   if (!required) return [];
-  const checked = candidate.verifiedLevel ?? candidate.verification?.level;
-  if (!checked) return [`Required checks: Not checked yet (needs ${required}).`];
+  const carer = viewer.side === "carer" ? viewer : candidate.side === "carer" ? candidate : undefined;
+  const checked = carer?.verifiedLevel ?? carer?.verification?.level;
+  if (!checked) return [t("match.checksNotChecked", "Required checks: Not checked yet (needs {required}).", { required })];
   const have = checked.toLowerCase();
   const requiredRank = LEVEL_RANK[required];
   const haveRank = LEVEL_RANK[have];
   const meets = requiredRank !== undefined && haveRank !== undefined ? haveRank >= requiredRank : have === required;
-  return meets ? [] : [`Required checks: ${have} is below the required ${required} level.`];
+  return meets ? [] : [t("match.checksBelowRequired", "Required checks: {have} is below the required {required} level.", { have, required })];
+}
+function essentialsFor(viewer: MatchProfile, candidate: MatchProfile, requirements: MatchRequirements): string[] {
+  const needs = needsFor(viewer, candidate, requirements);
+  const available = slotsFrom(availableValue(viewer, candidate));
+  return [
+    ...availabilityEssentials(needs, available),
+    ...checksEssentials(viewer, candidate, requirements),
+    ...checkAges(viewer, candidate, requirements),
+    ...budgetEssentials(viewer, candidate, requirements),
+  ];
 }
 function overlaps(left: unknown[], right: unknown[]): number | null {
   const a = [...new Set(left.map(clean).filter(Boolean))];
@@ -404,14 +422,7 @@ export function scoreMatch(options: ScoreMatchOptions): MatchResult {
   const { viewer, candidate } = options;
   const requirements = options.requirements ?? {};
   const weights = normalizeWeights(options.weights ?? viewer.card?.weights as Partial<MatchWeights> | undefined);
-  const needs = needsFor(viewer, candidate, requirements);
-  const available = slotsFrom(availableValue(viewer, candidate));
-  const unmetEssentials = [
-    ...availabilityEssentials(needs, available),
-    ...checksEssentials(viewer, candidate, requirements),
-    ...checkAges(viewer, candidate, requirements),
-    ...budgetEssentials(viewer, candidate, requirements),
-  ];
+  const unmetEssentials = essentialsFor(viewer, candidate, requirements);
   const criteria = criteriaFor(viewer, candidate, requirements, weights, options.km, options.radiusKm);
   const known = criteria.filter((item) => item.fit !== null);
   const weightTotal = known.reduce((sum, item) => sum + item.weight, 0);
@@ -422,25 +433,24 @@ export function scoreMatch(options: ScoreMatchOptions): MatchResult {
 }
 
 function visaLabel(status: VisaStatus): string {
-  if (status.status === "eligible") return "Eligible";
-  if (status.status === "ineligible") return "Not eligible";
-  if (status.status === "not-applicable") return "Not applicable";
-  if (status.status === "not-checked") return "Not checked yet";
-  return "Unknown";
+  if (status.status === "eligible") return t("match.visa.eligible", "Eligible");
+  if (status.status === "ineligible") return t("match.visa.ineligible", "Not eligible");
+  if (status.status === "not-applicable") return t("match.visa.notApplicable", "Not applicable");
+  if (status.status === "not-checked") return t("match.visa.notChecked", "Not checked yet");
+  return t("match.visa.unknown", "Unknown");
 }
 
 export function explain(viewer: MatchProfile, candidate: MatchProfile, result: MatchResult): string[] {
   const sentences = result.criteria.map((criterion) => criterion.fit === null
-    ? `${criterion.label}: Not stated.`
-    : `${criterion.label}: ${Math.round(criterion.fit * 100)}% fit (${criterion.weight}% weight).`);
-  if (result.score === null) sentences.unshift(`Match score not shown yet: only ${result.coverage}% of weighted facts are stated.`);
-  const checkLevel = candidate.verifiedLevel ?? candidate.verification?.level;
-  sentences.push(checkLevel ? `Checks: ${checkLevel} level is on record.` : "Checks: Not checked yet.");
-  if (result.unmetEssentials.length) sentences.push(...result.unmetEssentials.map((item) => `Unmet essential: ${item}`));
-  else sentences.push("No stated essential is unmet.");
-  const visaSource = result.visaStatus.source ? ` Source: ${result.visaStatus.source}.` : "";
-  sentences.push(`Visa status: ${visaLabel(result.visaStatus)}; checked separately and not part of the match score.${visaSource}`);
-  const required = requiredCheckLevel(viewer, {});
-  if (required && !checkLevel && !sentences.some((sentence) => sentence.includes("Not checked yet"))) sentences.push(`Required checks: Not checked yet (needs ${required}).`);
+    ? t("match.factNotStated", "{criterion}: Not stated.", { criterion: criterion.label })
+    : t("match.factFit", "{criterion}: {fit}% fit ({weight}% weight).", { criterion: criterion.label, fit: Math.round(criterion.fit * 100), weight: criterion.weight }));
+  if (result.score === null) sentences.unshift(t("match.scoreHidden", "Match score not shown yet: only {coverage}% of weighted facts are stated.", { coverage: result.coverage }));
+  const carer = viewer.side === "carer" ? viewer : candidate.side === "carer" ? candidate : undefined;
+  const checkLevel = carer?.verifiedLevel ?? carer?.verification?.level;
+  sentences.push(checkLevel ? t("match.checksOnRecord", "Checks: {level} level is on record.", { level: checkLevel }) : t("match.checksNotCheckedGeneral", "Checks: Not checked yet."));
+  if (result.unmetEssentials.length) sentences.push(...result.unmetEssentials.map((item) => t("match.unmetEssential", "Unmet essential: {item}", { item })));
+  else sentences.push(t("match.noUnmetEssentials", "No stated essential is unmet."));
+  const visaSource = result.visaStatus.source ? t("match.visaSource", " Source: {source}.", { source: result.visaStatus.source }) : "";
+  sentences.push(t("match.visaSeparate", "Visa status: {status}; checked separately and not part of the match score.{source}", { status: visaLabel(result.visaStatus), source: visaSource }));
   return sentences;
 }

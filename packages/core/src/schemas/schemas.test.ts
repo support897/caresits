@@ -8,8 +8,11 @@ import {
   dayStorySchema,
   emergencyContactsSchema,
   medicalRecordSchema,
+  mealPlanSchema,
   notificationPrefsSchema,
   profileCardSchema,
+  shoppingItemSchema,
+  userSpaceIndexSchema,
 } from "./index.js";
 
 const stamp = new Date("2026-11-04T00:00:00.000Z");
@@ -44,6 +47,20 @@ describe("shared Firestore schemas", () => {
       lastActive: 1_793_750_400_000,
       weights: { experience: 25, personality: 20, availability: 20, budget: 15, location: 10, activities: 10 },
     }).success).toBe(true);
+  });
+
+  it("accepts au-pair host, second-side, and experience card data", () => {
+    expect(profileCardSchema.safeParse({
+      experienceYears: 4,
+      photoUrl: "users/host-1/profile.webp",
+      auPairHost: {
+        country: "Australia", room: "Private room", pocketMoneyPerWeek: 320, hoursPerWeek: 25,
+        childcareDuties: ["school pickup"], otherHousework: ["laundry"], languages: ["English"],
+        visaHelp: true, infantCareNeeded: false,
+      },
+      alsoSide: { side: "carer", headline: "Warm carer", experienceYears: 4, careTypes: ["nanny"] },
+    }).success).toBe(true);
+    expect(profileCardSchema.safeParse({ auPairHost: { country: "Australia", admin: true } }).success).toBe(false);
   });
 
   it("rejects qualification claims from profile cards", () => {
@@ -94,6 +111,13 @@ describe("shared Firestore schemas", () => {
     }).success).toBe(true);
   });
 
+  it("accepts a completed timeline ask reply", () => {
+    expect(dayStorySchema.safeParse({
+      childId: "child-1", day: "2026-11-04", kind: "activity", at: stamp, by: "carer-1", text: "Painting",
+      asks: [{ by: "family-1", text: "Share a photo", at: stamp, answeredAt: stamp, answerText: "Done", answerPhotoKey: "spaces/family/painting.webp" }],
+    }).success).toBe(true);
+  });
+
   it("accepts a requested time-off calendar event", () => {
     expect(calendarEventSchema.safeParse({
       kind: "timeoff", title: "Day off", start: stamp, end: new Date(stamp.getTime() + 3_600_000),
@@ -103,7 +127,7 @@ describe("shared Firestore schemas", () => {
 
   it("limits the account emergency-contact list to three", () => {
     const contact = { name: "Parent", phone: "+61 400 000 000" };
-    expect(emergencyContactsSchema.safeParse({ contacts: [contact, contact, contact] }).success).toBe(true);
+    expect(emergencyContactsSchema.safeParse({ contacts: [contact, contact, contact], updatedAt: stamp }).success).toBe(true);
     expect(emergencyContactsSchema.safeParse({ contacts: [contact, contact, contact, contact] }).success).toBe(false);
   });
 
@@ -127,6 +151,25 @@ describe("shared Firestore schemas", () => {
       spaceId: "space-1", role: "limited", createdBy: "owner", createdAt: stamp,
       expiresAt: new Date(stamp.getTime() + 60_000), usedBy: null,
     }).success).toBe(true);
+  });
+
+  it("accepts targeted booking invites with a permission snapshot", () => {
+    expect(careSpaceInviteSchema.safeParse({
+      spaceId: "family-1", role: "regular", createdBy: "family-1", createdAt: stamp,
+      expiresAt: new Date(stamp.getTime() + 60_000), usedBy: null,
+      perms: { allergies: false, medication: false, photos: false, calendar: false, privateMessages: false },
+      targetUid: "carer-1", bookingId: "booking-1",
+    }).success).toBe(true);
+    expect(careSpaceInviteSchema.safeParse({
+      spaceId: "family-1", role: "regular", createdBy: "family-1", createdAt: stamp,
+      expiresAt: new Date(stamp.getTime() + 60_000), usedBy: null, targetUid: "carer-1",
+    }).success).toBe(false);
+  });
+
+  it("checks app-owned space index, meal plan, and shopping shapes", () => {
+    expect(userSpaceIndexSchema.safeParse({ spaceId: "family-1", name: "Family", memberRole: "admin", joinedAt: stamp }).success).toBe(true);
+    expect(mealPlanSchema.safeParse({ meals: [{ childId: "child-1", name: "Soup", ingredients: ["carrot"] }] }).success).toBe(true);
+    expect(shoppingItemSchema.safeParse({ item: "Carrot", source: "meal", bought: false, reimbursed: false }).success).toBe(true);
   });
 
   it("uses safe notification defaults and has no safety-alert opt-out", () => {

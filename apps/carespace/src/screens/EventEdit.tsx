@@ -1,7 +1,7 @@
 import "../lib/i18n";
 import { useEffect, useState } from "react";
 import { BackBar, Empty, t, type ScreenProps, useAuth, useNav } from "@cc/core";
-import { createCalendarEvent, getCalendarEvent, saveCalendarEvent, type CalendarEvent, type CalendarKind } from "../data/calendar";
+import { createCalendarEvent, getCalendarEvent, localDateKey, saveCalendarEvent, type CalendarEvent, type CalendarKind } from "../data/calendar";
 import { getSpaceAccess, type SpaceAccess } from "../data/spaces";
 import { canPost } from "../lib/permissions";
 
@@ -9,7 +9,7 @@ type EventEditParams = { uid?: string; spaceId: string; eventId?: string };
 type FormState = { title: string; kind: Exclude<CalendarKind, "booking">; date: string; from: string; to: string };
 const localDate = (value: string) => {
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "" : `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  return Number.isNaN(date.getTime()) ? "" : localDateKey(date);
 };
 const localTime = (value: string) => {
   const date = new Date(value);
@@ -27,9 +27,10 @@ export default function Screen({ params }: ScreenProps<EventEditParams>) {
   const uid = params.uid || user?.uid || "";
   const [access, setAccess] = useState<SpaceAccess | null>(null);
   const [existing, setExisting] = useState<CalendarEvent | null>(null);
-  const [form, setForm] = useState<FormState>({ title: "", kind: "shift", date: localDate(new Date().toISOString()), from: "09:00", to: "17:00" });
+  const [form, setForm] = useState<FormState>({ title: "", kind: "shift", date: localDateKey(new Date()), from: "09:00", to: "17:00" });
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [queued, setQueued] = useState(false);
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
@@ -67,15 +68,15 @@ export default function Screen({ params }: ScreenProps<EventEditParams>) {
     setBusy(true);
     setNotice("");
     try {
-      if (existing) {
-        const updated: CalendarEvent = { ...existing, title: form.title.trim(), kind: form.kind, start, end };
-        await saveCalendarEvent(params.spaceId, updated);
-      } else {
-        await createCalendarEvent(params.spaceId, {
+      const result = existing
+        ? await saveCalendarEvent(params.spaceId, { ...existing, title: form.title.trim(), kind: form.kind, start, end })
+        : await createCalendarEvent(params.spaceId, {
           title: form.title.trim(), kind: form.kind, start, end, ownerUid: uid, state: "active",
         });
-      }
-      nav.back();
+      if (result.queued) {
+        setQueued(true);
+        setNotice(t("cs.offline.queued", "Saved here. It will sync when you're back online."));
+      } else nav.back();
     } catch { setNotice(t("cs.event.save.error", "Event could not be saved. Check your access and try again.")); }
     finally { setBusy(false); }
   }
@@ -91,20 +92,20 @@ export default function Screen({ params }: ScreenProps<EventEditParams>) {
           <p className="muted">{t(`cs.calendar.state.${existing.state}`, existing.state)}</p>
         </div>
         : <form onSubmit={(event) => void save(event)} className="card" style={{ display: "grid", gap: 12 }}>
-          <label><span style={{ display: "block", marginBottom: 6 }}>{t("cs.event.name", "Event name")}</span><input className="field" value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} maxLength={120} required /></label>
+          <label><span style={{ display: "block", marginBottom: 6 }}>{t("cs.event.name", "Event name")}</span><input className="field" value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} maxLength={120} required disabled={queued} /></label>
           <label><span style={{ display: "block", marginBottom: 6 }}>{t("cs.event.kind", "Type")}</span>
-            <select className="field" value={form.kind} onChange={(event) => setForm((current) => ({ ...current, kind: event.target.value as FormState["kind"] }))}>
+            <select className="field" value={form.kind} onChange={(event) => setForm((current) => ({ ...current, kind: event.target.value as FormState["kind"] }))} disabled={queued}>
               {EVENT_KINDS.map(([kind, key, label]) => <option key={kind} value={kind}>{t(key, label)}</option>)}
             </select>
           </label>
-          <label><span style={{ display: "block", marginBottom: 6 }}>{t("cs.event.date", "Date")}</span><input className="field" type="date" value={form.date} onChange={(event) => setForm((current) => ({ ...current, date: event.target.value }))} required /></label>
+          <label><span style={{ display: "block", marginBottom: 6 }}>{t("cs.event.date", "Date")}</span><input className="field" type="date" value={form.date} onChange={(event) => setForm((current) => ({ ...current, date: event.target.value }))} required disabled={queued} /></label>
           <div className="row" style={{ gap: 10 }}>
-            <label style={{ flex: 1 }}><span style={{ display: "block", marginBottom: 6 }}>{t("cs.event.from", "From")}</span><input className="field" type="time" value={form.from} onChange={(event) => setForm((current) => ({ ...current, from: event.target.value }))} required /></label>
-            <label style={{ flex: 1 }}><span style={{ display: "block", marginBottom: 6 }}>{t("cs.event.to", "To")}</span><input className="field" type="time" value={form.to} onChange={(event) => setForm((current) => ({ ...current, to: event.target.value }))} required /></label>
+            <label style={{ flex: 1 }}><span style={{ display: "block", marginBottom: 6 }}>{t("cs.event.from", "From")}</span><input className="field" type="time" value={form.from} onChange={(event) => setForm((current) => ({ ...current, from: event.target.value }))} required disabled={queued} /></label>
+            <label style={{ flex: 1 }}><span style={{ display: "block", marginBottom: 6 }}>{t("cs.event.to", "To")}</span><input className="field" type="time" value={form.to} onChange={(event) => setForm((current) => ({ ...current, to: event.target.value }))} required disabled={queued} /></label>
           </div>
-          {notice && <p role="alert" style={{ margin: 0, color: "var(--danger)" }}>{notice}</p>}
+          {notice && <p role={queued ? "status" : "alert"} style={{ margin: 0, color: queued ? "var(--muted)" : "var(--danger)" }}>{notice}</p>}
           {!editable && <p className="muted" style={{ margin: 0 }}>{t("cs.event.readonly", "This role cannot edit calendar events.")}</p>}
-          <button type="submit" className="btn" disabled={!editable || busy}>{busy ? t("cs.event.saving", "Saving…") : t("cs.event.save", "Save changes")}</button>
+          <button type="submit" className="btn" disabled={!editable || busy || queued}>{busy ? t("cs.event.saving", "Saving…") : t("cs.event.save", "Save changes")}</button>
         </form>}
       {notice && loading === false && existing?.kind === "booking" && <p role="status">{notice}</p>}
     </div>

@@ -1,3 +1,5 @@
+import { t } from "@cc/core";
+
 export type ProfileFacts = {
   languages?: string[];
   experienceYears?: number | string;
@@ -19,14 +21,28 @@ export function suggestIntro(profileFacts: ProfileFacts): string {
   const style = cleanList(profileFacts.style);
   const rawYears = profileFacts.experienceYears;
   const years = typeof rawYears === "string" ? (rawYears.trim() ? Number(rawYears) : Number.NaN) : rawYears;
-  if (careTypes.length) lines.push(`Care types: ${careTypes.join(", ")}.`);
-  if (languages.length) lines.push(`Languages: ${languages.join(", ")}.`);
-  if (typeof years === "number" && Number.isFinite(years) && years >= 0) lines.push(`Childcare experience: ${years} ${years === 1 ? "year" : "years"}.`);
-  if (style.length) lines.push(`Care style: ${style.join(", ")}.`);
+  if (careTypes.length) lines.push(t("onb.ai.fact.careTypes", "Care types: {values}.", { values: careTypes.join(", ") }));
+  if (languages.length) lines.push(t("onb.ai.fact.languages", "Languages: {values}.", { values: languages.join(", ") }));
+  if (typeof years === "number" && Number.isFinite(years) && years >= 0) {
+    const unit = years === 1 ? t("onb.ai.fact.year", "year") : t("onb.ai.fact.years", "years");
+    lines.push(t("onb.ai.fact.experience", "Childcare experience: {years} {unit}.", { years, unit }));
+  }
+  if (style.length) lines.push(t("onb.ai.fact.style", "Care style: {values}.", { values: style.join(", ") }));
   return lines.join(" ");
 }
 
 const RULES: Array<{ group: string; value: string; phrase: string }> = [
+  { group: "style", value: "caring", phrase: "caring" },
+  { group: "style", value: "patient", phrase: "patient" },
+  { group: "style", value: "calm", phrase: "calm" },
+  { group: "style", value: "energetic", phrase: "energetic" },
+  { group: "style", value: "playful", phrase: "playful" },
+  { group: "style", value: "independent", phrase: "independent" },
+  { group: "style", value: "organized", phrase: "organized" },
+  { group: "style", value: "communicative", phrase: "communicative" },
+  { group: "style", value: "reliable", phrase: "reliable" },
+  { group: "style", value: "creative", phrase: "creative" },
+  { group: "style", value: "safety focused", phrase: "safety focused" },
   { group: "style", value: "Montessori", phrase: "montessori" },
   { group: "style", value: "gentle parenting", phrase: "gentle parenting" },
   { group: "style", value: "calm routines", phrase: "calm routines" },

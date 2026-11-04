@@ -1,10 +1,15 @@
 import * as A from "firebase/auth";
-import { app } from "./firebase";
+import { app, emulatorEnabled } from "./firebase";
 import { restoreSessionMirror, startMirror, hasSavedSession } from "./session";
 let _auth: A.Auth | null = null;
+let _emulatorAuth: A.Auth | null = null;
 export function auth(): A.Auth {
   if (_auth) return _auth;
   try { _auth = A.initializeAuth(app, { persistence: [A.browserLocalPersistence, A.indexedDBLocalPersistence] }); } catch { _auth = A.getAuth(app); }
+  if (emulatorEnabled && _emulatorAuth !== _auth) {
+    A.connectAuthEmulator(_auth, "http://127.0.0.1:9099", { disableWarnings: true });
+    _emulatorAuth = _auth;
+  }
   try { startMirror(); } catch { /* bonus */ }
   return _auth;
 }

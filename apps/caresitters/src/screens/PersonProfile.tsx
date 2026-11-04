@@ -42,6 +42,19 @@ function checkLabel(status: QualificationRecord["status"]): string {
   return ({ submitted: t("person.checkSubmitted", "Submitted"), under_review: t("person.checkUnderReview", "Under review"), verified: t("person.checkVerified", "Verified"), expired: t("person.checkExpired", "Expired"), needs_renewal: t("person.checkRenewal", "Needs renewal") })[status];
 }
 
+function listText(value: unknown): string[] {
+  return Array.isArray(value) ? value.map(String).filter(Boolean) : typeof value === "string" && value.trim() ? [value.trim()] : [];
+}
+
+function careTypeLabel(value: string): string {
+  const labels: Record<string, string> = {
+    babysitter: t("person.careBabysitter", "Babysitting"),
+    nanny: t("person.careNanny", "Nanny care"),
+    au_pair: t("person.careAuPair", "Au pair"),
+  };
+  return labels[value] ?? value;
+}
+
 export default function PersonProfile({ params }: ScreenProps<Params>) {
   const nav = useNav();
   const uid = params.uid;
@@ -101,8 +114,19 @@ export default function PersonProfile({ params }: ScreenProps<Params>) {
   const rate = Number(rateValue);
   const hasRate = rateValue !== null && rateValue !== undefined && rateValue !== "" && Number.isFinite(rate) && rate >= 0;
   const exampleCost = hasRate ? estimateCost("09:00", "12:00", rate) : null;
-  const displayName = person?.name ?? t("person.loadingName", "Carer profile");
+  const displayName = person?.firstName || person?.name || t("person.loadingName", "Carer profile");
   const availability = useMemo(() => person ? DAYS.map((day) => ({ day, value: availabilityFor(person, day) })) : [], [person]);
+  const details: Array<{ label: string; value: string }> = [];
+  if (person) {
+    if (typeof person.card.suburb === "string" && person.card.suburb.trim()) details.push({ label: t("person.location", "Location"), value: person.card.suburb.trim() });
+    const years = Number(person.card.experienceYears);
+    if (Number.isFinite(years) && years >= 0) details.push({ label: t("person.experience", "Experience"), value: t(years === 1 ? "person.experienceOneYear" : "person.experienceYears", years === 1 ? "1 year" : "{count} years", { count: years }) });
+    const languages = listText(person.card.languages);
+    if (languages.length) details.push({ label: t("person.languages", "Languages"), value: languages.join(", ") });
+    const careTypes = listText(person.card.careTypes).map(careTypeLabel);
+    if (careTypes.length) details.push({ label: t("person.careTypes", "Care offered"), value: careTypes.join(", ") });
+  }
+  const verifiedCheck = view.checks.some((check) => check.status === "verified");
 
   async function toggleSaved() {
     const currentUid = auth().currentUser?.uid;
@@ -123,14 +147,15 @@ export default function PersonProfile({ params }: ScreenProps<Params>) {
       {view.loading && <div className="booking-list" aria-label={t("person.loading", "Loading profile")}><div className="sk" style={{ height: 320 }} /><div className="sk" style={{ height: 120 }} /></div>}
       {!view.loading && !person && <Empty mood="oops" title={t("person.notFound", "Profile not available")} body={view.error || t("person.notFoundBody", "This person may have removed their profile.")} />}
       {person && <>
-        <section className="booking-hero" aria-label={t("person.photoLabel", "Profile photo")}>{person.photoUrl ? <img src={person.photoUrl} alt={t("person.photoAlt", "Photo of {name}", { name: displayName })} /> : <div className="booking-hero-placeholder" aria-hidden="true">{person.firstName.slice(0, 1).toUpperCase()}</div>}<div className="booking-hero-shade" /><div className="booking-hero-copy"><h1>{displayName}</h1><p>{person.card.headline ? String(person.card.headline) : person.about ? String(person.about) : t("person.introMissing", "Introduction not shared yet.")}</p></div><div className="booking-hero-tools"><button className="booking-icon-button" onClick={() => void toggleSaved()} aria-pressed={saved} disabled={saving} aria-label={saved ? t("person.unsave", "Remove from Saved") : t("person.save", "Save profile")}>{saved ? `♥ ${t("person.saved", "Saved")}` : `♡ ${t("person.save", "Save")}`}</button></div></section>
+        <section className="booking-hero" aria-label={t("person.photoLabel", "Profile photo")}>{person.photoUrl ? <img src={person.photoUrl} alt={t("person.photoAlt", "Photo of {name}", { name: displayName })} /> : <div className="booking-hero-placeholder" aria-hidden="true">{person.firstName.slice(0, 1).toUpperCase()}</div>}<div className="booking-hero-shade" /><span className={`booking-status booking-hero-status${verifiedCheck ? " verified" : ""}`}>{verifiedCheck ? t("person.serverChecked", "Server checked") : t("person.noVerifiedChecks", "No verified checks")}</span><div className="booking-hero-copy"><h1>{displayName}</h1><p>{person.card.headline ? String(person.card.headline) : person.about ? String(person.about) : t("person.introMissing", "Introduction not shared yet.")}</p></div><div className="booking-hero-tools"><button className="booking-icon-button" onClick={() => void toggleSaved()} aria-pressed={saved} disabled={saving} aria-label={saved ? t("person.unsave", "Remove from Saved") : t("person.save", "Save profile")}>{saved ? `♥ ${t("person.saved", "Saved")}` : `♡ ${t("person.save", "Save")}`}</button></div></section>
+        {details.length > 0 && <section className="booking-card booking-section"><h2>{t("person.detailsTitle", "About {name}", { name: displayName })}</h2><dl className="booking-profile-details">{details.map(({ label, value }) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl><p className="booking-meta">{t("person.locationPrivacy", "Only a general area is shown. Exact addresses stay private until a parent shares them.")}</p></section>}
         {person.card.videoKey && <section className="booking-section booking-card"><h2>{t("person.videoTitle", "Video introduction")}</h2>{videoUrl ? <video className="booking-video" src={videoUrl} controls playsInline preload="metadata" aria-label={t("person.videoLabel", "Video introduction from {name}", { name: displayName })} /> : <p className="booking-note">{t("person.videoUnavailable", "Video not available yet")}</p>}</section>}
         <section className="booking-card booking-section"><h2>{t("person.whyTitle", "Why you match")}</h2>{why.length ? <ul style={{ margin: 0, paddingInlineStart: 22 }}>{why.map((line, index) => <li key={`${index}-${line}`}>{line}</li>)}</ul> : <p className="booking-meta">{t("person.whyUnknown", "Not enough shared profile details yet.")}</p>}</section>
         <section className="booking-card booking-section"><div className="booking-between"><h2>{t("person.checksTitle", "Checks and dates")}</h2><span className="booking-status">{view.checks.some((check) => check.status === "verified") ? t("person.serverChecked", "Server checked") : t("person.noVerifiedChecks", "No verified checks")}</span></div>{view.checks.length ? <div className="booking-checklist">{view.checks.map((check) => <div className="booking-check" key={check.id}><div className="booking-between"><b>{check.label}</b><span className={`booking-status${check.status === "verified" ? " verified" : check.status === "submitted" || check.status === "under_review" ? " pending" : ""}`}>{checkLabel(check.status)}</span></div><p className="booking-meta">{check.checkedOn ? t("person.checkedOn", "Checked {date}", { date: check.checkedOn }) : t("person.noCheckDate", "Check date not recorded")}{check.verifiedBy ? ` · ${t("person.checkedBy", "checked by {name}", { name: check.verifiedBy })}` : ""}{check.expires ? ` · ${t("person.expires", "expires {date}", { date: check.expires })}` : ""}</p></div>)}</div> : <p className="booking-meta">{t("person.checksUnknown", "No check record was found. This profile is not shown as verified.")}</p>}</section>
         <section className="booking-card booking-section"><h2>{t("person.reviewsTitle", "Reviews")}</h2>{view.reviews.length ? view.reviews.map((review, index) => <article className="booking-review" key={`${review.name}-${index}`}><div className="booking-between"><b>{review.name}</b>{review.rating != null && <span aria-label={t("person.rating", "Rating {rating} out of 5", { rating: review.rating })}>★ {review.rating}/5</span>}</div>{review.date && <p className="booking-meta">{review.date}</p>}{review.text && <p>{review.text}</p>}</article>) : <p className="booking-meta">{t("person.noReviews", "No reviews shared yet.")}</p>}</section>
         <section className="booking-card booking-section"><h2>{t("person.calendarTitle", "Availability")}</h2><div className="booking-day-grid" aria-label={t("person.calendarLabel", "Weekly availability calendar")}>{availability.map(({ day, value }) => <div className={`booking-day${value === true ? " available" : value === null ? " unknown" : ""}`} key={day}><span>{t(`day.${day.toLowerCase()}`, day)}</span><br /><span aria-label={value === true ? t("person.available", "Available") : value === false ? t("person.notListed", "Not listed") : t("person.notShared", "Not shared")}>{value === true ? "✓" : value === false ? "—" : "?"}</span></div>)}</div><p className="booking-meta">{t("person.calendarDisclaimer", "Shared days are not a promise. The carer still needs to accept a request.")}</p></section>
         <section className="booking-card booking-section"><h2>{t("person.rateTitle", "Rate and estimate")}</h2>{hasRate ? <><p><b>{money(rate)} {t("person.perHour", "per hour")}</b></p><p className="booking-meta">{exampleCost != null ? t("person.exampleCost", "Example: 3 hours would cost about {amount}.", { amount: money(exampleCost) }) : t("person.rateEstimate", "Choose a time to see your estimated cost.")}</p></> : <p className="booking-meta">{t("person.rateMissing", "Rate not listed. Message to ask before requesting a booking.")}</p>}</section>
-        <section className="booking-note"><b>{t("person.manageTitle", "Already working together?")}</b><p>{t("person.manageBody", "Manage care updates in {app}.", { app: APP2 })}</p><button className="booking-quiet-link" onClick={() => openCareSpace()}>{t("person.openCareSpace", "Open {app}", { app: APP2 })}</button><p className="booking-meta"><a href={careLinks.universal}>{t("person.universalLink", "Open the web link")}</a> · <a href={careLinks.custom}>{t("person.customLink", "Open with the app link")}</a> · <a href={careLinks.appStore}>{t("person.appStoreFallback", "Find {app} in the App Store", { app: APP2 })}</a></p></section>
+        <section className="booking-note"><b>{t("person.manageTitle", "Already working together?")}</b><p>{t("person.manageBody", "Manage care updates in {app}.", { app: APP2 })}</p><button className="booking-quiet-link" onClick={() => openCareSpace()}>{t("person.openCareSpace", "Open {app}", { app: APP2 })}</button><div className="booking-links"><a className="booking-link" href={careLinks.universal}>{t("person.universalLink", "Open the web link")}</a><a className="booking-link" href={careLinks.custom}>{t("person.customLink", "Open with the app link")}</a><a className="booking-link" href={careLinks.appStore}>{t("person.appStoreFallback", "Find {app} in the App Store", { app: APP2 })}</a></div></section>
         {saveError && <p className="booking-error" role="alert">{saveError}</p>}
       </>}
     </div></div>

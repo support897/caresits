@@ -4,6 +4,7 @@ import { ACTIVITIES, type ActivityVariant } from "../content/activities";
 import { DEMO_SPACES, loadCareSpace, type CarePerms, type CareRole } from "../data/children";
 import { addShoppingItems } from "../data/shopping";
 import { missingMaterials } from "../lib/activities";
+import { canEditShopping } from "../lib/permissions";
 import { CareEmpty, DemoNotice } from "./care/common";
 import "./care/care.css";
 
@@ -36,13 +37,14 @@ export default function ActivityDetail({ params }: ScreenProps<Params>) {
     return activity[variant];
   }, [activity, variant]);
   const missing = activity ? missingMaterials(activity, inventory) : [];
+  const canManageShopping = demo || canEditShopping(params.role);
   const displayedMaterials = variant === "spanish" && activity ? activity.spanish.materials : activity?.materials.map((material, index) => t(`care.activity.${activity.id}.material.${index}`, material)) ?? [];
   const displayedSteps = variant === "base" && activity ? activity.steps.map((step, index) => t(`care.activity.${activity.id}.step.${index}`, step)) : variant === "spanish" && activity ? activity.spanish.steps : version?.steps.map((step, index) => t(`care.activity.${activity?.id}.${variant}.step.${index}`, step)) ?? [];
   const displayedTitle = variant === "base" && activity ? t(`care.activity.${activity.id}.title`, activity.title) : variant === "spanish" ? activity?.spanish.title ?? "" : version && activity ? t(`care.activity.${activity.id}.${variant}.title`, version.title) : "";
   const displayedGoal = variant === "base" && activity ? t(`care.activity.${activity.id}.goal`, activity.learningGoal) : variant === "spanish" && activity ? activity.spanish.learningGoal : version && activity ? t(`care.activity.${activity.id}.${variant}.goal`, version.learningGoal) : "";
 
   async function addMaterials() {
-    if (!params.spaceId || !activity || !missing.length) return;
+    if (!params.spaceId || !activity || !canManageShopping || !missing.length) return;
     setBusy(true); setError(""); setNotice("");
     try {
       if (!demo) await addShoppingItems(params.spaceId, missing.map((item) => ({ item, childId: params.childId, source: "activity", sourceId: activity.id, buyer: params.uid, due: due || undefined })));
@@ -59,9 +61,10 @@ export default function ActivityDetail({ params }: ScreenProps<Params>) {
       {error && <div className="care-info care-warning" role="alert">{error}</div>}
       {notice && <div className="care-status" role="status">{notice}</div>}
       <div className="care-head"><div><h1>{displayedTitle}</h1><p>{t("care.activityDetailLength", "{minutes} minutes · for ages {min}–{max}", { minutes: activity.minutes, min: activity.minAge, max: activity.maxAge })}</p></div></div>
+      <div className="care-alert" role="note">{t("care.activityInspirationNotice", "These ideas are starting points for play, not fixed learning labels or promises about development. Adapt them to the child’s abilities and supervise every activity.")}</div>
       {params.childName && <p className="care-muted">{t("care.activityForChild", "For {child}", { child: params.childName })}</p>}
       <div className="care-row">{activity.interests.map((interest) => <span className="care-badge" key={interest}>{t(`care.interest.${interest.replaceAll(" ", "-")}`, interest)}</span>)}</div>
-      <section className="care-card care-section"><h2>{t("care.materials", "Materials")}</h2><ul className="care-list">{displayedMaterials.map((material, index) => { const baseMaterial = variant === "base" ? activity.materials[index] ?? material : material; const hasIt = inventory.some((item) => item.toLowerCase().includes(baseMaterial.toLowerCase()) || baseMaterial.toLowerCase().includes(item.toLowerCase())); return <li key={`${index}-${material}`}>{material}{variant === "base" && <span className="care-muted">{hasIt ? ` · ${t("care.haveMaterial", "we have this")}` : ` · ${t("care.needMaterial", "not on the family list")}`}</span>}</li>; })}</ul></section>
+      <section className="care-card care-section"><h2>{t("care.materials", "Materials")}</h2><ul className="care-list">{displayedMaterials.map((material, index) => { const baseMaterial = variant === "base" ? activity.materials[index] ?? material : material; const hasIt = inventory.some((item) => item.toLowerCase().includes(baseMaterial.toLowerCase()) || baseMaterial.toLowerCase().includes(item.toLowerCase())); return <li key={`${index}-${material}`}>{material}{variant === "base" && <span className="care-muted">{hasIt ? ` · ${t("care.haveMaterial", "we have this")}` : ` · ${t("care.needMaterial", "not on the family list")}`}</span>}</li>; })}</ul><div className="care-alert" role="note">{t("care.activityMaterialCaution", "Confirm material ingredients and skin or contact risks with the family before starting.")}</div></section>
       <section className="care-card care-section"><h2>{t("care.steps", "Steps")}</h2><ol className="care-steps">{displayedSteps.map((step, index) => <li key={`${index}-${step}`}>{step}</li>)}</ol></section>
       <section className="care-card care-section"><h2>{t("care.learningGoal", "Learning goal")}</h2><p>{displayedGoal}</p></section>
       <section className="care-card care-section">
@@ -75,8 +78,10 @@ export default function ActivityDetail({ params }: ScreenProps<Params>) {
       <section className="care-card care-section">
         <h2>{t("care.addMaterialsShopping", "Add materials to shopping list")}</h2>
         {missing.length ? <p>{t("care.missingMaterialsLabel", "Missing: {items}", { items: missing.join(", ") })}</p> : <p>{t("care.allMaterialsOwned", "The family checklist has all these materials.")}</p>}
-        <label className="care-field"><span>{t("care.dueDate", "Needed by")}</span><input type="date" value={due} onChange={(event) => setDue(event.target.value)} /></label>
-        <Button onClick={() => void addMaterials()} disabled={busy || !params.spaceId || !missing.length}>{t("care.addMaterialsShoppingButton", "Add materials to shopping list")}</Button>
+        {canManageShopping ? <>
+          <label className="care-field"><span>{t("care.dueDate", "Needed by")}</span><input type="date" value={due} onChange={(event) => setDue(event.target.value)} /></label>
+          <Button onClick={() => void addMaterials()} disabled={busy || !params.spaceId || !missing.length}>{t("care.addMaterialsShoppingButton", "Add materials to shopping list")}</Button>
+        </> : <p className="care-muted">{t("care.activityShoppingReadOnly", "A family admin or regular carer can add materials to this family’s shopping list.")}</p>}
       </section>
     </div></div>
   </div>;

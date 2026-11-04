@@ -44,6 +44,13 @@ export default function VisaGuide({ params }: ScreenProps<Params>) {
     return () => { live = false; };
   }, [params.passport]);
 
+  useEffect(() => {
+    if (passportLoading) return;
+    const screens = document.querySelectorAll<HTMLElement>(".aupair-screen");
+    const current = screens[screens.length - 1];
+    current?.querySelector<HTMLButtonElement>('button[aria-label="Back"]')?.focus();
+  }, [passportLoading]);
+
   const passportStatus = assessment.status === "eligible" ? "Guidance available" : "Unknown";
   const statusText = assessment.status === "eligible"
     ? t("aupair.visaExplicitPassport", "The official page lists this passport for the checked pathway. Only the government decides the application.")

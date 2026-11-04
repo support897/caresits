@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { BackBar, Bunny, Button, t, useNav, type ScreenProps } from "@cc/core";
-import { canReadMedical, DEMO_CHILDREN, DEMO_SPACES, loadCareSpaces, loadChildren, saveChild, type CareSpace, type ChildProfile } from "../data/children";
+import { canReadAllergies, DEMO_CHILDREN, DEMO_SPACES, loadCareSpaces, loadChildren, saveChild, type CareSpace, type ChildProfile } from "../data/children";
 import { DEMO_MEDICAL, loadMedicalRecord } from "../data/medical";
 import { AllergyBanner, CareEmpty, DemoNotice } from "./care/common";
 import "./care/care.css";
@@ -43,11 +43,11 @@ export default function Care({ params }: ScreenProps<Params>) {
       if (!live) return;
       setChildren(items);
       const names: Record<string, string[]> = {};
-      if (canReadMedical(space)) {
+      if (canReadAllergies(space)) {
         await Promise.all(items.map(async (child) => {
           try {
             const record = demo ? DEMO_MEDICAL[child.id] : await loadMedicalRecord(space.id, child.id, space);
-            names[child.id] = record?.allergies.map((allergy) => allergy.name).filter(Boolean) ?? [];
+            names[child.id] = record?.allergies?.map((allergy) => allergy.name).filter(Boolean) ?? [];
           } catch { names[child.id] = []; }
         }));
       }
@@ -76,7 +76,7 @@ export default function Care({ params }: ScreenProps<Params>) {
       {error && <div className="care-info care-warning" role="alert">{error}</div>}
       {sortedSpaces.map((item) => <button className="care-space-card" key={item.id} onClick={() => { setError(""); setSpace(item); }}>
         <span className="care-badge" aria-hidden="true">{item.name.slice(0, 1).toUpperCase()}</span>
-        <span className="care-card-copy"><b>{item.name}</b><p>{t("care.spaceRole", "{role} · private family list", { role: item.role })}</p></span><span aria-hidden="true">›</span>
+        <span className="care-card-copy"><b>{item.name}</b><p>{t("care.spaceRole", "{role} · private family list", { role: item.role })}</p></span><span aria-hidden="true" className="flip">›</span>
       </button>)}
       {!loading && !sortedSpaces.length && <CareEmpty title={t("care.emptySpaces", "No care spaces yet")} detail={t("care.emptySpacesDetail", "Ask a family admin to invite you to their private space.")} />}
     </> : <>
@@ -88,7 +88,7 @@ export default function Care({ params }: ScreenProps<Params>) {
         <span className="care-badge" aria-hidden="true">{child.name.slice(0, 1).toUpperCase()}</span>
         <span className="care-card-copy"><b>{child.name}</b><p>{t("care.age", "Age {age}", { age: child.ageYears })} · {child.interests.slice(0, 2).join(", ") || t("care.noInterests", "Interests not added")}</p></span>
         {!!allergies[child.id]?.length && <span className="care-badge" role="img" aria-label={t("care.allergyCount", "Has recorded allergies")}>! {allergies[child.id]?.length}</span>}
-        <span aria-hidden="true">›</span>
+        <span aria-hidden="true" className="flip">›</span>
       </button>)}
       {loading && <div className="care-info">{t("care.loadingChildren", "Loading children…")}</div>}
       {!loading && !children.length && <CareEmpty title={t("care.noChildren", "No child profiles here yet")} detail={t("care.noChildrenDetail", "An admin can add a child profile for this family.")} />}

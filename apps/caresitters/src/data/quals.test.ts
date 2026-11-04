@@ -8,16 +8,19 @@ describe("qualification display logic", () => {
     expect(AUSTRALIAN_CHILD_CHECKS.every((check) => check.lastChecked === "2026-11-04" && check.officialUrl.startsWith("https://"))).toBe(true);
   });
 
-  it("keeps upload status submitted unless server check evidence exists", () => {
-    expect(qualificationStatus({ status: "submitted" }, new Date("2026-11-04T00:00:00Z"))).toBe("submitted");
-    expect(qualificationStatus({ status: "verified" }, new Date("2026-11-04T00:00:00Z"))).toBe("under review");
-    expect(qualificationStatus({ status: "verified", checkedOn: "2026-10-01", verifiedBy: "reviewer" }, new Date("2026-11-04T00:00:00Z"))).toBe("verified");
+  it("never trusts client-supplied verification claims", () => {
+    const today = new Date("2026-11-04T00:00:00Z");
+    expect(qualificationStatus({ status: "submitted" }, today)).toBe("submitted");
+    expect(qualificationStatus({ status: "verified" }, today)).toBe("submitted");
+    expect(qualificationStatus({ status: "verified", checkedOn: "2026-10-01", verifiedBy: "client" }, today)).toBe("submitted");
+    expect(qualificationStatus({ status: "verified", checkedOn: "2026-10-01", verifiedBy: "reviewer" }, today, true)).toBe("verified");
   });
 
   it("uses expiry dates for expired and renewal states", () => {
     const today = new Date("2026-11-04T12:00:00Z");
-    expect(qualificationStatus({ status: "verified", checkedOn: "2026-01-01", verifiedBy: "reviewer", expiresOn: "2026-11-03" }, today)).toBe("expired");
-    expect(qualificationStatus({ status: "verified", checkedOn: "2026-01-01", verifiedBy: "reviewer", expiresOn: "2026-11-20" }, today)).toBe("needs renewal");
+    expect(qualificationStatus({ status: "verified", checkedOn: "2026-01-01", verifiedBy: "reviewer", expiresOn: "2026-11-03" }, today, true)).toBe("expired");
+    expect(qualificationStatus({ status: "verified", checkedOn: "2026-01-01", verifiedBy: "reviewer", expiresOn: "2026-11-20" }, today, true)).toBe("needs renewal");
+    expect(qualificationStatus({ status: "expired", expiresOn: "2026-11-03" }, today)).toBe("submitted");
   });
 
   it("parses common date formats", () => {

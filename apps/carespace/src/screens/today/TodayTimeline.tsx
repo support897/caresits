@@ -1,17 +1,32 @@
 import "../../lib/i18n";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Empty, t } from "@cc/core";
 import { MediaPicker } from "@cc/core/src/media/MediaPicker";
 import { getPrivateMediaUrl } from "@cc/core/src/media/upload";
-import { addTodayItem, answerTodayAsk, askForTodayUpdate, makeTodayAsk, readToday } from "../../data/today";
+import { addTodayItem, answerTodayAsk, askForTodayUpdate, makeTodayAsk, readSpacePhotos, readToday } from "../../data/today";
 import { readCalendar, type CalendarEvent } from "../../data/calendar";
 import { loadChildren, type ChildProfile } from "../../data/children";
 import type { SpaceMember } from "../../data/spaces";
 import { canPost, canSeePhotos } from "../../lib/permissions";
-import { groupTimelineByDay, type TimelineItem } from "../../lib/timeline";
+import { appendVoiceTranscript, groupTimelineByDay, timelineItemsForChild, type TimelineItem } from "../../lib/timeline";
 
 const localDay = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 const nowDay = localDay(new Date());
+type VoiceRecognitionResult = { 0?: { transcript?: string } };
+type VoiceRecognitionEvent = { results: ArrayLike<VoiceRecognitionResult> };
+type VoiceRecognition = {
+  lang: string;
+  interimResults: boolean;
+  onresult: ((event: VoiceRecognitionEvent) => void) | null;
+  onerror: ((event: { error?: string }) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+};
+type VoiceRecognitionWindow = Window & {
+  SpeechRecognition?: new () => VoiceRecognition;
+  webkitSpeechRecognition?: new () => VoiceRecognition;
+};
 
 const KIND_LABELS: Record<TimelineItem["kind"], [string, string]> = {
   arrival: ["cs.today.kind.arrival", "Arrival"],
@@ -53,6 +68,61 @@ function PhotoPreview({ photoKey }: { photoKey: string }) {
     : <p className="muted" style={{ margin: "8px 0 0" }}>{t("cs.today.photo.saved", "Photo saved to this care update")}</p>;
 }
 
+export type PhotoGalleryProps = {
+  spaceId: string;
+  member: SpaceMember;
+  childProfiles?: Array<Pick<ChildProfile, "id" | "name">>;
+};
+
+export function PhotoGallery({ spaceId, member, childProfiles = [] }: PhotoGalleryProps) {
+  const [photos, setPhotos] = useState<TimelineItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [fromCache, setFromCache] = useState(false);
+  const [online, setOnline] = useState(typeof navigator === "undefined" || navigator.onLine);
+  const [notice, setNotice] = useState("");
+  const mayRead = canSeePhotos(member.role, member.perms);
+  const refresh = useCallback(async () => {
+    if (!mayRead) { setPhotos([]); setLoading(false); return; }
+    try {
+      const result = await readSpacePhotos(spaceId);
+      setPhotos(result.items);
+      setFromCache(result.fromCache);
+      setOnline((typeof navigator === "undefined" || navigator.onLine) && !result.fromCache);
+      setNotice("");
+    } catch {
+      setNotice(t("cs.photos.load.error", "Photos could not load. Check your access and connection."));
+    } finally { setLoading(false); }
+  }, [mayRead, spaceId]);
+
+  useEffect(() => {
+    void refresh();
+    const onlineHandler = () => { setOnline(true); setLoading(true); void refresh(); };
+    const offlineHandler = () => { setOnline(false); setLoading(true); void refresh(); };
+    window.addEventListener("online", onlineHandler);
+    window.addEventListener("offline", offlineHandler);
+    return () => {
+      window.removeEventListener("online", onlineHandler);
+      window.removeEventListener("offline", offlineHandler);
+    };
+  }, [refresh]);
+
+  if (!mayRead) return <div className="scroll"><Empty mood="rest" title={t("cs.photos.private.title", "Photos are private for this role")} body={t("cs.photos.private.body", "A family admin can change photo access.")} /></div>;
+  return <div className="scroll" style={{ paddingTop: 12 }}>
+    <h1 style={{ fontSize: 28, marginBottom: 12 }}>{t("cs.photos.title", "Shared photos")}</h1>
+    {!online && fromCache && <p role="status" className="card" style={{ margin: "0 0 12px", padding: 12, background: "var(--soft)" }}>{t("cs.offline.banner", "You're offline - showing saved copy")}</p>}
+    {!online && !fromCache && <p role="status" className="card" style={{ margin: "0 0 12px", padding: 12, background: "var(--soft)" }}>{t("cs.offline.empty", "You're offline. No saved copy is on this device yet.")}</p>}
+    {notice && <p role="status" className="muted">{notice}</p>}
+    {loading ? <div className="sk" style={{ height: 150 }} /> : photos.length ? <div style={{ display: "grid", gap: 12 }} aria-label={t("cs.photos.gallery", "Photos shared with this care space")}>
+      {photos.map((photo) => <article key={photo.id} className="card" style={{ minWidth: 0 }}>
+        {photo.photoKey && <PhotoPreview photoKey={photo.photoKey} />}
+        <p style={{ margin: "8px 0 0", overflowWrap: "anywhere" }}>{photo.text}</p>
+        {photo.childId && childProfiles.find((child) => child.id === photo.childId)?.name && <p className="muted" style={{ margin: "4px 0 0" }}>{t("cs.photos.child", "For {name}", { name: childProfiles.find((child) => child.id === photo.childId)!.name })}</p>}
+        <time className="muted" dateTime={String(photo.at)}>{new Date(photo.at).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}</time>
+      </article>)}
+    </div> : <Empty mood="hello" title={t("cs.photos.empty.title", "Shared moments will show here")} body={t("cs.photos.empty.body", "Photos shared with this care space stay together.")} />}
+  </div>;
+}
+
 export type TodayPreviewData = {
   items: TimelineItem[];
   children: Array<Pick<ChildProfile, "id" | "name" | "ageYears">>;
@@ -68,6 +138,8 @@ export function TodayTimeline({ spaceId, uid, member, previewData }: TodayTimeli
   const [fromCache, setFromCache] = useState(false);
   const [online, setOnline] = useState(typeof navigator === "undefined" || navigator.onLine);
   const [busy, setBusy] = useState(false);
+  const [listening, setListening] = useState(false);
+  const recognitionRef = useRef<VoiceRecognition | null>(null);
   const [draft, setDraft] = useState("");
   const [notice, setNotice] = useState("");
   const [askOpen, setAskOpen] = useState<string | null>(null);
@@ -78,6 +150,11 @@ export function TodayTimeline({ spaceId, uid, member, previewData }: TodayTimeli
   const role = member.role;
   const showPhotos = canSeePhotos(role, member.perms);
   const canWrite = canPost(role);
+
+  function showWriteResult(queued: boolean) {
+    setFromCache((current) => current || queued);
+    setNotice(queued ? t("cs.offline.queued", "Saved here. It will sync when you're back online.") : "");
+  }
 
   const refresh = useCallback(async () => {
     if (previewData) {
@@ -123,10 +200,55 @@ export function TodayTimeline({ spaceId, uid, member, previewData }: TodayTimeli
     };
   }, [refresh]);
 
-  const grouped = useMemo(() => groupTimelineByDay(items), [items]);
-  const nextEvent = useMemo(() => todayEvents
+  const childItems = useMemo(() => timelineItemsForChild(items, childId), [childId, items]);
+  const childEvents = useMemo(() => todayEvents.filter((event) => !event.childId || event.childId === childId), [childId, todayEvents]);
+  const grouped = useMemo(() => groupTimelineByDay(childItems), [childItems]);
+  const nextEvent = useMemo(() => childEvents
     .filter((event) => new Date(event.start).getTime() >= Date.now())
-    .sort((left, right) => left.start.localeCompare(right.start))[0], [todayEvents]);
+    .sort((left, right) => left.start.localeCompare(right.start))[0], [childEvents]);
+
+  useEffect(() => () => { recognitionRef.current?.stop(); }, []);
+
+  function toggleDictation() {
+    if (listening) {
+      recognitionRef.current?.stop();
+      setListening(false);
+      return;
+    }
+    const speechWindow = window as VoiceRecognitionWindow;
+    const Recognition = speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
+    if (!Recognition) {
+      setNotice(t("cs.today.voice.unsupported", "Voice typing is not available here. Try your keyboard’s microphone instead."));
+      return;
+    }
+    const recognition = new Recognition();
+    recognition.lang = "en-AU";
+    recognition.interimResults = false;
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results).map((result) => result[0]?.transcript ?? "").filter(Boolean).join(" ");
+      setDraft((current) => appendVoiceTranscript(current, transcript));
+    };
+    recognition.onerror = (event) => {
+      setListening(false);
+      recognitionRef.current = null;
+      setNotice(event.error === "not-allowed"
+        ? t("cs.today.voice.denied", "Microphone access was not allowed. You can still type your update.")
+        : t("cs.today.voice.error", "Voice typing stopped. Try again or type your update."));
+    };
+    recognition.onend = () => {
+      setListening(false);
+      recognitionRef.current = null;
+    };
+    recognitionRef.current = recognition;
+    setNotice("");
+    setListening(true);
+    try { recognition.start(); }
+    catch {
+      recognitionRef.current = null;
+      setListening(false);
+      setNotice(t("cs.today.voice.error", "Voice typing stopped. Try again or type your update."));
+    }
+  }
 
   async function addQuick(kind: TimelineItem["kind"], defaultText: string) {
     if (!canWrite || busy) return;
@@ -137,7 +259,7 @@ export function TodayTimeline({ spaceId, uid, member, previewData }: TodayTimeli
     setBusy(true);
     setNotice("");
     try {
-      const item = await addTodayItem(spaceId, {
+      const result = await addTodayItem(spaceId, {
         childId,
         day: nowDay,
         kind,
@@ -145,9 +267,10 @@ export function TodayTimeline({ spaceId, uid, member, previewData }: TodayTimeli
         text: draft.trim() || defaultText,
         by: uid,
       });
-      setItems((current) => [...current.filter((entry) => entry.id !== item.id), item]);
+      setItems((current) => [...current.filter((entry) => entry.id !== result.item.id), result.item]);
       setDraft("");
       setNoteOpen(false);
+      showWriteResult(result.queued);
     } catch {
       setNotice(t("cs.today.save.error", "This update could not be saved. Check your access and try again."));
     } finally { setBusy(false); }
@@ -159,7 +282,7 @@ export function TodayTimeline({ spaceId, uid, member, previewData }: TodayTimeli
       return;
     }
     try {
-      const item = await addTodayItem(spaceId, {
+      const result = await addTodayItem(spaceId, {
         childId,
         day: nowDay,
         kind: "photo",
@@ -168,7 +291,8 @@ export function TodayTimeline({ spaceId, uid, member, previewData }: TodayTimeli
         photoKey,
         by: uid,
       });
-      setItems((current) => [...current.filter((entry) => entry.id !== item.id), item]);
+      setItems((current) => [...current.filter((entry) => entry.id !== result.item.id), result.item]);
+      showWriteResult(result.queued);
     } catch { setNotice(t("cs.today.save.error", "This update could not be saved. Check your access and try again.")); }
   }
 
@@ -176,10 +300,11 @@ export function TodayTimeline({ spaceId, uid, member, previewData }: TodayTimeli
     const text = (askDrafts[item.id] ?? "").trim();
     if (!text || !canWrite) return;
     try {
-      const next = await askForTodayUpdate(spaceId, item, makeTodayAsk(uid, text));
-      setItems((current) => current.map((entry) => entry.id === item.id ? next : entry));
+      const result = await askForTodayUpdate(spaceId, item, makeTodayAsk(uid, text));
+      setItems((current) => current.map((entry) => entry.id === item.id ? result.item : entry));
       setAskDrafts((current) => ({ ...current, [item.id]: "" }));
       setAskOpen(null);
+      showWriteResult(result.queued);
     } catch { setNotice(t("cs.today.ask.error", "The update request could not be saved.")); }
   }
 
@@ -189,14 +314,15 @@ export function TodayTimeline({ spaceId, uid, member, previewData }: TodayTimeli
     const answerPhotoKey = answerPhotos[key];
     if ((!answerText && !answerPhotoKey) || !canWrite) return;
     try {
-      const next = await answerTodayAsk(spaceId, item, askIndex, {
+      const result = await answerTodayAsk(spaceId, item, askIndex, {
         answeredAt: new Date().toISOString(),
         ...(answerText ? { answerText } : {}),
         ...(answerPhotoKey ? { answerPhotoKey } : {}),
       });
-      setItems((current) => current.map((entry) => entry.id === item.id ? next : entry));
+      setItems((current) => current.map((entry) => entry.id === item.id ? result.item : entry));
       setAnswerDrafts((current) => ({ ...current, [key]: "" }));
       setAnswerPhotos((current) => ({ ...current, [key]: "" }));
+      showWriteResult(result.queued);
     } catch { setNotice(t("cs.today.answer.error", "The update could not be sent.")); }
   }
 
@@ -231,6 +357,7 @@ export function TodayTimeline({ spaceId, uid, member, previewData }: TodayTimeli
         aria-label={t("cs.today.detail.placeholder", "What happened? Meal, drink, nap, or activity")} />
       <div className="row" style={{ marginTop: 10, gap: 8 }}>
         {QUICK_ACTIONS.map((action) => <button key={action.kind} type="button" className="chip" disabled={busy || !children.length} onClick={() => void addQuick(action.kind, t(action.fallbackKey, action.fallback))}>{t(action.key, action.label)}</button>)}
+        <button type="button" className="chip" aria-pressed={listening} onClick={toggleDictation}>{listening ? t("cs.today.voice.stop", "Stop dictation") : t("cs.today.voice.start", "Dictate an update")}</button>
         <button type="button" className="chip" disabled={busy || !children.length} onClick={() => setNoteOpen((value) => !value)}>{t("cs.today.quick.note", "Note")}</button>
       </div>
       {noteOpen && <div style={{ marginTop: 10 }}>
@@ -248,7 +375,7 @@ export function TodayTimeline({ spaceId, uid, member, previewData }: TodayTimeli
           const [kindKey, kindFallback] = KIND_LABELS[item.kind];
           return <article key={item.id} className="card" style={{ padding: 14 }}>
             <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-              <span className="tag" style={{ background: "var(--soft)", color: "var(--text)" }}>{t(kindKey, kindFallback)}</span>
+              <span className="tag" style={{ background: "var(--soft)", color: "var(--text)", fontSize: 17 }}>{t(kindKey, kindFallback)}</span>
               <time className="muted">{timeLabel(item.at)}</time>
             </div>
             <p style={{ margin: "10px 0 0", whiteSpace: "pre-wrap" }}>{item.text}</p>
