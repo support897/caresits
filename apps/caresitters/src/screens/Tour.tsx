@@ -32,7 +32,7 @@ export default function Tour({ params }: ScreenProps) {
     const trapFocus = (event: KeyboardEvent) => {
       if (event.key === "Escape") { event.preventDefault(); finish(); return; }
       if (event.key !== "Tab") return;
-      const focusable = [...(dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled])') ?? [])];
+      const focusable = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled])') ?? []);
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
       if (!first || !last) { event.preventDefault(); return; }
@@ -46,7 +46,7 @@ export default function Tour({ params }: ScreenProps) {
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, String(step)); } catch { /* resume is a convenience */ }
     const timer = window.setTimeout(() => {
-      const tabs = [...document.querySelectorAll<HTMLElement>(".tabs .tab")];
+      const tabs = Array.from(document.querySelectorAll<HTMLElement>(".tabs .tab"));
       tabs[step]?.click();
       const anchor = document.querySelector<HTMLElement>(".screen h1") ?? tabs[step];
       if (anchor) {
@@ -60,7 +60,7 @@ export default function Tour({ params }: ScreenProps) {
   useEffect(() => {
     const resize = () => {
       setSize({ width: window.innerWidth, height: window.innerHeight });
-      const tabs = [...document.querySelectorAll<HTMLElement>(".tabs .tab")];
+      const tabs = Array.from(document.querySelectorAll<HTMLElement>(".tabs .tab"));
       const anchor = document.querySelector<HTMLElement>(".screen h1") ?? tabs[step];
       const rect = anchor?.getBoundingClientRect();
       if (rect) setTarget({ left: rect.left, top: rect.top, width: rect.width, height: rect.height });
