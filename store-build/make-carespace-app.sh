@@ -13,8 +13,8 @@ p='ios/App/App.xcodeproj/project.pbxproj'; s=open(p).read()
 s=s.replace('com.ilse.caresits','com.ilse.carespace'); s=re.sub(r'CURRENT_PROJECT_VERSION = \d+;','CURRENT_PROJECT_VERSION = 1;',s); open(p,'w').write(s)
 p='ios/App/App/Info.plist'; s=open(p).read(); s=s.replace('<string>Caresitters</string>','<string>CareSpace</string>',1); open(p,'w').write(s)
 PY
-sed -i '' 's#<string>com.ilse.caresits</string>#<string>com.ilse.carespace</string>#' ios/App/App/GoogleService-Info.plist
-# no Sign in with Apple entitlement on this App ID yet (email sign-in only)
-printf '<?xml version="1.0" encoding="UTF-8"?>\n<plist version="1.0">\n<dict/>\n</plist>\n' > ios/App/App/App.entitlements
+# CareSpace has its own Firebase iOS app (own Google sign-in key) and Sign in with Apple is on for its App ID
+cp carespace-GoogleService-Info.plist ios/App/App/GoogleService-Info.plist
+sed -i '' 's#com.googleusercontent.apps.908064912971-m38ejiid1tp1qlirbqefh9odhlpv5r2k#com.googleusercontent.apps.908064912971-1mqcckm55pdlu1qoo4mukudg9h8o7l97#' ios/App/App/Info.plist
 cp carespace-icon-1024.png ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png
 npx cap sync ios
