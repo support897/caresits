@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Bunny } from "../Bunny"; import { signInGoogle, signInApple, signInEmail, sendReset } from "../auth"; import { t } from "../i18n"; import { spring } from "./index";
+import { Bunny } from "../Bunny"; import { useAuth } from "../hooks"; import { signInGoogle, signInApple, signInEmail, sendReset } from "../auth"; import { t } from "../i18n"; import { spring } from "./index";
 /** One sign-in for both apps: Google, Apple, email. Session is remembered on the phone (see session.ts). */
 export function SignIn({ title, tagline }: { title: string; tagline: string }) {
+  const { user } = useAuth();
   const [e, setE] = useState(""), [p, setP] = useState(""), [msg, setMsg] = useState(""), [busy, setBusy] = useState(false), [mail, setMail] = useState(false);
   const fail = (er: unknown) => { setBusy(false); const c = ((er as { code?: string })?.code ?? "") + ((er as Error)?.message ?? ""); setMsg(/cancel|1001|popup-closed/i.test(c) ? "" : /weak/.test(c) ? t("auth.weak", "Password needs 6+ characters.") : /invalid|wrong|not-found/.test(c) ? t("auth.bad", "Email or password is not right.") : /network|timeout/.test(c) ? t("auth.net", "No connection. Try again.") : t("auth.fail", "Could not sign in. Try again.")); };
-  const run = async (fn: () => Promise<unknown>) => { setBusy(true); setMsg(""); try { await fn(); } catch (x) { fail(x); } };
+  const run = async (fn: () => Promise<unknown>) => { setBusy(true); setMsg(""); try { await fn(); setBusy(false); } catch (x) { fail(x); } };
+  if (user) return null; // never show sign-in to someone who is already in
   return <div className="scroll" style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 10, textAlign: "center", minHeight: "100%" }}>
     <motion.div initial={{ scale: .5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={spring} style={{ alignSelf: "center" }}><Bunny mood="hello" size={140} /></motion.div>
     <h1 style={{ fontSize: 42 }}>{title}</h1><p className="muted" style={{ margin: "0 0 8px" }}>{tagline}</p>
