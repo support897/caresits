@@ -2,6 +2,7 @@ import { useEffect, useRef, type ReactNode, type ButtonHTMLAttributes } from "re
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Bunny, type Mood } from "../Bunny";
 import { haptic } from "../haptics";
+import { MediaImg } from "../MediaImg";
 import { t } from "../i18n";
 export const spring = { type: "spring", stiffness: 380, damping: 30 } as const;
 export const Button = ({ alt, small, children, ...r }: ButtonHTMLAttributes<HTMLButtonElement> & { alt?: boolean; small?: boolean }) => <button {...r} type={r.type ?? "button"} className={`btn${alt ? " alt" : ""}${small ? " sm" : ""} ${r.className ?? ""}`}>{children}</button>;
@@ -32,7 +33,7 @@ export function Sheet({ children, onClose, label }: { children: ReactNode; onClo
     <motion.div ref={panel} tabIndex={-1} initial={reduced ? false : { y: 60 }} animate={{ y: 0 }} exit={{ y: reduced ? 0 : 60 }} transition={motionTransition} onClick={(event) => event.stopPropagation()}>{children}</motion.div></motion.div></AnimatePresence>;
 }
 export const Empty = ({ mood = "rest", title, body, action }: { mood?: Mood; title: string; body?: string; action?: ReactNode }) => <div className="empty"><Bunny mood={mood} size={110} /><h3>{title}</h3>{body && <p className="muted" style={{ margin: 0 }}>{body}</p>}{action}</div>;
-export const Avatar = ({ name, url, size = 48 }: { name: string; url?: string; size?: number }) => <div className="av" style={{ width: size, height: size, fontSize: size * .42 }} aria-hidden="true">{url ? <img src={url} alt="" /> : (name[0] ?? "?").toUpperCase()}</div>;
+export const Avatar = ({ name, url, size = 48 }: { name: string; url?: string; size?: number }) => <div className="av" style={{ width: size, height: size, fontSize: size * .42 }} aria-hidden="true">{url ? <MediaImg src={url} alt="" /> : (name[0] ?? "?").toUpperCase()}</div>;
 export function Ring({ pct, label }: { pct: number; label: string }) { const reduced = useReducedMotion(), r = 28, c = 2 * Math.PI * r; return <div role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={label} style={{ position: "relative", width: 68, height: 68 }}><svg viewBox="0 0 68 68" width="68" height="68"><circle cx="34" cy="34" r={r} fill="none" stroke="var(--line)" strokeWidth="6" /><motion.circle cx="34" cy="34" r={r} fill="none" stroke="var(--good)" strokeWidth="6" strokeLinecap="round" strokeDasharray={c} initial={reduced ? false : { strokeDashoffset: c }} animate={{ strokeDashoffset: c * (1 - pct / 100) }} transition={reduced ? { duration: 0 } : { duration: .8 }} transform="rotate(-90 34 34)" /></svg><b style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>{pct}%</b></div>; }
 export type TabDef = { key: string; label: string; icon: string; badge?: number };
 export function TabBar({ tabs, value, onChange }: { tabs: TabDef[]; value: string; onChange: (k: string) => void }) {
