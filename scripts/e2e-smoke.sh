@@ -10,6 +10,7 @@ TMP_DIR="$(mktemp -d)"
 EMU_PID=""
 CS_PID=""
 SECOND_PID=""
+FILES_PID=""
 
 stop_group() {
   local pid="$1"
@@ -20,6 +21,7 @@ stop_group() {
 cleanup() {
   stop_group "$CS_PID"
   stop_group "$SECOND_PID"
+  stop_group "$FILES_PID"
   stop_group "$EMU_PID"
   rm -rf "$TMP_DIR"
 }
@@ -92,5 +94,7 @@ SECOND_PID="$(start_group "$TMP_DIR/second-app.log" corepack pnpm --filter @cc/c
 wait_for_port "http://127.0.0.1:4173/" "$CS_PID" "Caresitters preview" "$TMP_DIR/caresitters.log"
 wait_for_port "http://127.0.0.1:4174/" "$SECOND_PID" "Second app preview" "$TMP_DIR/second-app.log"
 
+FILES_PID="$(start_group "$TMP_DIR/files.log" node "$ROOT/e2e/fake-files.mjs")"
+sleep 1
 printf 'Running Playwright smoke specs...\n'
 "$PLAYWRIGHT_CLI" test --config "$ROOT/e2e/playwright.config.mjs"
