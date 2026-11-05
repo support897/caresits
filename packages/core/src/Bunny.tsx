@@ -47,7 +47,7 @@ function Extras({ mood }: { mood: Mood }) {
   if (mood === "celebrate") return <g className="b-spark" fill="#F2B84B"><path d="M26 40l3 8 8 3-8 3-3 8-3-8-8-3 8-3z" /><path d="M176 28l2.5 6 6 2.5-6 2.5-2.5 6-2.5-6-6-2.5 6-2.5z" /><circle cx="170" cy="84" r="3" fill={PINK} /><circle cx="30" cy="96" r="3" fill={PINK} /></g>;
   if (mood === "oops") return <path className="b-drop" d="M150 62c-7 10-9 15-9 19a9 9 0 0018 0c0-4-2-9-9-19z" fill="#8EC5E8" />;
   if (mood === "think") return <g className="b-bubble"><circle cx="150" cy="58" r="5" fill="#fff" stroke={HEART} strokeWidth="1.5" /><circle cx="162" cy="40" r="8" fill="#fff" stroke={HEART} strokeWidth="1.5" /><text x="162" y="46" textAnchor="middle" fontSize="15" fontWeight="700" fill={NOSE}>?</text></g>;
-  if (mood === "rest") return <g className="b-zzz" fill={HEART} fontWeight="700" fontFamily="Newsreader,Georgia,serif"><text x="146" y="48" fontSize="20">z</text><text x="160" y="30" fontSize="15">z</text></g>;
+  if (mood === "rest") return <g className="b-zzz" fill={HEART} fontWeight="700" fontFamily="var(--font-title)"><text x="146" y="48" fontSize="20">z</text><text x="160" y="30" fontSize="15">z</text></g>;
   return null;
 }
 export const Bunny = forwardRef<BunnyHandle, { mood?: Mood; size?: number; onTap?: () => void; caption?: string; className?: string }>(function Bunny({ mood = "hello", size = 140, onTap, caption, className }, ref) {
