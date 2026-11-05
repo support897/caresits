@@ -50,6 +50,7 @@ test("email signup builds a saved family profile and signs out cleanly", async (
   await page.getByRole("button", { name: "Montessori", exact: true }).click();
   await page.getByRole("button", { name: "reading", exact: true }).click();
   await page.getByRole("button", { name: "Spanish", exact: true }).click();
+  await page.getByRole("button", { name: "Save and continue", exact: true }).click();
   await page.getByRole("button", { name: "Finish profile", exact: true }).click();
 
   const skipTour = page.getByRole("button", { name: "Skip", exact: true });
