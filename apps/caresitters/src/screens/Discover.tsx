@@ -219,7 +219,9 @@ export default function Discover({ params }: ScreenProps) {
     </header>
 
     <div className="scroll">
-      <section aria-label={t("disc.quickSearch", "Quick search")} className="card" style={{ display: "grid", gap: 10, padding: 14 }}>
+      <details aria-label={t("disc.quickSearch", "Quick search")} className="card" style={{ padding: 14 }}>
+        <summary style={{ minHeight: 44, display: "flex", alignItems: "center", cursor: "pointer", fontWeight: 700, fontSize: 19, listStylePosition: "inside" }}>{t("disc.filtersToggle", "Search and filters")}</summary>
+        <div style={{ display: "grid", gap: 10, marginBlockStart: 10 }}>
         <div><h2 style={{ fontSize: 22 }}>{t("disc.quickTitle", "Tell us what you need")}</h2><p className="muted" style={{ margin: "4px 0 0" }}>{t("disc.quickHelp", "Suggestions are rule-based. Review and confirm before matching.")}</p></div>
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "center" }}>
           <input className="field" value={searchText} onChange={(event) => setSearchText(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") makeSuggestions(); }} placeholder={t("disc.searchPlaceholder", "e.g. available Friday from 4pm, can cook")} aria-label={t("disc.searchPlaceholder", "Describe what you need")} />
@@ -247,7 +249,8 @@ export default function Discover({ params }: ScreenProps) {
             <span>{search.label}</span><div className="row"><Button type="button" alt small onClick={() => applySavedSearch(search)}>{t("disc.applySearch", "Apply")}</Button><Button type="button" alt small onClick={() => removeSearch(search)} aria-label={t("disc.deleteSearch", "Delete saved search: {label}", { label: search.label })}>{t("disc.delete", "Delete")}</Button></div>
           </div>) : <p className="muted" style={{ margin: 0 }}>{t("disc.noSavedSearches", "Saved searches stay on this device until you remove them.")}</p>}
         </div>
-      </section>
+      </div>
+      </details>
 
       {loading && <div style={{ paddingBlock: 24 }}><Empty mood="rest" title={t("disc.loading", "Finding profiles…")} /></div>}
       {!loading && loadError && <Empty mood="oops" title={t("disc.loadError", "Profiles could not load")} body={t("disc.tryAgain", "Check your connection and try again.")} />}
