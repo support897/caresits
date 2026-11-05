@@ -40,7 +40,7 @@ export function PersonCard({ person, km, result, saved, onSave, onWhy, onOpen }:
   return <article className="card" style={cardBox} aria-label={t("disc.personCard", "Profile for {name}", { name: person.firstName })}>
     <button type="button" onClick={onOpen} aria-label={t("disc.openProfile", "Open {name}'s profile", { name: person.firstName })} style={{ display: "block", width: "100%", textAlign: "start" }}>
       <div style={{ position: "relative", width: "100%", aspectRatio: "1.42", background: "var(--soft)", display: "grid", placeItems: "center", overflow: "hidden" }}>
-        {person.photoUrl ? <img src={person.photoUrl} alt={t("disc.photoAlt", "{name}'s profile photo", { name: person.firstName })} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span aria-hidden="true" style={{ fontFamily: "Newsreader,serif", fontSize: 68, color: "var(--muted)" }}>{person.firstName.charAt(0).toUpperCase()}</span>}
+        {person.photoUrl ? <img src={person.photoUrl} alt={t("disc.photoAlt", "{name}'s profile photo", { name: person.firstName })} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span aria-hidden="true" style={{ fontFamily: "var(--font-title)", fontSize: 68, color: "var(--muted)" }}>{person.firstName.charAt(0).toUpperCase()}</span>}
         {badge && <span className="tag good" style={{ position: "absolute", insetInlineStart: 12, insetBlockStart: 12, fontSize: 17, background: "var(--good)", color: "var(--cream)" }}>{t(badge === "Verified" ? "disc.verified" : "disc.idSighted", badge)}</span>}
       </div>
       <div style={{ padding: 16, display: "grid", gap: 8 }}>
@@ -62,7 +62,7 @@ export function PersonCard({ person, km, result, saved, onSave, onWhy, onOpen }:
       <Button type="button" alt onClick={onWhy} aria-label={t("disc.whyButton", "Why this match for {name}", { name: person.firstName })}>
         {result.score === null ? t("disc.why", "Why this match") : t("disc.matchScore", "{score}% match", { score: result.score })}
       </Button>
-      <motion.button type="button" aria-label={saved ? t("disc.unsave", "Remove {name} from saved", { name: person.firstName }) : t("disc.save", "Save {name}", { name: person.firstName })} aria-pressed={saved} onClick={onSave} whileTap={{ scale: 0.82 }} transition={{ type: "spring", stiffness: 420, damping: 18 }} style={{ width: 48, height: 48, borderRadius: 99, background: saved ? "var(--blush)" : "var(--soft)", display: "grid", placeItems: "center", color: "var(--text)" }}>
+      <motion.button type="button" aria-label={saved ? t("disc.unsave", "Remove {name} from saved", { name: person.firstName }) : t("disc.save", "Save {name}", { name: person.firstName })} aria-pressed={saved} onClick={onSave} animate={{ scale: saved ? [1, 1.45, 1] : 1 }} whileTap={{ scale: 0.82 }} transition={{ type: "spring", stiffness: 420, damping: 18 }} style={{ width: 48, height: 48, borderRadius: 99, background: saved ? "var(--blush)" : "var(--soft)", display: "grid", placeItems: "center", color: "var(--text)" }}>
         <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill={saved ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8z" /></svg>
       </motion.button>
     </div>
