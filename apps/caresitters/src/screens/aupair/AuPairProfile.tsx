@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
-import { Avatar, BackBar, Button, Empty, auth, loadProfile, saveProfile, t, useNav, type Person, type ScreenProps } from "@cc/core";
+import { Avatar, MediaImg, BackBar, Button, Empty, auth, loadProfile, saveProfile, t, useNav, type Person, type ScreenProps } from "@cc/core";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@cc/core";
 import { AUPAIR_DESTINATIONS, CHILDCARE_DUTIES, OTHER_HOUSEWORK, PASSPORT_COUNTRIES, destinationByName, packAuPairArrival, parseAuPairArrival, personLanguages, placementCompatibility, placementCompatibilityFacts, type PlacementMode } from "../../data/aupair";
@@ -212,7 +212,7 @@ export default function AuPairProfile({ params }: ScreenProps<Params>) {
     <BackBar title={title} onBack={nav.back} right={isOwner && !editing ? <button className="chip" onClick={() => setEditing(true)}>{t("aupair.edit", "Edit")}</button> : undefined} />
     <div className="aupair-scroll"><div className="ap-content">
       <header className="ap-profile-hero">
-        <div className="ap-profile-avatar">{person.photoUrl ? <img src={person.photoUrl} alt={t("aupair.profilePhotoAlt", "Profile photo of {name}", { name: person.name })} /> : <Avatar name={person.firstName} size={70} />}</div>
+        <div className="ap-profile-avatar">{person.photoUrl ? <MediaImg src={person.photoUrl} alt={t("aupair.profilePhotoAlt", "Profile photo of {name}", { name: person.name })} /> : <Avatar name={person.firstName} size={70} />}</div>
         <div><h1>{person.name}</h1><p>{asString(person.card.headline) || asString(person.about) || (mode === "host" ? t("aupair.hostIntro", "A family opening their home to an au pair") : t("aupair.auPairIntro", "An au pair looking for a host family"))}</p></div>
       </header>
 
