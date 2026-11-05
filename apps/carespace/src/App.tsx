@@ -39,7 +39,7 @@ function SignedInApp({ uid, name, email, seen, inviteInput, onWelcomeDone }: Sig
 export function App() {
   useLang(); const { user, ready } = useAuth(); const [seen, setSeen] = useState(() => localStorage.getItem("caresits-cs-welcome") === "1");
   const [inviteInput, setInviteInput] = useState(() => inviteInputFromUrl());
-  useEffect(() => { document.body.dataset.theme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"; }, []);
+  useEffect(() => { document.body.dataset.theme = "light"; }, []);
   useEffect(() => {
     const updateInvite = () => setInviteInput(inviteInputFromUrl());
     window.addEventListener("popstate", updateInvite);
