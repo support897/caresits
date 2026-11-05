@@ -66,8 +66,8 @@ export default function Medical({ params }: ScreenProps<Params>) {
       {demo && <DemoNotice />}
       {!allowed ? <CareEmpty title={t("care.medicalNoAccess", "You cannot read these details")} detail={t("care.medicalNoAccessHint", "A parent can grant allergy and medication access for this family space.")} /> : <>
         {record && record.allergies !== null && <AllergyBanner names={record.allergies.map((item) => item.name).filter(Boolean)} />}
-        {record && record.allergies === null && <div className="care-alert" role="alert"><strong>{t("care.allergyUnconfirmed", "Allergy details could not be confirmed.")}</strong><p>{t("care.allergyUnavailableHint", "Ask a parent to record and confirm this child’s allergies before serving food.")}</p></div>}
-        <div className="care-info"><b>{t("care.medicalSeparate", "Private care information")}</b><p>{t("care.medicalSeparateHint", "Allergies, medication, and emergency instructions are stored apart from daily notes. Only an admin can edit them. Each saved change alerts the care team.")}</p></div>
+        {record && record.allergies === null && <div className="care-alert" role="alert"><strong>{t("care.allergyUnconfirmed", "Allergy details could not be confirmed.")}</strong><p>{t("care.allergyUnavailableHint", "Ask a parent to confirm allergies before serving food.")}</p></div>}
+        <div className="care-info"><b>{t("care.medicalSeparate", "Private care information")}</b><p>{t("care.medicalSeparateHint", "Kept apart from daily notes. Only an admin can edit.")}</p></div>
         {error && <div className="care-info care-warning" role="alert">{error}</div>}
         {notice && <div className="care-status" role="status">{notice}</div>}
         {!record ? <div className="sk" style={{ height: 180, marginTop: 12 }} /> : <>
@@ -75,18 +75,18 @@ export default function Medical({ params }: ScreenProps<Params>) {
           {editable && !editing && <Button onClick={() => { setDraft(cloneRecord(record)); setEditing(true); }}>{t("care.editMedical", "Edit details")}</Button>}
           <section className="care-section">
             <div className="care-card"><h2>{t("care.allergies", "Allergies")}</h2>
-              {record.allergies === null ? <p className="care-muted">{t("care.allergyUnavailableHint", "Ask a parent to record and confirm this child’s allergies before serving food.")}</p> : draft.allergies.length ? draft.allergies.map((item, index) => <div className="care-section-card" key={`allergy-${index}`}>
+              {record.allergies === null ? <p className="care-muted">{t("care.allergyUnavailableHint", "Ask a parent to confirm allergies before serving food.")}</p> : draft.allergies.length ? draft.allergies.map((item, index) => <div className="care-section-card" key={`allergy-${index}`}>
                 {editing ? <div className="care-grid">
                   <label className="care-field"><span>{t("care.allergyName", "Allergy name")}</span><input value={item.name} onChange={(event) => updateAllergy(index, "name", event.target.value)} /></label>
                   <label className="care-field"><span>{t("care.severity", "Severity stated by parent")}</span><input value={item.severity} onChange={(event) => updateAllergy(index, "severity", event.target.value)} /></label>
                   <label className="care-field"><span>{t("care.allergyNotes", "Parent’s notes")}</span><textarea value={item.notes} onChange={(event) => updateAllergy(index, "notes", event.target.value)} /></label>
                   <Button alt onClick={() => setDraft({ ...draft, allergies: draft.allergies.filter((_, i) => i !== index) })}>{t("care.removeAllergy", "Remove allergy")}</Button>
                 </div> : <><b>{item.name}</b>{item.severity && <p>{t("care.severityLabel", "Severity: {severity}", { severity: item.severity })}</p>}{item.notes && <p>{item.notes}</p>}</>}
-              </div>) : <p className="care-muted">{t("care.noAllergies", "No allergies recorded in this space. Check with the parent before serving food.")}</p>}
+              </div>) : <p className="care-muted">{t("care.noAllergies", "No allergies recorded. Check with the parent.")}</p>}
               {editing && <Button alt onClick={() => setDraft({ ...draft, allergies: [...draft.allergies, { name: "", severity: "", notes: "" }] })}>{t("care.addAllergy", "Add an allergy")}</Button>}
             </div>
             <div className="care-card"><h2>{t("care.medications", "Medication")}</h2>
-              {record.medication === null ? <p className="care-muted">{t("care.medicationUnavailable", "Medication details are not available or recorded. Ask a parent before relying on them.")}</p> : draft.medication.length ? draft.medication.map((item, index) => <div className="care-section-card" key={`medicine-${index}`}>
+              {record.medication === null ? <p className="care-muted">{t("care.medicationUnavailable", "No medication details yet. Ask a parent.")}</p> : draft.medication.length ? draft.medication.map((item, index) => <div className="care-section-card" key={`medicine-${index}`}>
                 {editing ? <div className="care-grid">
                   <label className="care-field"><span>{t("care.medName", "Medicine name")}</span><input value={item.name} onChange={(event) => updateMedication(index, "name", event.target.value)} /></label>
                   <label className="care-field"><span>{t("care.dose", "Dose stated by parent")}</span><input value={item.dose} onChange={(event) => updateMedication(index, "dose", event.target.value)} /></label>
@@ -98,7 +98,7 @@ export default function Medical({ params }: ScreenProps<Params>) {
               {editing && <Button alt onClick={() => setDraft({ ...draft, medication: [...draft.medication, { name: "", dose: "", times: "", notes: "" }] })}>{t("care.addMedicine", "Add medication")}</Button>}
             </div>
             <div className="care-card"><h2>{t("care.emergency", "Emergency details")}</h2>
-              {record.emergency === null ? <p className="care-muted">{t("care.emergencyUnavailable", "Emergency details are not available or recorded. Ask a parent before relying on them.")}</p> : <>
+              {record.emergency === null ? <p className="care-muted">{t("care.emergencyUnavailable", "No emergency details yet. Ask a parent.")}</p> : <>
                 <h3>{t("care.contacts", "Contacts")}</h3>
                 {draft.emergency.contacts.map((contact, index) => <div className="care-section-card" key={`contact-${index}`}>
                   {editing ? <div className="care-grid">

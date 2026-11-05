@@ -119,7 +119,7 @@ export default function DailyReport({ params }: ScreenProps<Params>) {
       return;
     }
     if (!mealConfirmed) {
-      setError(t("care.mealConfirmRequired", "Check the ingredients and the parent’s instructions before saving this meal."));
+      setError(t("care.mealConfirmRequired", "Check ingredients and parent's notes first."));
       return;
     }
     if (await saveItem("meal", entered)) {
@@ -148,7 +148,7 @@ export default function DailyReport({ params }: ScreenProps<Params>) {
     const speechWindow = window as VoiceRecognitionWindow;
     const Recognition = speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
     if (!Recognition) {
-      setNotice(t("care.voiceUnsupported", "Voice typing is not available in this browser. Try your keyboard microphone or type your note."));
+      setNotice(t("care.voiceUnsupported", "Voice typing isn't available here. Type your note."));
       return;
     }
     const recognition = new Recognition();
@@ -198,7 +198,7 @@ export default function DailyReport({ params }: ScreenProps<Params>) {
       {!canWrite && <div className="care-alert" role="alert">{t("care.reportReadOnly", "You do not have permission to add updates to this family’s report.")}</div>}
       <div className="care-head"><div><h1>{title}</h1><p>{t("care.reportDate", "Today · {day}", { day })}</p></div></div>
       {allergies?.length ? <AllergyBanner names={allergies} /> : null}
-      {!allergyAccess && <div className="care-alert" role="alert"><strong>{t("care.allergyInfoMissing", "Allergy details are not available to you.")}</strong><p>{t("care.allergyInfoMissingHint", "This meal is not checked for this child. Ask a parent before serving food.")}</p></div>}
+      {!allergyAccess && <div className="care-alert" role="alert"><strong>{t("care.allergyInfoMissing", "Allergy details are not available to you.")}</strong><p>{t("care.allergyInfoMissingHint", "Not checked for this child. Ask a parent first.")}</p></div>}
       {allergyAccess && allergies === null && <div className="care-alert" role="alert"><strong>{t("care.allergyInfoLoading", "Allergy details could not be confirmed.")}</strong><p>{t("care.reportAllergyError", "Ask a parent before logging food.")}</p></div>}
       {error && <div className="care-info care-warning" role="alert">{error}</div>}
       {notice && <div className="care-status" role="status">{notice}</div>}
@@ -218,7 +218,7 @@ export default function DailyReport({ params }: ScreenProps<Params>) {
       <section className="care-card care-section">
         <h2>{t("care.addNote", "Add a note")}</h2>
         <label className="care-field"><span>{t("care.noteLabel", "Note for the family")}</span><textarea value={note} disabled={!canWrite} onChange={(event) => setNote(event.target.value)} maxLength={1000} /></label>
-        <p className="care-muted">{t("care.voicePrivacy", "Voice typing may use your browser’s speech service. Review the words before saving.")}</p>
+        <p className="care-muted">{t("care.voicePrivacy", "Voice typing may use your browser's speech service. Check the words.")}</p>
         <Button alt onClick={toggleVoiceTyping} aria-pressed={listening} disabled={busy || !canWrite}>{listening ? t("care.voiceStop", "Stop voice typing") : t("care.voiceStart", "Use voice typing")}</Button>
         <Button onClick={() => void saveNote()} disabled={!canWrite || !note.trim() || busy}>{t("care.saveNote", "Save note")}</Button>
       </section>

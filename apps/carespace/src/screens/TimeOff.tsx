@@ -218,7 +218,7 @@ export default function Screen({ params }: ScreenProps<TimeOffParams>) {
               <div className="row" style={{ justifyContent: "space-between" }}><strong>{event.title}</strong><span className="tag" style={{ fontSize: 17 }}>{event.queued ? `${status} · ${t("cs.offline.waiting", "Waiting to sync")}` : status}</span></div>
               <p style={{ margin: "8px 0 0" }}>{new Date(event.start).toLocaleString(undefined, { weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" })} · {space?.name ?? event.spaceName}</p>
               {swapStart && swapEnd && <p className="muted" style={{ margin: "8px 0 0" }}>{t("cs.timeoff.history.proposed", "Proposed time")}: {swapStart.toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} – {swapEnd.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</p>}
-              {event.state === "swap" && <p className="muted" style={{ margin: "8px 0 0" }}>{t("cs.timeoff.history.swap.pending", "This is a proposal, not a booking change. Confirm it with the family before changing plans.")}</p>}
+              {event.state === "swap" && <p className="muted" style={{ margin: "8px 0 0" }}>{t("cs.timeoff.history.swap.pending", "A proposal, not a change. Confirm with the family.")}</p>}
             </article>;
           })}
         </div>

@@ -176,8 +176,8 @@ export default function Child({ params }: ScreenProps<Params>) {
     <div className="scroll"><div className="care-wrap">
       {demo && <DemoNotice />}
       <AllergyBanner names={allergyNames} />
-      {!canReadAllergies({ role, perms }) && <div className="care-alert" role="alert"><strong>{t("care.allergyInfoMissing", "Allergy details are not available to you.")}</strong><p>{t("care.allergyInfoMissingHint", "Ask a parent before serving food.")}</p></div>}
-      {canReadAllergies({ role, perms }) && medicalLoaded && medical?.allergies === null && <div className="care-alert" role="alert"><strong>{t("care.allergyUnconfirmed", "Allergy details could not be confirmed.")}</strong><p>{t("care.allergyUnavailableHint", "Ask a parent to record and confirm this child’s allergies before serving food.")}</p></div>}
+      {!canReadAllergies({ role, perms }) && <div className="care-alert" role="alert"><strong>{t("care.allergyInfoMissing", "Allergy details are not available to you.")}</strong><p>{t("care.allergyInfoMissingHint", "Not checked for this child. Ask a parent first.")}</p></div>}
+      {canReadAllergies({ role, perms }) && medicalLoaded && medical?.allergies === null && <div className="care-alert" role="alert"><strong>{t("care.allergyUnconfirmed", "Allergy details could not be confirmed.")}</strong><p>{t("care.allergyUnavailableHint", "Ask a parent to confirm allergies before serving food.")}</p></div>}
       {error && <div className="care-info care-warning" role="alert">{error}</div>}
       {notice && <div className="care-status" role="status">{notice}</div>}
       <div className="care-head"><div><h1>{child.name}</h1><p>{t("care.childAge", "Age {age} years", { age: child.ageYears })}</p></div><span className="care-badge">{t("care.profilePrivate", "Private family profile")}</span></div>
@@ -197,7 +197,7 @@ export default function Child({ params }: ScreenProps<Params>) {
             <p className="care-muted">{section.id === "health" ? t("care.healthSectionGuard", section.description) : t(`care.sectionHint.${section.id}`, section.description)}</p>
             {section.id === "meals" && <>
               <label className="care-field"><span>{t("care.foodPreferencesLabel", "Food preferences, separated by commas")}</span><textarea value={foodDraft} onChange={(event) => setFoodDraft(event.target.value)} disabled={!canEditChildDetails(role)} maxLength={3_600} /></label>
-              <p className="care-muted">{t("care.foodPreferencesSafety", "Food preferences do not replace allergy or medical records. Check Medical before serving food.")}</p>
+              <p className="care-muted">{t("care.foodPreferencesSafety", "Preferences aren't allergy records. Check Medical first.")}</p>
               {canEditChildDetails(role) && <Button alt onClick={() => void saveDetails({ foodPreferences: parseChildList(foodDraft, 30, 120) })} disabled={busy}>{t("care.saveFoodPreferences", "Save food preferences")}</Button>}
             </>}
             {section.id === "sleep" && <>
@@ -231,9 +231,8 @@ export default function Child({ params }: ScreenProps<Params>) {
                 <label className="care-field"><span>{t("care.milestoneTitleLabel", "Milestone")}</span><input value={milestoneTitle} onChange={(event) => setMilestoneTitle(event.target.value)} maxLength={120} /></label>
                 <label className="care-field"><span>{t("care.milestoneDateLabel", "Date and time")}</span><input type="datetime-local" value={milestoneAt} onChange={(event) => setMilestoneAt(event.target.value)} required /></label>
                 <label className="care-field"><span>{t("care.milestoneNoteLabel", "Optional note")}</span><textarea value={milestoneNote} onChange={(event) => setMilestoneNote(event.target.value)} maxLength={600} /></label>
-                {demo ? <p className="care-muted">{t("care.galleryUploadUnavailable", "Photo uploads need the R2 file server, which is not deployed in this test environment. Save the milestone without a photo.")}</p> : <>
+                {demo ? null : <>
                   <MediaPicker kind="gallery" uid={params.uid} spaceId={spaceId} buttonLabel={t("care.milestonePhotoButton", "Add optional photo")} onDone={(key) => void addMilestonePhoto(key)} />
-                  <p className="care-muted">{t("care.galleryUploadUnavailable", "Photo uploads need the R2 file server, which is not deployed in this test environment. Save the milestone without a photo if upload is unavailable.")}</p>
                 </>}
                 {milestonePhotoKey && <p className="care-status" role="status">{t("care.milestonePhotoReady", "A private photo is attached to this milestone.")}</p>}
                 <div className="care-row"><Button onClick={() => void saveMilestone()} disabled={busy || !milestoneTitle.trim() || !milestoneAt}>{t("care.saveMilestone", editingMilestoneIndex === null ? "Save milestone" : "Update milestone")}</Button>{editingMilestoneIndex !== null && <Button alt onClick={() => { setEditingMilestoneIndex(null); setMilestoneTitle(""); setMilestoneAt(localDateTimeInput(new Date())); setMilestoneNote(""); setMilestonePhotoKey(""); }}>{t("care.cancelEditMilestone", "Cancel edit")}</Button>}</div>

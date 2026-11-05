@@ -87,11 +87,11 @@ export default function Meals({ params }: ScreenProps<Params>) {
       {error && <div className="care-info care-warning" role="alert">{error}</div>}
       {notice && <div className="care-status" role="status">{notice}<div className="care-row"><Button alt small onClick={() => nav.push("shopping", { spaceId, childId: selectedChild, uid, ownerUid: params.ownerUid, role, perms, demo })}>{t("care.openShopping", "Open shopping list")}</Button></div></div>}
       <div className="care-head"><div><h1>{t("care.mealsTitle", "Meals and recipes")}</h1><p>{t("care.mealsSubtitle", "Check ingredients against the child’s recorded allergies before planning.")}</p></div><span className="care-badge">{day}</span></div>
-      {!canReadAllergyInfo && <div className="care-alert" role="alert"><strong>{t("care.allergyInfoMissing", "Allergy details are not available to you.")}</strong><p>{t("care.allergyInfoMissingHint", "This meal list is not checked for this child. Ask a parent before planning or serving food.")}</p></div>}
-      {canReadAllergyInfo && !allergyDataLoaded && <div className="care-alert" role="alert"><strong>{t("care.allergyUnconfirmed", "Allergy details could not be confirmed.")}</strong><p>{t("care.allergyUnavailableHint", "Ask a parent to record and confirm this child’s allergies before planning or serving food.")}</p></div>}
+      {!canReadAllergyInfo && <div className="care-alert" role="alert"><strong>{t("care.allergyInfoMissing", "Allergy details are not available to you.")}</strong><p>{t("care.allergyInfoMissingHint", "Not checked for this child. Ask a parent first.")}</p></div>}
+      {canReadAllergyInfo && !allergyDataLoaded && <div className="care-alert" role="alert"><strong>{t("care.allergyUnconfirmed", "Allergy details could not be confirmed.")}</strong><p>{t("care.allergyUnavailableHint", "Ask a parent to confirm allergies before serving food.")}</p></div>}
       {children.length > 0 && <label className="care-field"><span>{t("care.selectChild", "Choose a child")}</span><select value={selectedChild} onChange={(event) => { setSelectedChild(event.target.value); setSelectedRecipe(null); setLabelsChecked(false); }}><option value="" disabled>{t("care.selectChildPlaceholder", "Choose a child")}</option>{children.map((child) => <option key={child.id} value={child.id}>{child.name}</option>)}</select></label>}
       {!!allergies.length && <AllergyBanner names={allergies} />}
-      {selected && canReadAllergyInfo && <section className="care-card care-section"><h2>{t("care.allergyHooks", "Ingredient checks for {child}", { child: selected.name })}</h2><p>{t("care.allergyHookHint", "Each recipe is checked with a conservative word match. A missing match does not confirm that food is suitable.")}</p></section>}
+      {selected && canReadAllergyInfo && <section className="care-card care-section"><h2>{t("care.allergyHooks", "Ingredient checks for {child}", { child: selected.name })}</h2><p>{t("care.allergyHookHint", "Quick word match only. Not proof a food is safe.")}</p></section>}
       <section className="care-section">
         <h2>{t("care.recipes", "Recipes")}</h2>
         {RECIPES.map((recipe) => {
@@ -108,10 +108,10 @@ export default function Meals({ params }: ScreenProps<Params>) {
         <h2>{t(`care.recipe.${selectedRecipe.id}.name`, selectedRecipe.name)}</h2>
         <ol className="care-steps">{selectedRecipe.steps.map((step, index) => <li key={`${index}-${step}`}>{t(`care.recipe.${selectedRecipe.id}.step.${index}`, step)}</li>)}</ol>
         {canReadAllergyInfo && allergyDataLoaded && selectedCheck && <AllergyCheckNotice result={selectedCheck} />}
-        {(!canReadAllergyInfo || !allergyDataLoaded) && <div className="care-alert" role="alert">{t("care.allergyInfoMissingHint", "This meal list is not checked for this child. Ask a parent before planning or serving food.")}</div>}
+        {(!canReadAllergyInfo || !allergyDataLoaded) && <div className="care-alert" role="alert">{t("care.allergyInfoMissingHint", "Not checked for this child. Ask a parent first.")}</div>}
         {canReadAllergyInfo && role === "admin" && allergyDataLoaded && <>
           <label className="care-check"><input type="checkbox" checked={labelsChecked} onChange={(event) => setLabelsChecked(event.target.checked)} /><span>{t("care.labelsChecked", "I checked the full labels and confirmed this meal with the parent.")}</span></label>
-          {(selectedCheck?.status === "contains" || selectedCheck?.status === "may-contain" || selectedCheck?.status === "unknown-ingredient") && <p className="care-muted">{t("care.blockFlaggedMeal", "This recipe has an allergy, cross-contact, or unknown-ingredient warning. Do not add it to the plan.")}</p>}
+          {(selectedCheck?.status === "contains" || selectedCheck?.status === "may-contain" || selectedCheck?.status === "unknown-ingredient") && <p className="care-muted">{t("care.blockFlaggedMeal", "Allergy or unknown-ingredient warning. Don't add it.")}</p>}
           <Button onClick={() => void approve()} disabled={!mayApprove || busy}>{t("care.approveMeal", "Approve meal and add ingredients to shopping")}</Button>
         </>}
         {role !== "admin" && <p className="care-muted">{t("care.mealAdminOnly", "Only an admin can approve a meal plan.")}</p>}

@@ -140,7 +140,7 @@ export default function PrivacyPerms({ params }: ScreenProps<PrivacyParams>) {
       <header className="profile-hero"><div className="profile-hero-copy"><p className="profile-eyebrow">{t("csPrivacy.kicker", "Your family’s information")}</p><h1>{t("csPrivacy.heading", "Privacy comes first")}</h1><p>{t("csPrivacy.subtitle", "You choose what each trusted person can see.")}</p></div><Bunny mood="think" size={74} /></header>
       <section className="profile-card" aria-label={t("csPrivacy.privateTitle", "Children’s data is private by default and shared only by a parent")}>
         <h2>{t("csPrivacy.privateTitle", "Children’s data is private by default and shared only by a parent")}</h2>
-        <p className="muted">{t("csPrivacy.privateBody", "Each care space stays separate. A parent can share allergies, medication, photos, calendar details and private messages with each member. Access can be changed or removed at any time.")}</p>
+        <p className="muted">{t("csPrivacy.privateBody", "Each space is separate. A parent chooses what each member sees.")}</p>
       </section>
       {error && <p className="profile-notice" role="alert">{error}</p>}
       {notice && <p className="profile-notice" role="status">{notice}</p>}
@@ -172,7 +172,7 @@ export default function PrivacyPerms({ params }: ScreenProps<PrivacyParams>) {
       </section>}
       <section className="profile-card">
         <h2>{t("csPrivacy.exportTitle", "Your data")}</h2>
-        <p className="muted">{t("csPrivacy.exportBody", "Ask for a copy of your account and care-space data. The secure export service prepares it for you.")}</p>
+        <p className="muted">{t("csPrivacy.exportBody", "Ask for a copy of your data.")}</p>
         <button type="button" className="btn alt" disabled={!uid || exporting} onClick={() => void requestExport()}>{exporting ? t("csPrivacy.exporting", "Sending request…") : t("csPrivacy.export", "Request data export")}</button>
       </section>
     </div></div>

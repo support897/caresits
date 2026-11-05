@@ -130,7 +130,7 @@ export default function Approvals({ uid, space, demo, onBack }: ApprovalsProps) 
     {demo && <DemoNotice />}
     {error && <div className="care-info care-warning" role="alert">{error}</div>}
     {notice && <div className="care-status" role="status">{notice}</div>}
-    {!isAdmin && <div className="care-info" role="note"><p>{t("care.approvals.parentOnly", "Only a parent admin can approve or decline. You can still see what is waiting for review.")}</p></div>}
+    {!isAdmin && <div className="care-info" role="note"><p>{t("care.approvals.parentOnly", "Only a parent can approve or decline.")}</p></div>}
     {loading ? <div className="sk" style={{ height: 150 }} /> : waiting.length ? <section className="care-section" aria-label={t("care.approvals.waitingLabel", "Waiting for parent review")}>
       {waiting.map((item) => {
         const details = approvalDetails(item, purchases, children);
@@ -139,7 +139,7 @@ export default function Approvals({ uid, space, demo, onBack }: ApprovalsProps) 
           <p>{t("care.approvals.requested", "Requested by a care team member.")}</p>
           {details && <p>{details}</p>}
           {item.kind === "purchase" && <p>{t("care.approvals.purchaseHint", "Check the item, family, and child before approving this purchase.")}</p>}
-          {item.kind === "meal" && <div className="care-alert" role="note">{t("care.approvals.mealSafety", "Plan approval does not confirm food is safe. Check the child’s recorded allergies and every full ingredient label before serving.")}</div>}
+          {item.kind === "meal" && <div className="care-alert" role="note">{t("care.approvals.mealSafety", "Approval doesn't make food safe. Check allergies and labels.")}</div>}
           {isAdmin && <div className="care-actions">
             <Button disabled={Boolean(busyId)} onClick={() => void decide(item, "approved")}>{busyId === item.id ? t("care.approvals.working", "Saving…") : t("care.approvals.approve", "Approve")}</Button>
             <Button alt disabled={Boolean(busyId)} onClick={() => void decide(item, "declined")}>{t("care.approvals.decline", "Decline")}</Button>

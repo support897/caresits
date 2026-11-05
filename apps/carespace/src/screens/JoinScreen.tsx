@@ -39,7 +39,7 @@ function LinkedInvite({ params }: { params: JoinParams }) {
     <BackBar title={t("cs.join.title", "Join with code")} onBack={nav.back} />
     <div className="scroll"><section className="profile-card" aria-labelledby="join-link-title">
       <h2 id="join-link-title">{t("csJoin.title", "Join with code")}</h2>
-      <p className="muted">{t("csJoin.help", "Paste the full code or invite link from the parent. The code includes the space and invite key.")}</p>
+      <p className="muted">{t("csJoin.help", "Paste the code or link from the parent.")}</p>
       <form onSubmit={(event) => void submit(event)}>
         <label className="profile-field"><span>{t("csJoin.codeLabel", "Invite code or link")}</span>
           <input className="field" autoComplete="off" value={input} onChange={(event) => setInput(event.target.value)} maxLength={500} required />

@@ -76,15 +76,14 @@ export default function Gallery({ params, onBack }: GalleryProps) {
       {demo && <DemoNotice />}
       {error && <div className="care-info care-warning" role="alert">{error}</div>}
       {notice && <div className="care-status" role="status">{notice}</div>}
-      <div className="care-head"><div><h1>{t("care.galleryHeading", "Care-space memories")}</h1><p>{t("care.galleryHint", "Photos and videos stay private. A parent controls when child media is shared with the family.")}</p></div></div>
+      <div className="care-head"><div><h1>{t("care.galleryHeading", "Care-space memories")}</h1><p>{t("care.galleryHint", "Private. A parent decides what is shared.")}</p></div></div>
       {canUploadPhotos && <div className="care-card">
         <h2>{t("care.galleryAddMedia", "Add a photo")}</h2>
-        <p className="care-muted">{t("care.galleryUploadUnavailable", "Photo uploads use the private R2 file server. It is not deployed in this test environment, so uploads may fail. New video uploads are not supported yet; existing videos can still be viewed and shared.")}</p>
         <MediaPicker kind="gallery" uid={uid} spaceId={spaceId} buttonLabel={t("care.galleryChoosePhoto", "Choose a photo")} onDone={(key) => void addPhoto(key)} />
       </div>}
       {!canReadPhotos && <CareEmpty title={t("care.galleryNoAccess", "Photo access is off")} detail={t("care.galleryNoAccessDetail", "Ask a parent to update your photo permission for this care space.")} />}
       {loading && <CareEmpty title={t("care.galleryLoading", "Loading private gallery…")} />}
-      {!loading && canReadPhotos && !visibleItems.length && <CareEmpty title={t("care.galleryEmpty", "No shared photos or videos yet")} detail={t("care.galleryEmptyDetail", "Photos and videos added to this care space will appear here. Child photos stay hidden until a parent shares them.")} />}
+      {!loading && canReadPhotos && !visibleItems.length && <CareEmpty title={t("care.galleryEmpty", "No shared photos or videos yet")} detail={t("care.galleryEmptyDetail", "Photos you add will show here.")} />}
       {canReadPhotos && visibleItems.length > 0 && <div aria-label={t("care.galleryItems", "Care-space photos and videos")} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))", gap: 12 }}>
         {visibleItems.map((item) => <article className="care-card" key={item.id} style={{ minWidth: 0, display: "grid", gap: 10 }}>
           {mediaUrls[item.id] ? item.kind === "video"

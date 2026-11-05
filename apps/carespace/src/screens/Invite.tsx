@@ -81,7 +81,7 @@ export default function Invite({ params }: ScreenProps<InviteParams>) {
     <div className="scroll"><div className="profile-screen">
       <header className="profile-hero"><div className="profile-hero-copy"><p className="profile-eyebrow">{t("csInvite.kicker", "Your trusted people")}</p><h1>{t("csInvite.heading", "Invite your own helper")}</h1><p>{spaceName}</p></div><Bunny mood="hello" size={76} /></header>
       <section className="profile-card">
-        <p>{t("csInvite.intro", "Share a private link or code with your nanny, grandparent or au pair. They do not need a marketplace profile.")}</p>
+        <p>{t("csInvite.intro", "Share a private link or code. No account needed to join.")}</p>
         <label className="profile-field"><span>{t("csInvite.roleLabel", "Choose their role")}</span><select value={role} disabled={!allowed} onChange={(event) => changeRole(event.currentTarget.value as SpaceRole)}>
           {INVITABLE_ROLES.map((item) => <option key={item} value={item}>{t(ROLE_LABELS[item][0], ROLE_LABELS[item][1])}</option>)}
         </select></label>

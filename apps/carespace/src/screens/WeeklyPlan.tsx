@@ -180,7 +180,7 @@ export default function WeeklyPlan({ uid, space, children, demo, onBack, onOpenA
     {error && <div className="care-info care-warning" role="alert">{error}</div>}
     {notice && <div className="care-status" role="status">{notice}</div>}
     <div className="care-info" role="note">
-      <p>{t("care.weekly.safetyNote", "Meal planning does not check allergies or food labels. Use Meals to check the child’s recorded allergies and confirm every full label before serving.")}</p>
+      <p>{t("care.weekly.safetyNote", "Plans don't check allergies. Use Meals to check labels.")}</p>
       <Button alt small disabled={!selectedChild} onClick={() => selectedChild && nav.push("meals", { spaceId: space.id, childId: selectedChild.id, childName: selectedChild.name, uid, ownerUid: space.ownerUid, role: space.role, perms: space.perms, demo })}>{t("care.weekly.reviewMeals", "Check meals and allergies")}</Button>
     </div>
     <section className="care-card care-section">
@@ -202,10 +202,10 @@ export default function WeeklyPlan({ uid, space, children, demo, onBack, onOpenA
       {!canEdit && <p className="care-muted">{reviewStatusUnknown
         ? t("care.weekly.reviewStatusError", "Parent review status could not load. Editing is paused until access returns.")
         : approvalStatus.pending
-          ? t("care.weekly.reviewPendingLock", "This week is waiting for a parent decision. Changes pause until the review is done.")
+          ? t("care.weekly.reviewPendingLock", "Waiting for a parent. Changes paused.")
           : space.role === "viewer"
-            ? t("care.weekly.viewerReadOnly", "Family viewers can read this plan. Ask a caregiver or parent to make changes.")
-            : t("care.weekly.locked", "A parent admin approved this week. Caregivers cannot change an approved plan.")}</p>}
+            ? t("care.weekly.viewerReadOnly", "View only.")
+            : t("care.weekly.locked", "Approved by a parent. Locked.")}</p>}
     </section>
     {loading ? <div className="sk" style={{ height: 240 }} /> : children.length === 0 ? <CareEmpty title={t("care.weekly.noChildren", "No children in this space")} detail={t("care.weekly.noChildrenHint", "Add a child before making a weekly plan.")} /> : <section className="care-grid" aria-label={t("care.weekly.daysLabel", "Weekly plan days")}>
       {PLAN_WEEKDAYS.map((day) => {
@@ -226,11 +226,11 @@ export default function WeeklyPlan({ uid, space, children, demo, onBack, onOpenA
     </section>}
     <section className="care-card care-section">
       <div className="care-head"><div><h2>{t("care.weekly.parentReview", "Parent review")}</h2><p>{plan.approvedBy ? t("care.weekly.approvedByParent", "A parent admin approved this week’s plan.") : t("care.weekly.waitingParent", "A parent admin can approve this saved plan.")}</p></div><span className="care-badge">{plan.approvedBy ? t("care.weekly.statusApproved", "Approved") : t("care.weekly.statusPending", "Needs approval")}</span></div>
-      {approvalStatus.pending && <p className="care-muted" role="status">{t("care.weekly.reviewPendingLock", "This week is waiting for a parent decision. Changes pause until the review is done.")}</p>}
-      {approvalStatus.declined && <p className="care-muted" role="note">{t("care.weekly.reviewDeclined", "Some planned activities or meals were declined. Remove or replace them before approving this weekly plan.")}</p>}
+      {approvalStatus.pending && <p className="care-muted" role="status">{t("care.weekly.reviewPendingLock", "Waiting for a parent. Changes paused.")}</p>}
+      {approvalStatus.declined && <p className="care-muted" role="note">{t("care.weekly.reviewDeclined", "Some items were declined. Replace them first.")}</p>}
       {space.role === "admin" && <Button onClick={() => void approvePlan()} disabled={saving || loading || reviewing || !hasPlanEntries(plan.days) || !uid || Boolean(plan.approvedBy) || approvalStatus.pending || approvalStatus.declined || reviewStatusUnknown}>{saving ? t("care.weekly.saving", "Saving…") : plan.approvedBy ? t("care.weekly.approvedAction", "Plan approved") : t("care.weekly.approveAction", "Approve weekly plan")}</Button>}
       {canRequestReview && <>
-        <p className="care-muted">{t("care.weekly.requestHint", "Send each planned activity and meal to the parent approvals inbox for review.")}</p>
+        <p className="care-muted">{t("care.weekly.requestHint", "Send items to the parent for review.")}</p>
         <Button alt onClick={() => void requestParentReview()} disabled={reviewing || saving || loading || approvalStatus.pending || reviewStatusUnknown || !hasPlanEntries(plan.days) || !uid}>{reviewing ? t("care.weekly.sendingReview", "Sending for review…") : t("care.weekly.requestReview", "Send to parent for review")}</Button>
       </>}
       {space.role === "viewer" && <p className="care-muted">{t("care.weekly.viewerReview", "A caregiver can send this plan to a parent for review.")}</p>}

@@ -71,7 +71,7 @@ export default function Team({ params }: ScreenProps<TeamParams>) {
 
   async function remove(member: TeamMember) {
     if (!admin || !uid || member.uid === uid || member.status !== "active") return;
-    const confirmed = window.confirm(t("csTeam.removeConfirm", "Remove {name} from this care space? Their access will end. Your family keeps its records.", { name: member.displayName }));
+    const confirmed = window.confirm(t("csTeam.removeConfirm", "Remove {name}? Their access ends.", { name: member.displayName }));
     if (!confirmed) return;
     setBusyUid(member.uid); setNotice(""); setError("");
     try {
@@ -132,7 +132,7 @@ export default function Team({ params }: ScreenProps<TeamParams>) {
         </section>
         <section className="profile-card">
           <h2>{t("csTeam.accessTitle", "Access can change")}</h2>
-          <p className="muted">{t("csTeam.accessBody", "Parents choose who sees allergies, medication, photos, calendar and private messages. Removing a member ends their access; the family keeps its records.")}</p>
+          <p className="muted">{t("csTeam.accessBody", "Parents choose who sees what. Removing someone ends their access.")}</p>
           {!admin && <button type="button" className="profile-action profile-danger" style={{ width: "100%", marginTop: 8 }} disabled={busyUid === uid} onClick={() => void leave()}>{t("csTeam.leave", "Leave this Care Space")}</button>}
         </section>
       </>}

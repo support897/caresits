@@ -86,7 +86,7 @@ export default function Activities({ params }: ScreenProps<Params>) {
 
   return <div className="scroll"><div className="care-wrap">
     <div className="care-head"><div><h1>{t("care.activitiesTitle", "Activities")}</h1><p>{t("care.activitiesSubtitle", "Ideas shaped around a child’s age, interests, and family materials.")}</p></div></div>
-    <div className="care-alert" role="note">{t("care.activityInspirationNotice", "These ideas are starting points for play, not fixed learning labels or promises about development. Adapt them to the child’s abilities and supervise every activity.")}</div>
+    <div className="care-alert" role="note">{t("care.activityInspirationNotice", "Ideas for play. Adapt to the child and supervise.")}</div>
     {demo && <DemoNotice />}
     {error && <div className="care-info care-warning" role="alert">{error}</div>}
     {!space ? <section className="care-section">
