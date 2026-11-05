@@ -51,7 +51,7 @@ export function AuPairCandidateCard({ person, me, mode, destination, passport, o
         return <span key={fact.id} className={`ap-match-reason${fact.matches ? " is-match" : " is-mismatch"}`}>
           <b>{label}:</b> {fact.matches ? t("aupair.factMatches", "matches stated details") : t("aupair.factDoesNotMatch", "does not match stated details")}
         </span>;
-      }) : <p className="ap-form-help">{t("aupair.compatibilityNoDetails", "More shared details are needed to compare this placement. Visa status is not a match signal.")}</p>}
+      }) : <p className="ap-form-help">{t("aupair.compatibilityNoDetails", "Add more details to compare.")}</p>}
     </div>
     {mode === "host" && host && <div className="ap-candidate-facts">
       {text(host.room) && <span>{t("aupair.roomFact", "Room: {room}", { room: text(host.room) })}</span>}
