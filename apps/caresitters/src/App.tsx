@@ -6,7 +6,7 @@ const Discover = lazy(() => import("./screens/Discover")); const Saved = lazy(()
 // Every pushed screen is registered here. Each file has a default export taking { params }.
 const registry: Registry = {
   person: () => import("./screens/PersonProfile"), photos: () => import("./screens/MyPhotos"), resume: () => import("./screens/ResumeEdit"), book: () => import("./screens/Book"), accepted: () => import("./screens/Accepted"), handoff: () => import("./screens/Handoff"),
-  chat: () => import("./screens/Chat"), aupair: () => import("./screens/aupair/AuPairHome"), "aupair-profile": () => import("./screens/aupair/AuPairProfile"), "aupair-visa": () => import("./screens/aupair/VisaGuide"),
+  chat: () => import("./screens/Chat"), aupair: () => import("./screens/aupair/AuPairHome"), "aupair-profile": () => import("./screens/aupair/AuPairProfile"), "aupair-visa": () => import("./screens/aupair/VisaGuide"), "aupair-timeline": () => import("./screens/aupair/Timeline"),
   safety: () => import("./screens/Safety"), quals: () => import("./screens/Quals"), weights: () => import("./screens/Weights"), settings: () => import("./screens/Settings"), "edit-profile": () => import("./screens/Builder"), plans: () => import("./screens/Plans"),
 };
 const Skel = () => <div className="scroll"><div className="sk" style={{ height: 160 }} /></div>;
