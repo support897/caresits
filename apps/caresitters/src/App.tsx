@@ -13,7 +13,7 @@ const Skel = () => <div className="scroll"><div className="sk" style={{ height: 
 export function App() {
   useLang(); const { user, ready } = useAuth(); const { profile, loading, reload } = useMyProfile(user?.uid);
   const [tab, setTab] = useState("discover"); const [tourDone, setTourDone] = useState(() => localStorage.getItem("caresits-tour-done") === "1");
-  useEffect(() => { document.body.dataset.theme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"; }, []);
+  useEffect(() => { document.body.dataset.theme = "light"; }, []);
   let body;
   if (!ready) body = <Skel />;
   else if (!user) body = <Suspense fallback={<Skel />}><WelcomeAuth /></Suspense>;
