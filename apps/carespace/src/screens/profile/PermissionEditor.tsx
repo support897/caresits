@@ -54,8 +54,8 @@ export function PermissionEditor({
         <span>{t("csPrivacy.permission.canEditAllergies", "Edit allergy information")}</span>
         <input type="checkbox" checked={extraValues.canEditAllergies} disabled={locked} aria-label={t("csPrivacy.permission.allowAllergyEdit", "Allow this person to edit allergy information")} onChange={(event) => onExtraChange?.({ ...extraValues, canEditAllergies: event.currentTarget.checked })} />
       </label>
-      <p className="muted profile-permission-note">{t("csPrivacy.permission.viewerDefaults", "A grandparent or family viewer starts with photos and calendar access. Allergies, medication, private messages, inviting people, and allergy edits start off.")}</p>
-      <p className="muted profile-permission-note">{t("csPrivacy.permission.allergyLimit", "Turning on allergy edits does not let a carer save medical changes. Only a parent admin can change medical records.")}</p>
+      <p className="muted profile-permission-note">{t("csPrivacy.permission.viewerDefaults", "Viewers start with photos and calendar only.")}</p>
+      <p className="muted profile-permission-note">{t("csPrivacy.permission.allergyLimit", "Only a parent admin can change medical records.")}</p>
     </>}
     {role === "admin" && <p className="muted profile-permission-note">{t("csProfile.permission.parent", "Parents keep full access to manage the family space.")}</p>}
     {role === "viewer" && <p className="muted profile-permission-note">{t("csProfile.permission.viewer", "Family viewers never see private messages.")}</p>}

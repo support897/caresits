@@ -46,7 +46,7 @@ export function JoinWithCode({ onJoined, onCancel }: JoinWithCodeProps) {
 
   return <section className="profile-card" aria-labelledby="join-with-code-title">
     <div className="profile-card-head"><h2 id="join-with-code-title">{t("csJoin.title", "Join with code")}</h2><Bunny mood="point" size={64} /></div>
-    <p className="muted">{t("csJoin.help", "Paste the full code or invite link from the parent. The code includes the space and invite key.")}</p>
+    <p className="muted">{t("csJoin.help", "Paste the code or link from the parent.")}</p>
     <form onSubmit={(event) => void submit(event)}>
       <label className="profile-field"><span>{t("csJoin.codeLabel", "Invite code or link")}</span><input className="field" autoComplete="off" value={input} onChange={(event) => setInput(event.target.value)} maxLength={500} required /></label>
       {error && <p className="profile-notice" role="alert">{error}</p>}

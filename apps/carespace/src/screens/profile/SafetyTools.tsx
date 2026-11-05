@@ -95,7 +95,7 @@ export function SafetyTools({ uid, spaces }: { uid: string; spaces: SpaceSummary
 
   return <section className="profile-card">
     <div className="profile-card-head"><h2>{t("csSafety.title", "Safety and help")}</h2><span className="tag">{t("csSafety.private", "Private")}</span></div>
-    <p className="muted">{t("csSafety.intro", "Keep care inside the app. Report a concern, block a person, or check in during a booking.")}</p>
+    <p className="muted">{t("csSafety.intro", "Report a concern, block someone, or check in.")}</p>
     {error && <p className="profile-notice" role="alert">{error}</p>}
     {notice && <p className="profile-notice" role="status">{notice}</p>}
     {spaces.length > 0 && <label className="profile-field"><span>{t("csSafety.space", "Care space")}</span><select value={selectedSpaceId} onChange={(event) => { setSelectedSpaceId(event.target.value); setNotice(""); }}>
@@ -135,6 +135,6 @@ export function SafetyTools({ uid, spaces }: { uid: string; spaces: SpaceSummary
         </form>
       </details>
     </> : <div className="empty"><Bunny mood="rest" size={68} /><p>{t("csSafety.noOtherMembers", "Other team members will appear here.")}</p></div>}
-    <p className="muted profile-permission-note">{t("csSafety.payments", "Keep booking payments in the app. Never send bank or card details in a message.")}</p>
+    <p className="muted profile-permission-note">{t("csSafety.payments", "Pay in the app. Never send card details in chat.")}</p>
   </section>;
 }
