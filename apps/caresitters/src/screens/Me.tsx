@@ -28,6 +28,9 @@ export default function Me({ params }: { params: Params }) {
   const rate = Number.isFinite(Number(me.card.rate)) && Number(me.card.rate) > 0 ? Number(me.card.rate) : null;
   const experienceYears = Number.isFinite(Number(me.card.experienceYears)) ? Number(me.card.experienceYears) : null;
   const links = [
+    { title: t("me.photos", "My photos"), body: t("me.photos.body", "See, add and remove the pictures on your profile"), action: () => nav.push("photos", { me }) },
+    ...(me.side === "carer" ? [{ title: t("me.resume", "My resume"), body: t("me.resume.body", "Your work and study, in your own words"), action: () => nav.push("resume", { me }) },
+      { title: t("me.reviews", "Reviews and references"), body: t("me.reviews.body", "What families said about you"), action: () => nav.push("person", { uid: me.uid, me }) }] : []),
     { title: t("me.qualifications", "Qualifications"), body: t("me.qualifications.body", "Checks, documents and review dates"), action: () => nav.push("quals", { me }) },
     { title: t("me.safety", "Safety"), body: t("me.safety.body", "Reports, blocks and emergency contacts"), action: () => nav.push("safety", { uid: me.uid }) },
     ...(me.side === "family" ? [{ title: t("me.weights", "Match priorities"), body: t("me.weights.body", "Choose what matters most to your family"), action: () => nav.push("weights", { me }) }] : []),
@@ -55,6 +58,7 @@ export default function Me({ params }: { params: Params }) {
         {me.side === "carer" && rate !== null && <div><dt className="muted">{t("me.profile.rate", "Hourly rate")}</dt><dd style={{ margin: 0 }}>{t("me.profile.money", "A${amount}/hour", { amount: rate })}</dd></div>}
         {me.side === "carer" && experienceYears !== null && <div><dt className="muted">{t("me.profile.experience", "Childcare experience")}</dt><dd style={{ margin: 0 }}>{t("onb.experience.years", "{years} years", { years: experienceYears })}</dd></div>}
       </dl>
+      <button className="btn alt" type="button" onClick={() => nav.push("person", { uid: me.uid, me })} style={{ marginBlockEnd: 10 }}>{t("me.viewProfile", "View my profile")}</button>
       <button className="btn" type="button" onClick={() => nav.push("edit-profile", { edit: true })}>{t("me.edit", "Edit profile")}</button>
     </section>
     <nav aria-label={t("me.account.links", "Account links")} style={{ display: "grid", gap: 10, marginBlockStart: 14 }}>
