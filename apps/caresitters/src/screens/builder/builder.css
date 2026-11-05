@@ -48,8 +48,8 @@
 .onb-welcome-cards{display:grid;gap:14px;margin-top:10px}
 .onb-welcome-card{display:flex;align-items:center;gap:16px;text-align:start;min-height:112px;padding:16px 18px;background:var(--card);border:1.5px solid var(--line);border-radius:24px;box-shadow:var(--shadow);transition:transform .16s,border-color .16s}
 .onb-welcome-card:hover{transform:translateY(-2px);border-color:var(--ink)}
-.onb-welcome-icon{width:54px;height:54px;border-radius:18px;display:grid;place-items:center;background:var(--blush);font:700 28px Atkinson,system-ui,sans-serif;flex:none}
-.onb-welcome-copy{display:grid;gap:4px;min-width:0}.onb-welcome-copy strong{font:700 23px/1.2 Newsreader,Georgia,serif}.onb-welcome-copy small{color:var(--muted);font:400 17px/1.35 Atkinson,system-ui,sans-serif}
+.onb-welcome-icon{width:54px;height:54px;border-radius:18px;display:grid;place-items:center;background:var(--blush);font:700 28px var(--font-body);flex:none}
+.onb-welcome-copy{display:grid;gap:4px;min-width:0}.onb-welcome-copy strong{font:700 23px/1.2 var(--font-title)}.onb-welcome-copy small{color:var(--muted);font:400 17px/1.35 var(--font-body)}
 @media(min-height:700px){.onb-welcome{justify-content:center}}
 @media(max-width:340px){.onb-choice-grid{grid-template-columns:1fr}.onb-scroll{padding-inline:14px}.onb-welcome-card{padding-inline:14px}.onb-welcome-copy strong{font-size:21px}}
 .onb-extra-section{display:grid;gap:12px;min-width:0;padding:14px;border:1px solid var(--line);border-radius:18px;background:var(--card)}
@@ -65,6 +65,6 @@
 .onb-gallery-controls{display:grid;gap:8px;min-width:0}
 @media(max-width:359px){.onb-extra-grid{grid-template-columns:1fr}.onb-gallery-item{grid-template-columns:72px minmax(0,1fr);gap:8px;padding:8px}.onb-gallery-item img,.onb-gallery-placeholder{width:72px;height:72px}}
 
-.onb-file-label{position:relative;display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:var(--ink,#1E4D44);color:#fff;font-weight:700;cursor:pointer;padding:0 20px;text-align:center}
+.onb-file-label{position:relative;display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:var(--bunny);color:var(--on-accent);box-shadow:0 4px 0 #e68aa3;font-weight:800;cursor:pointer;padding:0 20px;text-align:center}
 .onb-file-label:focus-within{outline:3px solid var(--bunny,#F4A9BC);outline-offset:2px}
 .onb-file-label input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;font-size:0}
