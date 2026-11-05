@@ -1,16 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="title">
-  <title id="title">Caresitters logo option B — carer hugging a child with bunny ears</title>
-  <rect width="1024" height="1024" rx="184" fill="#F6CBD3"/>
-  <path fill="#1E4D44" d="M512 840C289 682 188 553 188 405c0-116 83-199 193-199 62 0 105 29 131 80 26-51 69-80 131-80 110 0 193 83 193 199 0 148-101 277-324 435Z"/>
-  <g fill="#FDF8F0">
-    <circle cx="405" cy="392" r="59"/>
-    <path d="M312 682c8-116 42-205 94-205 54 0 89 75 94 205H312Z"/>
-    <circle cx="596" cy="496" r="49"/>
-    <path d="M520 681c7-90 34-143 77-143s70 53 77 143H520Z"/>
-    <path d="M364 519c68 92 145 135 231 136 22 0 39-16 39-38 0-21-17-38-38-38-61-1-114-32-167-103-13-17-37-20-54-7-17 13-20 34-11 50Z"/>
-  </g>
-  <g fill="#FDF8F0">
-    <path d="M568 461c-23-74-19-130 9-156 14-13 32-8 38 10 10 30 5 78-5 126Z"/>
-    <path d="M614 452c5-80 24-131 53-144 17-8 31 4 30 23-1 31-23 75-48 115Z"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="Caresitters">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFC9D6"/><stop offset="1" stop-color="#F4A9BC"/></linearGradient></defs>
+  <rect width="1024" height="1024" rx="230" fill="url(#bg)"/>
+  <circle cx="190" cy="190" r="26" fill="#FFD966"/><circle cx="850" cy="215" r="18" fill="#A9D4F5"/><circle cx="880" cy="820" r="24" fill="#FFD966"/><circle cx="150" cy="780" r="16" fill="#A9D4F5"/>
+  <path fill="#fff" d="M512 860C285 700 182 566 182 413c0-120 85-205 197-205 64 0 108 30 133 82 25-52 69-82 133-82 112 0 197 85 197 205 0 153-103 287-330 447Z"/>
+<g transform="translate(512 470) scale(.84) translate(-512 -600)">
+  <ellipse cx="370" cy="765" rx="150" ry="95" fill="#8EC5E8"/><ellipse cx="650" cy="790" rx="105" ry="70" fill="#FFD966"/>
+  <circle cx="385" cy="520" r="128" fill="#8EC5E8"/>
+  <path d="M262 500c4-86 64-140 130-140 62 0 118 38 130 100-52-8-112-30-150-76-26 52-66 100-110 116Z" fill="#6FB1DE"/>
+  <g transform="rotate(-10 590 400)"><ellipse cx="585" cy="385" rx="34" ry="104" fill="#F4A9BC"/><ellipse cx="585" cy="390" rx="16" ry="74" fill="#FFE1E9"/></g>
+  <g transform="rotate(12 700 400)"><ellipse cx="700" cy="390" rx="34" ry="100" fill="#F4A9BC"/><ellipse cx="700" cy="395" rx="16" ry="70" fill="#FFE1E9"/></g>
+  <circle cx="645" cy="565" r="100" fill="#FFD966"/>
+  <g fill="#3B2A33"><circle cx="350" cy="540" r="13"/><circle cx="420" cy="540" r="13"/><circle cx="615" cy="575" r="11"/><circle cx="676" cy="575" r="11"/></g>
+  <path d="M355 585q30 30 62 0" stroke="#3B2A33" stroke-width="12" fill="none" stroke-linecap="round"/><path d="M622 612q23 22 46 0" stroke="#3B2A33" stroke-width="10" fill="none" stroke-linecap="round"/>
+  <circle cx="318" cy="580" r="18" fill="#F4A9BC" opacity=".7"/><circle cx="452" cy="580" r="18" fill="#F4A9BC" opacity=".7"/>
+</g>
 </svg>
