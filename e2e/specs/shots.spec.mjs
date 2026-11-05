@@ -1,4 +1,7 @@
 import { test, expect, CARESITTERS_URL, SECOND_APP_URL, createUser, seedCarer, seedProfile, signIn, newTestEmail } from "../lib.mjs";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+const PHOTO = "data:image/jpeg;base64," + readFileSync(path.resolve(import.meta.dirname, "../fixtures/photo-with-gps.jpg")).toString("base64");
 const OUT = "/home/user/shots";
 async function tabs(page, prefix) {
   await page.waitForTimeout(1500);
@@ -14,7 +17,7 @@ test("shots caresitters carer + family", async ({ browser }) => {
   for (const side of ["family", "carer"]) {
     const user = await createUser(newTestEmail(side));
     const other = await createUser(newTestEmail("o" + side));
-    if (side === "family") await seedCarer(other.uid); else await seedProfile(other.uid, { side: "family" });
+    if (side === "family") await seedCarer(other.uid, { photoUrl: PHOTO, card: { age: 29, experienceYears: 5, careTypes: ["nanny"] } }); else await seedProfile(other.uid, { side: "family", photoUrl: PHOTO });
     if (side === "carer") await seedCarer(user.uid); else await seedProfile(user.uid, { side: "family" });
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
     const page = await ctx.newPage();
