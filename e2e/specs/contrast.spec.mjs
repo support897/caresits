@@ -4,6 +4,8 @@ const AXE = readFileSync("/home/user/pw/node_modules/axe-core/axe.min.js", "utf8
 const found = [];
 async function audit(page, label) {
   await page.waitForTimeout(900);
+  const bg = await page.evaluate(() => [[195, 300], [195, 120], [20, 500], [370, 400]].map(([x, y]) => { let el = document.elementFromPoint(x, y); while (el) { const c = getComputedStyle(el).backgroundColor; if (c !== "rgba(0, 0, 0, 0)" && c !== "transparent") return c; el = el.parentElement; } return "rgb(255, 255, 255)"; }));
+  for (const c of bg) if (!/^rgb\(255, 255, 255\)$|^rgb\(253, 227, 234\)$|^rgb\(255, 245, 248\)$|^rgb\(238, 247, 254\)$|^rgb\(255, 217, 102\)$/.test(c)) found.push({ label, html: "background " + c, msg: "not white/pastel" });
   await page.evaluate(AXE);
   const r = await page.evaluate(async () => (await window.axe.run(document, { runOnly: ["color-contrast"] })).violations.flatMap((v) => v.nodes.map((n) => ({ html: n.html.slice(0, 110), msg: (n.any[0]?.message || "").slice(0, 120) }))));
   for (const v of r) found.push({ label, ...v });
