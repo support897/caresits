@@ -182,6 +182,19 @@ test("live rules baseline and v2 security extensions", { concurrency: 1 }, async
       await assertSucceeds(setDoc(ref, profile("carer", card)));
       await assertFails(updateDoc(ref, { "card.reviewsSummary": { count: 1, avg: 5 } }));
     });
+    await t.test("carer resume document: owner writes small text, others read, oversize or unknown parts denied", async () => {
+      const resume = { summary: "Warm nanny", jobs: ["Nanny, Smith family (2021 - 2024)"], education: ["Cert III Early Childhood"], skills: ["First aid", "Cooking"], certificates: ["Senior first aid"] };
+      const mine = doc(as("resume-ok"), "profiles/resume-ok/resume/main");
+      await assertSucceeds(setDoc(mine, resume));
+      await assertSucceeds(getDoc(doc(as("someone-else"), "profiles/resume-ok/resume/main")));
+      await assertFails(setDoc(doc(as("other-writer"), "profiles/resume-ok/resume/main"), resume));
+      await assertFails(setDoc(doc(as("resume-name"), "profiles/resume-name/resume/second"), resume));
+      await assertFails(setDoc(doc(as("resume-big"), "profiles/resume-big/resume/main"), { ...resume, summary: "x".repeat(601) }));
+      await assertFails(setDoc(doc(as("resume-many"), "profiles/resume-many/resume/main"), { ...resume, jobs: Array.from({ length: 9 }, () => "job") }));
+      await assertFails(setDoc(doc(as("resume-long"), "profiles/resume-long/resume/main"), { ...resume, jobs: ["y".repeat(2600)] }));
+      await assertFails(setDoc(doc(as("resume-extra"), "profiles/resume-extra/resume/main"), { ...resume, phone: "0412345678" }));
+      await assertFails(setDoc(doc(as("resume-type"), "profiles/resume-type/resume/main"), { ...resume, skills: "not a list" }));
+    });
     await t.test("reviews summary stays server-only on sparse profile updates", async () => {
       const owner = as("review-guard");
       const ref = doc(owner, "profiles/review-guard");
