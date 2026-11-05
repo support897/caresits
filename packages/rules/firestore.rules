@@ -643,6 +643,20 @@ function validProfileCardExtraFields(card) {
     && essentials is map && essentials.keys().hasOnly(["schedule", "budget", "minAgeGroupsOk"])
     && ageGroups is list && ageGroups.size() <= 5 && ageGroups.hasOnly(["newborn", "infant", "toddler", "preschool", "school"]);
 }
+// Carer resume (5 Nov 2026): self-reported text only, with a hard size cap per part.
+// Phone numbers and emails are removed on the device before saving; rules bound the size.
+function validResumeList(items, maxCount, maxChars) {
+  return items is list && items.size() <= maxCount
+    && (items.size() == 0 || items.join("|").size() <= maxChars);
+}
+function validResumeDoc(data) {
+  return data.keys().hasOnly(["summary", "jobs", "education", "skills", "certificates", "updatedAt"])
+    && data.get("summary", "") is string && data.get("summary", "").size() <= 600
+    && validResumeList(data.get("jobs", []), 8, 2500)
+    && validResumeList(data.get("education", []), 6, 1900)
+    && validResumeList(data.get("skills", []), 20, 1300)
+    && validResumeList(data.get("certificates", []), 8, 2500);
+}
 function validLegacyProfileCardFields(card) {
   return validProfileCardCoreFields(card)
     && validProfileCardExtraFields(card)
@@ -697,6 +711,15 @@ match /profiles/{uid} {
 // contactBy; the state machine carries the protection.)
 // C2 — the creator's claimed role must match their published
 // card's side.
+match /profiles/{uid}/resume/{docId} {
+  // Carer resume (5 Nov 2026): one self-reported document, owner writes, signed-in users read
+  // (same read wall as the profile card). Phone numbers and emails are removed on the device.
+  allow read: if signedIn() && (!isAnon() || demoUnlocked());
+  allow create, update: if signedIn() && !isAnon()
+    && request.auth.uid == uid && docId == "main"
+    && validResumeDoc(request.resource.data);
+  allow delete: if signedIn() && request.auth.uid == uid;
+}
 match /profiles/{uid}/answers/{code} {
   // Per-answer construction (Security ruling, 16 Oct 2026): one
   // document per questionnaire answer. Code membership is one
