@@ -2,7 +2,7 @@ import "../lib/i18n";
 import { useEffect, useState } from "react";
 import { BackBar, Empty, t, type ScreenProps, useAuth, useNav } from "@cc/core";
 import { getSpaceAccess, type SpaceAccess } from "../data/spaces";
-import { ChatPanel } from "./today";
+import { ChatPanel } from "./today/index";
 
 type ThreadParams = { spaceId: string };
 

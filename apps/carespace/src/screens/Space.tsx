@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { BackBar, Empty, t, type ScreenProps, useAuth, useNav } from "@cc/core";
 import { getSpaceAccess, type SpaceAccess } from "../data/spaces";
 import { loadChildren, type ChildProfile } from "../data/children";
-import { ChatPanel, PhotoGallery, TodayTimeline } from "./today";
+import { ChatPanel, PhotoGallery, TodayTimeline } from "./today/index";
 
 type SpaceParams = { spaceId: string; section?: string };
 type SpaceSection = "updates" | "chat" | "photos" | "children";

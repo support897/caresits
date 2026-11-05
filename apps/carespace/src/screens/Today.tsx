@@ -2,7 +2,7 @@ import "../lib/i18n";
 import { useEffect, useState } from "react";
 import { BackBar, Empty, t, type ScreenProps, useAuth, useNav } from "@cc/core";
 import { getSpaceAccess, type SpaceAccess } from "../data/spaces";
-import { TodayTimeline } from "./today";
+import { TodayTimeline } from "./today/index";
 
 type TodayParams = { spaceId: string };
 
