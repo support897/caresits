@@ -105,7 +105,7 @@ export default function Bookings({ params }: ScreenProps<Params>) {
       await refresh();
       if (next === "accepted") nav.push("accepted", { bookingId: booking.id, pairId: booking.pairId });
     } catch {
-      setError(t("bookings.updateError", "This booking could not be updated. Check your connection and try again."));
+      setError(t("bookings.updateError", "Could not update. Try again."));
     } finally { setBusyId(""); }
   }
 
@@ -118,7 +118,7 @@ export default function Bookings({ params }: ScreenProps<Params>) {
       await transitionBookingSeries(item.pairId, item.id, next, me.side, uid);
       await refresh();
     } catch {
-      setError(t("bookings.seriesUpdateError", "The repeat series could not be updated. Check your connection and try again."));
+      setError(t("bookings.seriesUpdateError", "Could not update. Try again."));
     } finally { setSeriesBusyId(""); }
   }
 
@@ -167,12 +167,12 @@ export default function Bookings({ params }: ScreenProps<Params>) {
     } catch (error) {
       const reason = error instanceof Error ? error.message : "";
       setRepeatError(reason === "availability-conflict"
-        ? t("bookings.repeatUnavailable", "The carer has not listed availability for the repeat day. Choose a different time.")
+        ? t("bookings.repeatUnavailable", "Not available that day. Pick another time.")
         : reason === "booking-conflict"
           ? t("bookings.repeatConflict", "A request already overlaps this time. Choose a different time.")
           : reason === "profile-incomplete"
             ? t("bookings.repeatProfile", "Finish your family profile before repeating this booking.")
-            : t("bookings.repeatError", "The repeat request could not be sent. Choose a different time or try again."));
+            : t("bookings.repeatError", "Could not send. Try another time."));
     } finally { setRepeatBusy(false); }
   }
 
@@ -191,7 +191,7 @@ export default function Bookings({ params }: ScreenProps<Params>) {
       <div className="booking-row"><b>{moneyLabel(booking.rate)} {t("bookings.perHour", "/ hour")}</b><span>{booking.recurring === "weekly" ? t("bookings.estimatedEach", "Estimated per visit: {amount}", { amount: moneyLabel(booking.estimate) }) : t("bookings.estimatedTotal", "Estimated total: {amount}", { amount: moneyLabel(booking.estimate) })}</span></div>
       {booking.recurring === "weekly" && <p className="booking-meta">{t("bookings.weekly", "Weekly request: {days}", { days: booking.weekdays.map((day) => t(`day.${day.toLowerCase()}`, day)).join(", ") || t("bookings.daysNotSet", "days not set") })}</p>}
       {(booking.childIds?.length ?? 0) > 0 && <p className="booking-meta">{t("bookings.childrenCount", "Children selected: {count}", { count: booking.childIds?.length ?? 0 })}</p>}
-      {booking.shareAddress && <p className="booking-meta">{t("bookings.addressChoice", "Address sharing may be arranged later. The exact address is not stored here.")}</p>}
+      {booking.shareAddress && <p className="booking-meta">{t("bookings.addressChoice", "Share your address later in chat.")}</p>}
       {booking.note && <p>{booking.note}</p>}
       {me.side === "family" && booking.state === "accepted" && <Button small onClick={() => nav.push("accepted", { bookingId: booking.id, pairId: booking.pairId })}>{t("bookings.openAccepted", "View accepted booking")}</Button>}
       {me.side === "carer" && booking.state === "accepted" && hasBookingEnded(booking, clock) && <Button small onClick={() => void changeState(booking, "completed")} disabled={busyId === booking.id}>{busyId === booking.id ? t("bookings.updating", "Updating…") : t("bookings.markCompleted", "Mark completed")}</Button>}
@@ -202,7 +202,7 @@ export default function Bookings({ params }: ScreenProps<Params>) {
   }
 
   function RequestCard({ booking }: { booking: BookingRecord }) {
-    return <article className="booking-card booking-summary"><div className="booking-between"><div><h3>{personName(booking)}</h3><p className="booking-meta">{dateLabel(booking.date)} · {booking.from}–{booking.to}</p></div><span className="booking-status pending">{t("bookings.newRequest", "Request")}</span></div><div className="booking-row"><b>{moneyLabel(booking.rate)} {t("bookings.perHour", "/ hour")}</b><span>{t("bookings.estimatedTotal", "Estimated total: {amount}", { amount: moneyLabel(booking.estimate) })}</span></div>{(booking.childIds?.length ?? 0) > 0 && <p className="booking-meta">{t("bookings.childrenCount", "Children selected: {count}", { count: booking.childIds?.length ?? 0 })}</p>}{booking.shareAddress && <p className="booking-meta">{t("bookings.addressChoice", "Address sharing may be arranged later. The exact address is not stored here.")}</p>}{booking.note && <p>{booking.note}</p>}<div className="booking-actions"><Button small onClick={() => void changeState(booking, "accepted")} disabled={busyId === booking.id}>{t("bookings.accept", "Accept")}</Button><Button small alt onClick={() => void changeState(booking, "declined")} disabled={busyId === booking.id}>{t("bookings.decline", "Decline")}</Button></div></article>;
+    return <article className="booking-card booking-summary"><div className="booking-between"><div><h3>{personName(booking)}</h3><p className="booking-meta">{dateLabel(booking.date)} · {booking.from}–{booking.to}</p></div><span className="booking-status pending">{t("bookings.newRequest", "Request")}</span></div><div className="booking-row"><b>{moneyLabel(booking.rate)} {t("bookings.perHour", "/ hour")}</b><span>{t("bookings.estimatedTotal", "Estimated total: {amount}", { amount: moneyLabel(booking.estimate) })}</span></div>{(booking.childIds?.length ?? 0) > 0 && <p className="booking-meta">{t("bookings.childrenCount", "Children selected: {count}", { count: booking.childIds?.length ?? 0 })}</p>}{booking.shareAddress && <p className="booking-meta">{t("bookings.addressChoice", "Share your address later in chat.")}</p>}{booking.note && <p>{booking.note}</p>}<div className="booking-actions"><Button small onClick={() => void changeState(booking, "accepted")} disabled={busyId === booking.id}>{t("bookings.accept", "Accept")}</Button><Button small alt onClick={() => void changeState(booking, "declined")} disabled={busyId === booking.id}>{t("bookings.decline", "Decline")}</Button></div></article>;
   }
 
   function SeriesCard({ item }: { item: BookingSeriesRecord }) {
@@ -228,7 +228,7 @@ export default function Bookings({ params }: ScreenProps<Params>) {
       {error && <p className="booking-error" role="alert">{error}</p>}
       {!loading && me.side === "family" && <>
         <header className="booking-section"><p className="booking-kicker">{t("bookings.familyKicker", "Your care, in one place")}</p><h1>{t("bookings.familyTitle", "Bookings")}</h1></header>
-        {usual && <section className="booking-note"><div className="booking-between"><div><b>{t("bookings.usualTitle", "Book my usual carer")}</b><p>{t("bookings.usualBody", "Repeat a past time with {name}.", { name: names[usual.carerUid] ?? t("bookings.person", "Care partner") })}</p>{usualEstimate != null && <p className="booking-meta">{t("bookings.repeatDetails", "Next: {date} · {from}–{to} · {estimate}", { date: dateLabel(usualRepeatDate), from: usual.from, to: usual.to, estimate: usual.recurring === "weekly" ? t("bookings.repeatPerVisit", "{amount} per visit", { amount: moneyLabel(usualEstimate) }) : t("bookings.repeatTotal", "{amount} estimated total", { amount: moneyLabel(usualEstimate) }) })}</p>}</div><div className="booking-actions"><Button small onClick={() => void repeatUsual()} disabled={repeatBusy}>{repeatBusy ? t("bookings.repeatSending", "Sending…") : t("bookings.repeat", "Repeat")}</Button><Button small alt onClick={openRepeat}>{t("bookings.repeatEdit", "Choose a different time")}</Button></div></div><p className="booking-meta">{t("bookings.repeatAccept", "The carer still needs to accept. This does not create an accepted booking.")}</p>{repeatMessage && <p role="status">{repeatMessage}</p>}{repeatError && <p className="booking-error" role="alert">{repeatError}</p>}</section>}
+        {usual && <section className="booking-note"><div className="booking-between"><div><b>{t("bookings.usualTitle", "Book my usual carer")}</b><p>{t("bookings.usualBody", "Repeat a past time with {name}.", { name: names[usual.carerUid] ?? t("bookings.person", "Care partner") })}</p>{usualEstimate != null && <p className="booking-meta">{t("bookings.repeatDetails", "Next: {date} · {from}–{to} · {estimate}", { date: dateLabel(usualRepeatDate), from: usual.from, to: usual.to, estimate: usual.recurring === "weekly" ? t("bookings.repeatPerVisit", "{amount} per visit", { amount: moneyLabel(usualEstimate) }) : t("bookings.repeatTotal", "{amount} estimated total", { amount: moneyLabel(usualEstimate) }) })}</p>}</div><div className="booking-actions"><Button small onClick={() => void repeatUsual()} disabled={repeatBusy}>{repeatBusy ? t("bookings.repeatSending", "Sending…") : t("bookings.repeat", "Repeat")}</Button><Button small alt onClick={openRepeat}>{t("bookings.repeatEdit", "Choose a different time")}</Button></div></div><p className="booking-meta">{t("bookings.repeatAccept", "Waiting for the carer to accept.")}</p>{repeatMessage && <p role="status">{repeatMessage}</p>}{repeatError && <p className="booking-error" role="alert">{repeatError}</p>}</section>}
         <section className="booking-section"><h2>{t("bookings.recurringTitle", "Recurring series")}</h2><div className="booking-list">{visibleSeries.map((item) => <SeriesCard key={`${item.pairId}-${item.id}`} item={item} />)}{!visibleSeries.length && <p className="booking-meta">{t("bookings.noRecurring", "No weekly requests yet.")}</p>}</div></section>
         <div className="booking-tabs" role="tablist" aria-label={t("bookings.listTabs", "Booking lists")}><button className={`chip${view === "upcoming" ? " on" : ""}`} role="tab" aria-selected={view === "upcoming"} onClick={() => setView("upcoming")}>{t("bookings.upcoming", "Upcoming")}</button><button className={`chip${view === "past" ? " on" : ""}`} role="tab" aria-selected={view === "past"} onClick={() => setView("past")}>{t("bookings.past", "Past")}</button></div>
         <div className="booking-list">{(view === "upcoming" ? upcoming : past).map((booking) => <BookingCard key={`${booking.pairId}-${booking.id}`} booking={booking} allowCancel={view === "upcoming"} />)}{(view === "upcoming" ? upcoming : past).length === 0 && <Empty mood="rest" title={view === "upcoming" ? t("bookings.noUpcoming", "No upcoming bookings") : t("bookings.noPast", "No past bookings")} body={t("bookings.familyEmpty", "Accepted and requested times will show here.")} />}</div>

@@ -229,7 +229,7 @@ export default function Builder({ params }: ScreenProps) {
   }
   function requestIntroSuggestion() {
     const suggestion = suggestIntro({ languages: draft.languages, experienceYears: draft.experienceYears, careTypes: draft.carerCareTypes, style: draft.style });
-    setError(suggestion ? "" : t("onb.ai.noFacts", "Add languages, years, care types, or care style before making a suggestion."));
+    setError(suggestion ? "" : t("onb.ai.noFacts", "Add a few details first."));
     setIntroSuggestion(suggestion);
   }
   function renderIntroSuggestion() {
@@ -250,7 +250,7 @@ export default function Builder({ params }: ScreenProps) {
           <p className="onb-privacy">{t("onb.family.privacy", "Exact address and child photos stay private until the parent shares.")}</p>
         </div>;
         case "children": return <div className="onb-field-stack">
-          <p className="muted onb-note">{t("onb.children.help", "Use a first name or nickname. Add only the age. You can add or remove children any time.")}</p>
+          <p className="muted onb-note">{t("onb.children.help", "First name and age only.")}</p>
           <p className="onb-privacy">{t("onb.family.privacy", "Exact address and child photos stay private until the parent shares.")}</p>
           {draft.kids.map((kid, index) => <div className="onb-kid" key={index}>
             <input className="field" aria-label={t("onb.children.nameLabel", "Child first name or nickname")} maxLength={40} value={kid.name} onChange={(event) => update({ kids: draft.kids.map((row, rowIndex) => rowIndex === index ? { ...row, name: event.target.value } : row) })} placeholder={t("onb.children.name", "First name or nickname")} />
@@ -280,7 +280,7 @@ export default function Builder({ params }: ScreenProps) {
 
     switch (stepName) {
       case "profile": return <div className="onb-field-stack">
-        <PhotoStep uid={uid} photoKey={draft.photoKey} onSaved={(photoKey) => update({ photoKey })} label={t("onb.profile.photo", "Choose your profile photo")} help={t("onb.profile.photo.help", "Use a clear photo of yourself. Do not upload photos of children you cared for.")} />
+        <PhotoStep uid={uid} photoKey={draft.photoKey} onSaved={(photoKey) => update({ photoKey })} label={t("onb.profile.photo", "Choose your profile photo")} help={t("onb.profile.photo.help", "A clear photo of you. No children.")} />
         <label className="onb-label" htmlFor="onb-carer-name">{t("onb.profile.name", "Your name")}</label>
         <input id="onb-carer-name" className="field" autoComplete="name" maxLength={80} value={draft.displayName} onChange={(event) => update({ displayName: event.target.value })} placeholder={t("onb.profile.namePlaceholder", "First name or preferred name")} />
         <div className="onb-row"><label className="onb-field-stack"><span className="onb-label">{t("onb.profile.suburb", "Suburb")}</span><input className="field" autoComplete="address-level2" maxLength={80} value={draft.suburb} onChange={(event) => update({ suburb: event.target.value })} placeholder={t("onb.family.suburbPlaceholder", "For example, New Farm")} /></label><label className="onb-field-stack"><span className="onb-label">{t("onb.profile.postcode", "Postcode")}</span><input className="field" inputMode="numeric" autoComplete="postal-code" maxLength={10} value={draft.postcode} onChange={(event) => update({ postcode: event.target.value })} placeholder={t("onb.family.postcodePlaceholder", "4005")} /></label></div>
@@ -289,7 +289,7 @@ export default function Builder({ params }: ScreenProps) {
       case "headline": return <div className="onb-field-stack"><label className="onb-label" htmlFor="onb-headline">{t("onb.headline.label", "A few words about your care")}</label><input id="onb-headline" className="field" maxLength={80} value={draft.headline} onChange={(event) => update({ headline: event.target.value })} placeholder={t("onb.headline.placeholder", "For example, Calm after-school care")} /><p className="muted onb-note">{t("onb.headline.count", "{count}/80 characters", { count: draft.headline.length })}</p></div>;
       case "intro": return <div className="onb-field-stack"><label className="onb-label" htmlFor="onb-intro">{t("onb.intro.label", "Tell families about your care")}</label><textarea id="onb-intro" className="field" maxLength={300} value={draft.intro} onChange={(event) => update({ intro: event.target.value })} placeholder={t("onb.intro.placeholder", "Write about your care and the families you work best with.")} /><p className="muted onb-note">{t("onb.intro.count", "{count}/300 characters", { count: draft.intro.length })}</p><Button type="button" alt onClick={requestIntroSuggestion}>{t("onb.ai.suggestIntro", "Suggest an introduction")}</Button>{renderIntroSuggestion()}</div>;
       case "values": return <div className="onb-field-stack">
-        <p className="muted onb-note">{t("onb.carer.values.help", "Choose the care styles and activities that describe your work. These are preferences, not safety checks.")}</p>
+        <p className="muted onb-note">{t("onb.carer.values.help", "Pick what describes you.")}</p>
         <div><p className="onb-label">{t("onb.carer.values.style", "Your care style")}</p><ChoiceCards items={STYLE.map((value) => ({ value, label: t(`onb.style.${value.toLowerCase().replaceAll(" ", "-")}`, value) }))} value={draft.style} onChange={(style) => update({ style })} multiple /></div>
         <div><p className="onb-label">{t("onb.carer.values.activities", "Activities you enjoy")}</p><ChoiceCards items={ACTIVITIES.map((value) => ({ value, label: t(`onb.activity.${value.toLowerCase().replaceAll(" ", "-")}`, value) }))} value={draft.activities} onChange={(activities) => update({ activities })} multiple /></div>
         <div><p className="onb-label">{t("onb.carer.values.distance", "How far you can travel")}</p><ChoiceCards items={DISTANCES.map((distance) => ({ value: String(distance), label: t("onb.distance.km", "{distance} km", { distance }) }))} value={[String(draft.distanceKm)]} onChange={(items) => { if (items[0]) update({ distanceKm: Number(items[0]) }); }} /></div>
@@ -324,7 +324,7 @@ export default function Builder({ params }: ScreenProps) {
       <section className="onb-completeness" aria-label={t("onb.complete.label", "Profile completeness")}>
         <div className="onb-completeness-heading"><span>{t("onb.complete.label", "Profile completeness")}</span><strong>{completeness}%</strong></div>
         <div className="onb-completeness-track" role="progressbar" aria-label={t("onb.complete.label", "Profile completeness")} aria-valuemin={0} aria-valuemax={100} aria-valuenow={completeness}><span style={{ width: `${completeness}%` }} /></div>
-        <p className="muted onb-note">{t("onb.complete.note", "Optional details can help people understand your profile. You can still finish now.")}</p>
+        <p className="muted onb-note">{t("onb.complete.note", "Optional. You can finish now.")}</p>
       </section>
       <details className="onb-preview">
         <summary>{t("onb.preview.toggle", "Preview your profile")}</summary>

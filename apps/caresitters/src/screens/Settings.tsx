@@ -109,7 +109,7 @@ export default function Settings({ params }: { params: Params }) {
 
       <section className="card" aria-labelledby="settings-privacy-title">
         <h2 id="settings-privacy-title">{t("settings.privacy.title", "Privacy and account")}</h2>
-        <p className="muted">{t("settings.privacy.note", "Exact addresses and child photos stay private until you choose to share them.")}</p>
+        <p className="muted">{t("settings.privacy.note", "Addresses and child photos stay private.")}</p>
         <button className="btn alt" type="button" onClick={() => nav.push("safety", { uid: me.uid })}>{t("settings.privacy.safety", "Open safety tools")}</button>
         <button className="btn alt" type="button" onClick={() => void downloadData()} disabled={Boolean(dataBusy)} style={{ marginBlockStart: 8 }}>{dataBusy === "export" ? t("settings.export.sending", "Sending request…") : t("settings.export.button", "Download my data")}</button>
         <label style={{ display: "block", marginBlockStart: 10 }}>{t("settings.delete.confirm.label", "Type DELETE to confirm account deletion")}<input className="field" value={deleteText} onChange={(event) => setDeleteText(event.target.value)} autoComplete="off" /></label>

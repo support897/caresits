@@ -10,7 +10,7 @@ export default function ResumeEdit({ params }: { params: { me: Person } }) {
   useEffect(() => { let live = true; void loadResume(uid).then((x) => { if (live && x) setR(x); }); return () => { live = false; }; }, [uid]);
   async function onFile(file?: File) {
     if (!file) return; setBusy(true); setMsg("");
-    try { const text = await extractFileText(file); const next = parseResumeText(text); setR(next); setMsg(t("resume.read", "We read it on your phone. Phone numbers and emails were removed. Please check it.")); }
+    try { const text = await extractFileText(file); const next = parseResumeText(text); setR(next); setMsg(t("resume.read", "Phone numbers and emails removed. Check it.")); }
     catch { setMsg(t("resume.readFail", "We could not read that file. Paste the text instead.")); }
     setBusy(false);
   }
@@ -25,19 +25,19 @@ export default function ResumeEdit({ params }: { params: { me: Person } }) {
     <BackBar title={t("resume.edit", "My resume")} onBack={() => nav.back()} />
     <div style={{ padding: 16, display: "grid", gap: 12 }}>
       <section className="card"><Bunny mood="hello" size={64} />
-        <p>{t("resume.how", "Add your resume file or paste the text. We read it on your phone, take out phone numbers and emails, and you check it before saving. The file itself is never uploaded.")}</p>
+        <p>{t("resume.how", "Add a file or paste text. Stays on your phone.")}</p>
         <input ref={fileRef} type="file" accept=".pdf,.txt,.md,application/pdf,text/plain" aria-label={t("resume.file", "Resume file")} hidden onChange={(e) => void onFile(e.target.files?.[0])} />
         <button className="btn" type="button" disabled={busy} onClick={() => fileRef.current?.click()}>{t("resume.pick", "Choose resume file")}</button>
         <label style={{ display: "block", marginBlockStart: 12 }}><strong>{t("resume.pasteLabel", "Or paste your resume")}</strong>
           <textarea aria-label={t("resume.pasteLabel", "Or paste your resume")} rows={4} value={paste} onChange={(e) => setPaste(e.target.value)} style={{ width: "100%", font: "inherit", fontSize: 17, padding: 12, borderRadius: 14, border: "2px solid var(--line)" }} /></label>
-        <button className="btn alt" type="button" disabled={busy || !paste.trim()} onClick={() => { setR(parseResumeText(paste)); setMsg(t("resume.read", "We read it on your phone. Phone numbers and emails were removed. Please check it.")); }} style={{ marginBlockStart: 8 }}>{t("resume.fill", "Fill in from text")}</button>
+        <button className="btn alt" type="button" disabled={busy || !paste.trim()} onClick={() => { setR(parseResumeText(paste)); setMsg(t("resume.read", "Phone numbers and emails removed. Check it.")); }} style={{ marginBlockStart: 8 }}>{t("resume.fill", "Fill in from text")}</button>
         {msg && <p role="status">{msg}</p>}
       </section>
       <section className="card">
         <label style={{ display: "block", marginBlockEnd: 12 }}><strong>{t("resume.summary", "About you")}</strong>
           <textarea aria-label={t("resume.summary", "About you")} rows={3} maxLength={600} value={r.summary} onChange={(e) => setR({ ...r, summary: e.target.value })} style={{ width: "100%", font: "inherit", fontSize: 17, padding: 12, borderRadius: 14, border: "2px solid var(--line)" }} /></label>
         {area(t("resume.jobs", "Work"), "jobs")}{area(t("resume.education", "Study"), "education")}{area(t("resume.certificates", "Certificates you list"), "certificates")}{area(t("resume.skills", "Skills"), "skills")}
-        <p className="muted">{t("resume.note", "This is what you say about yourself. It does not show as checked. Checks come from Qualifications.")}</p>
+        <p className="muted">{t("resume.note", "Your own words. Not checked.")}</p>
         <button className="btn" type="button" disabled={busy} onClick={() => void save()}>{t("resume.save", "Save resume")}</button>
       </section>
     </div>

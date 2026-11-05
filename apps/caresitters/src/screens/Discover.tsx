@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bunny, Button, Chip, Empty, haptic, t, useNav, type ScreenProps } from "@cc/core";
+import { Bunny, Button, Chip, Empty, Sheet, haptic, t, useNav, type ScreenProps } from "@cc/core";
+import { SwipeDeck } from "./discover/SwipeDeck";
 import type { Person } from "@cc/core";
 import { removeSavedPerson, savePerson, subscribeDiscoveryPeople, subscribeSavedIds, type DiscoveryPerson } from "../data/people";
 import { PersonCard } from "./discover/PersonCard";
@@ -32,7 +33,8 @@ export default function Discover({ params }: ScreenProps) {
   const [confirmedSuggestions, setConfirmedSuggestions] = useState<RequirementSuggestion[]>([]);
   const [requirements, setRequirements] = useState<MatchRequirements>({});
   const [matchWeights, setMatchWeights] = useState<Partial<MatchWeights> | undefined>(undefined);
-  const [deckMode, setDeckMode] = useState(false);
+  const [deckMode, setDeckMode] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
   const [deckIndex, setDeckIndex] = useState(0);
   const [why, setWhy] = useState<Row | null>(null);
   const [saveError, setSaveError] = useState(false);
@@ -200,9 +202,15 @@ export default function Discover({ params }: ScreenProps) {
   const title = me.side === "family" ? t("disc.titleFamily", "Discover care") : t("disc.titleCarer", "Find families");
 
   return <div className="app">
-    <header style={{ padding: "10px 16px 12px", display: "grid", gap: 8, borderBottom: "1px solid var(--line)" }}>
+    <div className="discover-bar">
+      <h1>{title}</h1>
+      <div className="row" style={{ gap: 8 }}>
+        <button type="button" className="icon-btn" onClick={() => setDeckMode((v) => !v)} aria-label={deckMode ? t("disc.showList", "Show list") : t("disc.showCards", "Show cards")}>{deckMode ? "☰" : "♥"}</button>
+        <button type="button" className="icon-btn" onClick={() => setShowFilters(true)} aria-label={t("disc.filters", "Filters")}>⚙</button>
+      </div>
+    </div>
+    {showFilters && <Sheet label={t("disc.filters", "Filters")} onClose={() => setShowFilters(false)}><div style={{ display: "grid", gap: 14 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-        <h1 style={{ fontSize: 30 }}>{title}</h1>
         <Button type="button" alt small onClick={() => nav.push("weights", { me })} aria-label={t("disc.editWeights", "Change match weights")}>{t("disc.weights", "Weights")}</Button>
       </div>
       <div className="row"><Button type="button" alt small onClick={() => nav.push("aupair", { me })}>{t("disc.auPairWorld", "Au pair world")}</Button></div>
@@ -216,13 +224,11 @@ export default function Discover({ params }: ScreenProps) {
           <input className="field" aria-label={t("disc.suburb", "Suburb")} value={suburb} onChange={(event) => setSuburb(event.target.value)} placeholder={t("disc.suburbPlaceholder", "Search a suburb")} />
         </label>
       </div>
-    </header>
-
-    <div className="scroll">
-      <details aria-label={t("disc.quickSearch", "Quick search")} className="card" style={{ padding: 14 }}>
-        <summary style={{ minHeight: 44, display: "flex", alignItems: "center", cursor: "pointer", fontWeight: 700, fontSize: 19, listStylePosition: "inside" }}>{t("disc.filtersToggle", "Search and filters")}</summary>
+    
+            <div>
+        
         <div style={{ display: "grid", gap: 10, marginBlockStart: 10 }}>
-        <div><h2 style={{ fontSize: 22 }}>{t("disc.quickTitle", "Tell us what you need")}</h2><p className="muted" style={{ margin: "4px 0 0" }}>{t("disc.quickHelp", "Suggestions are rule-based. Review and confirm before matching.")}</p></div>
+        <div><h2 style={{ fontSize: 22 }}>{t("disc.quickTitle", "Tell us what you need")}</h2><p className="muted" style={{ margin: "4px 0 0" }}>{t("disc.quickHelp", "Pick what applies.")}</p></div>
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "center" }}>
           <input className="field" value={searchText} onChange={(event) => setSearchText(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") makeSuggestions(); }} placeholder={t("disc.searchPlaceholder", "e.g. available Friday from 4pm, can cook")} aria-label={t("disc.searchPlaceholder", "Describe what you need")} />
           <Button type="button" small onClick={makeSuggestions} style={{ width: "auto", paddingInline: 16 }}>{t("disc.suggest", "Suggest")}</Button>
@@ -233,7 +239,7 @@ export default function Discover({ params }: ScreenProps) {
         </div>}
         {confirmedSuggestions.length > 0 && <p role="status" className="muted" style={{ margin: 0 }}>{t("disc.confirmed", "Confirmed for this search: {needs}", { needs: confirmedSuggestions.map((item) => item.label).join(" · ") })}</p>}
         <div style={{ display: "grid", gap: 10, borderTop: "1px solid var(--line)", paddingBlockStart: 12 }}>
-          <div><h3 style={{ fontSize: 19 }}>{t("disc.dateSearchTitle", "Search by date and time")}</h3><p className="muted" style={{ margin: "4px 0 0" }}>{t("disc.dateSearchHelp", "Choose a date and optional time window. Add it to use it as an essential.")}</p></div>
+          <div><h3 style={{ fontSize: 19 }}>{t("disc.dateSearchTitle", "Search by date and time")}</h3><p className="muted" style={{ margin: "4px 0 0" }}>{t("disc.dateSearchHelp", "Pick a day and time.")}</p></div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))", gap: 8 }}>
             <label style={{ display: "grid", gap: 4 }}><span>{t("disc.date", "Date")}</span><input className="field" type="date" value={searchDate} onChange={(event) => setSearchDate(event.target.value)} aria-label={t("disc.date", "Date")} /></label>
             <label style={{ display: "grid", gap: 4 }}><span>{t("disc.from", "From")}</span><input className="field" type="time" value={timeFrom} onChange={(event) => setTimeFrom(event.target.value)} aria-label={t("disc.from", "From")} /></label>
@@ -247,29 +253,22 @@ export default function Discover({ params }: ScreenProps) {
           <h3 style={{ fontSize: 19 }}>{t("disc.savedSearches", "Saved searches")}</h3>
           {savedSearches.length ? savedSearches.map((search) => <div key={search.id} className="row" style={{ alignItems: "center", justifyContent: "space-between" }}>
             <span>{search.label}</span><div className="row"><Button type="button" alt small onClick={() => applySavedSearch(search)}>{t("disc.applySearch", "Apply")}</Button><Button type="button" alt small onClick={() => removeSearch(search)} aria-label={t("disc.deleteSearch", "Delete saved search: {label}", { label: search.label })}>{t("disc.delete", "Delete")}</Button></div>
-          </div>) : <p className="muted" style={{ margin: 0 }}>{t("disc.noSavedSearches", "Saved searches stay on this device until you remove them.")}</p>}
+          </div>) : <p className="muted" style={{ margin: 0 }}>{t("disc.noSavedSearches", "No saved searches.")}</p>}
         </div>
       </div>
-      </details>
+      </div>
+      <Button type="button" onClick={() => setShowFilters(false)}>{t("disc.done", "Done")}</Button>
+    </div></Sheet>}
+    {deckMode && !loading && !loadError && <SwipeDeck rows={eligibleRows.length ? eligibleRows : radiusRows} savedIds={savedIds} onSave={(row) => void toggleSave(row)} onOpen={openPerson} onWhy={(row) => setWhy(row)} onList={() => setDeckMode(false)} />}
+
+    {(!deckMode || loading || loadError) && <div className="scroll">
+
 
       {loading && <div style={{ paddingBlock: 24 }}><Empty mood="rest" title={t("disc.loading", "Finding profiles…")} /></div>}
       {!loading && loadError && <Empty mood="oops" title={t("disc.loadError", "Profiles could not load")} body={t("disc.tryAgain", "Check your connection and try again.")} />}
       {!loading && !loadError && saveError && <p role="alert" style={{ color: "var(--danger)" }}>{t("disc.saveError", "Could not update saved profiles. Try again.")}</p>}
 
       {!loading && !loadError && <>
-        <div className="row" style={{ marginBlock: 18 }}>
-          <Chip type="button" on={deckMode} onClick={() => setDeckMode(true)}>{t("disc.swipeMode", "Swipe deck")}</Chip>
-          <Chip type="button" on={!deckMode} onClick={() => setDeckMode(false)}>{t("disc.sectionMode", "Sections")}</Chip>
-        </div>
-
-        {deckMode && <section aria-label={t("disc.swipeMode", "Swipe deck")} style={{ display: "grid", justifyItems: "center", gap: 12, marginBlock: 16 }}>
-          {currentDeckCard ? <>
-            <p className="muted" style={{ margin: 0 }}>{t("disc.deckCount", "Profile {current} of {total}", { current: deckIndex + 1, total: bestMatches.length })}</p>
-            <AnimatePresence mode="wait"><motion.div key={currentDeckCard.person.uid} drag="x" dragConstraints={{ left: 0, right: 0 }} dragElastic={0.82} onDragEnd={(_, info) => { if (info.offset.x > 90) { if (savedIds.has(currentDeckCard.person.uid)) haptic(); else void toggleSave(currentDeckCard); nextCard(); } else if (info.offset.x < -90) { haptic(); nextCard(); } }} initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, x: 160, rotate: 8 }} transition={{ type: "spring", stiffness: 320, damping: 28 }} style={{ touchAction: "pan-y", cursor: "grab" }}>{card(currentDeckCard)}</motion.div></AnimatePresence>
-            <div className="row" style={{ justifyContent: "center" }}><Button type="button" alt small onClick={() => { haptic(); nextCard(); }}>{t("disc.skip", "Next")}</Button><Button type="button" small onClick={() => void toggleSave(currentDeckCard)}>{savedIds.has(currentDeckCard.person.uid) ? t("disc.saved", "Saved") : t("disc.saveHeart", "Save with heart")}</Button></div>
-          </> : <Empty mood="celebrate" title={t("disc.deckDone", "You saw all best matches")} body={t("disc.deckDoneBody", "Switch to sections to browse more.")} />}
-        </section>}
-
         {!deckMode && <>
           {eligibleRows.length > 0 ? section(t("disc.best", "Best matches"), t("disc.bestHint", "Profiles that meet stated essentials"), bestMatches, t("disc.noBest", "No profiles match all confirmed essentials yet.")) : <Empty mood="point" title={t("disc.noMatches", "No matches in this area yet")} body={nearestText} />}
           {eligibleRows.length > 0 && section(t("disc.available", activeSearchDate ? "Available on this date" : "Available this week"), t("disc.availableHint", "From shared schedules"), availableRows, t("disc.noAvailability", "No matching availability is listed for this week."))}
@@ -294,7 +293,7 @@ export default function Discover({ params }: ScreenProps) {
         {people.length === 0 && <Empty mood="rest" title={t("disc.emptyTitle", "No profiles yet")} body={t("disc.emptyBody", "New profiles will show here when they fit your search.")} />}
         {radiusRows.length === 0 && people.length > 0 && nearest.length > 0 && <section aria-label={t("disc.nearestTitle", "Nearest profiles")}><h2>{t("disc.nearestTitle", "Nearest profiles")}</h2><ul style={{ paddingInlineStart: 24 }}>{nearest.map((row) => <li key={row.person.uid}>{row.person.firstName} · {row.km?.toFixed(1)} km</li>)}</ul></section>}
       </>}
-    </div>
+    </div>}
     {why && <WhyMatchSheet viewer={me} candidate={why.person} result={why.result} onClose={() => setWhy(null)} />}
     {savedCelebration && <div role="status" style={{ position: "fixed", insetInlineEnd: 18, insetBlockEnd: 20, zIndex: 90, pointerEvents: "none" }}><Bunny mood="celebrate" size={76} caption={t("disc.savedThanks", "Saved to your list")} /></div>}
   </div>;

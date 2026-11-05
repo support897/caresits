@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { type Person, Bunny, t, useNav } from "@cc/core";
+import { type Person, Bunny, MediaImg, t, useNav } from "@cc/core";
 import NotificationsInbox, { NotificationsLauncher } from "./Notifications";
 
 type Params = { me: Person; reload?: () => void };
@@ -28,21 +28,26 @@ export default function Me({ params }: { params: Params }) {
   const rate = Number.isFinite(Number(me.card.rate)) && Number(me.card.rate) > 0 ? Number(me.card.rate) : null;
   const experienceYears = Number.isFinite(Number(me.card.experienceYears)) ? Number(me.card.experienceYears) : null;
   const links = [
-    { title: t("me.photos", "My photos"), body: t("me.photos.body", "See, add and remove the pictures on your profile"), action: () => nav.push("photos", { me }) },
-    ...(me.side === "carer" ? [{ title: t("me.resume", "My resume"), body: t("me.resume.body", "Your work and study, in your own words"), action: () => nav.push("resume", { me }) },
-      { title: t("me.reviews", "Reviews and references"), body: t("me.reviews.body", "What families said about you"), action: () => nav.push("person", { uid: me.uid, me }) }] : []),
-    { title: t("me.qualifications", "Qualifications"), body: t("me.qualifications.body", "Checks, documents and review dates"), action: () => nav.push("quals", { me }) },
-    { title: t("me.safety", "Safety"), body: t("me.safety.body", "Reports, blocks and emergency contacts"), action: () => nav.push("safety", { uid: me.uid }) },
-    ...(me.side === "family" ? [{ title: t("me.weights", "Match priorities"), body: t("me.weights.body", "Choose what matters most to your family"), action: () => nav.push("weights", { me }) }] : []),
-    { title: t("me.plans", "Plans"), body: t("me.plans.body", "Free for everyone, for now"), action: () => nav.push("plans", { me }) },
-    { title: t("me.settings", "Settings"), body: t("me.settings.body", "Notifications, theme and privacy"), action: () => nav.push("settings", { me }) },
+    { title: t("me.photos", "My photos"), body: t("me.photos.body", "Add or remove"), action: () => nav.push("photos", { me }) },
+    ...(me.side === "carer" ? [{ title: t("me.resume", "My resume"), body: t("me.resume.body", "Work and study"), action: () => nav.push("resume", { me }) },
+      { title: t("me.reviews", "Reviews and references"), body: t("me.reviews.body", "What families say"), action: () => nav.push("person", { uid: me.uid, me }) }] : []),
+    { title: t("me.qualifications", "Qualifications"), body: t("me.qualifications.body", "Checks and documents"), action: () => nav.push("quals", { me }) },
+    { title: t("me.safety", "Safety"), body: t("me.safety.body", "Report, block, contacts"), action: () => nav.push("safety", { uid: me.uid }) },
+    ...(me.side === "family" ? [{ title: t("me.weights", "Match priorities"), body: t("me.weights.body", "What matters most"), action: () => nav.push("weights", { me }) }] : []),
+    { title: t("me.plans", "Plans"), body: t("me.plans.body", "Free for now"), action: () => nav.push("plans", { me }) },
+    { title: t("me.settings", "Settings"), body: t("me.settings.body", "Alerts and privacy"), action: () => nav.push("settings", { me }) },
   ];
   return <div style={{ height: "100%", minHeight: 0, overflowY: "auto", padding: 16, background: "var(--cream)" }}>
     <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBlockEnd: 16 }}><div><p className="muted" style={{ margin: 0 }}>{t("me.kicker", "Your account")}</p><h1>{t("me.title", "Me")}</h1></div><Bunny mood="hello" size={74} /></header>
     <section className="card" aria-label={t("me.profile.summary", "Profile summary")}>
       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-        <span className="av" style={{ width: 72, height: 72, fontSize: 27 }}>{me.photoUrl ? <img src={me.photoUrl} alt="" /> : me.firstName.slice(0, 1).toUpperCase()}</span>
+        <span className="av" style={{ width: 72, height: 72, fontSize: 27 }}>{me.photoUrl ? <MediaImg src={me.photoUrl} alt="" /> : me.firstName.slice(0, 1).toUpperCase()}</span>
         <div style={{ minWidth: 0 }}><h2 style={{ fontSize: 25, overflowWrap: "anywhere" }}>{me.name}</h2><p className="muted" style={{ margin: "4px 0" }}>{me.side === "carer" ? t("me.role.carer", "Carer") : t("me.role.family", "Family")}</p></div>
+      </div>
+      {(() => { const c = me.card as Record<string, unknown>; const checks = [Boolean(me.photoUrl) || strings(me.card.gallery).length > 0, Boolean(me.about && me.about.length > 20), Boolean(c.age), Boolean(c.headline || c.experienceYears), strings(me.card.gallery).length >= 3]; const done = checks.filter(Boolean).length; const pct = Math.round((done / checks.length) * 100); return pct < 100 ? <div className="me-strength" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label={t("me.strength", "Profile strength")}><span>{t("me.strength", "Profile strength")} {pct}%</span><i style={{ backgroundSize: `${pct}% 100%` }} /></div> : <div className="me-strength full" role="status">{t("me.strength.full", "Profile strength 100% ♥")}</div>; })()}
+      <div className="me-photos" data-testid="me-photos" aria-label={t("me.photos", "My photos")}>
+        {strings(me.card.gallery).slice(0, 6).map((key, i) => <button type="button" key={key} className="me-photo" onClick={() => nav.push("photos", { me })} aria-label={t("me.photoN", "Photo {n}", { n: i + 1 })}><MediaImg src={key} alt="" /></button>)}
+        {strings(me.card.gallery).length < 6 && <button type="button" className="me-photo add" onClick={() => nav.push("photos", { me })} aria-label={t("photos.add", "Add a photo")}>+</button>}
       </div>
       {headline && <h3 style={{ marginBlockStart: 14 }}>{headline}</h3>}
       {me.about && <p style={{ overflowWrap: "anywhere" }}>{me.about}</p>}

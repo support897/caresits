@@ -27,7 +27,7 @@ export default function MyPhotos({ params }: { params: { me: Person } }) {
   return <div style={{ height: "100%", overflowY: "auto", background: "var(--cream)" }}>
     <BackBar title={t("photos.title", "My photos")} onBack={() => nav.back()} />
     <div style={{ padding: 16 }}>
-      <p className="muted">{t("photos.help", "Add up to {max} photos. People see these on your profile. Photos have no location data.", { max: MAX })}</p>
+      <p className="muted">{t("photos.help", "Up to {max} photos. Shown on your profile.", { max: MAX })}</p>
       <div data-testid="my-photos" style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
         {keys.map((k, i) => <figure key={k} className="card" style={{ margin: 0, padding: 8 }}>
           {urls[k] ? <img src={urls[k] as string} alt={t("photos.alt", "Photo {n}", { n: i + 1 })} style={{ width: "100%", aspectRatio: "1", objectFit: "cover", borderRadius: 14 }} /> : <div className="sk" style={{ aspectRatio: "1", borderRadius: 14 }} />}

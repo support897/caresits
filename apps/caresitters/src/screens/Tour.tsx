@@ -6,11 +6,11 @@ type TourParams = { onDone: () => void };
 type Target = { left: number; top: number; width: number; height: number };
 const STORAGE_KEY = "caresits-tour-step";
 const TABS = [
-  { name: "Discover", title: "Find a good fit", caption: "Start with people who fit your care needs." },
-  { name: "Saved", title: "Keep favourites close", caption: "Save profiles to compare when you are ready." },
-  { name: "Bookings", title: "See every booking", caption: "Your requests and accepted bookings stay here." },
-  { name: "Messages", title: "Talk in one place", caption: "Message families and carers here." },
-  { name: "Me", title: "Your profile lives here", caption: "Edit your details and care preferences here." },
+  { name: "Discover", title: "Swipe to find", caption: "Right to save." },
+  { name: "Saved", title: "Your favourites", caption: "Compare when ready." },
+  { name: "Bookings", title: "Your bookings", caption: "All in one place." },
+  { name: "Messages", title: "Say hello", caption: "Chat here." },
+  { name: "Me", title: "Your profile", caption: "Photos and details." },
 ];
 function savedStep(): number {
   try { const value = Number(localStorage.getItem(STORAGE_KEY) ?? 0); return Number.isFinite(value) ? Math.max(0, Math.min(TABS.length - 1, Math.floor(value))) : 0; } catch { return 0; }

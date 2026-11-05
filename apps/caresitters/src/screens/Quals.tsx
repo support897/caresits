@@ -86,7 +86,7 @@ export default function Quals({ params }: { params: Params }) {
       <header><p className="muted" style={{ margin: 0 }}>{t("quals.kicker", "Checks and training")}</p><h1>{t("quals.title", "Qualifications")}</h1></header>
       <section className="card" aria-labelledby="quals-state-title">
         <h2 id="quals-state-title">{t("quals.state.title", "Your state or territory")}</h2>
-        <p className="muted">{t("quals.state.intro", "Each place has its own child-safety check. Choose where you work to see the official name and guide.")}</p>
+        <p className="muted">{t("quals.state.intro", "Pick where you work.")}</p>
         <label>{t("quals.state.label", "State or territory")}<select className="field" value={state} onChange={(event) => setState(event.target.value as AustralianStateCode | "")}>
           <option value="">{t("quals.state.choose", "Choose a state or territory")}</option>
           {AUSTRALIAN_CHILD_CHECKS.map((check) => <option key={check.code} value={check.code}>{t(`quals.stateName.${check.code}`, check.state)}</option>)}
@@ -95,7 +95,7 @@ export default function Quals({ params }: { params: Params }) {
           <strong>{t(`quals.checkName.${selected.code}`, selected.name)}</strong><p>{t(`quals.guidance.${selected.code}`, selected.guidance)}</p><p className="muted">{t("quals.state.validity", "Typical validity")}: {t(`quals.validity.${selected.code}`, selected.validity)}</p>
           <a href={selected.officialUrl} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", minHeight: 44, color: "var(--text)" }}>{t("quals.state.official", "Open the official government guide")}</a>
           <p className="muted">{t("quals.state.checked", "Official wording last checked")}: {dateLabel(selected.lastChecked)}</p>
-        </div> : <p className="muted">{t("quals.state.help", "Queensland uses a Blue Card. Other states and territories use their own check or registration. Follow the official guide for your role.")}</p>}
+        </div> : <p className="muted">{t("quals.state.help", "Queensland: Blue Card. Other states use their own check.")}</p>}
       </section>
 
       <section className="card" aria-labelledby="quals-list-title">

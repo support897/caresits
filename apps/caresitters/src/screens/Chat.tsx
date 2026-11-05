@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { auth, Bunny, loadProfile, t, useNav, type Person } from "@cc/core";
+import { auth, Bunny, MediaImg, loadProfile, t, useNav, type Person } from "@cc/core";
 import { Composer } from "../../../../packages/core/src/chat/Composer";
 import { MessageList } from "../../../../packages/core/src/chat/MessageList";
 import { MediaPicker } from "../../../../packages/core/src/media/MediaPicker";
@@ -122,7 +122,7 @@ export default function Chat({ params }: { params: Params }) {
       <button type="button" className="chip" aria-label={t("chat.safety.open", "Open safety tools")} onClick={() => nav.push("safety", { uid, otherUid, relId })} style={{ flex: "0 1 auto", minWidth: 48, minHeight: 48, paddingInline: 12, whiteSpace: "normal", overflowWrap: "anywhere" }}>{t("chat.safety.button", "Safety")}</button>
     </header>
     <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, padding: "8px 14px", borderBlockEnd: "1px solid var(--line)" }}>
-      <span className="av">{other?.photoUrl ? <img src={other.photoUrl} alt="" /> : name.slice(0, 1).toUpperCase()}</span>
+      <span className="av">{other?.photoUrl ? <MediaImg src={other.photoUrl} alt="" /> : name.slice(0, 1).toUpperCase()}</span>
       <div style={{ flex: 1, minWidth: 0, overflowWrap: "anywhere" }}><strong>{name}</strong><div className="muted" role={blocked ? "status" : undefined} style={{ overflowWrap: "anywhere" }}>{stateLabel}</div></div>
     </div>
     {error && <p role="alert" style={{ margin: "8px 14px", color: "var(--danger)" }}>{error}</p>}

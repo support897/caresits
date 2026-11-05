@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { db, loadPeople, type Person, Bunny, t, useNav } from "@cc/core";
+import { db, MediaImg, loadPeople, type Person, Bunny, t, useNav } from "@cc/core";
 import { collection, doc, getDocs, setDoc } from "firebase/firestore";
 import { isProfileComplete, pairIdFor, planContact } from "../lib/booking";
 import { loadBookingsForUser } from "../data/bookings";
@@ -245,7 +245,7 @@ export default function Messages({ params }: { params: Params }) {
       <div style={{ display: "flex", alignItems: "center", gap: 8, flex: "0 0 auto" }}>
         <Bell uid={me.uid} side={me.side} app="caresitters" />
         <button type="button" onClick={() => nav.push("settings", { me })} aria-label={t("messages.account.open", "Open account settings for {name}", { name: accountName })} style={{ display: "grid", placeItems: "center", width: 48, height: 48, borderRadius: 24, background: "var(--soft)" }}>
-          <span className="av" style={{ width: 40, height: 40 }}>{me.photoUrl ? <img src={me.photoUrl} alt="" loading="lazy" /> : initials(accountName)}</span>
+          <span className="av" style={{ width: 40, height: 40 }}>{me.photoUrl ? <MediaImg src={me.photoUrl} alt="" loading="lazy" /> : initials(accountName)}</span>
         </button>
       </div>
     </header>
@@ -257,7 +257,7 @@ export default function Messages({ params }: { params: Params }) {
         <p className="muted" style={{ margin: "0 0 8px" }}>{t("messages.circle.title", "Your care circle")}</p>
         <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBlock: 3 }}>
           {quickPeople.map(({ rel, otherUid, person, unread: count }) => <button key={rel.id} type="button" onClick={() => nav.push("chat", { relId: rel.id, otherUid })} aria-label={count ? t("messages.quick.unread", "Open {name}, {count} unread", { name: person.name, count }) : t("messages.quick.open", "Open chat with {name}", { name: person.name })} style={{ flex: "0 0 72px", display: "grid", justifyItems: "center", gap: 5, minHeight: 78 }}>
-            <span className="av" style={{ width: 54, height: 54, position: "relative" }}>{person.photoUrl ? <img src={person.photoUrl} alt="" loading="lazy" /> : initials(person.name)}{count > 0 && <span style={{ position: "absolute", insetInlineEnd: -2, insetBlockStart: -2, width: 16, height: 16, borderRadius: 50, background: "var(--danger)", border: "2px solid var(--cream)" }} />}</span>
+            <span className="av" style={{ width: 54, height: 54, position: "relative" }}>{person.photoUrl ? <MediaImg src={person.photoUrl} alt="" loading="lazy" /> : initials(person.name)}{count > 0 && <span style={{ position: "absolute", insetInlineEnd: -2, insetBlockStart: -2, width: 16, height: 16, borderRadius: 50, background: "var(--danger)", border: "2px solid var(--cream)" }} />}</span>
             <span style={{ maxWidth: 72, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{person.name}</span>
           </button>)}
         </div>
@@ -268,7 +268,7 @@ export default function Messages({ params }: { params: Params }) {
       {error && <p role="alert" style={{ color: "var(--danger)" }}>{error}</p>}
       {loading ? <div aria-busy="true" className="stack"><div className="sk" style={{ height: 86 }} /><div className="sk" style={{ height: 86 }} /></div> : rows.length ? <div style={{ display: "grid" }}>
         {rows.map(({ rel, otherUid, person, last, preview, statusLabel, unread: count }) => <button key={rel.id} type="button" onClick={() => nav.push("chat", { relId: rel.id, otherUid })} aria-label={count ? t("messages.row.unread", "{name}. {preview}. {status}. {count} unread", { name: person.name, preview, status: statusLabel, count }) : t("messages.row.label", "{name}. {preview}. {status}", { name: person.name, preview, status: statusLabel })} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", minWidth: 0, minHeight: 82, padding: "10px 4px", textAlign: "start", borderBlockEnd: "1px solid var(--line)", overflow: "hidden" }}>
-          <span className="av" style={{ width: 54, height: 54 }}>{person.photoUrl ? <img src={person.photoUrl} alt="" loading="lazy" /> : initials(person.name)}</span>
+          <span className="av" style={{ width: 54, height: 54 }}>{person.photoUrl ? <MediaImg src={person.photoUrl} alt="" loading="lazy" /> : initials(person.name)}</span>
           <span style={{ flex: 1, minWidth: 0 }}>
             <span style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, minWidth: 0 }}><strong style={{ flex: "1 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{person.name}</strong><time className="muted" style={{ flex: "0 1 auto", minWidth: 0, fontSize: 17, whiteSpace: "normal", textAlign: "end" }}>{last ? timeLabel(last.at) : rel.state === "pending" ? t("messages.request.label", "Request") : ""}</time></span>
             <span className="muted" style={{ display: "block", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{preview}</span>
@@ -289,11 +289,11 @@ export default function Messages({ params }: { params: Params }) {
         {pickerError && <p role="alert" style={{ color: "var(--danger)", fontSize: 17 }}>{pickerError}</p>}
         {pickerLoading ? <p role="status" style={{ fontSize: 17 }}>{t("messages.new.loading", "Loading people…")}</p> : pickerRows.length ? <div role="group" aria-label={t("messages.new.results", "People to message")} style={{ display: "grid", marginBlockStart: 8 }}>
           {pickerRows.map((person) => <button key={person.uid} type="button" onClick={() => void startConversation(person)} disabled={pickerBusy} aria-label={t("messages.new.open", "Start a conversation with {name}", { name: person.name })} style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, minHeight: 64, padding: "8px 4px", borderBlockEnd: "1px solid var(--line)", textAlign: "start" }}>
-            <span className="av" style={{ width: 48, height: 48, flex: "0 0 48px" }}>{person.photoUrl ? <img src={person.photoUrl} alt="" loading="lazy" /> : initials(person.name)}</span>
+            <span className="av" style={{ width: 48, height: 48, flex: "0 0 48px" }}>{person.photoUrl ? <MediaImg src={person.photoUrl} alt="" loading="lazy" /> : initials(person.name)}</span>
             <span style={{ minWidth: 0, flex: 1, fontSize: 17, overflowWrap: "anywhere" }}>{person.name}</span>
             {pickerBusy && <span className="muted" style={{ fontSize: 17 }}>{t("messages.new.opening", "Opening…")}</span>}
           </button>)}
-        </div> : <div className="empty" style={{ paddingBlock: 18 }}><Bunny mood="think" size={80} /><h3>{t("messages.new.empty.title", "No people found")}</h3><p className="muted" style={{ fontSize: 17 }}>{pickerSearch.trim() ? t("messages.new.empty.search", "Try another name.") : me.side === "family" ? t("messages.new.empty.family", "Saved or booked carers will show here. Search by name to find another carer.") : t("messages.new.empty.carer", "Families with a care relationship will show here.")}</p></div>}
+        </div> : <div className="empty" style={{ paddingBlock: 18 }}><Bunny mood="think" size={80} /><h3>{t("messages.new.empty.title", "No people found")}</h3><p className="muted" style={{ fontSize: 17 }}>{pickerSearch.trim() ? t("messages.new.empty.search", "Try another name.") : me.side === "family" ? t("messages.new.empty.family", "Saved carers show here.") : t("messages.new.empty.carer", "Families with a care relationship will show here.")}</p></div>}
       </section>
     </div>}
   </div>;
