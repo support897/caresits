@@ -1,5 +1,5 @@
 import { useState, useEffect, lazy, Suspense, useRef } from "react";
-import { useAuth, useNav, NavHost, ToastHost, TabBar, SignIn, ICON, useLang, t, APP2, type Registry } from "@cc/core";
+import { useAuth, useNav, NavHost, ToastHost, TabBar, AppTopBar, SignIn, ICON, useLang, t, APP2, type Registry } from "@cc/core";
 const Chats = lazy(() => import("./screens/Chats")); const CalendarTab = lazy(() => import("./screens/Calendar")); const Care = lazy(() => import("./screens/Care")); const Activities = lazy(() => import("./screens/Activities")); const ProfileTab = lazy(() => import("./screens/Profile")); const Welcome = lazy(() => import("./screens/Welcome"));
 // Pushed screens (default export, props { params }). The Space home ("Today") opens from a Chats row.
 const registry: Registry = {
@@ -30,7 +30,7 @@ function SignedInApp({ uid, name, email, seen, inviteInput, onWelcomeDone }: Sig
     }
   }, [inviteInput, nav, onWelcomeDone]);
   const tabs = [{ key: "chats", label: t("cs.tab.chats", "Chats"), icon: ICON.chat }, { key: "calendar", label: t("cs.tab.calendar", "Calendar"), icon: ICON.cal }, { key: "care", label: t("cs.tab.care", "Care"), icon: ICON.care }, { key: "activities", label: t("cs.tab.activities", "Activities"), icon: ICON.sun }, { key: "profile", label: t("cs.tab.profile", "Profile"), icon: ICON.user }];
-  return <div className="app"><div className="screen"><Suspense fallback={<Skel />}>
+  return <div className="app"><AppTopBar current="carespace" /><div className="screen"><Suspense fallback={<Skel />}>
     {!seen && <Welcome params={{ uid, name, onDone: onWelcomeDone }} />}
     {tab === "chats" && <Chats params={{ uid, name }} />}{tab === "calendar" && <CalendarTab params={{ uid }} />}{tab === "care" && <Care params={{ uid }} />}{tab === "activities" && <Activities params={{ uid }} />}{tab === "profile" && <ProfileTab params={{ uid, name, email }} />}
   </Suspense></div><TabBar tabs={tabs} value={tab} onChange={setTab} /></div>;
