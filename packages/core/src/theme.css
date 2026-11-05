@@ -29,3 +29,8 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;paddin
 .tab[aria-current=page],.tab.on,.tab[aria-selected=true]{opacity:1;color:var(--pink-deep)}
 .tab[aria-current=page] svg,.tab.on svg,.tab[aria-selected=true] svg{animation:tabpop .35s cubic-bezier(.34,1.56,.64,1)}
 @keyframes tabpop{0%{transform:scale(.7)}100%{transform:scale(1)}}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:48px;padding:4px 14px;background:#fff}
+.topbar-brand{display:flex;align-items:center;gap:8px;font-family:var(--font-title);font-weight:600;font-size:20px;color:var(--pink-deep)}
+.topbar-switch{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 14px 0 8px;border-radius:99px;background:var(--soft);border:1.5px solid var(--line);font-family:var(--font-name);font-weight:800;font-size:15px;transition:transform .15s cubic-bezier(.34,1.56,.64,1)}
+.topbar-switch:active{transform:scale(.94)}
+@media(max-width:340px){.topbar-brand span{display:none}}
