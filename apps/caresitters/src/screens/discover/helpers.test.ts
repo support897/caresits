@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import type { Person } from "@cc/core";
-import { approximateMapPins, availabilityDays, deleteDiscoverSearch, experienceYearsOf, isAvailableOnDate, isAvailableThisWeek, loadSavedSearches, saveDiscoverSearch } from "./helpers";
+import { distanceKmBetween, approximateMapPins, availabilityDays, deleteDiscoverSearch, experienceYearsOf, isAvailableOnDate, isAvailableThisWeek, loadSavedSearches, saveDiscoverSearch } from "./helpers";
 
 function person(uid: string, availability: unknown, cardExtra: Record<string, unknown> = {}): Person {
   return { uid, side: "carer", name: uid, firstName: uid, card: { availability, ...cardExtra }, looking: {}, raw: {} };
@@ -63,5 +63,19 @@ describe("Discover availability and private saved searches", () => {
     expect(loadSavedSearches("family-a")[0]).not.toHaveProperty("searchText");
     expect(loadSavedSearches("family-b")).toEqual([]);
     expect(deleteDiscoverSearch("family-a", "search-a")).toEqual([]);
+  });
+});
+
+describe("Distance from postcode", () => {
+  it("measures between two postcodes when no coordinates were saved", () => {
+    const a = { ...person("a", {}), postcode: "4005" } as Person;
+    const b = { ...person("b", {}), postcode: "4000" } as Person;
+    const km = distanceKmBetween(a, b);
+    expect(km).not.toBeNull();
+    expect(km as number).toBeGreaterThan(0.5);
+    expect(km as number).toBeLessThan(10);
+  });
+  it("stays unknown for a missing or unknown postcode", () => {
+    expect(distanceKmBetween({ ...person("a", {}), postcode: "4005" } as Person, { ...person("b", {}), postcode: "0001" } as Person)).toBeNull();
   });
 });

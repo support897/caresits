@@ -1,3 +1,4 @@
+import POSTCODES from "../../data/au-postcodes.json";
 import type { Person } from "@cc/core";
 import type { DiscoveryPerson } from "../../data/people";
 
@@ -17,7 +18,10 @@ function coords(person: Person): { lat: number; lng: number } | undefined {
   const location = asRecord(raw.location ?? card.location);
   const lat = firstNumber(card.lat, raw.lat, location.lat);
   const lng = firstNumber(card.lng, raw.lng, location.lng);
-  return lat === undefined || lng === undefined ? undefined : { lat, lng };
+  if (lat !== undefined && lng !== undefined) return { lat, lng };
+  // No saved coordinates: use the middle of the profile's postcode (approximate area only, never an address).
+  const centre = (POSTCODES as unknown as Record<string, [number, number] | undefined>)[String(person.postcode ?? "").trim()];
+  return centre ? { lat: centre[0], lng: centre[1] } : undefined;
 }
 
 export function distanceKmBetween(me: Person, other: Person): number | null {
