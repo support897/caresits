@@ -12,7 +12,7 @@ function readThemeMode(): ThemeMode {
 }
 function applyTheme(mode: ThemeMode): void {
   if (typeof document === "undefined") return;
-  document.body.dataset.theme = mode === "auto" ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : mode;
+  void mode; document.body.dataset.theme = "light";
 }
 
 export default function Settings({ params }: { params: Params }) {
@@ -100,11 +100,6 @@ export default function Settings({ params }: { params: Params }) {
         {me.side === "carer" && <label style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 48 }}><input type="checkbox" checked={prefs.muteNonUrgentWhileWorking} disabled={savingPrefs} onChange={(event) => void updatePrefs({ ...prefs, muteNonUrgentWhileWorking: event.target.checked })} style={{ width: 22, height: 22, accentColor: "var(--ink)" }} /><span>{t("settings.notifications.working", "Mute non-urgent while working")}</span></label>}
         <p className="muted">{t("settings.notifications.safety", "Safety and allergy alerts always come through.")}</p>
         {prefsMessage && <p role="status" className="muted">{prefsMessage}</p>}
-      </section>
-
-      <section className="card" aria-labelledby="settings-theme-title">
-        <h2 id="settings-theme-title">{t("settings.theme.title", "Theme")}</h2>
-        <label>{t("settings.theme.mode", "Theme mode")}<select className="field" value={theme} onChange={(event) => setTheme(event.target.value as ThemeMode)}><option value="auto">{t("settings.theme.auto", "Auto")}</option><option value="light">{t("settings.theme.light", "Light")}</option><option value="dark">{t("settings.theme.dark", "Dark")}</option></select></label>
       </section>
 
       <section className="card" aria-labelledby="settings-privacy-title">

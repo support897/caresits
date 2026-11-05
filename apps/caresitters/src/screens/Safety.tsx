@@ -141,13 +141,13 @@ export default function Safety({ params }: { params: Params }) {
     <div className="scroll" style={{ display: "grid", gap: 14 }}>
       <section className="card" aria-labelledby="safety-tools-title">
         <div className="row" style={{ justifyContent: "space-between" }}><div><p className="muted" style={{ margin: 0 }}>{t("safety.kicker", "Care with clear records")}</p><h1 id="safety-tools-title">{t("safety.tools.title", "Your safety tools")}</h1></div><Bunny mood="think" size={74} /></div>
-        <p>{t("safety.records", "Keep booking records and payments in the app so care plans and costs stay together.")}</p>
+        <p>{t("safety.records", "Keep bookings in the app.")}</p>
         <p style={{ marginBlockEnd: 6 }}><strong>{t("safety.emergency.number", "National emergency number")}</strong></p>
         <a className="btn" href="tel:000" aria-label={t("safety.emergency.call", "Call 000")} style={{ minHeight: 48 }}>{t("safety.emergency.000", "000")}</a>
-        <p className="muted">{t("safety.emergency.note", "If someone is in immediate danger, call 000 yourself. The app does not call for you.")}</p>
+        <p className="muted">{t("safety.emergency.note", "In danger? Call 000. The app can't call for you.")}</p>
         <details style={{ marginBlockStart: 12 }}>
           <summary style={{ minHeight: 44, display: "flex", alignItems: "center", cursor: "pointer" }}>{t("safety.checks.summary", "Official child-safety checks by state or territory")}</summary>
-          <p className="muted">{t("safety.checks.disclaimer", "Check current rules with your state or territory. These links do not confirm that anyone holds a current check or is verified by this app.")}</p>
+          <p className="muted">{t("safety.checks.disclaimer", "Check current rules with your state. Links don't confirm anyone's check.")}</p>
           <ul style={{ display: "grid", gap: 12, paddingInlineStart: 24 }}>
             {CHECK_SOURCES.map((source) => <li key={source.id}>
               <strong>{source.region}</strong>
@@ -160,7 +160,7 @@ export default function Safety({ params }: { params: Params }) {
 
       <section className="card" aria-labelledby="safety-bookings-title">
         <h2 id="safety-bookings-title">{t("safety.bookings.title", "Booking records")}</h2>
-        <p className="muted">{t("safety.bookings.intro", "Bookings with this care partner stay together here. Only people in the relationship can view them.")}</p>
+        <p className="muted">{t("safety.bookings.intro", "Only you two can see these.")}</p>
         {!otherUid || !relId ? <p className="muted">{t("safety.bookings.noRelationship", "Open Safety from a conversation to view its booking records.")}</p> : bookingsLoading ? <p role="status">{t("safety.bookings.loading", "Loading booking records…")}</p> : bookingError ? <p role="alert" style={{ color: "var(--danger)" }}>{bookingError}</p> : bookings.length ? <div className="stack">
           {bookings.map((booking) => <article className="booking-card" key={`${booking.pairId}-${booking.id}`}>
             <div className="booking-between"><strong>{booking.date ? dateLabel(booking.date) : t("safety.booking.noDate", "Date not set")}</strong><span className="booking-status">{bookingStateLabel(booking.state)}</span></div>
@@ -194,7 +194,7 @@ export default function Safety({ params }: { params: Params }) {
 
       <section className="card" aria-labelledby="safety-report-title">
         <h2 id="safety-report-title">{t("safety.report.title", "Report or block")}</h2>
-        <p className="muted">{t("safety.report.intro", "Reports go to the safety team. Blocking keeps this person from contacting you through the app.")}</p>
+        <p className="muted">{t("safety.report.intro", "Reports go to our safety team.")}</p>
         <form onSubmit={reviewReport} className="stack">
           <label>{t("safety.report.reason", "Why are you reporting this person?")}<select className="field" value={category} onChange={(event) => setCategory(event.target.value)} style={{ minHeight: 48 }}>{REPORT_CATEGORIES.map(([key]) => <option key={key} value={key}>{categoryLabels[key]}</option>)}</select></label>
           <label>{t("safety.report.details", "More details (optional)")}<textarea className="field" rows={4} maxLength={1000} value={reportText} onChange={(event) => setReportText(event.target.value)} /></label>
@@ -212,7 +212,7 @@ export default function Safety({ params }: { params: Params }) {
         {otherUid && blockStatusError && <p role="alert" style={{ color: "var(--danger)" }}>{t("safety.block.statusError", "Block status could not be checked. Blocking is paused.")}</p>}
         {confirmBlock && <div role="group" aria-labelledby="safety-block-confirm-title" style={{ marginBlockStart: 12, padding: 12, border: "1px solid var(--danger)", borderRadius: 14, background: "var(--soft)" }}>
           <h3 id="safety-block-confirm-title">{t("safety.block.confirm.title", "Block this person?")}</h3>
-          <p>{t("safety.block.confirm.body", "They will not be able to contact you through the app. They are not notified.")}</p>
+          <p>{t("safety.block.confirm.body", "They can't contact you. They aren't told.")}</p>
           <div className="row"><button className="btn alt" type="button" onClick={() => void confirmBlockUser()} disabled={saving} style={{ minHeight: 48 }}>{saving ? t("safety.saving", "Saving…") : t("safety.block.confirm.button", "Confirm block")}</button><button className="chip" type="button" onClick={() => setConfirmBlock(false)} disabled={saving} style={{ minHeight: 48 }}>{t("safety.cancel", "Cancel")}</button></div>
         </div>}
         {!otherUid && <p className="muted">{t("safety.report.noTarget", "Open Safety from a conversation or profile to report a person.")}</p>}

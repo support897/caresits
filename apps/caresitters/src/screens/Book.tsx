@@ -163,7 +163,7 @@ export default function Book({ params }: ScreenProps<Params>) {
           {availabilityClashes.length > 0 && <p className="booking-note" role="status">{t("book.availabilityClash", "Not listed as available: {days}. You can still send the request.", { days: availabilityClashes.join(", ") })}</p>}
           {!availabilityClashes.length && <p className="booking-meta">{scheduleKnown ? t("book.availabilityClear", "No schedule conflict is listed. The carer still needs to accept.") : t("book.availabilityUnknown", "No weekly schedule is shared yet. The carer will check these days.")}</p>}
         </section>}
-        {overlapClashes.length > 0 && <p className="booking-note" role="status">{t("book.conflictWarning", "Conflict warning: {count} overlapping booking or weekly series. You can still send; the carer decides.", { count: overlapClashes.length })}</p>}
+        {overlapClashes.length > 0 && <p className="booking-note" role="status">{t("book.conflictWarning", "{count} overlapping booking. The carer decides.", { count: overlapClashes.length })}</p>}
         {carer.card.instantBook === true && <div className="booking-note">{familyComplete ? t("book.instantEligible", "Instant booking is on for this carer.") : t("book.instantNeedsProfile", "Finish your profile to book instantly.")}</div>}
         {message && <p className="booking-error" role="alert">{message}</p>}
       </>}
