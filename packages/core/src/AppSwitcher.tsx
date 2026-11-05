@@ -54,12 +54,14 @@ export function AppMark({ app, size = 30 }: { app: AppId; size?: number }) {
 </svg>;
 }
 
-/** The app name in the fun title font, letters in pink and blue with a little bounce. Never yellow text. */
+/** The app name in the fun title font: two calm colour halves and one yellow dot. Never yellow text. */
 export function Wordmark({ app, size = 26 }: { app: AppId; size?: number }) {
-  const name = NAME[app];
-  const colors = ["var(--pink-deep)", "var(--sky-deep)"];
-  return <span className="wordmark" style={{ fontSize: size }} aria-label={name}>
-    {[...name.toLowerCase()].map((ch, i) => <span key={i} aria-hidden="true" style={{ color: colors[i % 2], transform: `translateY(${[0, -2, 1, -1][i % 4]}px) rotate(${[-4, 3, -2, 4][i % 4]}deg)` }}>{ch}</span>)}
+  const name = NAME[app].toLowerCase();
+  const cut = app === "caresitters" ? 4 : 5;
+  return <span className="wordmark" style={{ fontSize: size }} aria-label={NAME[app]}>
+    <span aria-hidden="true" style={{ color: "var(--pink-deep)" }}>{name.slice(0, cut)}</span>
+    <span aria-hidden="true" style={{ color: "var(--sky-deep)" }}>{name.slice(cut)}</span>
+    <i className="wm-dot" aria-hidden="true" />
   </span>;
 }
 
