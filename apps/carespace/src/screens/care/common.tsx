@@ -10,7 +10,7 @@ export function AllergyBanner({ names }: { names: string[] }) {
   if (!names.length) return null;
   return <div className="care-alert" role="alert" aria-live="polite">
     <strong>{t("care.allergyBannerTitle", "Allergy alert")}</strong>
-    <p>{t("care.allergyBannerText", "This child has recorded allergies: {names}. Check every label and ask the parent before serving food.", { names: names.join(", ") })}</p>
+    <p>{t("care.allergyBannerText", "Allergies: {names}. Check labels and ask the parent before serving.", { names: names.join(", ") })}</p>
   </div>;
 }
 
