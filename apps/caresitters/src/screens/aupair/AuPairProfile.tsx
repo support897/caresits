@@ -238,11 +238,11 @@ export default function AuPairProfile({ params }: ScreenProps<Params>) {
             </label>
           </div>
           <p className="ap-form-help">{t("aupair.localCurrency", "Pocket money is shown in the destination's local currency ({currency}).", { currency: currencyFor(hostForm.country) || t("aupair.currencySetByHost", "set by host") })}</p>
-          {renderDutyList(t("aupair.childcareDuties", "Childcare duties"), CHILDCARE_DUTIES, hostForm.childcareDuties, "childcareDuties", t("aupair.childcareHelp", "Care for children, such as play, school runs, children's meals, and their rooms or laundry."))}
+          {renderDutyList(t("aupair.childcareDuties", "Childcare duties"), CHILDCARE_DUTIES, hostForm.childcareDuties, "childcareDuties", t("aupair.childcareHelp", "Play, school runs, kids' meals, kids' rooms."))}
           <div className="ap-duty-boundary" role="separator" aria-label={t("aupair.dutiesBoundary", "Line between childcare and unrelated housework")}>{t("aupair.boundaryLabel", "Clear boundary")}</div>
-          {renderDutyList(t("aupair.otherHousework", "Other housework"), OTHER_HOUSEWORK, hostForm.otherHousework, "otherHousework", t("aupair.houseworkHelp", "These tasks are not childcare duties. Keep the placement focused on children and cultural exchange."))}
+          {renderDutyList(t("aupair.otherHousework", "Other housework"), OTHER_HOUSEWORK, hostForm.otherHousework, "otherHousework", t("aupair.houseworkHelp", "Not childcare. Keep the focus on children."))}
           <p className="ap-form-help">{t("aupair.houseworkShare", "Unrelated housework share: {share}% of listed duties.", { share: Math.round(dutiesShare * 100) })}</p>
-          {highHousework && <div className="ap-duty-warning" role="alert"><strong>{t("aupair.houseworkWarningTitle", "Housework share is high")}</strong>{t("aupair.houseworkWarning", "Unrelated housework is half or more of listed duties. Keep expectations focused on childcare; this is not a legal test.")}</div>}
+          {highHousework && <div className="ap-duty-warning" role="alert"><strong>{t("aupair.houseworkWarningTitle", "Housework share is high")}</strong>{t("aupair.houseworkWarning", "Half or more is housework. Keep it about childcare.")}</div>}
           <label>{t("aupair.languages", "Languages spoken at home")}
             <input value={hostForm.languages} onChange={(event) => setHostForm((value) => ({ ...value, languages: event.target.value }))} placeholder={t("aupair.languagesExample", "For example, English and Spanish")} />
           </label>
@@ -294,17 +294,17 @@ export default function AuPairProfile({ params }: ScreenProps<Params>) {
           </dl>
         </section>
         <section className="ap-section-card">
-          <div className="ap-duty-group"><h2>{t("aupair.childcareDuties", "Childcare duties")}</h2><p>{t("aupair.childcareHelp", "Care for children, such as play, school runs, children's meals, and their rooms or laundry.")}</p>
+          <div className="ap-duty-group"><h2>{t("aupair.childcareDuties", "Childcare duties")}</h2><p>{t("aupair.childcareHelp", "Play, school runs, kids' meals, kids' rooms.")}</p>
             {viewHostDuties.length ? <ul>{viewHostDuties.map((duty) => <li key={duty}>{dutyName(duty)}</li>)}</ul> : <p>{t("aupair.notShared", "Not shared")}</p>}
           </div>
           <div className="ap-duty-boundary" role="separator" aria-label={t("aupair.dutiesBoundary", "Line between childcare and unrelated housework")}>{t("aupair.boundaryLabel", "Clear boundary")}</div>
-          <div className="ap-duty-group"><h2>{t("aupair.otherHousework", "Other housework")}</h2><p>{t("aupair.houseworkHelp", "These tasks are not childcare duties. Keep the placement focused on children and cultural exchange.")}</p>
+          <div className="ap-duty-group"><h2>{t("aupair.otherHousework", "Other housework")}</h2><p>{t("aupair.houseworkHelp", "Not childcare. Keep the focus on children.")}</p>
             {viewOtherHousework.length ? <ul>{viewOtherHousework.map((duty) => <li key={duty}>{dutyName(duty)}</li>)}</ul> : <p>{t("aupair.notShared", "Not shared")}</p>}
             <p className="ap-form-help">{t("aupair.houseworkShare", "Unrelated housework share: {share}% of listed duties.", { share: Math.round(viewHouseworkShare * 100) })}</p>
-            {viewHouseworkHigh && <div className="ap-duty-warning" role="alert"><strong>{t("aupair.houseworkWarningTitle", "Housework share is high")}</strong>{t("aupair.houseworkWarning", "Unrelated housework is half or more of listed duties. Keep expectations focused on childcare; this is not a legal test.")}</div>}
+            {viewHouseworkHigh && <div className="ap-duty-warning" role="alert"><strong>{t("aupair.houseworkWarningTitle", "Housework share is high")}</strong>{t("aupair.houseworkWarning", "Half or more is housework. Keep it about childcare.")}</div>}
           </div>
         </section>
-        <section className="ap-visa-note"><h2>{t("aupair.visaSupportTitle", "Visa support")}</h2><p>{hostData(person).visaHelp === true ? t("aupair.visaSupportYes", "This family says it can offer practical help. This does not decide visa permission.") : t("aupair.visaSupportNo", "This family has not listed visa help.")}</p></section>
+        <section className="ap-visa-note"><h2>{t("aupair.visaSupportTitle", "Visa support")}</h2><p>{hostData(person).visaHelp === true ? t("aupair.visaSupportYes", "This family can help. It doesn't decide your visa.") : t("aupair.visaSupportNo", "This family has not listed visa help.")}</p></section>
       </> : <>
         <section className="ap-section-card">
           <h2 className="ap-section-title">{t("aupair.auPairDetails", "About this au pair")}</h2>
@@ -334,9 +334,9 @@ export default function AuPairProfile({ params }: ScreenProps<Params>) {
           {compatibilityFacts.length ? compatibilityFacts.map((fact) => {
             const label = fact.id === "destination" ? t("aupair.factDestination", "Destination") : fact.id === "languages" ? t("aupair.factLanguages", "Languages") : t("aupair.factInfant", "Infant care");
             return <span key={fact.id} className={`ap-match-reason${fact.matches ? " is-match" : " is-mismatch"}`}><b>{label}:</b> {fact.matches ? t("aupair.factMatches", "matches stated details") : t("aupair.factDoesNotMatch", "does not match stated details")}</span>;
-          }) : <p className="ap-form-help">{t("aupair.compatibilityNoDetails", "More shared details are needed to compare this placement. Visa status is not a match signal.")}</p>}
+          }) : <p className="ap-form-help">{t("aupair.compatibilityNoDetails", "Add more details to compare.")}</p>}
         </div>
-        <p className="ap-form-help">{t("aupair.visaNotMatch", "Visa status is separate from compatibility. Only the government decides permission to enter or work.")}</p>
+        <p className="ap-form-help">{t("aupair.visaNotMatch", "Visa is separate from match. Only the government decides.")}</p>
       </section>}
       {visaDestination && <section className="ap-visa-note"><h2>{t("aupair.visaGuideTitle", "Visa guidance for {country}", { country: visaDestinationLabel })}</h2><p>{source ? sourceSummary : t("aupair.noVisaSource", "No official page has been checked for this destination yet.")}</p><p>{passport ? t("aupair.visaUnknown", "Unknown for your passport - check the official site") : t("aupair.visaChoosePassport", "Choose your passport country to see the right official guidance.")}</p><Button alt onClick={() => nav.push("aupair-visa", { destination: visaDestination, passport })}>{t("aupair.openVisa", "Open visa guide")}</Button></section>}
     </div></div>

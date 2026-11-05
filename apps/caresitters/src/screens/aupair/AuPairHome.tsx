@@ -93,7 +93,7 @@ export default function AuPairHome({ params }: ScreenProps<Params>) {
     <div className="aupair-scroll"><div className="ap-content">
       <header className="ap-intro">
         <h1>{t("aupair.headline", "A place to find a family abroad")}</h1>
-        <p>{t("aupair.intro", "Explore live-in childcare placements. This is a separate path from local hourly care.")}</p>
+        <p>{t("aupair.intro", "Live-in care. Separate from hourly care.")}</p>
         <div className="ap-saved-actions"><Button small alt onClick={openMyProfile}>{t("aupair.editMyProfile", "My placement profile")}</Button></div>
       </header>
 
@@ -113,7 +113,7 @@ export default function AuPairHome({ params }: ScreenProps<Params>) {
         </label>
         {passportSaving && <p className="ap-form-help" role="status">{t("aupair.passportSaving", "Saving passport country…")}</p>}
         {passportError && <p className="ap-error" role="alert">{t("aupair.passportSaveError", "Passport country could not be saved. Try again.")}</p>}
-        <p className="ap-form-help">{t("aupair.passportPrivacy", "Saved in your private account settings. It is used only to show the right official guidance.")}</p>
+        <p className="ap-form-help">{t("aupair.passportPrivacy", "Private. Used only to show the right guide.")}</p>
       </section>
 
       {selectedDestination && <section className="ap-selected-place" aria-label={t("aupair.selectedDestination", "Selected destination")}>
@@ -138,7 +138,7 @@ export default function AuPairHome({ params }: ScreenProps<Params>) {
           onOpen={() => profileFor(person)}
         />)}
       </section>
-      <p className="ap-note">{t("aupair.visaNotMatch", "Visa status is separate from compatibility. Only the government decides permission to enter or work.")}</p>
+      <p className="ap-note">{t("aupair.visaNotMatch", "Visa is separate from match. Only the government decides.")}</p>
     </div></div>
   </div>;
 }

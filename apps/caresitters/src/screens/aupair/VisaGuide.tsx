@@ -53,7 +53,7 @@ export default function VisaGuide({ params }: ScreenProps<Params>) {
 
   const passportStatus = assessment.status === "eligible" ? "Guidance available" : "Unknown";
   const statusText = assessment.status === "eligible"
-    ? t("aupair.visaExplicitPassport", "The official page lists this passport for the checked pathway. Only the government decides the application.")
+    ? t("aupair.visaExplicitPassport", "Listed on the official page. The government decides.")
     : t("aupair.visaUnknown", "Unknown for your passport - check the official site");
   const lastChecked = source?.checked ? source.lastChecked : t("aupair.notChecked", "Not checked yet");
 
@@ -72,7 +72,7 @@ export default function VisaGuide({ params }: ScreenProps<Params>) {
         {passportLoading && <p role="status">{t("aupair.passportLoading", "Checking your saved passport country…")}</p>}
         <p>{statusText}</p>
         <p>{source.checked ? sourceSummary : t("aupair.notCheckedSummary", "Not checked yet - open the official site")}</p>
-        {source.checked ? <p className="ap-form-help">{t("aupair.passportRulesNotListed", "This app has not checked a rule for your passport and circumstances. Confirm directly with the government.")}</p> : null}
+        {source.checked ? <p className="ap-form-help">{t("aupair.passportRulesNotListed", "We haven't checked your passport. Confirm with the government.")}</p> : null}
       </section>
 
       <section className="ap-section-card">
@@ -80,7 +80,7 @@ export default function VisaGuide({ params }: ScreenProps<Params>) {
         <ul>
           <li>{t("aupair.checkPassport", "Check the rules for your passport and current situation.")}</li>
           <li>{t("aupair.checkWorkPermission", "Check whether the route permits this kind of childcare work.")}</li>
-          <li>{t("aupair.checkHostAgreement", "Read the official conditions and any placement agreement before making plans.")}</li>
+          <li>{t("aupair.checkHostAgreement", "Read the official conditions first.")}</li>
         </ul>
         <a className="btn" href={source.officialUrl} target="_blank" rel="noreferrer">{t("aupair.openOfficial", "Open official government page")}</a>
         <p>{t("aupair.lastChecked", "Last checked {date}", { date: lastChecked })}</p>
