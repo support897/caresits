@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildPins, clusterPins, fuzz, FUZZ_DEGREES } from "./WorldMap";
-import { project, WORLD_H, WORLD_W } from "./worldMap";
+import { project, WORLD_H, WORLD_W } from "./worldGeo";
 const row = (uid: string, lat: number, lng: number) => ({ person: { uid, firstName: uid, card: { lat, lng } } as never, km: null, result: { score: 80 } as never });
 describe("world map", () => {
   it("projects the corners inside the box", () => {

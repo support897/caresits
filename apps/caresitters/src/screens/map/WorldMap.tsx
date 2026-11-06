@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { agentSay, haptic, t } from "@cc/core";
 import type { DeckRow } from "../discover/SwipeDeck";
 import { coords, suburbOf } from "../discover/helpers";
-import { WORLD_H, WORLD_PATH, WORLD_W, project } from "./worldMap";
+import { WORLD_H, WORLD_PATH, WORLD_W, project } from "./worldGeo";
 import "./map.css";
 
 /** Pins are placed on a coarse grid (about 5 to 10 km) so nobody's home is ever shown exactly. */

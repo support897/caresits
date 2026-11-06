@@ -1,7 +1,7 @@
 import { t } from "@cc/core";
 import type { Person } from "@cc/core";
 import { coords, suburbOf } from "../discover/helpers";
-import { WORLD_PATH, project } from "./worldMap";
+import { WORLD_PATH, project } from "./worldGeo";
 import { fuzz } from "./WorldMap";
 import "./map.css";
 
