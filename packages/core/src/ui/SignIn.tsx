@@ -9,8 +9,7 @@ export function SignIn({ title, tagline }: { title: string; tagline: string }) {
   const run = async (fn: () => Promise<unknown>) => { setBusy(true); setMsg(""); try { await fn(); setBusy(false); } catch (x) { fail(x); } };
   if (user) return null; // never show sign-in to someone who is already in
   return <div className="scroll" style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 10, textAlign: "center", minHeight: "100%" }}>
-    <motion.div initial={reduced ? false : { scale: .5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={reduced ? { duration: 0 } : spring} style={{ alignSelf: "center" }}><Bunny mood="hello" size={140} /></motion.div>
-    <h1 style={{ fontSize: 42 }}>{title}</h1><p className="muted" style={{ margin: "0 0 8px" }}>{tagline}</p>
+    <h1 style={{ margin: 0 }}><img src="/brand/lockup-tight.png" alt={title} style={{ width: "min(86vw, 340px)", height: "auto", display: "block", margin: "0 auto" }} /></h1><p className="muted" style={{ margin: "0 0 8px" }}>{tagline}</p>
     <button className="btn alt" disabled={busy} onClick={() => run(signInGoogle)}><b aria-hidden="true">G</b> {t("auth.google", "Continue with Google")}</button>
     <button className="btn apple" disabled={busy} onClick={() => run(signInApple)}>{t("auth.apple", "Continue with Apple")}</button>
     {!mail ? <button className="btn alt" disabled={busy} onClick={() => setMail(true)}>{t("auth.email", "Continue with email")}</button> : <>
