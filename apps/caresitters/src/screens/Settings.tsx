@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
-import { BackBar, isBunnyCalm, setBunnyCalm, setLang, signOutUser, t, useLang, useNav, type Person } from "@cc/core";
+import { BackBar, LegalAndDelete, isBunnyCalm, setBunnyCalm, setLang, signOutUser, t, useLang, useNav, type Person } from "@cc/core";
 import { DEFAULT_NOTIFICATION_PREFS, NOTIFICATION_CATEGORIES, notificationCategoryLabel, type NotificationPrefs } from "../../../../packages/core/src/notifications/prefs";
 import { loadNotificationPrefs, saveNotificationPrefs } from "../../../../packages/core/src/notifications/store";
-import { requestAccountDeletion, requestDataExport } from "../data/safety";
 
 type Params = { me: Person };
 type ThemeMode = "auto" | "light" | "dark";
@@ -24,10 +23,6 @@ export default function Settings({ params }: { params: Params }) {
   const [prefs, setPrefs] = useState<NotificationPrefs>({ ...DEFAULT_NOTIFICATION_PREFS, muted: {} });
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [prefsMessage, setPrefsMessage] = useState("");
-  const [dataBusy, setDataBusy] = useState("");
-  const [dataMessage, setDataMessage] = useState("");
-  const [dataError, setDataError] = useState("");
-  const [deleteText, setDeleteText] = useState("");
 
   useEffect(() => { setLang("en"); }, []);
   useEffect(() => {
@@ -52,20 +47,6 @@ export default function Settings({ params }: { params: Params }) {
     try { await saveNotificationPrefs(me.uid, "caresitters", next); setPrefsMessage(t("settings.notify.saved", "Notification choices saved.")); }
     catch { setPrefsMessage(t("settings.notify.saveError", "Notification choices could not save.")); }
     finally { setSavingPrefs(false); }
-  }
-
-  async function downloadData() {
-    setDataBusy("export"); setDataMessage(""); setDataError("");
-    try { await requestDataExport(me.uid); setDataMessage(t("settings.export.requested", "Data download requested.")); }
-    catch { setDataError(t("settings.export.error", "Data download request could not be sent.")); }
-    finally { setDataBusy(""); }
-  }
-  async function deleteAccount() {
-    if (deleteText !== "DELETE") return;
-    setDataBusy("delete"); setDataMessage(""); setDataError("");
-    try { await requestAccountDeletion(me.uid, deleteText); setDataMessage(t("settings.delete.requested", "Account deletion requested.")); }
-    catch { setDataError(t("settings.delete.error", "Account deletion request could not be sent.")); }
-    finally { setDataBusy(""); }
   }
 
   return <div className="app">
@@ -106,12 +87,10 @@ export default function Settings({ params }: { params: Params }) {
         <h2 id="settings-privacy-title">{t("settings.privacy.title", "Privacy and account")}</h2>
         <p className="muted">{t("settings.privacy.note", "Addresses and child photos stay private.")}</p>
         <button className="btn alt" type="button" onClick={() => nav.push("safety", { uid: me.uid })}>{t("settings.privacy.safety", "Open safety tools")}</button>
-        <button className="btn alt" type="button" onClick={() => void downloadData()} disabled={Boolean(dataBusy)} style={{ marginBlockStart: 8 }}>{dataBusy === "export" ? t("settings.export.sending", "Sending request…") : t("settings.export.button", "Download my data")}</button>
-        <label style={{ display: "block", marginBlockStart: 10 }}>{t("settings.delete.confirm.label", "Type DELETE to confirm account deletion")}<input className="field" value={deleteText} onChange={(event) => setDeleteText(event.target.value)} autoComplete="off" /></label>
-        <button className="btn" type="button" onClick={() => void deleteAccount()} disabled={deleteText !== "DELETE" || Boolean(dataBusy)} style={{ marginBlockStart: 8, background: "var(--danger)" }}>{dataBusy === "delete" ? t("settings.delete.sending", "Sending request…") : t("settings.delete.button", "Delete my account")}</button>
-        <p className="muted">{t("settings.delete.note", "This sends a request. The account is not removed from this screen.")}</p>
-        {dataMessage && <p role="status">{dataMessage}</p>}{dataError && <p role="alert" style={{ color: "var(--danger)" }}>{dataError}</p>}
+        <a className="btn alt" href="mailto:hello@caresits.xyz?subject=Send%20me%20a%20copy%20of%20my%20data" style={{ marginBlockStart: 8, display: "block", textAlign: "center" }}>{t("settings.export.button", "Ask for a copy of my data")}</a>
       </section>
+
+      <LegalAndDelete />
 
       <button className="btn alt" type="button" onClick={() => void signOutUser()}>{t("settings.signOut", "Sign out")}</button>
       <p className="muted center">{t("settings.lang.direction", "Layout follows your device's reading direction.")}</p>

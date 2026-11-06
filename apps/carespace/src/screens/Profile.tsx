@@ -1,6 +1,6 @@
 import "../lib/i18n";
 import { useEffect, useState } from "react";
-import { APP1, Avatar, Bunny, LANGS, t, useLang, useNav, signOutUser, isBunnyCalm, setBunnyCalm, setLang, type ScreenProps } from "@cc/core";
+import { APP1, Avatar, Bunny, LANGS, t, useLang, useNav, signOutUser, LegalAndDelete, isBunnyCalm, setBunnyCalm, setLang, type ScreenProps } from "@cc/core";
 import { listUserSpaces, type SpaceSummary } from "../data/spaces";
 import { SafetyTools } from "./profile/SafetyTools";
 import "./profile/profile.css";
@@ -54,6 +54,7 @@ export default function Profile({ params }: ScreenProps<ProfileParams>) {
       <div className="profile-hero-copy"><p className="profile-eyebrow">{t("csProfile.account", "Account")}</p><h2>{params.name || t("csProfile.you", "You")}</h2><p>{params.email || t("csProfile.noEmail", "Email not added")}</p></div>
       <button type="button" className="profile-action profile-danger" disabled={busy} onClick={() => void signOut()}>{busy ? t("csProfile.signingOut", "Signing out…") : t("csProfile.signOut", "Sign out")}</button>
     </section>
+    <LegalAndDelete />
     <section className="profile-card">
       <div className="profile-card-head"><h2>{t("csProfile.languageTitle", "Language")}</h2>{LANGS.length > 1 && <span className="tag">{LANGS.length} {t("csProfile.languages", "languages")}</span>}</div>
       <label className="profile-language"><span>{t("csProfile.languageLabel", "App language")}</span><select aria-label={t("csProfile.languageLabel", "App language")} value={lang} onChange={(event) => setLang(event.target.value as (typeof LANGS)[number][0])}>
