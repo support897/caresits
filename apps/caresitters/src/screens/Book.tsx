@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { type Person, type ScreenProps, BackBar, Bunny, Button, Empty, auth, loadProfile, schemas, t, useNav } from "@cc/core";
+import { type Person, type ScreenProps, BackBar, Bunny, BunnyAgent, Button, agentSay, Empty, auth, loadProfile, schemas, t, useNav } from "@cc/core";
 import { CANCEL_POLICY } from "@cc/core";
 import { bookingEndAtMillis, createBookingRequest, loadBookingContextForPair, loadFamilyChildren, type BookingRecord, type BookingSeriesRecord, type FamilyChild } from "../data/bookings";
 import { checkAvailability, estimateCost, isProfileComplete } from "../lib/booking";
@@ -99,6 +99,8 @@ export default function Book({ params }: ScreenProps<Params>) {
     setWeekdays((current) => current.includes(day) ? current.filter((item) => item !== day) : DAYS.filter((item) => current.includes(item) || item === day));
   }
 
+  useEffect(() => { const id = window.setTimeout(() => agentSay("book-open"), 1200); return () => window.clearTimeout(id); }, []);
+
   async function sendRequest() {
     if (!carer || !family || !date || estimate == null || sending || sent) return;
     if (family.side !== "family") { setMessage(t("book.familyRole", "Switch to a family profile to send a booking request.")); return; }
@@ -123,9 +125,9 @@ export default function Book({ params }: ScreenProps<Params>) {
         shareAddress,
         note,
       });
-      setSent(true);
+      setSent(true); agentSay("booking-sent");
     } catch (error) {
-      const reason = error instanceof Error ? error.message : "";
+      const reason = error instanceof Error ? error.message : ""; agentSay("book-failed");
       setMessage(reason === "profile-incomplete" ? t("book.completeProfile", "Finish your family profile before sending this request.")
         : reason === "repeat-range-invalid" || reason === "repeat-days-required" ? t("book.repeatRangeError", "Choose at least one day and an end date within twelve weeks.")
           : t("book.sendError", "The request could not be sent. Check your connection and try again."));
@@ -170,5 +172,6 @@ export default function Book({ params }: ScreenProps<Params>) {
       {sent && <section className="booking-card booking-empty"><Bunny mood="rest" size={100} /><h2>{t("book.requestSentTitle", "Request sent")}</h2><p>{t("book.requestSentBody", "Your request is waiting for the carer to accept.")}</p><Button onClick={nav.back}>{t("book.backToProfile", "Back to profile")}</Button></section>}
     </div></div>
     {carer && !sent && <div className="booking-bottom single"><p className="booking-policy-line">{t("book.cancellationPolicy", CANCEL_POLICY)}</p><Button onClick={() => void sendRequest()} disabled={!family || !validRate || estimate == null || !date || endsBeforeNow || (repeat && (!weekdays.length || hasInvalidRepeatRange)) || sending}>{sending ? t("book.sending", "Sending request…") : t("book.send", "Send request")}</Button></div>}
+    <div className="agent-high"><BunnyAgent size={48} /></div>
   </div>;
 }

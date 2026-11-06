@@ -7,7 +7,7 @@ import type { Mood } from "./Bunny";
 export type AgentEvent =
   | "open" | "save" | "pass" | "pass-streak" | "undo" | "open-profile" | "deck-empty" | "filters-strict"
   | "match" | "rematch" | "message-sent" | "booking-sent" | "booking-accepted" | "profile-incomplete"
-  | "upload-start" | "upload-done" | "upload-failed" | "offline" | "online" | "map-open" | "liked-from-map" | "timeline-step" | "timeline-done";
+  | "upload-start" | "upload-done" | "upload-failed" | "offline" | "online" | "map-open" | "liked-from-map" | "timeline-step" | "timeline-done" | "chat-open" | "book-open" | "book-failed";
 export type AgentLine = { mood: Mood; text: string; key: string };
 const LINES: Record<AgentEvent, { mood: Mood; key: string; text: string }[]> = {
   open: [{ mood: "hello", key: "agent.open.1", text: "Hi! I'll help you find the right fit." }, { mood: "hello", key: "agent.open.2", text: "Welcome back. Ready to meet someone lovely?" }],
@@ -32,11 +32,14 @@ const LINES: Record<AgentEvent, { mood: Mood; key: string; text: string }[]> = {
   "map-open": [{ mood: "point", key: "agent.map.1", text: "Tap a pin to meet someone nearby." }],
   "timeline-step": [{ mood: "encourage", key: "agent.tl.1", text: "One step closer. Well done!" }],
   "timeline-done": [{ mood: "celebrate", key: "agent.tl.2", text: "Every step done. Have a wonderful time together!" }],
+  "chat-open": [{ mood: "hello", key: "agent.chat.1", text: "Say hello. A short, friendly note is a great start." }],
+  "book-open": [{ mood: "point", key: "agent.bookopen.1", text: "Pick a time. You can see the cost before you send." }],
+  "book-failed": [{ mood: "oops", key: "agent.bookfail.1", text: "That didn't send. Check your connection and try again." }],
   "liked-from-map": [{ mood: "celebrate", key: "agent.maplike.1", text: "Saved from the map. Nice!" }],
 };
 /** Never speak twice inside this gap, except for events that need an answer right away. */
 export const AGENT_GAP_MS = 6000;
-const URGENT = new Set<AgentEvent>(["match", "rematch", "upload-failed", "offline", "booking-accepted"]);
+const URGENT = new Set<AgentEvent>(["match", "rematch", "upload-failed", "offline", "booking-accepted", "book-failed"]);
 type Listener = (line: AgentLine | null) => void;
 const listeners = new Set<Listener>();
 let lastAt = -1e15, lastKey = "", passRun = 0;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { type ScreenProps, BackBar, Bunny, Button, Empty, auth, t, useNav } from "@cc/core";
+import { type ScreenProps, BackBar, Bunny, BunnyAgent, Button, Empty, agentSay, auth, t, useNav } from "@cc/core";
 import { loadBookingById, type BookingRecord } from "../data/bookings";
 import "./booking/booking.css";
 
@@ -21,6 +21,7 @@ export default function Accepted({ params }: ScreenProps<Params>) {
   }, [params.bookingId, params.pairId]);
 
   const accepted = booking?.state === "accepted";
+  useEffect(() => { if (accepted) agentSay("booking-accepted"); }, [accepted]);
   return <div className="booking-screen">
     <BackBar title={t("accepted.title", "Booking update")} onBack={nav.back} />
     <div className="scroll"><div className="booking-content">
@@ -31,5 +32,6 @@ export default function Accepted({ params }: ScreenProps<Params>) {
       {!loading && !error && booking && booking.state !== "accepted" && booking.state !== "requested" && <section className="booking-card booking-empty"><Bunny mood="think" size={100} /><h2>{t("accepted.noLongerAvailable", "This booking is not active")}</h2><p>{t("accepted.state", "Current status: {state}", { state: booking.state })}</p><Button alt onClick={nav.back}>{t("accepted.back", "Back to bookings")}</Button></section>}
       {!loading && !error && !booking && <Empty mood="rest" title={t("accepted.notFound", "Booking not found")} body={t("accepted.notFoundBody", "This booking is not available in your account.")} />}
     </div></div>
+    <BunnyAgent size={56} />
   </div>;
 }

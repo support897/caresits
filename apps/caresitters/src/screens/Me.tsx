@@ -29,6 +29,7 @@ export default function Me({ params }: { params: Params }) {
   const experienceYears = Number.isFinite(Number(me.card.experienceYears)) ? Number(me.card.experienceYears) : null;
   const links = [
     { title: t("me.photos", "My photos"), body: t("me.photos.body", "Add or remove"), action: () => nav.push("photos", { me }) },
+    ...(me.side === "family" ? [{ title: t("me.kidPhotos", "Children's photos"), body: t("me.kidPhotos.body", "Private, optional"), action: () => nav.push("child-photos", { me }) }] : []),
     ...(me.side === "carer" ? [{ title: t("me.resume", "My resume"), body: t("me.resume.body", "Work and study"), action: () => nav.push("resume", { me }) },
       { title: t("me.reviews", "Reviews and references"), body: t("me.reviews.body", "What families say"), action: () => nav.push("person", { uid: me.uid, me }) }] : []),
     { title: t("me.qualifications", "Qualifications"), body: t("me.qualifications.body", "Checks and documents"), action: () => nav.push("quals", { me }) },

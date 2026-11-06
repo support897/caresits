@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { auth, Bunny, MediaImg, loadProfile, t, useNav, type Person } from "@cc/core";
+import { auth, Bunny, BunnyAgent, MediaImg, agentSay, loadProfile, t, useNav, type Person } from "@cc/core";
 import { Composer } from "../../../../packages/core/src/chat/Composer";
 import { MessageList } from "../../../../packages/core/src/chat/MessageList";
 import { MediaPicker } from "../../../../packages/core/src/media/MediaPicker";
@@ -85,6 +85,8 @@ export default function Chat({ params }: { params: Params }) {
     return () => globalThis.removeEventListener?.("online", retry);
   }, [uid, relId, blockStatusReady, blocked, state]);
 
+  useEffect(() => { if (activeStates.has(state)) { const id = window.setTimeout(() => { if (!messages.length) agentSay("chat-open"); }, 900); return () => window.clearTimeout(id); } return undefined; }, [state, messages.length]);
+
   async function sendText(text: string) {
     if (busy || !canSendChat(state, blocked, blockStatusReady)) return;
     setBusy(true);
@@ -94,7 +96,8 @@ export default function Chat({ params }: { params: Params }) {
     if (result.ok && result.queued && result.message) {
       setQueued((current) => [...current.filter((row) => row.id !== result.message?.id), result.message!]);
       setNotice(t("chat.queued.notice", "Message saved on this device and will send when you are back online."));
-    } else if (!result.ok) setNotice(t("chat.send.error", "Message did not send. Check your connection and try again."));
+    } else if (result.ok) agentSay("message-sent");
+    else if (!result.ok) setNotice(t("chat.send.error", "Message did not send. Check your connection and try again."));
   }
 
   async function sendAttachment(key: string, fileName?: string) {
@@ -136,6 +139,7 @@ export default function Chat({ params }: { params: Params }) {
       <Composer onSend={sendText} sending={busy} disabled={!canSendChat(state, blocked, blockStatusReady)} />
       {notice && <p role="status" style={{ margin: "0 14px 10px", color: "var(--muted)" }}>{notice}</p>}
     </>}
+    <div className="agent-high"><BunnyAgent size={48} /></div>
   </div>;
 }
 
