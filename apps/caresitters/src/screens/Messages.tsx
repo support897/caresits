@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { db, MediaImg, loadPeople, type Person, Bunny, t, useNav } from "@cc/core";
 import { collection, doc, getDocs, setDoc } from "firebase/firestore";
+import { ageLabel, PAGE, pageSlice } from "./ageLabel";
 import { isProfileComplete, pairIdFor, planContact } from "../lib/booking";
 import { loadBookingsForUser } from "../data/bookings";
 import { loadSavedIds } from "../data/people";
@@ -44,7 +45,9 @@ const labels: Record<ChatFilter, string> = {
 function initials(name: string): string { return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0] ?? "").join("").toUpperCase(); }
 function timeLabel(value: unknown): string {
   const ms = timeMs(value);
-  return ms ? new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(new Date(ms)) : "";
+  if (!ms) return "";
+  const sameDay = new Date(ms).toDateString() === new Date().toDateString();
+  return sameDay ? new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(new Date(ms)) : ageLabel(ms);
 }
 
 export default function Messages({ params }: { params: Params }) {
@@ -52,6 +55,7 @@ export default function Messages({ params }: { params: Params }) {
   const { me } = params;
   const accountName = me.firstName || me.name || t("messages.account.name", "Your account");
   const [tab, setTab] = useState<ChatFilter>("All");
+  const [shown, setShown] = useState(PAGE);
   const [search, setSearch] = useState("");
   const [relations, setRelations] = useState<Relationship[]>([]);
   const [people, setPeople] = useState<Record<string, ChatPerson>>({});
@@ -254,7 +258,7 @@ export default function Messages({ params }: { params: Params }) {
       <label htmlFor="messages-search" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clipPath: "inset(50%)" }}>{t("messages.search.label", "Search conversations")}</label>
       <input id="messages-search" className="field" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("messages.search.placeholder", "Search families, carers and chats")} style={{ minHeight: 50 }} />
       {quickPeople.length > 0 && <section aria-label={t("messages.circle.label", "Your care circle")} style={{ marginBlock: 16 }}>
-        <p className="muted" style={{ margin: "0 0 8px" }}>{t("messages.circle.title", "Your care circle")}</p>
+        <p className="muted" style={{ margin: "0 0 8px" }}>{t("messages.circle.title", "New matches")}</p>
         <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBlock: 3 }}>
           {quickPeople.map(({ rel, otherUid, person, unread: count }) => <button key={rel.id} type="button" onClick={() => nav.push("chat", { relId: rel.id, otherUid })} aria-label={count ? t("messages.quick.unread", "Open {name}, {count} unread", { name: person.name, count }) : t("messages.quick.open", "Open chat with {name}", { name: person.name })} style={{ flex: "0 0 72px", display: "grid", justifyItems: "center", gap: 5, minHeight: 78 }}>
             <span className="av" style={{ width: 54, height: 54, position: "relative" }}>{person.photoUrl ? <MediaImg src={person.photoUrl} alt="" loading="lazy" /> : initials(person.name)}{count > 0 && <span style={{ position: "absolute", insetInlineEnd: -2, insetBlockStart: -2, width: 16, height: 16, borderRadius: 50, background: "var(--danger)", border: "2px solid var(--cream)" }} />}</span>
@@ -267,7 +271,7 @@ export default function Messages({ params }: { params: Params }) {
       </nav>
       {error && <p role="alert" style={{ color: "var(--danger)" }}>{error}</p>}
       {loading ? <div aria-busy="true" className="stack"><div className="sk" style={{ height: 86 }} /><div className="sk" style={{ height: 86 }} /></div> : rows.length ? <div style={{ display: "grid" }}>
-        {rows.map(({ rel, otherUid, person, last, preview, statusLabel, unread: count }) => <button key={rel.id} type="button" onClick={() => nav.push("chat", { relId: rel.id, otherUid })} aria-label={count ? t("messages.row.unread", "{name}. {preview}. {status}. {count} unread", { name: person.name, preview, status: statusLabel, count }) : t("messages.row.label", "{name}. {preview}. {status}", { name: person.name, preview, status: statusLabel })} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", minWidth: 0, minHeight: 82, padding: "10px 4px", textAlign: "start", borderBlockEnd: "1px solid var(--line)", overflow: "hidden" }}>
+        {pageSlice(rows, shown).items.map(({ rel, otherUid, person, last, preview, statusLabel, unread: count }) => <button key={rel.id} type="button" onClick={() => nav.push("chat", { relId: rel.id, otherUid })} aria-label={count ? t("messages.row.unread", "{name}. {preview}. {status}. {count} unread", { name: person.name, preview, status: statusLabel, count }) : t("messages.row.label", "{name}. {preview}. {status}", { name: person.name, preview, status: statusLabel })} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", minWidth: 0, minHeight: 82, padding: "10px 4px", textAlign: "start", borderBlockEnd: "1px solid var(--line)", overflow: "hidden" }}>
           <span className="av" style={{ width: 54, height: 54 }}>{person.photoUrl ? <MediaImg src={person.photoUrl} alt="" loading="lazy" /> : initials(person.name)}</span>
           <span style={{ flex: 1, minWidth: 0 }}>
             <span style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, minWidth: 0 }}><strong style={{ flex: "1 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{person.name}</strong><time className="muted" style={{ flex: "0 1 auto", minWidth: 0, fontSize: 17, whiteSpace: "normal", textAlign: "end" }}>{last ? timeLabel(last.at) : rel.state === "pending" ? t("messages.request.label", "Request") : ""}</time></span>
@@ -275,6 +279,7 @@ export default function Messages({ params }: { params: Params }) {
             <span style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, minWidth: 0, marginBlockStart: 4 }}><span className="tag" style={{ flex: "0 1 auto", minWidth: 0, maxWidth: count > 0 ? "calc(100% - 36px)" : "100%", overflowWrap: "anywhere", whiteSpace: "normal", textAlign: "start", fontSize: 17, color: "var(--text)", background: "var(--soft)" }}>{statusLabel}</span>{count > 0 && <span className="pip" aria-label={t("messages.unread.count", "{count} unread", { count })} style={{ position: "static", flex: "0 0 auto", minWidth: 28, height: 28, padding: "0 6px", display: "grid", placeItems: "center", fontSize: 17, color: "var(--cream)" }}>{count > 99 ? "99+" : count}</span>}</span>
           </span>
         </button>)}
+        {pageSlice(rows, shown).more > 0 && <button type="button" className="btn alt" data-testid="load-more" onClick={() => setShown((n) => n + PAGE)} style={{ marginBlockStart: 12 }}>{t("messages.loadMore", "Load more")}</button>}
       </div> : <div className="empty" style={{ paddingBlock: 22 }}><Bunny mood="hello" size={94} /><h2>{emptyTitle}</h2><p className="muted">{emptyBody}</p></div>}
       <p className="muted center" style={{ marginBlock: 18 }}>{t("messages.private.note", "Every family has its own private space.")}</p>
     </div>

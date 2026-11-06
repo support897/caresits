@@ -953,6 +953,15 @@ match /relationships/{pairId}/bookings/{bookingId} {
   allow delete: if false;
 }
 
+match /relationships/{pairId}/timeline/{docId} {
+  allow read: if signedIn() && !isAnon() && pairMember(pairId) && !pairSevered(pairId);
+  allow write: if signedIn() && !isAnon() && pairMember(pairId) && !pairSevered(pairId)
+    && docId == "state"
+    && request.resource.data.keys().hasOnly(["done"])
+    && request.resource.data.done is map
+    && request.resource.data.done.size() <= 20;
+}
+
 match /relationships/{pairId}/series/{seriesId} {
   allow read: if bookingPairCanRead(pairId);
   allow create: if bookingPairCanCreate(pairId)

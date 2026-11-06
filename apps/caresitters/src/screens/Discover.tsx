@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bunny, Button, Chip, Empty, Sheet, haptic, t, useNav, type ScreenProps } from "@cc/core";
+import { Bunny, BunnyAgent, Button, Chip, Empty, Sheet, agentSay, haptic, t, useNav, type ScreenProps } from "@cc/core";
 import { SwipeDeck } from "./discover/SwipeDeck";
+import { WorldMap } from "./map/WorldMap";
 import type { Person } from "@cc/core";
 import { removeSavedPerson, savePerson, subscribeDiscoveryPeople, subscribeSavedIds, type DiscoveryPerson } from "../data/people";
 import { PersonCard } from "./discover/PersonCard";
@@ -34,11 +35,19 @@ export default function Discover({ params }: ScreenProps) {
   const [requirements, setRequirements] = useState<MatchRequirements>({});
   const [matchWeights, setMatchWeights] = useState<Partial<MatchWeights> | undefined>(undefined);
   const [deckMode, setDeckMode] = useState(true);
+  const [mapMode, setMapMode] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [deckIndex, setDeckIndex] = useState(0);
   const [why, setWhy] = useState<Row | null>(null);
   const [saveError, setSaveError] = useState(false);
   const [savedCelebration, setSavedCelebration] = useState(false);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => agentSay("open"), 900);
+    const off = () => agentSay("offline"), on = () => agentSay("online");
+    window.addEventListener("offline", off); window.addEventListener("online", on);
+    return () => { window.clearTimeout(id); window.removeEventListener("offline", off); window.removeEventListener("online", on); };
+  }, []);
 
   useEffect(() => {
     setSavedSearches(loadSavedSearches(me.uid));
@@ -205,7 +214,8 @@ export default function Discover({ params }: ScreenProps) {
     <div className="discover-bar">
       <h1>{title}</h1>
       <div className="row" style={{ gap: 8 }}>
-        <button type="button" className="icon-btn" onClick={() => setDeckMode((v) => !v)} aria-label={deckMode ? t("disc.showList", "Show list") : t("disc.showCards", "Show cards")}>{deckMode ? "☰" : "♥"}</button>
+        <button type="button" className="icon-btn" onClick={() => { setMapMode(false); setDeckMode((v) => !v); }} aria-label={deckMode ? t("disc.showList", "Show list") : t("disc.showCards", "Show cards")}>{deckMode ? "☰" : "♥"}</button>
+        <button type="button" className={`icon-btn${mapMode ? " on" : ""}`} onClick={() => setMapMode((v) => !v)} aria-pressed={mapMode} aria-label={t("disc.map", "Map")}>🌍</button>
         <button type="button" className="icon-btn" onClick={() => setShowFilters(true)} aria-label={t("disc.filters", "Filters")}>⚙</button>
       </div>
     </div>
@@ -259,9 +269,10 @@ export default function Discover({ params }: ScreenProps) {
       </div>
       <Button type="button" onClick={() => setShowFilters(false)}>{t("disc.done", "Done")}</Button>
     </div></Sheet>}
-    {deckMode && !loading && !loadError && <SwipeDeck rows={eligibleRows.length ? eligibleRows : radiusRows} savedIds={savedIds} onSave={(row) => void toggleSave(row)} onOpen={openPerson} onWhy={(row) => setWhy(row)} onList={() => setDeckMode(false)} />}
+    {mapMode && !loading && !loadError && <WorldMap rows={rows} savedIds={savedIds} onSave={(row) => void toggleSave(row)} onOpen={openPerson} />}
+    {deckMode && !mapMode && !loading && !loadError && <SwipeDeck rows={eligibleRows.length ? eligibleRows : radiusRows} savedIds={savedIds} onSave={(row) => void toggleSave(row)} onOpen={openPerson} onWhy={(row) => setWhy(row)} onList={() => setDeckMode(false)} />}
 
-    {(!deckMode || loading || loadError) && <div className="scroll">
+    {(!mapMode && (!deckMode || loading || loadError)) && <div className="scroll">
 
 
       {loading && <div style={{ paddingBlock: 24 }}><Empty mood="rest" title={t("disc.loading", "Finding profiles…")} /></div>}
@@ -294,7 +305,7 @@ export default function Discover({ params }: ScreenProps) {
         {radiusRows.length === 0 && people.length > 0 && nearest.length > 0 && <section aria-label={t("disc.nearestTitle", "Nearest profiles")}><h2>{t("disc.nearestTitle", "Nearest profiles")}</h2><ul style={{ paddingInlineStart: 24 }}>{nearest.map((row) => <li key={row.person.uid}>{row.person.firstName} · {row.km?.toFixed(1)} km</li>)}</ul></section>}
       </>}
     </div>}
+    <BunnyAgent size={58} />
     {why && <WhyMatchSheet viewer={me} candidate={why.person} result={why.result} onClose={() => setWhy(null)} />}
-    {savedCelebration && <div role="status" style={{ position: "fixed", insetInlineEnd: 18, insetBlockEnd: 20, zIndex: 90, pointerEvents: "none" }}><Bunny mood="celebrate" size={76} caption={t("disc.savedThanks", "Saved to your list")} /></div>}
   </div>;
 }

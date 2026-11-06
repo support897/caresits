@@ -187,7 +187,7 @@ export async function uploadMediaFile({ uid, spaceId, shareWithSpace = false, fi
       extension = "pdf";
     } else if (file.type.startsWith("image/")) {
       blob = await stripExif(file);
-      if (blob.size <= 0 || blob.size > MAX_PHOTO_BYTES) throw new Error(t("media.photoTooLarge", "Photo must be 5 MB or smaller."));
+      if (blob.size <= 0 || blob.size > MAX_PHOTO_BYTES) throw new Error(t("media.photoTooLarge", "This photo is too big to send. Try a smaller one."));
       if (containsExifBytes(await blob.arrayBuffer())) throw new Error(t("media.exifNotStripped", "Photo details could not be removed. Choose another photo."));
       extension = "jpg";
     } else {
@@ -197,7 +197,7 @@ export async function uploadMediaFile({ uid, spaceId, shareWithSpace = false, fi
     if (!file.type.startsWith("image/")) throw new Error(t("media.choosePhoto", "Choose a photo first."));
     report(onProgress, "prepare", 0);
     blob = await stripExif(file);
-    if (blob.size <= 0 || blob.size > MAX_PHOTO_BYTES) throw new Error(t("media.photoTooLarge", "Photo must be 5 MB or smaller."));
+    if (blob.size <= 0 || blob.size > MAX_PHOTO_BYTES) throw new Error(t("media.photoTooLarge", "This photo is too big to send. Try a smaller one."));
     if (containsExifBytes(await blob.arrayBuffer())) throw new Error(t("media.exifNotStripped", "Photo details could not be removed. Choose another photo."));
     if (kind === "child" && shareWithSpace && !spaceId) throw new Error(t("media.chooseSpace", "Choose a care space before sharing a child photo."));
     extension = "jpg";

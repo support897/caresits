@@ -43,21 +43,27 @@ async function openImage(file: Blob): Promise<OpenImage> {
   }
 }
 
-export async function stripExif(file: Blob, maxSide = 1600): Promise<Blob> {
+/** Photos of any size are accepted: they are shrunk on the phone until the result fits `limitBytes`. */
+export async function stripExif(file: Blob, maxSide = 1600, limitBytes = 4.5 * 1024 * 1024): Promise<Blob> {
   if (!file) throw new Error(t("media.choosePhoto", "Choose a photo first."));
   if (typeof document === "undefined") throw new Error(t("media.imageUnavailable", "Photo editing is not ready on this device."));
   const image = await openImage(file);
   try {
-    const size = resizeDimensions(image.width, image.height, maxSide);
-    if (!size) throw new Error(t("media.imageUnreadable", "This photo could not be opened."));
-    const canvas = document.createElement("canvas");
-    canvas.width = size.width;
-    canvas.height = size.height;
-    const context = canvas.getContext("2d");
-    if (!context) throw new Error(t("media.imageUnavailable", "Photo editing is not ready on this device."));
-    context.drawImage(image.source, 0, 0, size.width, size.height);
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.84));
-    if (!blob) throw new Error(t("media.imageEncodeFailed", "This photo could not be prepared. Choose it again."));
-    return blob;
+    let side = maxSide, quality = 0.84, blob: Blob | null = null;
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const size = resizeDimensions(image.width, image.height, side);
+      if (!size) throw new Error(t("media.imageUnreadable", "This photo could not be opened."));
+      const canvas = document.createElement("canvas");
+      canvas.width = size.width;
+      canvas.height = size.height;
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error(t("media.imageUnavailable", "Photo editing is not ready on this device."));
+      context.drawImage(image.source, 0, 0, size.width, size.height);
+      blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+      if (!blob) throw new Error(t("media.imageEncodeFailed", "This photo could not be prepared. Choose it again."));
+      if (blob.size <= limitBytes) return blob;
+      quality = Math.max(0.5, quality - 0.12); side = Math.round(side * 0.8);
+    }
+    return blob!;
   } finally { image.close(); }
 }

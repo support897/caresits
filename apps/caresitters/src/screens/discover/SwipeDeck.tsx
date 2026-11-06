@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AnimatePresence, motion, useMotionValue, useTransform } from "framer-motion";
-import { Bunny, MediaImg, haptic, t } from "@cc/core";
+import { Bunny, MediaImg, agentSay, haptic, t } from "@cc/core";
 import type { DiscoveryPerson } from "../../data/people";
 import type { MatchResult } from "../../../../../packages/core/src/match/types";
 import { experienceYearsOf, rateOf, reviewsOf, suburbOf, verifiedBadgeText } from "./helpers";
@@ -39,6 +39,7 @@ function Card({ row, top, onSwipe, onOpen }: { row: DeckRow; top: boolean; onSwi
         <h2 className="deck-name">{p.firstName}{age ? <span className="deck-age"> {age}</span> : null}</h2>
         {meta && <p className="deck-meta">{meta}</p>}
         <div className="deck-tags">
+          {typeof row.result.score === "number" && <span className="deck-tag pct">{Math.round(row.result.score)}% {t("deck.match", "match")}</span>}
           {rate !== undefined && <span className="deck-tag">A${rate}/hr</span>}
           {rating?.rating !== undefined && <span className="deck-tag">★ {rating.rating.toFixed(1)}</span>}
           {years !== undefined && <span className="deck-tag">{years}y</span>}
@@ -56,19 +57,20 @@ export function SwipeDeck({ rows, savedIds, onSave, onOpen, onWhy, onList }: Pro
   const cur = rows[i]; const next = rows[i + 1];
   function go(dir: 1 | -1) {
     if (!cur) return; haptic();
-    if (dir === 1) { if (!savedIds.has(cur.person.uid)) onSave(cur); setBurst(true); window.setTimeout(() => setBurst(false), 900); }
+    if (dir === 1) { if (!savedIds.has(cur.person.uid)) { onSave(cur); agentSay("save"); } else agentSay("rematch"); setBurst(true); window.setTimeout(() => setBurst(false), 900); } else agentSay("pass");
     setLast(i); setI((n) => n + 1);
   }
+  if (!cur) { agentSay("deck-empty"); }
   if (!cur) return <div className="deck-empty"><Bunny mood="celebrate" size={120} /><h2>{t("deck.done", "You saw everyone")}</h2>
     <button type="button" className="btn" onClick={() => setI(0)}>{t("deck.again", "Start again")}</button><button type="button" className="btn alt" onClick={onList}>{t("deck.list", "See list")}</button></div>;
   return <div className="deck">
     <div className="deck-stack" data-testid="deck">
       {next && <Card key={next.person.uid} row={next} top={false} onSwipe={() => {}} onOpen={() => {}} />}
-      <AnimatePresence initial={false}><Card key={cur.person.uid} row={cur} top onSwipe={go} onOpen={() => onOpen(cur)} /></AnimatePresence>
+      <AnimatePresence initial={false}><Card key={cur.person.uid} row={cur} top onSwipe={go} onOpen={() => { agentSay("open-profile"); onOpen(cur); }} /></AnimatePresence>
       {burst && <div className="deck-burst" aria-hidden="true"><Bunny mood="celebrate" size={110} /></div>}
     </div>
     <div className="deck-actions">
-      <button type="button" className="deck-btn small" disabled={last === null || i === 0} onClick={() => { setI((n) => Math.max(0, n - 1)); setLast(null); haptic(); }} aria-label={t("deck.undo", "Undo")}>↺</button>
+      <button type="button" className="deck-btn small" disabled={last === null || i === 0} onClick={() => { setI((n) => Math.max(0, n - 1)); setLast(null); agentSay("undo"); haptic(); }} aria-label={t("deck.undo", "Undo")}>↺</button>
       <button type="button" className="deck-btn nope" onClick={() => go(-1)} aria-label={t("deck.skip", "Pass")}>✕</button>
       <button type="button" className="deck-btn like" onClick={() => go(1)} aria-label={t("deck.save", "Save")}>♥</button>
       <button type="button" className="deck-btn small" onClick={() => onWhy(cur)} aria-label={t("deck.why", "Why this match")}>i</button>

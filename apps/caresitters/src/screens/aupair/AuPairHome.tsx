@@ -123,6 +123,8 @@ export default function AuPairHome({ params }: ScreenProps<Params>) {
         <button type="button" className="ap-place-action" onClick={() => nav.push("aupair-visa", { destination, passport })}>{t("aupair.openVisa", "Visa guidance")}</button>
       </section>}
 
+      <button type="button" className="ap-place-action" data-testid="open-timeline" style={{ margin: "8px 16px" }} onClick={() => nav.push("aupair-timeline", { destination })}>{t("aupair.timeline", "My journey checklist")}</button>
+
       <section className="ap-list" aria-labelledby="ap-list-title">
         <div className="ap-list-heading"><h2 id="ap-list-title">{targetLabel}</h2><span>{t("aupair.profileCount", "{count} listed", { count: candidates.length })}</span></div>
         {loading && <div className="card" role="status">{t("aupair.loading", "Loading placement profiles…")}</div>}

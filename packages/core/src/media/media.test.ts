@@ -47,3 +47,14 @@ describe("private media helpers", () => {
     expect(getVideoReasons(10, 60.1).length).toBe(1);
   });
 });
+
+describe("any-size photos", () => {
+  it("shrinks until the result fits the limit", async () => {
+    let calls = 0;
+    vi.stubGlobal("document", { createElement: () => ({ width: 0, height: 0, getContext: () => ({ drawImage: vi.fn() }),
+      toBlob: (cb: BlobCallback, _t: string, q: number) => { calls++; cb(new Blob([new Uint8Array(q > 0.7 ? 6_000_000 : 1_000_000)], { type: "image/jpeg" })); } }) });
+    vi.stubGlobal("createImageBitmap", async () => ({ width: 8000, height: 6000, close: vi.fn() }));
+    const out = await stripExif(new Blob([new Uint8Array(30_000_000)], { type: "image/heic" }));
+    expect(out.size).toBeLessThanOrEqual(4.5 * 1024 * 1024); expect(calls).toBeGreaterThan(1);
+  });
+});

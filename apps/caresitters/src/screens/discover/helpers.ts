@@ -12,7 +12,7 @@ function asNumber(value: unknown): number | undefined {
   return undefined;
 }
 function firstNumber(...values: unknown[]): number | undefined { return values.map(asNumber).find((value) => value !== undefined); }
-function coords(person: Person): { lat: number; lng: number } | undefined {
+export function coords(person: Person): { lat: number; lng: number } | undefined {
   const card = asRecord(person.card);
   const raw = asRecord(person.raw);
   const location = asRecord(raw.location ?? card.location);

@@ -48,5 +48,8 @@ test("carer: app switcher, photos, resume without phone number, view my profile"
   await expect(page.getByTestId("resume-view")).toContainText("Not checked by us");
   await expect(page.getByTestId("resume-view")).not.toContainText("0412");
   await expect(page.getByText("Smith family").first()).toBeVisible();
+  await expect(page.getByTestId("profile-chips")).toBeVisible();
+  await expect(page.getByTestId("mini-map")).toBeVisible();
+  expect(await page.content()).not.toMatch(/-27\.4698|153\.0251/);
   await page.screenshot({ path: "/home/user/shots/pr-4-viewprofile.png", fullPage: false });
 });

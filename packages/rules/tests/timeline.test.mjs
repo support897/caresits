@@ -1,0 +1,20 @@
+import { test } from "node:test";
+import { readFileSync } from "node:fs";
+import { initializeTestEnvironment, assertFails, assertSucceeds } from "@firebase/rules-unit-testing";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+const rules = readFileSync(new URL("../firestore.rules", import.meta.url), "utf8");
+test("timeline is shared by the two people in a match only", async () => {
+  const env = await initializeTestEnvironment({ projectId: "demo-cc-tl", firestore: { rules } });
+  await env.withSecurityRulesDisabled(async (c) => { await setDoc(doc(c.firestore(), "relationships/a_b"), { members: ["a", "b"], familyUid: "a", carerUid: "b", state: "contact" }); });
+  const a = env.authenticatedContext("a", { email: "a@x.com", email_verified: true }).firestore();
+  const b = env.authenticatedContext("b", { email: "b@x.com", email_verified: true }).firestore();
+  const z = env.authenticatedContext("z", { email: "z@x.com", email_verified: true }).firestore();
+  await assertSucceeds(setDoc(doc(a, "relationships/a_b/timeline/state"), { done: { match: { by: "a", at: 1 } } }));
+  await assertSucceeds(getDoc(doc(b, "relationships/a_b/timeline/state")));
+  await assertSucceeds(setDoc(doc(b, "relationships/a_b/timeline/state"), { done: { match: { by: "a", at: 1 }, visa: { by: "b", at: 2 } } }));
+  await assertFails(getDoc(doc(z, "relationships/a_b/timeline/state")));
+  await assertFails(setDoc(doc(z, "relationships/a_b/timeline/state"), { done: {} }));
+  await assertFails(setDoc(doc(a, "relationships/a_b/timeline/other"), { done: {} }));
+  await assertFails(setDoc(doc(a, "relationships/a_b/timeline/state"), { done: {}, extra: 1 }));
+  await env.cleanup();
+});

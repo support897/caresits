@@ -24,3 +24,5 @@
 .discover-bar h1{font-size:28px}
 .icon-btn{width:48px;height:48px;border-radius:16px;background:#fff;box-shadow:0 2px 10px #f4a9bc44;display:grid;place-items:center;color:var(--pink-deep);font-size:22px}
 @media (prefers-reduced-motion:reduce){.deck-burst{animation:none;opacity:0}}
+
+.deck-tag.pct{background:var(--pink-deep);color:#fff}
