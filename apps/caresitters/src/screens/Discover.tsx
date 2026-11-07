@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bunny, BunnyAgent, Button, Chip, Empty, Sheet, agentSay, haptic, t, useNav, type ScreenProps } from "@cc/core";
+import { filterEligible, servicesOf, type ServiceType, Bunny, BunnyAgent, Button, Chip, Empty, Sheet, agentSay, haptic, t, useNav, type ScreenProps } from "@cc/core";
 import { SwipeDeck } from "./discover/SwipeDeck";
 import { WorldMap } from "./map/WorldMap";
 import type { Person } from "@cc/core";
@@ -21,6 +21,10 @@ export default function Discover({ params }: ScreenProps) {
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set(fakeSaved ?? []));
   const [loading, setLoading] = useState(!fakePeople);
   const [loadError, setLoadError] = useState(false);
+  const services = servicesOf(me);
+  const intentKey = `caresitters-intent-${me.uid}`;
+  const [intent, setIntentState] = useState<ServiceType | null>(() => { try { const v = localStorage.getItem(intentKey); return services.includes(v as ServiceType) ? (v as ServiceType) : null; } catch { return null; } });
+  const setIntent = (next: ServiceType | null) => { setIntentState(next); try { next ? localStorage.setItem(intentKey, next) : localStorage.removeItem(intentKey); } catch { /* storage unavailable */ } };
   const [radiusKm, setRadiusKm] = useState(25);
   const [suburb, setSuburb] = useState("");
   const [searchText, setSearchText] = useState("");
@@ -65,10 +69,10 @@ export default function Discover({ params }: ScreenProps) {
     }, () => {
       setLoadError(true);
       setLoading(false);
-    });
+    }, 200, intent);
     const stopSaved = subscribeSavedIds(me.uid, (saved) => setSavedIds(new Set(saved)), () => setSaveError(true));
     return () => { stopPeople(); stopSaved(); };
-  }, [fakePeople, fakeSaved, me, me.uid]);
+  }, [fakePeople, fakeSaved, me, me.uid, intent]);
 
   useEffect(() => {
     const onWeightsSaved = (event: Event) => {
@@ -79,11 +83,11 @@ export default function Discover({ params }: ScreenProps) {
     return () => window.removeEventListener("cc:match-weights-updated", onWeightsSaved);
   }, [me.uid]);
 
-  const rows = useMemo<Row[]>(() => people.map((person) => {
+  const rows = useMemo<Row[]>(() => filterEligible(me, people, intent).map((person) => {
     const km = distanceKmBetween(me, person);
     const result = scoreMatch({ viewer: me, candidate: person, km, radiusKm, requirements, weights: matchWeights });
     return { person, km, result };
-  }), [me, people, radiusKm, requirements, matchWeights]);
+  }), [me, people, intent, radiusKm, requirements, matchWeights]);
   const matchesSuburb = (person: DiscoveryPerson) => !suburb.trim() || suburbOf(person).toLowerCase().includes(suburb.trim().toLowerCase());
   const radiusRows = rows.filter((row) => (radiusKm <= 0 || (row.km !== null && row.km <= radiusKm)) && matchesSuburb(row.person));
   const eligibleRows = radiusRows.filter((row) => row.result.eligible).sort((a, b) => (b.result.score ?? -1) - (a.result.score ?? -1));
@@ -219,6 +223,10 @@ export default function Discover({ params }: ScreenProps) {
         <button type="button" className="icon-btn" onClick={() => setShowFilters(true)} aria-label={t("disc.filters", "Filters")}>⚙</button>
       </div>
     </div>
+    {services.length > 1 && <div className="row" role="group" aria-label={t("disc.service", "Service")} style={{ gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+      <Chip on={intent === null} onClick={() => setIntent(null)}>{t("disc.serviceAll", "All")}</Chip>
+      {services.map((svc) => <Chip key={svc} on={intent === svc} onClick={() => setIntent(svc)}>{svc === "au_pair" ? t("care.au_pair", "Au pair") : svc === "nanny" ? t("care.nanny", "Nanny") : t("care.babysitter", "Babysitter")}</Chip>)}
+    </div>}
     {showFilters && <Sheet label={t("disc.filters", "Filters")} onClose={() => setShowFilters(false)}><div style={{ display: "grid", gap: 14 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
         <Button type="button" alt small onClick={() => nav.push("weights", { me })} aria-label={t("disc.editWeights", "Change match weights")}>{t("disc.weights", "Weights")}</Button>

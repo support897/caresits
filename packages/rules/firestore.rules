@@ -687,8 +687,29 @@ function validProfileWrite(data) {
     && validLooking(looking);
 }
 
+// Reciprocal discovery (Phase 1, 7 Nov 2026) - OWNER MUST DEPLOY.
+// get: own profile, a relationship partner, or an opposite-side profile that shares a service with the viewer.
+// list: the query MUST filter on side and card.careTypes array-contains <service>, and the viewer must
+// offer/seek that same service on the opposite side. Missing careTypes never match.
+function profileEligible(d) {
+  let me = get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data;
+  return me.side != d.side
+    && me.get("card", {}).get("careTypes", []).hasAny(d.get("card", {}).get("careTypes", []));
+}
+function profileListService(svc) {
+  let me = get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data;
+  return me.side != resource.data.side
+    && svc in me.get("card", {}).get("careTypes", [])
+    && svc in resource.data.get("card", {}).get("careTypes", []);
+}
 match /profiles/{uid} {
-  allow read: if signedIn() && (!isAnon() || demoUnlocked());
+  allow get: if signedIn() && (!isAnon() || demoUnlocked())
+    && (request.auth.uid == uid
+      || exists(/databases/$(database)/documents/relationships/$(relId(request.auth.uid, uid)))
+      || (exists(/databases/$(database)/documents/profiles/$(request.auth.uid)) && profileEligible(resource.data)));
+  allow list: if signedIn() && (!isAnon() || demoUnlocked())
+    && exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
+    && (profileListService("nanny") || profileListService("babysitter") || profileListService("au_pair"));
   allow create, update: if signedIn() && !isAnon()
     && request.auth.uid == uid
     && validProfileWrite(request.resource.data)

@@ -1,5 +1,5 @@
 import { collection, deleteDoc, doc, getDoc, getDocs, limit, onSnapshot, query, serverTimestamp, setDoc } from "firebase/firestore";
-import { db, fromDoc, loadPeople, loadProfile, type Person } from "@cc/core";
+import { counterpartQueries, db, filterEligible, fromDoc, loadPeople, loadProfile, type Person, type ServiceType } from "@cc/core";
 
 export type DiscoveryPerson = Person & { verifiedLevel?: string; verifiedAt?: number };
 export type VerifiedRecordReader = (uid: string) => Promise<Record<string, unknown> | null>;
@@ -54,8 +54,8 @@ export async function enrichWithVerifiedLevels(people: Person[], readRecord: Ver
   return results.filter((person): person is DiscoveryPerson => person !== undefined);
 }
 
-export async function loadDiscoveryPeople(me: Person, max = 200): Promise<DiscoveryPerson[]> {
-  return enrichWithVerifiedLevels(await loadPeople(me, max));
+export async function loadDiscoveryPeople(me: Person, max = 200, intent?: ServiceType | null): Promise<DiscoveryPerson[]> {
+  return enrichWithVerifiedLevels(await loadPeople(me, max, intent));
 }
 
 export function subscribeDiscoveryPeople(
@@ -63,21 +63,27 @@ export function subscribeDiscoveryPeople(
   onPeople: (people: DiscoveryPerson[]) => void,
   onError: (error: Error) => void,
   max = 200,
+  intent?: ServiceType | null,
 ): () => void {
   let generation = 0;
-  const stop = onSnapshot(query(collection(db, "profiles"), limit(max)), (snapshot) => {
+  const queries = counterpartQueries(me, max, intent);
+  const latest = new Map<number, Person[]>();
+  const emit = () => {
     const current = ++generation;
-    const people = snapshot.docs
-      .filter((item) => item.id !== me.uid)
-      .map((item) => fromDoc(item.id, item.data()))
-      .filter((person) => person.side !== me.side);
-    void enrichWithVerifiedLevels(people).then((enriched) => {
+    const merged = new Map<string, Person>();
+    for (const rows of latest.values()) for (const person of rows) merged.set(person.uid, person);
+    void enrichWithVerifiedLevels(filterEligible(me, [...merged.values()], intent)).then((enriched) => {
       if (current === generation) onPeople(enriched);
     }).catch((error: unknown) => {
       if (current === generation) onError(error instanceof Error ? error : new Error("Could not read profiles"));
     });
-  }, onError);
-  return () => { generation += 1; stop(); };
+  };
+  if (!queries.length) { onPeople([]); return () => undefined; }
+  const stops = queries.map((q, index) => onSnapshot(q, (snapshot) => {
+    latest.set(index, snapshot.docs.filter((item) => item.id !== me.uid).map((item) => fromDoc(item.id, item.data())));
+    if (latest.size === queries.length) emit();
+  }, onError));
+  return () => { generation += 1; stops.forEach((stop) => stop()); };
 }
 
 export async function loadSavedIds(uid: string): Promise<string[]> {
@@ -91,10 +97,10 @@ export function subscribeSavedIds(uid: string, onIds: (ids: string[]) => void, o
   }, onError);
 }
 
-export async function loadSavedPeople(me: Person): Promise<DiscoveryPerson[]> {
+export async function loadSavedPeople(me: Person, intent?: ServiceType | null): Promise<DiscoveryPerson[]> {
   const ids = await loadSavedIds(me.uid);
   const profiles = await Promise.all(ids.map((uid) => loadProfile(uid)));
-  const people = profiles.filter((person): person is Person => person !== null && person.side !== me.side);
+  const people = filterEligible(me, profiles.filter((person): person is Person => person !== null), intent);
   return enrichWithVerifiedLevels(people);
 }
 

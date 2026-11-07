@@ -83,8 +83,9 @@ test("app Firestore paths match rules and isolate users", { concurrency: 1 }, as
         auPairHost: { country: "Australia", room: "Private", pocketMoneyPerWeek: 320, hoursPerWeek: 25,
           childcareDuties: ["school pickup"], otherHousework: ["laundry"], languages: ["English"], visaHelp: true, infantCareNeeded: false },
         alsoSide: { side: "carer", headline: "Warm carer", experienceYears: 4, careTypes: ["nanny"] },
-        experienceYears: 4, photoUrl: "users/audit-family/profile.webp",
+        experienceYears: 4, photoUrl: "users/audit-family/profile.webp", careTypes: ["nanny"],
       };
+      await env.withSecurityRulesDisabled(async (ctx) => setDoc(doc(ctx.firestore(), "profiles/audit-carer"), profile("carer", { careTypes: ["nanny"] })));
       await assertSucceeds(setDoc(doc(owner, "profiles/audit-family"), profile("family", card)));
       await assertSucceeds(getDoc(doc(carer, "profiles/audit-family")));
       await assertFails(setDoc(doc(outsider, "profiles/audit-family"), profile("family", card)));
