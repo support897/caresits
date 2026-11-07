@@ -355,6 +355,7 @@ export function TodayTimeline({ spaceId, uid, member, previewData }: TodayTimeli
       <label htmlFor="today-detail" style={{ display: "block", marginBottom: 8 }}>{t("cs.today.addUpdate", "Add a care update")}</label>
       <input id="today-detail" className="field" value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={t("cs.today.detail.placeholder", "What happened? Meal, drink, nap, or activity")}
         aria-label={t("cs.today.detail.placeholder", "What happened? Meal, drink, nap, or activity")} />
+      {!children.length && <p className="muted" role="status" data-testid="no-child-hint" style={{ margin: "8px 0 0" }}>{t("cs.today.needChildHint", "Add a child in the Care tab to start posting updates.")}</p>}
       <div className="row" style={{ marginTop: 10, gap: 8 }}>
         {QUICK_ACTIONS.map((action) => <button key={action.kind} type="button" className="chip" disabled={busy || !children.length} onClick={() => void addQuick(action.kind, t(action.fallbackKey, action.fallback))}>{t(action.key, action.label)}</button>)}
         <button type="button" className="chip" aria-pressed={listening} onClick={toggleDictation}>{listening ? t("cs.today.voice.stop", "Stop dictation") : t("cs.today.voice.start", "Dictate an update")}</button>
