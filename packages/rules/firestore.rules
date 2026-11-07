@@ -255,8 +255,8 @@ service cloud.firestore {
         && request.resource.data.status == 'submitted'
         && !request.resource.data.keys().hasAny(['checkedOn', 'verifiedBy']);
       allow update: if false;
-      allow delete: if signedIn() && request.auth.uid == uid && !isAnon()
-        && resource.data.status == 'submitted';
+      // Owner may remove their own copy at any status (needed for in-app account deletion).
+      allow delete: if signedIn() && request.auth.uid == uid && !isAnon();
     }
     match /users/{uid}/emergencyContacts/{docId} {
       allow get: if docId == 'main' && signedIn() && request.auth.uid == uid
@@ -285,7 +285,7 @@ service cloud.firestore {
       allow update: if signedIn() && request.auth.uid == uid && !isAnon()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["read"])
         && request.resource.data.read is bool;
-      allow delete: if false;
+      allow delete: if signedIn() && request.auth.uid == uid && !isAnon();
     }
 
 
