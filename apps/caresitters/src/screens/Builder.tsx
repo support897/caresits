@@ -4,6 +4,9 @@ import { extractPrefs, suggestIntro, type ExtractedPrefs } from "../lib/aiAssist
 import { buildProfilePatch, CARER_STEP_KEYS, clearOnboardingDraft, createOnboardingDraft, FAMILY_STEP_KEYS, loadOnboardingDraft, loadOnboardingSide, profileCompletenessPercent, progressPercent, saveOnboardingDraft, type OnboardingDraft, type OnboardingSide } from "../data/onboarding";
 import { ChoiceCards, type Choice } from "./builder/ChoiceCards";
 import { PhotoStep } from "./builder/PhotoStep";
+import { ServiceDetailsStep } from "./builder/ServiceDetailsStep";
+import { firstIncompleteService, loadServiceDetails, saveServiceDetails, type DetailValues } from "../data/serviceDetails";
+import { isServiceType, type ServiceType } from "@cc/core";
 import { ProfileExtrasStep } from "./builder/ProfileExtrasStep";
 import { VideoStep } from "./builder/VideoStep";
 import { QualificationsStep } from "./builder/QualificationsStep";
@@ -11,7 +14,7 @@ import "./builder/builder.css";
 
 type BuilderParams = { onDone?: () => void; edit?: boolean; side?: OnboardingSide };
 type Loose = Record<string, unknown>;
-const PROFILE_EXTRA_KEYS = ["gallery", "mainPhotoIndex", "parentNames", "householdPrefs", "essentials", "ageGroups", "idealFamily", "auPair", "auPairHost"] as const;
+const PROFILE_EXTRA_KEYS = ["gallery", "mainPhotoIndex", "parentNames", "householdPrefs", "essentials", "ageGroups", "idealFamily", "auPair", "auPairHost", "serviceDetails"] as const;
 const extrasStorageKey = (uid: string, side: OnboardingSide) => `caresits-profile-extras:${uid}:${side}`;
 function cleanExtraValue(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(cleanExtraValue);
@@ -122,7 +125,7 @@ export default function Builder({ params }: ScreenProps) {
   const [error, setError] = useState("");
   const [introSuggestion, setIntroSuggestion] = useState("");
   const [prefSuggestion, setPrefSuggestion] = useState<ExtractedPrefs | null>(null);
-  const steps = side === "family" ? [...FAMILY_STEP_KEYS, "profile-extras"] : [...CARER_STEP_KEYS, "profile-extras"];
+  const steps = side === "family" ? [...FAMILY_STEP_KEYS.flatMap((k) => k === "care-type" ? [k, "service-details"] : [k]), "profile-extras"] : [...CARER_STEP_KEYS.flatMap((k) => k === "care-types" ? [k, "service-details"] : [k]), "profile-extras"];
   const progress = progressPercent(step, steps.length);
   const stepName = steps[step] ?? steps[0] ?? "profile-extras";
   const isSecondary = Boolean(profile && side !== profile.side);
@@ -142,6 +145,7 @@ export default function Builder({ params }: ScreenProps) {
       freshDraft.displayName = user.displayName ?? "";
       setDraft(saved?.draft ?? (loaded ? profileDraft(loaded, chosenSide) : freshDraft));
       setProfileExtras(loadProfileExtrasDraft(user.uid, chosenSide, loaded));
+      if (loaded) void loadServiceDetails(user.uid).then((saved2) => { if (live && Object.keys(saved2).length) setProfileExtras((cur) => ({ ...cur, serviceDetails: { ...saved2, ...asRecord(cur.serviceDetails) } })); }).catch(() => undefined);
       setStep(Math.min(saved?.stepIndex ?? 0, chosenSide === "family" ? FAMILY_STEP_KEYS.length : CARER_STEP_KEYS.length));
       setReady(true);
     }).catch(() => { if (live) { setError(t("onb.loadError", "Could not load your profile. Try again.")); setReady(true); } });
@@ -161,7 +165,7 @@ export default function Builder({ params }: ScreenProps) {
   const title = useMemo(() => {
     const key = `onb.step.${side}.${stepName}`;
     const labels: Record<string, string> = {
-      family: "Your family", children: "Children", "care-type": "Care type", schedule: "Your schedule", budget: "Your budget", distance: "How far to look", values: "What matters to you?", "profile-extras": side === "family" ? "Family preferences" : "Your care profile",
+      family: "Your family", children: "Children", "care-type": "Care type", schedule: "Your schedule", budget: "Your budget", distance: "How far to look", values: "What matters to you?", "service-details": "Care details", "profile-extras": side === "family" ? "Family preferences" : "Your care profile",
       profile: "Your profile", headline: "Your headline", intro: "A short introduction", video: "Video introduction", languages: "Languages", experience: "Childcare years", qualifications: "Qualifications", rate: "Your hourly rate", availability: "When you are free", "care-types": "Care you offer",
     };
     return t(key, labels[stepName] ?? "Your profile");
@@ -175,13 +179,18 @@ export default function Builder({ params }: ScreenProps) {
     if (side === "carer" && stepName === "headline" && !draft.headline.trim()) return t("onb.headline.required", "Add a short headline to continue.");
     if (side === "carer" && stepName === "availability" && !draft.carerDays.length) return t("onb.availability.required", "Choose at least one day to add your availability.");
     if (side === "carer" && stepName === "care-types" && !draft.carerCareTypes.length) return t("onb.carerCare.required", "Choose at least one kind of care.");
+    if (stepName === "service-details") {
+      const services = (side === "family" ? draft.familyCareTypes : draft.carerCareTypes).filter((x): x is ServiceType => isServiceType(x));
+      const gap = firstIncompleteService(side, services, (asRecord(profileExtras.serviceDetails) as Record<string, DetailValues>));
+      if (gap) return t("onb.service.required", "Answer every question for {service} to continue.", { service: gap.service.replace("_", " ") });
+    }
     return "";
   }
 
   async function persist(): Promise<void> {
     if (!uid) throw new Error(t("onb.signinRequired", "Sign in to save your profile."));
     const patch = buildProfilePatch(side, draft, profile?.side);
-    const extras = cleanProfileExtras(profileExtras);
+    const { serviceDetails, ...extras } = cleanProfileExtras(profileExtras);
     const card = { ...patch.card, ...extras };
     const gallery = Array.isArray(card.gallery) ? card.gallery : [];
     const mainIndex = typeof card.mainPhotoIndex === "number" ? card.mainPhotoIndex : -1;
@@ -190,6 +199,8 @@ export default function Builder({ params }: ScreenProps) {
     if (!checked.success || (mainIndex >= 0 && mainIndex >= gallery.length)) throw new Error(t("onb.extras.invalid", "Check the profile details and photo choice before saving."));
     const finalPatch = { ...patch, card, ...(mainIndex >= 0 && typeof gallery[mainIndex] === "string" ? { photoUrl: gallery[mainIndex] as string } : {}) };
     await saveProfile(uid, finalPatch);
+    const offered = (side === "family" ? draft.familyCareTypes : draft.carerCareTypes).filter((x): x is ServiceType => isServiceType(x));
+    if (!isSecondary) await saveServiceDetails(uid, side, asRecord(serviceDetails) as Record<string, DetailValues>, offered);
     setProfile((current) => current ? { ...current, card: { ...current.card, ...card }, ...(finalPatch.photoUrl ? { photoUrl: finalPatch.photoUrl } : {}) } : ({ uid, side, name: draft.displayName.trim() || "Member", firstName: draft.displayName.trim().split(/\s+/)[0] || "Member", postcode: draft.postcode.trim(), photoUrl: finalPatch.photoUrl ?? (draft.photoKey || undefined), about: draft.intro.slice(0, 300), card, looking: {}, raw: {} } as Person));
   }
 
@@ -274,6 +285,7 @@ export default function Builder({ params }: ScreenProps) {
             <div className="row"><Button type="button" alt small onClick={() => setPrefSuggestion(null)}>{t("onb.ai.discard", "Discard")}</Button><Button type="button" small disabled={!prefSuggestion.matchedPhrases.length} onClick={() => { update({ style: [...new Set([...draft.style, ...(prefSuggestion.prefs.style ?? [])])], activities: [...new Set([...draft.activities, ...(prefSuggestion.prefs.activities ?? [])])], familyLanguages: [...new Set([...draft.familyLanguages, ...(prefSuggestion.prefs.languages ?? [])])] }); setPrefSuggestion(null); }}>{t("onb.ai.confirm", "Confirm")}</Button></div>
           </div>}
         </div>;
+        case "service-details": return <ServiceDetailsStep side="family" services={draft.familyCareTypes.filter((x): x is ServiceType => isServiceType(x))} values={asRecord(profileExtras.serviceDetails) as Record<string, DetailValues>} onChange={(serviceDetails) => setProfileExtras({ ...profileExtras, serviceDetails })} />;
         case "profile-extras": return <ProfileExtrasStep uid={uid} side="family" extras={profileExtras} familyAuPair={draft.familyCareTypes.includes("au_pair")} carerAuPair={false} onChange={setProfileExtras} />;
       }
     }
@@ -301,6 +313,7 @@ export default function Builder({ params }: ScreenProps) {
       case "rate": return <ChoiceCards items={AMOUNTS.map((amount) => ({ value: String(amount), label: t("onb.rate.amount", "A${amount}/hour", { amount }) }))} value={[String(draft.rate)]} onChange={(items) => { if (items[0]) update({ rate: Number(items[0]) }); }} />;
       case "availability": return <div className="onb-field-stack"><p className="muted onb-note">{t("onb.availability.help", "Choose the days and your usual time window.")}</p><ChoiceCards items={dayChoices()} value={draft.carerDays} onChange={(carerDays) => update({ carerDays })} multiple /><div className="onb-row"><label className="onb-field-stack"><span className="onb-label">{t("onb.schedule.from", "From")}</span><input className="field" type="time" value={draft.carerFrom} onChange={(event) => update({ carerFrom: event.target.value })} /></label><label className="onb-field-stack"><span className="onb-label">{t("onb.schedule.to", "To")}</span><input className="field" type="time" value={draft.carerTo} onChange={(event) => update({ carerTo: event.target.value })} /></label></div></div>;
       case "care-types": return <div className="onb-field-stack"><ChoiceCards items={careChoices()} value={draft.carerCareTypes} onChange={(carerCareTypes) => update({ carerCareTypes })} multiple /><Button type="button" alt onClick={requestIntroSuggestion}>{t("onb.ai.suggestIntro", "Suggest an introduction")}</Button>{renderIntroSuggestion()}</div>;
+      case "service-details": return <ServiceDetailsStep side="carer" services={draft.carerCareTypes.filter((x): x is ServiceType => isServiceType(x))} values={asRecord(profileExtras.serviceDetails) as Record<string, DetailValues>} onChange={(serviceDetails) => setProfileExtras({ ...profileExtras, serviceDetails })} />;
       case "profile-extras": return <ProfileExtrasStep uid={uid} side="carer" extras={profileExtras} familyAuPair={false} carerAuPair={draft.carerCareTypes.includes("au_pair")} onChange={setProfileExtras} />;
       default: return null;
     }

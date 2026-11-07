@@ -732,6 +732,22 @@ match /profiles/{uid} {
 // contactBy; the state machine carries the protection.)
 // C2 — the creator's claimed role must match their published
 // card's side.
+// Role-specific service answers (Phase 1, 7 Nov 2026) - OWNER MUST DEPLOY.
+// One doc per service (nanny | babysitter | au_pair). Owner writes; readable by the owner, a relationship
+// partner, or an opposite-side member who shares a service (same rule as the profile get).
+match /profiles/{uid}/service/{serviceId} {
+  allow read: if signedIn() && !isAnon()
+    && (request.auth.uid == uid
+      || exists(/databases/$(database)/documents/relationships/$(relId(request.auth.uid, uid)))
+      || (exists(/databases/$(database)/documents/profiles/$(request.auth.uid)) && profileEligible(get(/databases/$(database)/documents/profiles/$(uid)).data)));
+  allow create, update: if signedIn() && !isAnon() && request.auth.uid == uid
+    && serviceId in ["nanny", "babysitter", "au_pair"]
+    && request.resource.data.keys().hasOnly(["service", "side", "values", "updatedAt"])
+    && request.resource.data["service"] == serviceId
+    && request.resource.data.side in ["family", "carer"]
+    && request.resource.data.values is map && request.resource.data.values.size() <= 16;
+  allow delete: if signedIn() && request.auth.uid == uid;
+}
 match /profiles/{uid}/resume/{docId} {
   // Carer resume (5 Nov 2026): one self-reported document, owner writes, signed-in users read
   // (same read wall as the profile card). Phone numbers and emails are removed on the device.

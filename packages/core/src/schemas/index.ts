@@ -528,3 +528,4 @@ export type CareSpaceInvite = z.infer<typeof careSpaceInviteSchema>;
 export type UserSpaceIndex = z.infer<typeof userSpaceIndexSchema>;
 export type MealPlan = z.infer<typeof mealPlanSchema>;
 export type ShoppingItemData = z.infer<typeof shoppingItemSchema>;
+export * from "./roles.js";

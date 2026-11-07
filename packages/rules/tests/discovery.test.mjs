@@ -50,3 +50,23 @@ test("reciprocal profile discovery is enforced by Firestore rules", { concurrenc
   });
   await env.cleanup();
 });
+
+test("service answers subcollection", { concurrency: 1 }, async (t) => {
+  const env = await initializeTestEnvironment({ projectId: "demo-cc", firestore: { rules, host: "127.0.0.1", port: 8085 } });
+  const as = (uid) => env.authenticatedContext(uid, { firebase: { sign_in_provider: "password" } }).firestore();
+  const own = as("sd1"), fam = as("sdF"), other = as("sdO");
+  await env.withSecurityRulesDisabled(async (ctx) => { const fs = ctx.firestore();
+    await setDoc(doc(fs, "profiles/sd1"), P("carer", ["babysitter"]));
+    await setDoc(doc(fs, "profiles/sdF"), P("family", ["babysitter"]));
+    await setDoc(doc(fs, "profiles/sdO"), P("family", ["nanny"])); });
+  const body = (svc) => ({ service: svc, side: "carer", values: { minBookingHours: 3 }, updatedAt: new Date() });
+  await t.test("owner writes valid service doc", async () => assertSucceeds(setDoc(doc(own, "profiles/sd1/service/babysitter"), body("babysitter"))));
+  await t.test("unknown service denied", async () => assertFails(setDoc(doc(own, "profiles/sd1/service/housekeeper"), body("housekeeper"))));
+  await t.test("mismatched service field denied", async () => assertFails(setDoc(doc(own, "profiles/sd1/service/nanny"), body("babysitter"))));
+  await t.test("others cannot write", async () => assertFails(setDoc(doc(fam, "profiles/sd1/service/babysitter"), body("babysitter"))));
+  await t.test("eligible family reads, ineligible family denied", async () => {
+    await assertSucceeds(getDoc(doc(fam, "profiles/sd1/service/babysitter")));
+    await assertFails(getDoc(doc(other, "profiles/sd1/service/babysitter")));
+  });
+  await env.cleanup();
+});
