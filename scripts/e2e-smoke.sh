@@ -97,4 +97,4 @@ wait_for_port "http://127.0.0.1:4174/" "$SECOND_PID" "Second app preview" "$TMP_
 FILES_PID="$(start_group "$TMP_DIR/files.log" node "$ROOT/e2e/fake-files.mjs")"
 sleep 1
 printf 'Running Playwright smoke specs...\n'
-"$PLAYWRIGHT_CLI" test --config "$ROOT/e2e/playwright.config.mjs"
+"$PLAYWRIGHT_CLI" test --config "$ROOT/e2e/playwright.config.mjs" "$@"
