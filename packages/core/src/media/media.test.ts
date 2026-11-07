@@ -58,3 +58,37 @@ describe("any-size photos", () => {
     expect(out.size).toBeLessThanOrEqual(4.5 * 1024 * 1024); expect(calls).toBeGreaterThan(1);
   });
 });
+
+import { assertRealImage, dedupeUpload, isTransientError, sniffImageType, withRetry } from "./validate";
+describe("upload reliability", () => {
+  it("sniffs real image types from bytes", () => {
+    expect(sniffImageType(new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0, 0, 0, 0, 0]))).toBe("jpeg");
+    expect(sniffImageType(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]))).toBe("png");
+    expect(sniffImageType(new TextEncoder().encode("RIFF\0\0\0\0WEBPVP8 "))).toBe("webp");
+    expect(sniffImageType(new Uint8Array([0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70, 0x68, 0x65, 0x69, 0x63]))).toBe("heic");
+    expect(sniffImageType(new TextEncoder().encode("<html>not an image"))).toBeNull();
+  });
+  it("rejects a file renamed to .jpg but not an image", async () => {
+    await expect(assertRealImage(new File(["<?php evil ?>"], "cat.jpg", { type: "image/jpeg" }))).rejects.toThrow(/not a photo/);
+  });
+  it("retries transient failures only", async () => {
+    let n = 0;
+    const slept: number[] = [];
+    const ok = await withRetry(async () => { if (++n < 3) throw new Error("Could not reach the file service. Try again when you are online."); return "done"; }, { sleep: async (ms) => { slept.push(ms); } });
+    expect(ok).toBe("done"); expect(n).toBe(3); expect(slept).toEqual([600, 1200]);
+    let m = 0;
+    await expect(withRetry(async () => { m++; throw new Error("You do not have access to save this file."); }, { sleep: async () => {} })).rejects.toThrow(/access/);
+    expect(m).toBe(1);
+    expect(isTransientError(new Error("This file is too large to save."))).toBe(false);
+  });
+  it("cancel stops retries", async () => {
+    const c = new AbortController(); c.abort();
+    await expect(withRetry(async () => "x", { signal: c.signal })).rejects.toThrow(/stopped/);
+  });
+  it("duplicate taps share one upload", async () => {
+    let runs = 0;
+    const start = () => new Promise<string>((r) => setTimeout(() => { runs++; r("k"); }, 5));
+    const [a, b] = await Promise.all([dedupeUpload("same", start), dedupeUpload("same", start)]);
+    expect(a).toBe("k"); expect(b).toBe("k"); expect(runs).toBe(1);
+  });
+});

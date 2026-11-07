@@ -1,11 +1,12 @@
 import { auth } from "../auth";
 import { t } from "../i18n";
 import { containsExifBytes, stripExif } from "./exif";
+import { assertRealImage, dedupeUpload, withRetry } from "./validate";
 import { MEDIA_GATEKEEPER_BASE_URL, MAX_ATTACHMENT_BYTES, MAX_PHOTO_BYTES, MAX_VIDEO_BYTES, MAX_VIDEO_SECONDS, PRESIGNED_LINK_SECONDS } from "./config";
 
 export type MediaKind = "avatar" | "child" | "gallery" | "video" | "attachment";
 export type UploadProgress = { stage: "prepare" | "link" | "upload" | "confirm" | "done"; percent: number };
-export type MediaUploadOptions = { uid?: string; spaceId?: string; shareWithSpace?: boolean; file: File; kind: MediaKind; onProgress?: (progress: UploadProgress) => void };
+export type MediaUploadOptions = { uid?: string; spaceId?: string; shareWithSpace?: boolean; file: File; kind: MediaKind; onProgress?: (progress: UploadProgress) => void; signal?: AbortSignal };
 export type DocumentUploadOptions = { uid?: string; file: File; onProgress?: (progress: UploadProgress) => void };
 
 type GatekeeperLink = { url?: string; headers?: Record<string, string>; expiresIn?: number; key?: string; ok?: boolean };
@@ -161,7 +162,15 @@ async function videoDuration(file: File): Promise<number> {
   });
 }
 
-export async function uploadMediaFile({ uid, spaceId, shareWithSpace = false, file, kind, onProgress }: MediaUploadOptions): Promise<string> {
+const fileIds = new WeakMap<object, number>();
+let fileCounter = 0;
+export function uploadMediaFile(options: MediaUploadOptions): Promise<string> {
+  const f = options.file as object;
+  if (!fileIds.has(f)) fileIds.set(f, ++fileCounter);
+  return dedupeUpload(`${options.uid ?? ""}|${options.kind}|${fileIds.get(f)}`, () => uploadMediaFileOnce(options));
+}
+
+async function uploadMediaFileOnce({ uid, spaceId, shareWithSpace = false, file, kind, onProgress, signal }: MediaUploadOptions): Promise<string> {
   const { user, token } = await currentUser(uid);
   if (!file || file.size <= 0) throw new Error(t("media.chooseFile", "Choose a file first."));
   const id = makeId();
@@ -186,6 +195,7 @@ export async function uploadMediaFile({ uid, spaceId, shareWithSpace = false, fi
       if (await file.slice(0, 5).text() !== "%PDF-") throw new Error(t("media.attachment.format", "Choose a real PDF or photo file."));
       extension = "pdf";
     } else if (file.type.startsWith("image/")) {
+      await assertRealImage(file);
       blob = await stripExif(file);
       if (blob.size <= 0 || blob.size > MAX_PHOTO_BYTES) throw new Error(t("media.photoTooLarge", "This photo is too big to send. Try a smaller one."));
       if (containsExifBytes(await blob.arrayBuffer())) throw new Error(t("media.exifNotStripped", "Photo details could not be removed. Choose another photo."));
@@ -194,8 +204,9 @@ export async function uploadMediaFile({ uid, spaceId, shareWithSpace = false, fi
       throw new Error(t("media.attachment.format", "Choose a real PDF or photo file."));
     }
   } else {
-    if (!file.type.startsWith("image/")) throw new Error(t("media.choosePhoto", "Choose a photo first."));
+    if (!file.type.startsWith("image/") && !/\.(jpe?g|png|webp|heic|heif)$/i.test(file.name)) throw new Error(t("media.choosePhoto", "Choose a photo first."));
     report(onProgress, "prepare", 0);
+    await assertRealImage(file);
     blob = await stripExif(file);
     if (blob.size <= 0 || blob.size > MAX_PHOTO_BYTES) throw new Error(t("media.photoTooLarge", "This photo is too big to send. Try a smaller one."));
     if (containsExifBytes(await blob.arrayBuffer())) throw new Error(t("media.exifNotStripped", "Photo details could not be removed. Choose another photo."));
@@ -207,7 +218,7 @@ export async function uploadMediaFile({ uid, spaceId, shareWithSpace = false, fi
   const key = mediaKeyFor({ uid: user.uid, spaceId, shareWithSpace, kind, id, extension });
   if (!key) throw new Error(t("media.badLocation", "Could not choose a safe place for this file."));
   const keySpaceId = key.startsWith("spaces/") ? spaceId : undefined;
-  return uploadToGatekeeper({ token, uid: user.uid, key, mediaClass, spaceId: keySpaceId, file: blob, onProgress });
+  return withRetry(() => uploadToGatekeeper({ token, uid: user.uid, key, mediaClass, spaceId: keySpaceId, file: blob, onProgress }), { signal });
 }
 
 export async function uploadQualificationDocument({ uid, file, onProgress }: DocumentUploadOptions): Promise<string> {

@@ -100,6 +100,8 @@ export function WorldMap({ rows, savedIds, onSave, onOpen, focusUid }: { focusUi
       </div>
       {!pins.length && <p className="wm-empty" role="status">{t("map.empty", "No pins yet. People appear here when they share their area.")}</p>}
     </div>
+    <ul className="wm-list" aria-label={t("map.results", "Results on the map")}>{rows.slice(0, 30).map((r) => { const on = sel === r.person.uid; return <li key={r.person.uid}><button type="button" className={`wm-row${on ? " on" : ""}`} aria-pressed={on} onClick={() => setSel(on ? null : r.person.uid)}>
+      <strong>{r.person.firstName}</strong><span>{[suburbOf(r.person), r.km !== null ? `${r.km.toFixed(1)} km` : ""].filter(Boolean).join(" · ")}</span>{typeof r.result.score === "number" && <span className="wm-pct">{Math.round(r.result.score)}%</span>}</button></li>; })}</ul>
     {selected && <article className="wm-sheet" aria-label={selected.person.firstName}>
       <button type="button" className="wm-sheet-main" onClick={() => onOpen(selected)}>
         <strong>{selected.person.firstName}</strong>

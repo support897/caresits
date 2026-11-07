@@ -16,3 +16,7 @@
 .profile-chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0}
 .profile-chip{background:var(--blush);color:var(--pink-deep);border-radius:999px;padding:6px 12px;font-weight:700;font-size:15px}
 .profile-chip.pct{background:var(--butter);color:#3B2A33}
+
+.wm-list{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:6px;max-height:34vh;overflow:auto}
+.wm-row{width:100%;min-height:44px;display:flex;gap:10px;align-items:center;padding:8px 12px;border-radius:14px;background:#fff;text-align:start}
+.wm-row.on{outline:3px solid #C2335A}

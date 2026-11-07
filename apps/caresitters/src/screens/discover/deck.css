@@ -46,3 +46,13 @@
 .dtag.pink{background:#FFD1DE}.dtag.sage{background:#E8F1E8;color:#2E6B50}.dtag.butter{background:#FFF3C9}.dtag.lav{background:#EFEAF7}.dtag.peach{background:#FCEBE2}.dtag.sky{background:#E8F1F8}
 .deck-dintro{background:#fff;border-radius:18px;padding:12px 14px;margin:8px 0}
 .deck-dactions{display:grid;gap:10px;margin-top:12px}
+
+.deck-gallery{position:absolute;inset-inline:0;top:10px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 10px;z-index:4;pointer-events:none}
+.deck-gallery button{pointer-events:auto}
+.deck-gprev,.deck-gnext{width:44px;height:44px;border-radius:99px;background:#fffc;color:#3b2a33;font-size:26px;line-height:1;display:grid;place-items:center}
+.deck-gprev:disabled,.deck-gnext:disabled{opacity:.35}
+.deck-dots{display:flex;gap:6px;flex:1;justify-content:center}
+.deck-dot{width:10px;height:10px;min-width:10px;min-height:10px;border-radius:99px;background:#fff9;padding:0;box-shadow:0 0 0 1px #3b2a3355}
+.deck-dot.on{background:#C2335A;box-shadow:0 0 0 2px #fff}
+.deck-gallery :focus-visible{outline:3px solid #C2335A;outline-offset:2px}
+@media (prefers-reduced-motion:reduce){.deck-card *{transition:none!important;animation:none!important}}

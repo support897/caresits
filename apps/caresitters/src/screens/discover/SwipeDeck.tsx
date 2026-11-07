@@ -16,6 +16,14 @@ const heroKey = (p: DiscoveryPerson): string | undefined => {
   const i = typeof p.card.mainPhotoIndex === "number" ? p.card.mainPhotoIndex : 0;
   return g[i] ?? g[0] ?? p.photoUrl;
 };
+/** Every uploaded gallery photo, main photo first; falls back to the avatar. */
+export const galleryKeysOf = (p: DiscoveryPerson): string[] => {
+  const g = Array.isArray(p.card.gallery) ? p.card.gallery.filter((x): x is string => typeof x === "string") : [];
+  const main = typeof p.card.mainPhotoIndex === "number" ? p.card.mainPhotoIndex : 0;
+  if (!g.length) return p.photoUrl ? [p.photoUrl] : [];
+  const first = g[main] ?? g[0]!;
+  return [first, ...g.filter((k) => k !== first)];
+};
 const tagsOf = (p: DiscoveryPerson): string[] => {
   const raw = [...(Array.isArray(p.card.careTypes) ? p.card.careTypes : []), ...(Array.isArray(p.card.languages) ? p.card.languages : [])];
   return raw.filter((x): x is string => typeof x === "string").map((x) => x.replace(/_/g, " ")).slice(0, 3);
@@ -23,6 +31,7 @@ const tagsOf = (p: DiscoveryPerson): string[] => {
 
 function Card({ row, top, onSwipe, onOpen }: { row: DeckRow; top: boolean; onSwipe: (dir: 1 | -1) => void; onOpen: () => void }) {
   const p = row.person; const x = useMotionValue(0);
+  const keys = galleryKeysOf(p); const [photo, setPhoto] = useState(0); const shown = keys[photo] ?? heroKey(p);
   const rotate = useTransform(x, [-220, 0, 220], [-14, 0, 14]);
   const like = useTransform(x, [20, 120], [0, 1]); const nope = useTransform(x, [-120, -20], [1, 0]);
   const badge = verifiedBadgeText(p); const rating = reviewsOf(p); const rate = rateOf(p); const age = ageOf(p); const years = experienceYearsOf(p); const sub = suburbOf(p);
@@ -33,7 +42,7 @@ function Card({ row, top, onSwipe, onOpen }: { row: DeckRow; top: boolean; onSwi
     initial={{ scale: top ? 0.96 : 0.92, opacity: 0 }} animate={{ scale: top ? 1 : 0.94, opacity: 1, y: top ? 0 : 14 }}
     exit={{ x: 420, opacity: 0, rotate: 18, transition: { duration: 0.25 } }} transition={{ type: "spring", stiffness: 300, damping: 26 }}>
     <button type="button" className="deck-hit" onClick={onOpen} aria-label={t("deck.open", "Open {name}", { name: p.firstName })}>
-      <div className="deck-photo"><span className="deck-initial" aria-hidden="true">{p.firstName.slice(0, 1).toUpperCase()}</span><MediaImg src={heroKey(p)} alt="" className="deck-img" draggable={false} /></div>
+      <div className="deck-photo"><span className="deck-initial" aria-hidden="true">{p.firstName.slice(0, 1).toUpperCase()}</span><MediaImg key={shown} src={shown} alt="" className="deck-img" draggable={false} /></div>
       <div className="deck-scrim" />
       {badge && <span className="deck-badge">{badge === "Verified" ? t("deck.verified", "Verified") : t("deck.idSighted", "ID seen")}</span>}
       <div className="deck-info">
@@ -48,6 +57,11 @@ function Card({ row, top, onSwipe, onOpen }: { row: DeckRow; top: boolean; onSwi
         </div>
       </div>
     </button>
+    {top && keys.length > 1 && <div className="deck-gallery" onPointerDownCapture={(e) => e.stopPropagation()}>
+      <button type="button" className="deck-gprev" aria-label={t("deck.prevPhoto", "Previous photo")} disabled={photo === 0} onClick={() => setPhoto((n) => Math.max(0, n - 1))}>‹</button>
+      <div className="deck-dots" role="group" aria-label={t("deck.photoCount", "Photo {n} of {total}", { n: photo + 1, total: keys.length })}>{keys.map((k, n) => <button key={k} type="button" className={`deck-dot${n === photo ? " on" : ""}`} aria-label={t("deck.photoN", "Show photo {n}", { n: n + 1 })} aria-current={n === photo} onClick={() => setPhoto(n)} />)}</div>
+      <button type="button" className="deck-gnext" aria-label={t("deck.nextPhoto", "Next photo")} disabled={photo === keys.length - 1} onClick={() => setPhoto((n) => Math.min(keys.length - 1, n + 1))}>›</button>
+    </div>}
     {top && <><motion.span className="deck-stamp like" style={{ opacity: like }} aria-hidden="true">♥</motion.span><motion.span className="deck-stamp nope" style={{ opacity: nope }} aria-hidden="true">✕</motion.span></>}
   </motion.article>;
 }

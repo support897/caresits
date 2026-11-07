@@ -79,3 +79,10 @@ describe("Distance from postcode", () => {
     expect(distanceKmBetween({ ...person("a", {}), postcode: "4005" } as Person, { ...person("b", {}), postcode: "0001" } as Person)).toBeNull();
   });
 });
+
+import { galleryKeysOf } from "./SwipeDeck";
+describe("deck gallery", () => {
+  const person = (card: Record<string, unknown>, photoUrl?: string) => ({ uid: "u", side: "carer", name: "A", firstName: "A", photoUrl, card, looking: {}, raw: {} }) as never;
+  it("puts the main photo first and keeps every upload", () => expect(galleryKeysOf(person({ gallery: ["a", "b", "c"], mainPhotoIndex: 2 }))).toEqual(["c", "a", "b"]));
+  it("falls back to avatar, or nothing", () => { expect(galleryKeysOf(person({}, "avatar"))).toEqual(["avatar"]); expect(galleryKeysOf(person({}))).toEqual([]); });
+});
