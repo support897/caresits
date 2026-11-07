@@ -13,5 +13,5 @@ test("phone in dark mode and old dark setting: app stays white", async ({ browse
   const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
   const theme = await page.evaluate(() => document.body.dataset.theme);
   console.log("DARKPROOF", bg, theme);
-  expect(bg).toBe("rgb(255, 255, 255)"); expect(theme).toBe("light");
+  expect(bg).toBe("rgb(255, 251, 242)"); expect(theme).toBe("light");
 });

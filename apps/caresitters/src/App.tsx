@@ -9,15 +9,16 @@ const registry: Registry = {
   chat: () => import("./screens/Chat"), aupair: () => import("./screens/aupair/AuPairHome"), "aupair-profile": () => import("./screens/aupair/AuPairProfile"), "aupair-visa": () => import("./screens/aupair/VisaGuide"), "aupair-timeline": () => import("./screens/aupair/Timeline"),
   safety: () => import("./screens/Safety"), quals: () => import("./screens/Quals"), weights: () => import("./screens/Weights"), settings: () => import("./screens/Settings"), "edit-profile": () => import("./screens/Builder"), plans: () => import("./screens/Plans"),
 };
+const Splash = () => <div id="splash" role="status" aria-label="Loading"><img src="/brand/icon-caresitters.png" alt="" /><i /></div>;
 const Skel = () => <div className="scroll"><div className="sk" style={{ height: 160 }} /></div>;
 export function App() {
   useLang(); const { user, ready } = useAuth(); const { profile, loading, reload } = useMyProfile(user?.uid);
   const [tab, setTab] = useState("discover"); const [tourDone, setTourDone] = useState(() => localStorage.getItem("caresits-tour-done") === "1");
   useEffect(() => { document.body.dataset.theme = "light"; }, []);
   let body;
-  if (!ready) body = <Skel />;
+  if (!ready) body = <Splash />;
   else if (!user) body = <Suspense fallback={<Skel />}><WelcomeAuth /></Suspense>;
-  else if (loading) body = <Skel />;
+  else if (loading) body = <Splash />;
   else if (!profile) body = <Suspense fallback={<Skel />}><Builder params={{ onDone: reload }} /></Suspense>;
   else {
     const tabs = [{ key: "discover", label: t("tab.discover", "Discover"), icon: ICON.discover }, { key: "saved", label: t("tab.saved", "Saved"), icon: ICON.heart }, { key: "bookings", label: t("tab.bookings", "Bookings"), icon: ICON.cal }, { key: "messages", label: t("tab.messages", "Messages"), icon: ICON.chat }, { key: "me", label: profile.side === "family" ? t("tab.family", "My family") : t("tab.me", "Me"), icon: ICON.user }];

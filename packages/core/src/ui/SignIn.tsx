@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { Bunny } from "../Bunny"; import { useAuth } from "../hooks"; import { signInGoogle, signInApple, signInEmail, sendReset } from "../auth"; import { t } from "../i18n"; import { spring } from "./index";
+import { Bunny } from "../Bunny"; import { useAuth } from "../hooks"; import { signInGoogle, signInApple, signInEmail, sendReset } from "../auth"; import { t } from "../i18n"; import { APP2 } from "../brand"; import { spring } from "./index";
 /** One sign-in for both apps: Google, Apple, email. Session is remembered on the phone (see session.ts). */
 export function SignIn({ title, tagline }: { title: string; tagline: string }) {
   const { user } = useAuth(), reduced = useReducedMotion();
@@ -9,7 +9,7 @@ export function SignIn({ title, tagline }: { title: string; tagline: string }) {
   const run = async (fn: () => Promise<unknown>) => { setBusy(true); setMsg(""); try { await fn(); setBusy(false); } catch (x) { fail(x); } };
   if (user) return null; // never show sign-in to someone who is already in
   return <div className="scroll" style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 10, textAlign: "center", minHeight: "100%" }}>
-    <h1 style={{ margin: 0 }}><img src="/brand/lockup-tight.png" alt={title} style={{ width: "min(86vw, 340px)", height: "auto", display: "block", margin: "0 auto" }} /></h1><p className="muted" style={{ margin: "0 0 8px" }}>{tagline}</p>
+    <h1 style={{ margin: 0 }}>{title === APP2 ? <img src="/brand/lockup-tight.webp" alt={title} style={{ width: "min(86vw, 340px)", height: "auto", display: "block", margin: "0 auto" }} /> : <Bunny mood="hello" size={190} />}</h1><p className="muted" style={{ margin: "0 0 8px" }}>{tagline}</p>
     <button className="btn alt" disabled={busy} onClick={() => run(signInGoogle)}><b aria-hidden="true">G</b> {t("auth.google", "Continue with Google")}</button>
     <button className="btn apple" disabled={busy} onClick={() => run(signInApple)}>{t("auth.apple", "Continue with Apple")}</button>
     {!mail ? <button className="btn alt" disabled={busy} onClick={() => setMail(true)}>{t("auth.email", "Continue with email")}</button> : <>

@@ -1,6 +1,6 @@
-@font-face{font-family:"Fredoka";src:url("./assets/fonts/Fredoka.ttf");font-weight:300 700;font-display:swap}
-@font-face{font-family:"Nunito";src:url("./assets/fonts/Nunito.ttf");font-weight:200 1000;font-display:swap}
-:root{color-scheme:light;--ink:#3B2A33;--cream:#FFFBF2;--sage:#FFE08A;--blush:#FFE3EC;--bunny:#F4A9BC;--pink-deep:#C2335A;--soft:#FFF4F7;--line:#F6E7ED;--card:#fff;--text:#3B2A33;--muted:#76626C;--danger:#B3264A;--good:#C2335A;--good-bg:#FFEFB0;--good-text:#6B4A00;--on-accent:#3B2A33;--focus-ring:#C2335A;--scrim:rgba(59,42,51,.45);--avatar-text:#3B2A33;--pip-text:#fff;--apple-button:#000;--apple-button-text:#fff;--butter:#FFE08A;--sky:#A9D4F5;--sky-deep:#2B6CA3;--sky-soft:#EEF7FE;--safe-t:env(safe-area-inset-top);--safe-b:env(safe-area-inset-bottom);--r:24px;--shadow:0 6px 24px #f4a9bc33;--font-title:Fredoka,"Baloo 2",system-ui,sans-serif;--font-name:Nunito,system-ui,sans-serif;--font-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+@font-face{font-family:"Fredoka";src:url("./assets/fonts/Fredoka.woff2") format("woff2");font-weight:300 700;font-display:swap}
+@font-face{font-family:"Nunito";src:url("./assets/fonts/Nunito.woff2") format("woff2");font-weight:200 1000;font-display:swap}
+:root{color-scheme:light;--lav:#EFEAF7;--lav-deep:#62517F;--peach:#FCEBE2;--sky:#E8F1F8;--sage-soft:#E8F1E8;--sage-ink:#2E6B50;--ink:#3B2A33;--cream:#FFFBF2;--sage:#FFE08A;--blush:#FFE3EC;--bunny:#F4A9BC;--pink-deep:#C2335A;--soft:#FFF4F7;--line:#F6E7ED;--card:#fff;--text:#3B2A33;--muted:#76626C;--danger:#B3264A;--good:#C2335A;--good-bg:#FFEFB0;--good-text:#6B4A00;--on-accent:#3B2A33;--focus-ring:#C2335A;--scrim:rgba(59,42,51,.45);--avatar-text:#3B2A33;--pip-text:#fff;--apple-button:#000;--apple-button-text:#fff;--butter:#FFE08A;--sky:#A9D4F5;--sky-deep:#2B6CA3;--sky-soft:#EEF7FE;--safe-t:env(safe-area-inset-top);--safe-b:env(safe-area-inset-bottom);--r:24px;--shadow:0 6px 24px #f4a9bc33;--font-title:Fredoka,"Baloo 2",system-ui,sans-serif;--font-name:Nunito,system-ui,sans-serif;--font-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body,#root{height:100%;margin:0}
 body{background:var(--cream);color:var(--text);font:400 17px/1.5 var(--font-body);overscroll-behavior:none}
 h1,h2,h3{font-family:var(--font-title);margin:0;font-weight:600;line-height:1.15;color:var(--text);letter-spacing:.1px}h1{font-size:34px}h2{font-size:27px}h3{font-size:21px;font-family:var(--font-name);font-weight:800}
@@ -36,3 +36,10 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;paddin
 .me-photo.add{border:2px dashed var(--bunny);background:#fff;color:var(--pink-deep);font:700 34px var(--font-title)}
 
 .me-strength{margin:10px 16px;display:grid;gap:6px;font-weight:700;color:var(--ink)}.me-strength i{display:block;block-size:12px;border-radius:99px;background:linear-gradient(var(--butter),var(--butter)) no-repeat,var(--blush)}.me-strength{position:relative}.me-strength span{font-size:15px}.me-strength.full{color:var(--pink-deep)}
+
+/* Pastel family: lavender, peach, powder blue, sage. Dark ink text only (all pairs >= 6:1). */
+.tint-lav{background:var(--lav)}.tint-peach{background:var(--peach)}.tint-sky{background:var(--sky)}.tint-sage{background:var(--sage-soft)}
+.tag.good{background:var(--sage-soft);color:var(--sage-ink)}.tag.info{background:var(--sky);color:var(--text)}
+.topbar{background:linear-gradient(180deg,var(--soft),#fff)}
+.onb-welcome-card:nth-child(1){background:var(--lav)}.onb-welcome-card:nth-child(2){background:var(--peach)}
+.topbar-switch{width:auto;gap:8px;padding:0 12px 0 6px;display:flex;align-items:center}.topbar-label{font:800 17px var(--font-name);color:var(--text)}

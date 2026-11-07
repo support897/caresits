@@ -1,6 +1,6 @@
 import "../lib/i18n";
 import { useEffect, useMemo, useState } from "react";
-import { Avatar, Button, Chip, Empty, t, type ScreenProps, useAuth, useNav } from "@cc/core";
+import { ExamplePreview, Avatar, Button, Chip, Empty, t, type ScreenProps, useAuth, useNav } from "@cc/core";
 import { readCalendar } from "../data/calendar";
 import { filterInboxRows, readSpaceChatPreview, type InboxFilter, type SpaceMessage } from "../data/chatSpace";
 import { loadChildren, type ChildProfile } from "../data/children";
@@ -177,6 +177,6 @@ export default function Screen({ params }: ScreenProps<ChatsParams>) {
             {row.unread > 0 && <span className="pip" style={{ position: "static", flex: "none", fontSize: 17, minWidth: 32, minHeight: 32, height: "auto" }} aria-label={unreadLabel}>{row.unread > 99 ? "99+" : row.unread}</span>}
           </button>;
         })}
-      </div> : <Empty mood="hello" title={t("cs.chats.empty.title", "A quiet place to start")} body={filter === "Requests" ? t("cs.chats.empty.requests", "Requests for your family will show here.") : t("cs.chats.empty.body", "Invite your own nanny, grandparent or au pair to begin.")} />}
+      </div> : <><Empty mood="hello" title={t("cs.chats.empty.title", "A quiet place to start")} body={filter === "Requests" ? t("cs.chats.empty.requests", "Requests for your family will show here.") : t("cs.chats.empty.body", "Invite your own nanny, grandparent or au pair to begin.")} /><ExamplePreview kind="chats" /></>}
   </div>;
 }

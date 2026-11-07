@@ -31,11 +31,11 @@ function fitView(pins: Pin[], vw: number, vh: number): View {
 }
 const PIN = "M0 0C-13-13-19-23-19-33A19 19 0 0 1 19-33C19-23 13-13 0 0Z";
 
-export function WorldMap({ rows, savedIds, onSave, onOpen }: { rows: DeckRow[]; savedIds: Set<string>; onSave: (row: DeckRow) => void; onOpen: (row: DeckRow) => void }) {
+export function WorldMap({ rows, savedIds, onSave, onOpen, focusUid }: { focusUid?: string; rows: DeckRow[]; savedIds: Set<string>; onSave: (row: DeckRow) => void; onOpen: (row: DeckRow) => void }) {
   const box = useRef<HTMLDivElement>(null);
   const [vb, setVb] = useState({ w: WORLD_W, h: 1100 });
   const [view, setView] = useState<View>({ k: 1, tx: 0, ty: 0 });
-  const [sel, setSel] = useState<string | null>(null);
+  const [sel, setSel] = useState<string | null>(focusUid ?? null);
   const pins = useMemo(() => buildPins(rows), [rows]);
   const fitted = useRef(false);
   const pointers = useRef(new Map<number, { x: number; y: number }>());

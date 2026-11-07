@@ -3,11 +3,12 @@ import { AnimatePresence, motion, useMotionValue, useTransform } from "framer-mo
 import { Bunny, MediaImg, agentSay, haptic, t } from "@cc/core";
 import type { DiscoveryPerson } from "../../data/people";
 import type { MatchResult } from "../../../../../packages/core/src/match/types";
-import { experienceYearsOf, rateOf, reviewsOf, suburbOf, verifiedBadgeText } from "./helpers";
+import { availabilitySummary, experienceYearsOf, introOf, rateOf, reviewsOf, suburbOf, verifiedBadgeText } from "./helpers";
+import { MiniMap } from "../map/MiniMap";
 import "./deck.css";
 
 export type DeckRow = { person: DiscoveryPerson; km: number | null; result: MatchResult };
-type Props = { rows: DeckRow[]; savedIds: Set<string>; onSave: (row: DeckRow) => void; onOpen: (row: DeckRow) => void; onWhy: (row: DeckRow) => void; onList: () => void };
+type Props = { rows: DeckRow[]; savedIds: Set<string>; onSave: (row: DeckRow) => void; onOpen: (row: DeckRow) => void; onWhy: (row: DeckRow) => void; onList: () => void; onMap?: (row: DeckRow) => void };
 
 const ageOf = (p: DiscoveryPerson) => (typeof p.card.age === "number" && p.card.age >= 18 ? p.card.age : undefined);
 const heroKey = (p: DiscoveryPerson): string | undefined => {
@@ -52,8 +53,8 @@ function Card({ row, top, onSwipe, onOpen }: { row: DeckRow; top: boolean; onSwi
 }
 
 /** Tinder-style deck: swipe right to save, left to skip, tap to open. */
-export function SwipeDeck({ rows, savedIds, onSave, onOpen, onWhy, onList }: Props) {
-  const [i, setI] = useState(0); const [last, setLast] = useState<number | null>(null); const [burst, setBurst] = useState(false);
+export function SwipeDeck({ rows, savedIds, onSave, onOpen, onWhy, onList, onMap }: Props) {
+  const [detail, setDetail] = useState<DeckRow | null>(null); const [i, setI] = useState(0); const [last, setLast] = useState<number | null>(null); const [burst, setBurst] = useState(false);
   const cur = rows[i]; const next = rows[i + 1];
   function go(dir: 1 | -1) {
     if (!cur) return; haptic();
@@ -66,7 +67,8 @@ export function SwipeDeck({ rows, savedIds, onSave, onOpen, onWhy, onList }: Pro
   return <div className="deck">
     <div className="deck-stack" data-testid="deck">
       {next && <Card key={next.person.uid} row={next} top={false} onSwipe={() => {}} onOpen={() => {}} />}
-      <AnimatePresence initial={false}><Card key={cur.person.uid} row={cur} top onSwipe={go} onOpen={() => { agentSay("open-profile"); onOpen(cur); }} /></AnimatePresence>
+      <AnimatePresence initial={false}><Card key={cur.person.uid} row={cur} top onSwipe={go} onOpen={() => { agentSay("open-profile"); setDetail(cur); }} /></AnimatePresence>
+      <span className="deck-peek" aria-hidden="true"><Bunny mood="point" size={72} /></span>
       {burst && <div className="deck-burst" aria-hidden="true"><Bunny mood="celebrate" size={110} /></div>}
     </div>
     <div className="deck-actions">
@@ -75,5 +77,31 @@ export function SwipeDeck({ rows, savedIds, onSave, onOpen, onWhy, onList }: Pro
       <button type="button" className="deck-btn like" onClick={() => go(1)} aria-label={t("deck.save", "Save")}>♥</button>
       <button type="button" className="deck-btn small" onClick={() => onWhy(cur)} aria-label={t("deck.why", "Why this match")}>i</button>
     </div>
+
+    {detail && <div className="deck-detail" role="dialog" aria-modal="true" aria-label={detail.person.firstName}>
+      <div className="deck-detail-card">
+        <button type="button" className="deck-x" onClick={() => setDetail(null)} aria-label={t("deck.close", "Close")}>✕</button>
+        <div className="deck-detail-photo"><span aria-hidden="true">{detail.person.firstName.slice(0, 1).toUpperCase()}</span><MediaImg src={heroKey(detail.person)} alt="" className="deck-img" draggable={false} /></div>
+        <h2 className="deck-dname">{detail.person.firstName}{ageOf(detail.person) ? <span> {ageOf(detail.person)}</span> : null}</h2>
+        <p className="muted" style={{ margin: "0 0 8px" }}>{[suburbOf(detail.person), detail.km !== null ? `${detail.km.toFixed(1)} km` : ""].filter(Boolean).join(" · ")}</p>
+        <div className="deck-dtags">
+          {typeof detail.result.score === "number" && <span className="dtag pink">{Math.round(detail.result.score)}% {t("deck.match", "match")}</span>}
+          {verifiedBadgeText(detail.person) && <span className="dtag sage">{verifiedBadgeText(detail.person) === "Verified" ? t("deck.verified", "Verified") : t("deck.idSighted", "ID seen")}</span>}
+          {rateOf(detail.person) !== undefined && <span className="dtag butter">A${rateOf(detail.person)}/hr</span>}
+          {reviewsOf(detail.person)?.rating !== undefined && <span className="dtag lav">★ {reviewsOf(detail.person)!.rating!.toFixed(1)}</span>}
+          {experienceYearsOf(detail.person) !== undefined && <span className="dtag peach">{experienceYearsOf(detail.person)} {t("deck.years", "years")}</span>}
+          {tagsOf(detail.person).map((tag) => <span key={tag} className="dtag sky">{tag}</span>)}
+        </div>
+        {introOf(detail.person) && <p className="deck-dintro">{introOf(detail.person)}</p>}
+        <p><b>{t("deck.avail", "Availability")}:</b> {availabilitySummary(detail.person) ?? t("disc.notStated", "Not stated")}</p>
+        <MiniMap person={detail.person} />
+        <div className="deck-dactions">
+          {onMap && <button type="button" className="btn alt" onClick={() => { const r = detail; setDetail(null); onMap(r); }}>🌍 {t("deck.seeMap", "See on the world map")}</button>}
+          <button type="button" className="btn alt" onClick={() => onWhy(detail)}>{t("deck.why", "Why this match")}</button>
+          <button type="button" className="btn" onClick={() => { const r = detail; setDetail(null); onOpen(r); }}>{t("deck.fullProfile", "Open full profile")}</button>
+          <button type="button" className="btn alt" onClick={() => { if (!savedIds.has(detail.person.uid)) onSave(detail); setDetail(null); }}>♥ {t("deck.save", "Save")}</button>
+        </div>
+      </div>
+    </div>}
   </div>;
 }

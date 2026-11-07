@@ -35,7 +35,7 @@ export default function Discover({ params }: ScreenProps) {
   const [requirements, setRequirements] = useState<MatchRequirements>({});
   const [matchWeights, setMatchWeights] = useState<Partial<MatchWeights> | undefined>(undefined);
   const [deckMode, setDeckMode] = useState(true);
-  const [mapMode, setMapMode] = useState(false);
+  const [mapMode, setMapMode] = useState(false); const [mapFocus, setMapFocus] = useState<string | undefined>(undefined);
   const [showFilters, setShowFilters] = useState(false);
   const [deckIndex, setDeckIndex] = useState(0);
   const [why, setWhy] = useState<Row | null>(null);
@@ -215,7 +215,7 @@ export default function Discover({ params }: ScreenProps) {
       <h1>{title}</h1>
       <div className="row" style={{ gap: 8 }}>
         <button type="button" className="icon-btn" onClick={() => { setMapMode(false); setDeckMode((v) => !v); }} aria-label={deckMode ? t("disc.showList", "Show list") : t("disc.showCards", "Show cards")}>{deckMode ? "☰" : "♥"}</button>
-        <button type="button" className={`icon-btn${mapMode ? " on" : ""}`} onClick={() => setMapMode((v) => !v)} aria-pressed={mapMode} aria-label={t("disc.map", "Map")}>🌍</button>
+        <button type="button" className={`icon-btn${mapMode ? " on" : ""}`} onClick={() => { setMapFocus(undefined); setMapMode((v) => !v); }} aria-pressed={mapMode} aria-label={t("disc.map", "Map")}>🌍</button>
         <button type="button" className="icon-btn" onClick={() => setShowFilters(true)} aria-label={t("disc.filters", "Filters")}>⚙</button>
       </div>
     </div>
@@ -269,8 +269,8 @@ export default function Discover({ params }: ScreenProps) {
       </div>
       <Button type="button" onClick={() => setShowFilters(false)}>{t("disc.done", "Done")}</Button>
     </div></Sheet>}
-    {mapMode && !loading && !loadError && <WorldMap rows={rows} savedIds={savedIds} onSave={(row) => void toggleSave(row)} onOpen={openPerson} />}
-    {deckMode && !mapMode && !loading && !loadError && <SwipeDeck rows={eligibleRows.length ? eligibleRows : radiusRows} savedIds={savedIds} onSave={(row) => void toggleSave(row)} onOpen={openPerson} onWhy={(row) => setWhy(row)} onList={() => setDeckMode(false)} />}
+    {mapMode && !loading && !loadError && <WorldMap focusUid={mapFocus} rows={rows} savedIds={savedIds} onSave={(row) => void toggleSave(row)} onOpen={openPerson} />}
+    {deckMode && !mapMode && !loading && !loadError && <SwipeDeck rows={eligibleRows.length ? eligibleRows : radiusRows} savedIds={savedIds} onSave={(row) => void toggleSave(row)} onOpen={openPerson} onWhy={(row) => setWhy(row)} onList={() => setDeckMode(false)} onMap={(row) => { setMapFocus(row.person.uid); setMapMode(true); }} />}
 
     {(!mapMode && (!deckMode || loading || loadError)) && <div className="scroll">
 

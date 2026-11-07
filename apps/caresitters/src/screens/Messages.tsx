@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { db, MediaImg, loadPeople, type Person, Bunny, t, useNav } from "@cc/core";
+import { ExamplePreview, db, MediaImg, loadPeople, type Person, Bunny, t, useNav } from "@cc/core";
 import { collection, doc, getDocs, setDoc } from "firebase/firestore";
 import { ageLabel, PAGE, pageSlice } from "./ageLabel";
 import { isProfileComplete, pairIdFor, planContact } from "../lib/booking";
@@ -280,7 +280,7 @@ export default function Messages({ params }: { params: Params }) {
           </span>
         </button>)}
         {pageSlice(rows, shown).more > 0 && <button type="button" className="btn alt" data-testid="load-more" onClick={() => setShown((n) => n + PAGE)} style={{ marginBlockStart: 12 }}>{t("messages.loadMore", "Load more")}</button>}
-      </div> : <div className="empty" style={{ paddingBlock: 22 }}><Bunny mood="hello" size={94} /><h2>{emptyTitle}</h2><p className="muted">{emptyBody}</p></div>}
+      </div> : <div className="empty" style={{ paddingBlock: 22 }}><Bunny mood="hello" size={94} /><h2>{emptyTitle}</h2><p className="muted">{emptyBody}</p><ExamplePreview kind="messages" /></div>}
       <p className="muted center" style={{ marginBlock: 18 }}>{t("messages.private.note", "Every family has its own private space.")}</p>
     </div>
     {pickerOpen && <div onClick={(event) => { if (event.target === event.currentTarget && !pickerBusy) setPickerOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 1000, display: "grid", placeItems: "center", padding: 12, background: "color-mix(in srgb, var(--ink) 45%, transparent)" }}>

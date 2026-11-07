@@ -26,3 +26,23 @@
 @media (prefers-reduced-motion:reduce){.deck-burst{animation:none;opacity:0}}
 
 .deck-tag.pct{background:var(--pink-deep);color:#fff}
+
+/* Cuter pastel deck */
+.deck-card{border:5px solid #fff;box-shadow:0 12px 32px #f4a9bc77,0 0 0 3px #FFE3EC}
+.deck-photo{background:linear-gradient(160deg,#FFD9E4,#E3DBF5 55%,#D6EAF8)}
+.deck-scrim{background:linear-gradient(to top,rgba(84,44,66,.85),rgba(84,44,66,0))}
+.deck-tag{background:#FFF3C9;color:#3B2A33}.deck-tag.pct{background:#FFD1DE;color:#3B2A33}
+.deck-peek{position:absolute;inset-inline-end:-6px;inset-block-start:-46px;z-index:3;pointer-events:none}
+.deck-btn{background:linear-gradient(180deg,#fff,#FFF4F7)}
+.deck-btn.like{background:#FFD1DE}.deck-btn.nope{background:#E3F0FA}
+.deck-detail{position:fixed;inset:0;z-index:90;background:rgba(59,42,51,.4);display:flex;align-items:flex-end}
+.deck-detail-card{position:relative;background:var(--cream);width:100%;max-height:92%;overflow:auto;border-radius:28px 28px 0 0;padding:16px 18px calc(24px + var(--safe-b));border-top:6px solid #FFD1DE}
+.deck-x{position:absolute;inset-block-start:12px;inset-inline-end:12px;width:48px;height:48px;border-radius:50%;background:#fff;z-index:2;font-size:20px;box-shadow:0 2px 10px #0002}
+.deck-detail-photo{position:relative;height:220px;border-radius:22px;overflow:hidden;background:linear-gradient(160deg,#FFD9E4,#E3DBF5 55%,#D6EAF8);display:grid;place-items:center;margin-bottom:12px}
+.deck-detail-photo>span{font:700 90px var(--font-title);color:#fff}
+.deck-dname{font-size:32px}.deck-dname span{font-weight:400}
+.deck-dtags{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 10px}
+.dtag{border-radius:99px;padding:5px 12px;font-weight:800;font-size:16px;color:var(--text)}
+.dtag.pink{background:#FFD1DE}.dtag.sage{background:#E8F1E8;color:#2E6B50}.dtag.butter{background:#FFF3C9}.dtag.lav{background:#EFEAF7}.dtag.peach{background:#FCEBE2}.dtag.sky{background:#E8F1F8}
+.deck-dintro{background:#fff;border-radius:18px;padding:12px 14px;margin:8px 0}
+.deck-dactions{display:grid;gap:10px;margin-top:12px}

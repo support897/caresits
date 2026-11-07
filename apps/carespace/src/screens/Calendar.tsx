@@ -1,6 +1,6 @@
 import "../lib/i18n";
 import { useEffect, useMemo, useState } from "react";
-import { BackBar, Chip, Empty, t, type ScreenProps, useAuth, useNav } from "@cc/core";
+import { ExamplePreview, BackBar, Chip, Empty, t, type ScreenProps, useAuth, useNav } from "@cc/core";
 import { calendarDaysForPeriod, decideTimeOffRequest, readCalendarForSpaces, shiftCalendarMonth, type CalendarPeriod } from "../data/calendar";
 import { expandCalendarEventsForRange, type CalendarEventWithRecurrence } from "../data/events";
 import { listUserSpaces, type SpaceSummary } from "../data/spaces";
@@ -217,7 +217,7 @@ export default function Screen({ params }: ScreenProps<CalendarParams>) {
       <h2 style={{ fontSize: 24, margin: "4px 0 10px" }}>{period === "month" ? new Date(`${selectedDay}T12:00:00`).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) : periodLabel}</h2>
       {visibleEvents.length ? <div style={{ display: "grid", gap: 10 }}>
         {visibleEvents.map((event) => renderEvent(event, period === "week"))}
-      </div> : <Empty mood="think" title={t("cs.calendar.empty.title", "Nothing planned for this day")} body={period === "week" ? t("cs.calendar.empty.week", "No shifts, school, activities or pickups are planned this week.") : t("cs.calendar.empty.body", "Shifts, school, activities and pickups will show here.")} />}
+      </div> : <><Empty mood="think" title={t("cs.calendar.empty.title", "Nothing planned for this day")} body={period === "week" ? t("cs.calendar.empty.week", "No shifts, school, activities or pickups are planned this week.") : t("cs.calendar.empty.body", "Shifts, school, activities and pickups will show here.")} /><ExamplePreview kind="calendar" /></>}
     </div>
   </div>;
 }

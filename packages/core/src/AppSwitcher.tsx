@@ -1,5 +1,5 @@
 import { APP1, APP2, type AppId } from "./brand";
-import { t } from "./i18n";
+import { t } from "./i18n"; import { Bunny } from "./Bunny";
 
 const STORE: Record<AppId, string> = {
   caresitters: "https://apps.apple.com/au/app/id6823577907",
@@ -43,9 +43,9 @@ export function Wordmark({ app, size = 26 }: { app: AppId; size?: number }) {
 export function AppTopBar({ current }: { current: AppId }) {
   const other: AppId = current === "caresitters" ? "carespace" : "caresitters";
   return <header className="topbar">
-    <Wordmark app={current} />
+    {current === "caresitters" ? <Bunny mood="hello" size={44} /> : <Wordmark app={current} />}
     <button type="button" className="topbar-switch" onClick={() => openSisterApp(other)} aria-label={t("switch.open", "Open {app}", { app: NAME[other] })}>
-      <AppMark app={other} size={36} />
+      <AppMark app={other} size={36} /><span className="topbar-label">{NAME[other]}</span>
     </button>
   </header>;
 }

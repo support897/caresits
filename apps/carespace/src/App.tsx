@@ -7,6 +7,7 @@ const registry: Registry = {
   team: () => import("./screens/Team"), invite: () => import("./screens/Invite"), join: () => import("./screens/JoinScreen"), profile: () => import("./screens/Profile"), medical: () => import("./screens/Medical"), shopping: () => import("./screens/Shopping"), meals: () => import("./screens/Meals"), activity: () => import("./screens/ActivityDetail"),
   timeoff: () => import("./screens/TimeOff"), "event-edit": () => import("./screens/EventEdit"), notifications: () => import("./screens/Notifications"), privacy: () => import("./screens/PrivacyPerms"), emergency: () => import("./screens/EmergencySheet"),
 };
+const Splash = () => <div id="splash" role="status" aria-label="Loading"><img src="/brand/icon-carespace.png" alt="" /><i /></div>;
 const Skel = () => <div className="scroll"><div className="sk" style={{ height: 160 }} /></div>;
 
 function inviteInputFromUrl(): string {
@@ -48,7 +49,7 @@ export function App() {
   }, []);
   const onWelcomeDone = () => { localStorage.setItem("caresits-cs-welcome", "1"); setSeen(true); };
   let body;
-  if (!ready) body = <Skel />;
+  if (!ready) body = <Splash />;
   else if (!user) body = <div className="app"><SignIn title={APP2} tagline={t("cs.tagline", "Run the care day.")} /></div>;
   else body = <NavHost registry={registry}><SignedInApp uid={user.uid} name={user.displayName ?? ""} email={user.email ?? ""} seen={seen} inviteInput={inviteInput} onWelcomeDone={onWelcomeDone} /></NavHost>;
   return <>{body}<ToastHost /></>;
