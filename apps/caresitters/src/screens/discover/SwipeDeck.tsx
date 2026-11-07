@@ -68,7 +68,7 @@ export function SwipeDeck({ rows, savedIds, onSave, onOpen, onWhy, onList, onMap
     <div className="deck-stack" data-testid="deck">
       {next && <Card key={next.person.uid} row={next} top={false} onSwipe={() => {}} onOpen={() => {}} />}
       <AnimatePresence initial={false}><Card key={cur.person.uid} row={cur} top onSwipe={go} onOpen={() => { agentSay("open-profile"); setDetail(cur); }} /></AnimatePresence>
-      <span className="deck-peek" aria-hidden="true"><Bunny mood="point" size={72} /></span>
+      <span className="deck-peek" aria-hidden="true"><Bunny mood="point" size={56} /></span>
       {burst && <div className="deck-burst" aria-hidden="true"><Bunny mood="celebrate" size={110} /></div>}
     </div>
     <div className="deck-actions">

@@ -23,7 +23,7 @@ const SAMPLES: Record<PreviewKind, { who: string; line: string; tag: string; tin
 export function ExamplePreview({ kind }: { kind: PreviewKind }) {
   return <section aria-label={t("preview.label", "Example of how this will look")} style={{ margin: "6px 0 0", opacity: 0.92 }}>
     <p className="muted" style={{ margin: "0 0 8px", textAlign: "center", fontWeight: 700 }}>{t("preview.title", "Here is how it will look")}</p>
-    {SAMPLES[kind].map((s) => <div key={s.who} className={`card tint-${s.tint}`} style={{ display: "flex", gap: 12, alignItems: "center", padding: 14, marginBottom: 10, boxShadow: "none" }} aria-hidden="true">
+    {SAMPLES[kind].map((s) => <div key={s.who} className={`card tint-${s.tint}`} style={{ display: "flex", gap: 12, alignItems: "center", padding: 14, marginBottom: 10, boxShadow: "none", textAlign: "start" }} aria-hidden="true">
       <span className="av" style={{ background: "#fff" }}>{s.who.slice(0, 1)}</span>
       <span style={{ flex: 1, minWidth: 0 }}><b style={{ display: "block" }}>{s.who}</b><span>{s.line}</span></span>
       {s.tag && <span className="tag info">{s.tag}</span>}

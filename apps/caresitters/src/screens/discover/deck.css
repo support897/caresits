@@ -32,7 +32,7 @@
 .deck-photo{background:linear-gradient(160deg,#FFD9E4,#E3DBF5 55%,#D6EAF8)}
 .deck-scrim{background:linear-gradient(to top,rgba(84,44,66,.85),rgba(84,44,66,0))}
 .deck-tag{background:#FFF3C9;color:#3B2A33}.deck-tag.pct{background:#FFD1DE;color:#3B2A33}
-.deck-peek{position:absolute;inset-inline-end:-6px;inset-block-start:-46px;z-index:3;pointer-events:none}
+.deck-peek{position:absolute;inset-inline-end:6px;inset-block-start:-20px;z-index:3;pointer-events:none}
 .deck-btn{background:linear-gradient(180deg,#fff,#FFF4F7)}
 .deck-btn.like{background:#FFD1DE}.deck-btn.nope{background:#E3F0FA}
 .deck-detail{position:fixed;inset:0;z-index:90;background:rgba(59,42,51,.4);display:flex;align-items:flex-end}
