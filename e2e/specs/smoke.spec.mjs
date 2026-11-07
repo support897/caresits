@@ -32,6 +32,15 @@ test("email signup builds a saved family profile and signs out cleanly", async (
   await page.getByRole("button", { name: /Babysitter/ }).click();
   await page.getByRole("button", { name: "Save and continue", exact: true }).click();
 
+  await expect(page.getByRole("heading", { name: "Care details", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Save and continue", exact: true }).click();
+  await expect(page.getByText("Answer every question for babysitter to continue.")).toBeVisible();
+  await page.getByLabel("Care instructions (short)").fill("Bedtime at 7, no screens");
+  await page.getByLabel("Date needed (YYYY-MM-DD)").fill("2026-12-01");
+  await page.getByLabel("Hours needed").fill("4");
+  await page.getByRole("group").filter({ hasText: "Sitter needs own transport" }).getByRole("button", { name: "No" }).click().catch(async () => { await page.getByRole("button", { name: "No", exact: true }).click(); });
+  await page.getByRole("button", { name: "Save and continue", exact: true }).click();
+
   await expect(page.getByRole("heading", { name: "Your schedule", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Mon", exact: true }).click();
   await page.locator('input[type="time"]').nth(0).fill("08:00");
