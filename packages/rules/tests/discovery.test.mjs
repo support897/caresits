@@ -1,4 +1,3 @@
-process.on("uncaughtException",e=>{console.log(e.stack)});
 import { test } from "node:test";
 import { initializeTestEnvironment, assertFails, assertSucceeds } from "@firebase/rules-unit-testing";
 import { collection, doc, getDoc, getDocs, query, setDoc, where } from "firebase/firestore";
@@ -13,7 +12,7 @@ const people = {
 };
 
 test("reciprocal profile discovery is enforced by Firestore rules", { concurrency: 1 }, async (t) => {
-  let env; try { env = await initializeTestEnvironment({ projectId: "demo-cc", firestore: { rules, host: "127.0.0.1", port: 8085 } }); } catch (e) { console.log(e.stack); throw e; }
+  const env = await initializeTestEnvironment({ projectId: "demo-cc", firestore: { rules, host: "127.0.0.1", port: 8085 } });
   const cache = {};
   const as = (uid) => (cache[uid] ??= env.authenticatedContext(uid, { firebase: { sign_in_provider: "password" } }).firestore());
   await env.withSecurityRulesDisabled(async (ctx) => { const fs = ctx.firestore(); for (const [uid, d] of Object.entries(people)) await setDoc(doc(fs, "profiles", uid), d); });
