@@ -1,3 +1,4 @@
+import { ROLE_TOURS, tourRoleFor } from "../data/tours";
 import { useEffect, useMemo, useState } from "react";
 import { auth, Button, Chip, loadProfile, Ring, saveProfile, schemas, t, useNav, type Person, type ScreenProps } from "@cc/core";
 import { extractPrefs, suggestIntro, type ExtractedPrefs } from "../lib/aiAssist";
@@ -323,6 +324,9 @@ export default function Builder({ params }: ScreenProps) {
   const alternateLabel = isSecondary
     ? t("onb.also.return", "Return to your {side} profile", { side: profile?.side === "family" ? t("onb.side.family", "family") : t("onb.side.carer", "carer") })
     : side === "family" ? t("onb.also.carer", "Also set up as a carer") : t("onb.also.family", "Also set up as a family");
+  const hintService = (side === "family" ? draft.familyCareTypes : draft.carerCareTypes).find((x) => isServiceType(x));
+  const hintRole = hintService ? tourRoleFor({ side, card: { careTypes: [hintService] } }) : null;
+  const stepHint = hintRole ? ROLE_TOURS[hintRole].builderHints[stepName] : stepName === "care-type" ? t("onb.hint.care", "Pick every service you want. Each one gets its own questions.") : undefined;
   const currentStep = step + 1;
   const completeness = profileCompletenessPercent(draft, side);
   return <main className="onb-screen">
@@ -332,7 +336,7 @@ export default function Builder({ params }: ScreenProps) {
         <div className="onb-progress"><span className="onb-kicker">{t("onb.step.count", "Step {current} of {total}", { current: currentStep, total: steps.length })}</span><Ring pct={progress} label={t("onb.progress.label", "Profile setup progress")} /></div>
       </header>
       {profile && <button type="button" className="chip" onClick={switchRole}>{alternateLabel}</button>}
-      <section className="onb-heading"><p className="onb-kicker">{t(`onb.side.${side}`, side === "family" ? "Family profile" : "Carer profile")}</p><h1>{title}</h1></section>
+      <section className="onb-heading"><p className="onb-kicker">{t(`onb.side.${side}`, side === "family" ? "Family profile" : "Carer profile")}</p><h1>{title}</h1>{stepHint && <p className="muted" data-builder-hint style={{ margin: "6px 0 0" }}>{stepHint}</p>}</section>
       <div className="onb-content">{renderStep()}</div>
       <section className="onb-completeness" aria-label={t("onb.complete.label", "Profile completeness")}>
         <div className="onb-completeness-heading"><span>{t("onb.complete.label", "Profile completeness")}</span><strong>{completeness}%</strong></div>

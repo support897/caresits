@@ -1,3 +1,4 @@
+import { tourRolesFor, resetProgress } from "../data/tours";
 import { useEffect, useState } from "react";
 import { BackBar, LegalAndDelete, isBunnyCalm, setBunnyCalm, setLang, signOutUser, t, useLang, useNav, type Person } from "@cc/core";
 import { DEFAULT_NOTIFICATION_PREFS, NOTIFICATION_CATEGORIES, notificationCategoryLabel, type NotificationPrefs } from "../../../../packages/core/src/notifications/prefs";
@@ -88,6 +89,11 @@ export default function Settings({ params }: { params: Params }) {
         <p className="muted">{t("settings.privacy.note", "Addresses and child photos stay private.")}</p>
         <button className="btn alt" type="button" onClick={() => nav.push("safety", { uid: me.uid })}>{t("settings.privacy.safety", "Open safety tools")}</button>
         <a className="btn alt" href="mailto:hello@caresits.xyz?subject=Send%20me%20a%20copy%20of%20my%20data" style={{ marginBlockStart: 8, display: "block", textAlign: "center" }}>{t("settings.export.button", "Ask for a copy of my data")}</a>
+      </section>
+
+      <section className="card" style={{ display: "grid", gap: 8 }}>
+        <h2>{t("settings.help", "Help")}</h2>
+        <button className="btn alt" type="button" onClick={() => { for (const r of tourRolesFor(me)) resetProgress(me.uid, r); window.dispatchEvent(new Event("caresits-tour-replay")); nav.back(); }}>{t("settings.tour", "Replay guided tour")}</button>
       </section>
 
       <LegalAndDelete />

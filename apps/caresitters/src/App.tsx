@@ -1,3 +1,4 @@
+import { tourRolesFor, loadProgress } from "./data/tours";
 import { useState, useEffect, lazy, Suspense } from "react";
 import { useAuth, NavHost, ToastHost, TabBar, AppTopBar, ICON, useLang, t, type Registry } from "@cc/core";
 import { useMyProfile } from "./data/me";
@@ -13,7 +14,8 @@ const Splash = () => <div id="splash" role="status" aria-label="Loading"><img sr
 const Skel = () => <div className="scroll"><div className="sk" style={{ height: 160 }} /></div>;
 export function App() {
   useLang(); const { user, ready } = useAuth(); const { profile, loading, reload } = useMyProfile(user?.uid);
-  const [tab, setTab] = useState("discover"); const [tourDone, setTourDone] = useState(() => localStorage.getItem("caresits-tour-done") === "1");
+  const [tab, setTab] = useState("discover"); const [tourState, setTourState] = useState<"open" | "paused" | "closed" | null>(null);
+  useEffect(() => { const replay = () => setTourState("open"); window.addEventListener("caresits-tour-replay", replay); return () => window.removeEventListener("caresits-tour-replay", replay); }, []);
   useEffect(() => { document.body.dataset.theme = "light"; }, []);
   let body;
   if (!ready) body = <Splash />;
@@ -22,7 +24,10 @@ export function App() {
   else if (!profile) body = <Suspense fallback={<Skel />}><Builder params={{ onDone: reload }} /></Suspense>;
   else {
     const tabs = [{ key: "discover", label: t("tab.discover", "Discover"), icon: ICON.discover }, { key: "saved", label: t("tab.saved", "Saved"), icon: ICON.heart }, { key: "bookings", label: t("tab.bookings", "Bookings"), icon: ICON.cal }, { key: "messages", label: t("tab.messages", "Messages"), icon: ICON.chat }, { key: "me", label: profile.side === "family" ? t("tab.family", "My family") : t("tab.me", "Me"), icon: ICON.user }];
-    body = <NavHost registry={registry}><div className="app">{!tourDone && <Suspense fallback={null}><Tour params={{ onDone: () => { localStorage.setItem("caresits-tour-done", "1"); setTourDone(true); } }} /></Suspense>}
+    const tourRoles = tourRolesFor(profile);
+    const showTour = tourRoles.length > 0 && (tourState === "open" || (tourState === null && tourRoles.some((r) => !loadProgress(profile.uid, r).done)));
+    body = <NavHost registry={registry}><div className="app">{showTour && <Suspense fallback={null}><Tour params={{ me: profile, onDone: () => setTourState("closed"), onPause: () => setTourState("paused") }} /></Suspense>}
+      {tourState === "paused" && <button type="button" className="chip" style={{ position: "fixed", insetInlineEnd: 12, insetBlockEnd: "calc(86px + var(--safe-b))", zIndex: 60 }} onClick={() => setTourState("open")}>{t("onb.tour.resume", "Resume guide")}</button>}
       <AppTopBar current="caresitters" /><div className="screen"><Suspense fallback={<Skel />}>
         {tab === "discover" && <Discover params={{ me: profile }} />}{tab === "saved" && <Saved params={{ me: profile }} />}{tab === "bookings" && <Bookings params={{ me: profile }} />}{tab === "messages" && <Messages params={{ me: profile }} />}{tab === "me" && <Me params={{ me: profile, reload }} />}
       </Suspense></div><TabBar tabs={tabs} value={tab} onChange={setTab} /></div></NavHost>;
