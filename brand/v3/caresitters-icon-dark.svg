@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Caresitters">
+  <rect width="1024" height="1024" rx="228" fill="#3B2A33"/>
+  <path d="M512 842C246 664 176 520 176 396c0-104 76-176 172-176 70 0 134 38 164 100 30-62 94-100 164-100 96 0 172 72 172 176 0 124-70 268-336 446z" fill="#FFE3EC"/>
+  <g fill="#3B2A33"><circle cx="438" cy="404" r="62"/><path d="M308 672c0-98 58-168 130-168s130 70 130 168z"/><circle cx="610" cy="494" r="40"/><path d="M524 686c0-70 38-124 86-124s86 54 86 124z"/></g>
+</svg>

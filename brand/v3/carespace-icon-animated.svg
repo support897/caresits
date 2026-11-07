@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="CareSpace">
+  <rect width="1024" height="1024" rx="228" fill="#3B2A33"/>
+  <path d="M248 824V484c0-146 106-262 264-262s264 116 264 262v340z" fill="#FFE3EC"/>
+  <path d="M248 824V484c0-146 106-262 264-262s264 116 264 262v340z" fill="none" stroke="#F4A9BC" stroke-width="22"/>
+  <g class="cs-heart"><path d="M512 704c-120-82-164-146-164-204 0-54 38-92 88-92 34 0 60 18 76 50 16-32 42-50 76-50 50 0 88 38 88 92 0 58-44 122-164 204z" fill="#C2335A"/></g>
+  <rect x="200" y="812" width="624" height="40" rx="20" fill="#F4A9BC"/>
+<style>
+.cs-heart{transform-box:fill-box;transform-origin:50% 60%;animation:csBeat 2.8s cubic-bezier(.4,0,.2,1) infinite}
+@keyframes csBeat{0%,100%{transform:scale(1)}18%{transform:scale(1.09)}34%{transform:scale(.99)}50%{transform:scale(1.04)}70%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.cs-heart{animation:none}}
+</style></svg>

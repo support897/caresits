@@ -33,15 +33,30 @@ function Mouth({ mood }: { mood: Mood }) {
   if (mood === "rest") return <>{nose}<path d="M95 115q5 4 10 0" stroke={INK} strokeWidth="2.2" fill="none" strokeLinecap="round" /></>;
   return <>{nose}<path d="M92 114q8 8 16 0" stroke={INK} strokeWidth="2.4" fill="none" strokeLinecap="round" /></>;
 }
+// Arms are one continuous limb (tapered stroke) ending in a real paw with toe notches.
+// Hand-authored vector art: no detached circles, no glyph shapes. Colours match the existing mascot.
+const PAW_LINE = "#E58BA4", EDGE = "#EE9DB5";
+function Paw({ x, y, rot = 0, finger }: { x: number; y: number; rot?: number; finger?: "point" | "thumb" }) {
+  return <g transform={`rotate(${rot} ${x} ${y})`}>
+    {finger === "point" && <path d={`M${x + 2} ${y} L${x + 16} ${y - 3}`} stroke={PINK} strokeWidth="7" strokeLinecap="round" fill="none" />}
+    {finger === "thumb" && <path d={`M${x} ${y - 2} L${x} ${y - 15}`} stroke={PINK} strokeWidth="7.5" strokeLinecap="round" fill="none" />}
+    <ellipse cx={x} cy={y} rx="10.5" ry="9.5" fill={PINK} stroke={EDGE} strokeWidth="1.6" />
+    <path d={`M${x - 3.5} ${y + 1} v5.5M${x + 3.5} ${y + 1} v5.5`} stroke={PAW_LINE} strokeWidth="1.8" strokeLinecap="round" fill="none" />
+  </g>;
+}
+function Limb({ d, end, rot, finger, cls = "" }: { d: string; end: [number, number]; rot?: number; finger?: "point" | "thumb"; cls?: string }) {
+  return <g className={`b-arm ${cls}`}><path d={d} stroke={EDGE} strokeWidth="19" strokeLinecap="round" strokeLinejoin="round" fill="none" /><path d={d} stroke={PINK} strokeWidth="16" strokeLinecap="round" strokeLinejoin="round" fill="none" /><Paw x={end[0]} y={end[1]} rot={rot} finger={finger} /></g>;
+}
+const RL = <Limb cls="a-rest" d="M68 150 Q54 172 59 196" end={[59, 197]} />;
+const RR = <Limb cls="a-rest" d="M132 150 Q146 172 141 196" end={[141, 197]} />;
 function Arms({ mood }: { mood: Mood }) {
-  const arm = (cls: string, cx: number, cy: number, rot: number, rx = 9, ry = 24) => <ellipse className={`b-arm ${cls}`} cx={cx} cy={cy} rx={rx} ry={ry} fill={PINK} transform={`rotate(${rot} ${cx} ${cy})`} />;
-  if (mood === "hello") return <>{arm("a-rest", 62, 160, 14)}<g className="b-wave" style={{ transformOrigin: "146px 150px" }}>{arm("", 150, 128, -24)}<circle cx="156" cy="104" r="8" fill={PINK} /></g></>;
-  if (mood === "point") return <>{arm("a-rest", 62, 160, 14)}<g>{arm("", 156, 160, -78, 9, 26)}<circle cx="184" cy="152" r="8" fill={PINK} /><ellipse cx="193" cy="150" rx="7" ry="4" fill={PINK} /></g></>;
-  if (mood === "celebrate") return <><g className="b-clap-l" style={{ transformOrigin: "62px 150px" }}>{arm("", 58, 118, 22, 9, 26)}<circle cx="70" cy="92" r="8" fill={PINK} /></g><g className="b-clap-r" style={{ transformOrigin: "138px 150px" }}>{arm("", 142, 118, -22, 9, 26)}<circle cx="130" cy="92" r="8" fill={PINK} /></g></>;
-  if (mood === "encourage") return <>{arm("a-rest", 62, 160, 14)}{arm("", 140, 130, -30, 9, 26)}<circle cx="150" cy="106" r="8" fill={PINK} /><rect x="146" y="92" width="6" height="12" rx="3" fill={PINK} /></>;
-  if (mood === "think") return <>{arm("a-rest", 62, 160, 14)}{arm("", 112, 146, 60, 9, 24)}<circle cx="104" cy="126" r="8" fill={PINK} /></>;
-  if (mood === "oops") return <>{arm("", 66, 130, 38, 9, 24)}{arm("", 134, 130, -38, 9, 24)}<circle cx="82" cy="112" r="7" fill={PINK} /><circle cx="118" cy="112" r="7" fill={PINK} /></>;
-  return <>{arm("a-rest", 62, 160, 14)}{arm("a-rest", 138, 160, -14)}</>;
+  if (mood === "hello") return <>{RL}<g className="b-wave" style={{ transformOrigin: "132px 150px" }}><Limb d="M132 150 Q162 142 158 108" end={[158, 102]} rot={-8} /></g></>;
+  if (mood === "point") return <>{RL}<Limb d="M132 152 Q160 158 180 148" end={[181, 147]} finger="point" rot={-6} /></>;
+  if (mood === "celebrate") return <><g className="b-clap-l" style={{ transformOrigin: "68px 150px" }}><Limb d="M68 148 Q36 134 46 98" end={[46, 92]} rot={10} /></g><g className="b-clap-r" style={{ transformOrigin: "132px 150px" }}><Limb d="M132 148 Q164 134 154 98" end={[154, 92]} rot={-10} /></g></>;
+  if (mood === "encourage") return <>{RL}<Limb d="M132 150 Q160 146 154 112" end={[154, 106]} rot={-6} /></>;
+  if (mood === "think") return <>{RL}<Limb d="M130 152 Q126 138 108 130" end={[105, 128]} rot={30} /></>;
+  if (mood === "oops") return <><Limb d="M68 150 Q54 128 78 114" end={[80, 113]} rot={25} /><Limb d="M132 150 Q146 128 122 114" end={[120, 113]} rot={-25} /></>;
+  return <>{RL}{RR}</>;
 }
 function Extras({ mood }: { mood: Mood }) {
   if (mood === "celebrate") return <g className="b-spark" fill="#F2B84B"><path d="M26 40l3 8 8 3-8 3-3 8-3-8-8-3 8-3z" /><path d="M176 28l2.5 6 6 2.5-6 2.5-2.5 6-2.5-6-6-2.5 6-2.5z" /><circle cx="170" cy="84" r="3" fill={PINK} /><circle cx="30" cy="96" r="3" fill={PINK} /></g>;
@@ -91,9 +106,10 @@ export const Bunny = forwardRef<BunnyHandle, { mood?: Mood; size?: number; onTap
           <ellipse cx="100" cy="168" rx="46" ry="52" fill={PINK} /><ellipse cx="100" cy="172" rx="29" ry="34" fill={BELLY} />
           <path d="M100 192c-17-12-24-21-24-30 0-8 6-12 12-12 5 0 9 3 12 7 3-4 7-7 12-7 6 0 12 4 12 12 0 9-7 18-24 30z" fill={HEART} />
           <ellipse cx="78" cy="218" rx="16" ry="8" fill={PINK} /><ellipse cx="122" cy="218" rx="16" ry="8" fill={PINK} />
-          <Arms mood={m} />
+          {m !== "oops" && m !== "think" && <Arms mood={m} />}
           <g className="b-head"><circle cx="100" cy="96" r="46" fill={PINK} /><circle cx="72" cy="108" r="9" fill={CHEEK} /><circle cx="128" cy="108" r="9" fill={CHEEK} />
             <Eyes mood={m} look={look} /><Mouth mood={m} /></g>
+          {(m === "oops" || m === "think") && <Arms mood={m} />}
         </g>
         <Extras mood={m} />
       </g>

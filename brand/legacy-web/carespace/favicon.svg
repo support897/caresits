@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="CareSpace">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#CBE6FA"/><stop offset="1" stop-color="#8EC5E8"/></linearGradient></defs>
+  <rect width="1024" height="1024" rx="230" fill="url(#bg)"/>
+  <circle cx="200" cy="200" r="26" fill="#FFD966"/><circle cx="840" cy="190" r="18" fill="#FFC9D6"/><circle cx="870" cy="830" r="24" fill="#FFD966"/><circle cx="160" cy="790" r="16" fill="#FFC9D6"/>
+  <path fill="#fff" d="M512 190 150 500v310c0 28 22 50 50 50h624c28 0 50-22 50-50V500Z"/>
+  <path fill="#FFD966" d="M512 190 110 520c-14 12-16 32-4 46 12 14 32 16 46 4L512 270l360 300c14 12 34 10 46-4 12-14 10-34-4-46Z"/>
+  <path fill="#F4A9BC" d="M512 770C390 690 335 625 335 555c0-58 42-100 96-100 36 0 64 19 81 51 17-32 45-51 81-51 54 0 96 42 96 100 0 70-55 135-177 215Z"/>
+  <rect x="440" y="800" width="144" height="60" rx="14" fill="#8EC5E8" opacity="0"/>
+</svg>
