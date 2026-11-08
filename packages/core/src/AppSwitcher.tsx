@@ -17,10 +17,10 @@ export function openSisterApp(target: AppId, path = ""): void {
   let handedOff = false;
   const onHide = () => { if (document.visibilityState === "hidden") handedOff = true; };
   document.addEventListener("visibilitychange", onHide);
-  try { window.location.assign(url); } catch { window.location.assign(STORE[target]); return; }
+  try { window.location.assign(url); } catch { window.open(STORE[target], "_blank", "noopener"); return; }
   window.setTimeout(() => {
     document.removeEventListener("visibilitychange", onHide);
-    if (!handedOff && document.visibilityState === "visible") window.location.assign(STORE[target]);
+    if (!handedOff && document.visibilityState === "visible") window.open(STORE[target], "_blank", "noopener");
   }, 1300);
 }
 
