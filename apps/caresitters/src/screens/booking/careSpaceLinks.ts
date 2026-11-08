@@ -15,9 +15,9 @@ export function openCareSpace(spaceId?: string): void {
   let opened = false;
   const markOpened = () => { if (document.visibilityState === "hidden") opened = true; };
   document.addEventListener("visibilitychange", markOpened);
-  try { window.location.assign(links.custom); } catch { window.location.assign(links.appStore); return; }
+  try { window.location.assign(links.custom); } catch { window.open(links.appStore, "_blank", "noopener"); return; }
   window.setTimeout(() => {
     document.removeEventListener("visibilitychange", markOpened);
-    if (!opened && document.visibilityState === "visible") window.location.assign(links.appStore);
+    if (!opened && document.visibilityState === "visible") window.open(links.appStore, "_blank", "noopener");
   }, 1100);
 }
