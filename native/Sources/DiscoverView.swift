@@ -18,6 +18,7 @@ struct DiscoverView: View {
     @State private var skipped: Set<String> = []
     @State private var detail: Person?
     @State private var drag: CGSize = .zero
+    @State private var deckContact: (person: Person, mode: ContactMode)?
     var deck: [Person] { let base = shown.filter { !skipped.contains($0.id) }; guard let me = s.me else { return base }; return base.sorted { $0.match(with: me).percent > $1.match(with: me).percent } }
 
     var body: some View {
@@ -55,18 +56,21 @@ struct DiscoverView: View {
                             .accessibilityIdentifier(i == 0 ? "topCard" : "card\(i)")
                     }
                 }.padding(.horizontal, 20).frame(maxHeight: .infinity)
-                HStack(spacing: 40) {
+                HStack(spacing: 14) {
                     roundBtn("xmark", .gray, "Skip") { if let p = deck.first { fling(p, like: false) } }
+                    roundBtn("bubble.left.fill", Brand.ink, "Message") { if let p = deck.first { deckContact = (p, .message) } }
+                    if s.me?.side == "carer" { roundBtn("doc.text.fill", Brand.ink, "Send resume") { if let p = deck.first { deckContact = (p, .resume) } } }
                     roundBtn("info", Brand.ink, "Details") { detail = deck.first }
                     roundBtn("heart.fill", Brand.bunny, "Like") { if let p = deck.first { fling(p, like: true) } }
                 }.padding(.bottom, 8)
             }
             .background(Brand.cream.ignoresSafeArea()).refreshable { await load() }.task { await load() }
+            .sheet(isPresented: Binding(get: { deckContact != nil }, set: { if !$0 { deckContact = nil } })) { if let d = deckContact { ContactSheet(person: d.person, mode: d.mode) } }
             .navigationDestination(item: $detail) { p in PersonDetailView(person: p, saved: saved.contains(p.id)) { on in if on { saved.insert(p.id) } else { saved.remove(p.id) } } }
         }
     }
     func roundBtn(_ icon: String, _ c: Color, _ label: String, _ f: @escaping () -> Void) -> some View {
-        Button(action: f) { Image(systemName: icon).font(.system(size: 26, weight: .bold)).foregroundStyle(c).frame(width: 66, height: 66).background(.white).clipShape(Circle()).shadow(color: .black.opacity(0.12), radius: 8, y: 3) }.accessibilityLabel(label)
+        Button(action: f) { Image(systemName: icon).font(.system(size: 22, weight: .bold)).foregroundStyle(c).frame(width: 56, height: 56).background(.white).clipShape(Circle()).shadow(color: .black.opacity(0.12), radius: 8, y: 3) }.accessibilityLabel(label)
     }
     func fling(_ p: Person, like: Bool) {
         withAnimation(.easeIn(duration: 0.22)) { drag = CGSize(width: like ? 700 : -700, height: 40) }
@@ -116,6 +120,7 @@ struct PersonDetailView: View {
     @State private var verified: String?; @State private var resume: Resume?
     @State private var reviews: [(rating: Int, text: String)] = []
     @State private var showBook = false
+    @State private var contact: ContactMode?
     @State private var rating: (avg: Double, count: Int)?
     var role: Role { s.role }
 
@@ -125,8 +130,8 @@ struct PersonDetailView: View {
                 PhotoView(key: person.photoKey, size: 150, fallback: person.role.emoji).padding(.top, 10)
                 Text(person.name).font(Brand.title(30)).foregroundStyle(Brand.ink)
                 if person.side == "carer" {
-                    Text(person.headline).font(.title3).foregroundStyle(Brand.muted).multilineTextAlignment(.center)
-                    HStack { Chip(text: person.role.emoji + " " + person.role.name, on: true, tint: person.role.tint); if person.rate > 0 { Chip(text: "💲\(Int(person.rate))/h") }; Chip(text: "⭐ \(person.years) yrs") }
+                    if !person.headline.isEmpty { Text(person.headline).font(.title3).foregroundStyle(Brand.muted).multilineTextAlignment(.center) }
+                    HStack { Chip(text: person.role.emoji + " " + person.role.name, on: true, tint: person.role.tint); if person.rate > 0 { Chip(text: "💲\(Int(person.rate))/h") }; if person.years > 0 { Chip(text: "⭐ \(person.years) yrs") } }
                 }
                 Card { VStack(alignment: .leading, spacing: 8) {
                     Text("Checks").font(.headline)
@@ -150,12 +155,17 @@ struct PersonDetailView: View {
                 } } }
                 if role == .family && person.side == "carer" { BigButton(title: "📅 Book \(person.firstName)", tint: role.tint) { showBook = true } }
                 else if person.side == "family" { Text("Families book you. You say yes.").font(.footnote).foregroundStyle(Brand.muted) }
-            }.padding(20)
+                HStack(spacing: 10) {
+                    Button { contact = .message } label: { Label("Message", systemImage: "bubble.left.fill").font(.system(size: 17, weight: .semibold)).frame(maxWidth: .infinity, minHeight: 48).background(Brand.field).foregroundStyle(Brand.ink).clipShape(RoundedRectangle(cornerRadius: 14)) }
+                    if s.me?.side == "carer" && person.side == "family" { Button { contact = .resume } label: { Label("Send resume", systemImage: "doc.text.fill").font(.system(size: 17, weight: .semibold)).frame(maxWidth: .infinity, minHeight: 48).background(Brand.field).foregroundStyle(Brand.ink).clipShape(RoundedRectangle(cornerRadius: 14)) } }
+                }
+            }.padding(20).padding(.bottom, 100)
         }
         .background(Brand.cream.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { saved.toggle(); onSave(saved); if let u = s.uid { Task { await Backend.setSaved(u, person.id, saved) } } } label: { Image(systemName: saved ? "heart.fill" : "heart").foregroundStyle(.pink) } } }
         .sheet(isPresented: $showBook) { BookSheet(carer: person) }
+        .sheet(item: $contact) { ContactSheet(person: person, mode: $0) }
         .task {
             if person.side == "carer" { verified = await Backend.verifiedLevel(person.id); reviews = await Backend.reviewsFor(carer: person.id); rating = await Backend.reviewSummary(person.id); resume = await Backend.loadResume(person.id) }
         }
