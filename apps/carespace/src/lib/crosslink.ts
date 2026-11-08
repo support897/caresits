@@ -33,13 +33,13 @@ export function openOtherApp(path: string): void {
     window.location.assign(universalUrl(path));
   } catch {
     cleanup();
-    window.location.assign(CARESITTERS_APP_STORE);
+    window.open(CARESITTERS_APP_STORE, "_blank", "noopener");
     return;
   }
 
   timer = window.setTimeout(() => {
     const shouldFallback = !handedOff && document.visibilityState !== "hidden";
     cleanup();
-    if (shouldFallback) window.location.assign(CARESITTERS_APP_STORE);
+    if (shouldFallback) window.open(CARESITTERS_APP_STORE, "_blank", "noopener");
   }, FALLBACK_DELAY_MS);
 }
