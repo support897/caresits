@@ -17,7 +17,7 @@ struct MessagesView: View {
                         Card { HStack(spacing: 12) { PhotoView(key: r.other?.photoKey ?? "", size: 52, fallback: r.other?.role.emoji ?? "🐰"); VStack(alignment: .leading) { Text(r.other?.name ?? "…").font(.headline).foregroundStyle(Brand.ink); Text(r.other.map { $0.side == "carer" ? "\($0.role.emoji) \($0.role.name)" : "🏡 Family" } ?? "").font(.subheadline).foregroundStyle(Brand.muted) }; Spacer(); Image(systemName: "chevron.right").foregroundStyle(Brand.muted) } }
                     }.buttonStyle(.plain).padding(.horizontal, 20)
                 }
-            }.padding(.bottom, 30) }
+            }.padding(.bottom, 100) }
             .background(Brand.cream.ignoresSafeArea()).refreshable { await load() }.task { await load() }
         }
     }

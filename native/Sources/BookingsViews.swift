@@ -115,7 +115,7 @@ struct BookingsCalendarView: View {
                     else if todays.isEmpty { EmptyHint(emoji: "🌤️", text: role == .family ? "Nothing booked. Tap New booking." : "Nothing booked this day.") }
                     ForEach(todays) { b in BookingRow(b: b, other: store.other(b, me: s.meSafe)) { await store.load(s.meSafe) }.padding(.horizontal, 20) }
                 }
-            }.padding(.bottom, 30) }
+            }.padding(.bottom, 100) }
             .background(Brand.cream.ignoresSafeArea()).refreshable { await store.load(s.meSafe) }.task { await store.load(s.meSafe) }
             .sheet(isPresented: $showNew, onDismiss: { Task { await store.load(s.meSafe) } }) { NewBookingPicker() }
             .sheet(isPresented: $showFree) { AvailabilityEditor() }
@@ -181,7 +181,7 @@ struct RequestsView: View {
                 else if waiting.isEmpty && coming.isEmpty { EmptyHint(emoji: "📭", text: "No requests yet") }
                 if !waiting.isEmpty { Text("⏳ Waiting for you").font(.headline).padding(.horizontal, 20); ForEach(waiting) { b in BookingRow(b: b, other: store.other(b, me: s.meSafe)) { await store.load(s.meSafe) }.padding(.horizontal, 20) } }
                 if !coming.isEmpty { Text("✅ Confirmed").font(.headline).padding(.horizontal, 20); ForEach(coming) { b in BookingRow(b: b, other: store.other(b, me: s.meSafe)) { await store.load(s.meSafe) }.padding(.horizontal, 20) } }
-            }.padding(.bottom, 30) }
+            }.padding(.bottom, 100) }
             .background(Brand.cream.ignoresSafeArea()).refreshable { await store.load(s.meSafe) }.task { await store.load(s.meSafe) }
         }
     }
@@ -210,7 +210,7 @@ struct TodayView: View {
                 ForEach(today) { b in BookingRow(b: b, other: store.other(b, me: s.meSafe)) { await store.load(s.meSafe) }.padding(.horizontal, 20) }
                 let up = mine.filter { $0.dateValue > Date() && !cal.isDateInToday($0.dateValue) && $0.state == "accepted" }.prefix(4)
                 if !up.isEmpty { Text("➡️ Coming up").font(.headline).padding(.horizontal, 20); ForEach(Array(up)) { b in BookingRow(b: b, other: store.other(b, me: s.meSafe)) { await store.load(s.meSafe) }.padding(.horizontal, 20) } }
-            }.padding(.bottom, 30) }
+            }.padding(.bottom, 100) }
             .background(Brand.cream.ignoresSafeArea()).refreshable { await store.load(s.meSafe) }.task { await store.load(s.meSafe) }
         }
     }

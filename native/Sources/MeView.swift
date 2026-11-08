@@ -18,7 +18,7 @@ struct MeView: View {
     var content: some View {
         NavigationStack {
             ScrollView { VStack(spacing: 14) {
-                Header(role: role, title: "Me", subtitle: "\(role.name) · \(role == .family ? "Family" : "Free for carers, always")")
+                Header(role: role, title: "Me", subtitle: role == .family ? "Your family" : "\(role.name) · Free for carers, always")
                 PhotosPicker(selection: $pick, matching: .images) {
                     ZStack(alignment: .bottomTrailing) {
                         PhotoView(key: me.photoKey, size: 120, fallback: role.emoji)
@@ -64,7 +64,7 @@ struct MeView: View {
                 } }.padding(.horizontal, 20)
                 Button("Sign out") { s.signOut() }.font(.headline).padding(.top, 8)
                 Button("Delete my account", role: .destructive) { confirmDelete = true }.font(.footnote)
-            }.padding(.bottom, 40) }
+            }.padding(.bottom, 100) }
             .background(Brand.cream.ignoresSafeArea())
             .onChange(of: pick) { _, i in Task { await setAvatar(i) } }
             .onChange(of: galleryPick) { _, items in Task { await addGallery(items) } }
