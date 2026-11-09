@@ -68,8 +68,8 @@ struct Booking: Identifiable {
     var stateLabel: String {
         switch state { case "requested": return "Waiting"; case "accepted": return "Confirmed"; case "declined": return "Declined"; case "cancelled": return "Cancelled"; case "completed": return "Done"; default: return state.capitalized }
     }
-    var stateEmoji: String {
-        switch state { case "requested": return "⏳"; case "accepted": return "✅"; case "declined": return "🚫"; case "cancelled": return "❌"; case "completed": return "🎉"; default: return "•" }
+    var stateIcon: BI {
+        switch state { case "requested": return .clock; case "accepted": return .checkCircle; case "declined": return .banned; case "cancelled": return .cross; case "completed": return .sparkle; default: return .circle }
     }
 }
 
@@ -82,7 +82,7 @@ struct Resume {
 extension Person: Hashable { static func == (a: Person, b: Person) -> Bool { a.id == b.id }; func hash(into h: inout Hasher) { h.combine(id) } }
 
 /// Simple, honest match: care types, days and budget only. It never says anyone is safe.
-struct MatchInfo { let percent: Int; let reasons: [(icon: String, text: String)] }
+struct MatchInfo { let percent: Int; let reasons: [(icon: BI, text: String)] }
 extension Person {
     func match(with me: Person) -> MatchInfo {
         let fam = me.side == "family" ? me : self, car = me.side == "family" ? self : me
@@ -92,10 +92,10 @@ extension Person {
         let dyScore = fam.days.isEmpty || car.days.isEmpty ? 0.5 : min(1, Double(dy.count) / Double(max(1, min(fam.days.count, car.days.count))))
         let budgetOK = fam.budgetMax <= 0 || car.rate <= 0 || car.rate <= fam.budgetMax
         let pct = Int((40 * svScore + 30 * dyScore + (budgetOK ? 30 : 8)).rounded())
-        var r: [(String, String)] = []
-        if !sv.isEmpty { r.append(("figure.and.child.holdinghands", sv.map { serviceLabels[$0] ?? $0 }.sorted().joined(separator: ", "))) }
-        if !dy.isEmpty { r.append(("calendar", dy.sorted().prefix(4).joined(separator: " "))) }
-        if budgetOK && car.rate > 0 { r.append(("dollarsign.circle", "Fits budget")) }
+        var r: [(BI, String)] = []
+        if !sv.isEmpty { r.append((.nanny, sv.map { serviceLabels[$0] ?? $0 }.sorted().joined(separator: ", "))) }
+        if !dy.isEmpty { r.append((.calendar, dy.sorted().prefix(4).joined(separator: " "))) }
+        if budgetOK && car.rate > 0 { r.append((.rate, "Fits budget")) }
         return MatchInfo(percent: min(100, pct), reasons: r)
     }
 }

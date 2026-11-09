@@ -31,7 +31,7 @@ struct WelcomeView: View {
                         HStack { Text("G").font(.system(size: 20, weight: .bold)).foregroundStyle(.red); Text("Continue with Google").font(.system(size: 18, weight: .semibold)) }
                             .frame(maxWidth: .infinity, minHeight: 52).background(.white).foregroundStyle(.black).overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.gray.opacity(0.4))).clipShape(RoundedRectangle(cornerRadius: 16))
                     }
-                    Button { withAnimation { showEmail.toggle() } } label: { Text("✉️  Use email").font(.system(size: 18, weight: .semibold)).frame(maxWidth: .infinity, minHeight: 52).background(Brand.sage.opacity(0.4)).foregroundStyle(Brand.ink).clipShape(RoundedRectangle(cornerRadius: 16)) }
+                    Button { withAnimation { showEmail.toggle() } } label: { HStack(spacing: 8) { BrandIcon(kind: .mail, size: 22); Text("Use email") }.font(.system(size: 18, weight: .semibold)).frame(maxWidth: .infinity, minHeight: 52).background(Brand.sage.opacity(0.4)).foregroundStyle(Brand.ink).clipShape(RoundedRectangle(cornerRadius: 16)) }
                 }
                 if !err.isEmpty { Text(err).foregroundStyle(.red).font(.callout).multilineTextAlignment(.center) }
             }.padding(20)
@@ -49,16 +49,16 @@ struct RolePickView: View {
     var body: some View {
         VStack(spacing: 22) {
             Spacer()
-            BunnyView(size: 90)
+            BunnyView(size: 90, mood: .hello)
             Text("Who are you?").font(Brand.title(32)).foregroundStyle(Brand.ink)
-            pick("🏡", "I need care", "family")
-            pick("🧸", "I give care", "carer")
+            pick(.home, "I need care", "family")
+            pick(.nanny, "I give care", "carer")
             Spacer()
         }.padding(24).frame(maxWidth: .infinity).background(Brand.cream.ignoresSafeArea())
     }
-    func pick(_ e: String, _ t: String, _ side: String) -> some View {
+    func pick(_ e: BI, _ t: String, _ side: String) -> some View {
         Button { s.chooseSide(side); s.sideConfirmed = true } label: {
-            HStack(spacing: 14) { Text(e).font(.system(size: 44)); Text(t).font(.system(size: 22, weight: .semibold)); Spacer(); Image(systemName: "chevron.right") }
+            HStack(spacing: 14) { BrandIcon(kind: e, size: 44); Text(t).font(.system(size: 22, weight: .semibold)); Spacer(); BrandIcon(kind: .chevron, size: 22) }
                 .padding(22).frame(maxWidth: .infinity).background(Brand.blush.opacity(0.5)).foregroundStyle(Brand.ink)
                 .clipShape(RoundedRectangle(cornerRadius: 22))
         }.accessibilityLabel(t)

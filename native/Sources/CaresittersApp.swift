@@ -11,9 +11,16 @@ struct CaresittersApp: App {
     }
     var body: some Scene {
         WindowGroup {
-            RootGate().environmentObject(session).tint(Brand.ink)
+            root.environmentObject(session).tint(Brand.ink).preferredColorScheme(.light)
                 .onOpenURL { GIDSignIn.sharedInstance.handle($0) }
         }
+    }
+    @ViewBuilder var root: some View {
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["CS_ICONS"] == "1" { IconGallery() } else { RootGate() }
+        #else
+        RootGate()
+        #endif
     }
 }
 

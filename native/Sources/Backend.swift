@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import UIKit
+import ImageIO
 import PhotosUI
 import CoreTransferable
 import UniformTypeIdentifiers
@@ -210,9 +211,20 @@ enum Media {
     }
     /// Uploads with one automatic retry for network hiccups.
     static func uploadSafe(_ raw: Data, kind: String) async throws -> String {
-        do { return try await upload(raw, kind: kind) }
+        let jpg = try prepare(raw)
+        return try await uploadPreparedSafe(jpg, kind: kind)
+    }
+    static func uploadPreparedSafe(_ jpg: Data, kind: String) async throws -> String {
+        do { return try await uploadPrepared(jpg, kind: kind) }
         catch let e as AppError { throw e }
-        catch { try? await Task.sleep(nanoseconds: 800_000_000); return try await upload(raw, kind: kind) }
+        catch { try? await Task.sleep(nanoseconds: 800_000_000); return try await uploadPrepared(jpg, kind: kind) }
+    }
+    /// The bytes the file service really serves for a stored photo (read back through a fresh link).
+    static func servedBytes(_ key: String) async throws -> Data {
+        guard let uid = Auth.auth().currentUser?.uid else { throw AppError.msg("Please sign in again.") }
+        let link = try await call(["op": "get", "key": key, "ownerUid": uid])
+        guard let s = link["url"] as? String, let u = URL(string: s) else { throw AppError.msg("No read link.") }
+        return try await URLSession.shared.data(from: u).0
     }
     static let base = "https://caresits-files.placenciailse.workers.dev"
     static var cache: [String: URL] = [:]
@@ -221,8 +233,8 @@ enum Media {
         guard let u = Auth.auth().currentUser else { throw AppError.msg("Please sign in again.") }
         return try await u.getIDToken()
     }
-    static func call(_ body: [String: Any]) async throws -> [String: Any] {
-        var req = URLRequest(url: URL(string: base + "/v1/link")!)
+    static func call(_ body: [String: Any], path: String = "/v1/link") async throws -> [String: Any] {
+        var req = URLRequest(url: URL(string: base + path)!)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("Bearer " + (try await token()), forHTTPHeaderField: "Authorization")
@@ -240,18 +252,80 @@ enum Media {
         let longest = max(img.size.width, img.size.height)
         let scale = min(1, 1600 / longest)
         let size = CGSize(width: max(1, img.size.width * scale), height: max(1, img.size.height * scale))
-        let fmt = UIGraphicsImageRendererFormat(); fmt.scale = 1; fmt.opaque = true
+        let fmt = UIGraphicsImageRendererFormat(); fmt.scale = 1; fmt.opaque = true; fmt.preferredRange = .standard
         let out = UIGraphicsImageRenderer(size: size, format: fmt).image { _ in img.draw(in: CGRect(origin: .zero, size: size)) }
         var q: CGFloat = 0.84
-        while q > 0.2 { if let j = out.jpegData(compressionQuality: q), j.count < 1_500_000 { return j }; q -= 0.15 }
+        while q > 0.2 {
+            // The redraw drops the original camera data. The JPEG writer then adds its own Exif block, which the
+            // file service refuses (422). So every metadata block is cut out here, then checked, before the upload.
+            if let j = out.jpegData(compressionQuality: q) ?? reencode(out, q) {
+                if let clean = stripMetadata(j) ?? reencode(out, q).flatMap({ stripMetadata($0) }), !hasMetadata(clean) {
+                    if clean.count < 1_500_000 { return clean }
+                } else { throw AppError.msg("Photo details could not be removed. Choose another photo.") }
+            }
+            q -= 0.15
+        }
         throw AppError.msg("That picture is too big.")
     }
+    /// Fallback writer (ImageIO) for the rare picture UIKit cannot encode.
+    static func reencode(_ img: UIImage, _ q: CGFloat) -> Data? {
+        guard let cg = img.cgImage else { return nil }
+        let d = NSMutableData()
+        guard let dest = CGImageDestinationCreateWithData(d, UTType.jpeg.identifier as CFString, 1, nil) else { return nil }
+        CGImageDestinationAddImage(dest, cg, [kCGImageDestinationLossyCompressionQuality: q] as CFDictionary)
+        return CGImageDestinationFinalize(dest) ? d as Data : nil
+    }
+    /// THE STRIP: walks the JPEG marker by marker and drops every metadata block (APP1 to APP15: Exif, XMP, GPS carrier,
+    /// colour profile, maker notes; and comments). The picture data is copied as is. nil if the bytes are not a clean JPEG.
+    static func stripMetadata(_ j: Data) -> Data? {
+        let b = [UInt8](j)
+        guard b.count > 4, b[0] == 0xFF, b[1] == 0xD8 else { return nil }
+        var out: [UInt8] = [0xFF, 0xD8]; var i = 2
+        while i + 2 <= b.count {
+            guard b[i] == 0xFF else { return nil }
+            let m = b[i + 1]
+            if m == 0xFF { i += 1; continue }
+            if m == 0xDA { out.append(contentsOf: b[i...]); return Data(out) }       // start of scan: the rest is the picture
+            if m == 0xD9 { out.append(contentsOf: [0xFF, 0xD9]); return Data(out) }
+            if m == 0x01 || (0xD0...0xD7).contains(m) { out.append(contentsOf: [0xFF, m]); i += 2; continue }
+            guard i + 4 <= b.count else { return nil }
+            let len = Int(b[i + 2]) << 8 | Int(b[i + 3])
+            guard len >= 2, i + 2 + len <= b.count else { return nil }
+            if !((0xE1...0xEF).contains(m) || m == 0xFE) { out.append(contentsOf: b[i..<(i + 2 + len)]) }
+            i += 2 + len
+        }
+        return nil
+    }
+    /// Names of metadata blocks still in a JPEG (empty means clean). Same rule the file service applies, and wider.
+    static func metadataBlocks(_ j: Data) -> [String] {
+        let b = [UInt8](j); var found: [String] = []; var i = 2
+        guard b.count > 4, b[0] == 0xFF, b[1] == 0xD8 else { return ["not-a-jpeg"] }
+        while i + 4 <= b.count, b[i] == 0xFF {
+            let m = b[i + 1]
+            if m == 0xDA || m == 0xD9 { break }
+            if m == 0xFF { i += 1; continue }
+            if m == 0x01 || (0xD0...0xD7).contains(m) { i += 2; continue }
+            let len = Int(b[i + 2]) << 8 | Int(b[i + 3]); guard len >= 2 else { break }
+            if (0xE1...0xEF).contains(m) || m == 0xFE {
+                let tag = String(bytes: b[min(i + 4, b.count)..<min(i + 12, b.count)].filter { $0 >= 32 && $0 < 127 }, encoding: .ascii) ?? ""
+                found.append(String(format: "FF%02X:", Int(m)) + tag)
+            }
+            i += 2 + len
+        }
+        return found
+    }
+    static func hasMetadata(_ j: Data) -> Bool { !metadataBlocks(j).isEmpty }
     static func randomId() -> String { String((0..<20).map { _ in "abcdef0123456789".randomElement()! }) }
 
     /// kind: "avatar" or "gallery". Returns the storage key to save on the profile.
     static func upload(_ raw: Data, kind: String) async throws -> String {
         guard let uid = Auth.auth().currentUser?.uid else { throw AppError.msg("Please sign in again.") }
-        let jpg = try prepare(raw)
+        return try await uploadPrepared(try prepare(raw), kind: kind)
+    }
+    /// Takes bytes that already went through `prepare`. Refuses anything that still carries metadata.
+    static func uploadPrepared(_ jpg: Data, kind: String) async throws -> String {
+        guard let uid = Auth.auth().currentUser?.uid else { throw AppError.msg("Please sign in again.") }
+        guard !hasMetadata(jpg) else { throw AppError.msg("Photo details could not be removed. Choose another photo.") }
         let id = randomId()
         let name = kind == "avatar" ? "avatar-\(id).jpg" : "photo-\(id).jpg"
         let key = kind == "avatar" ? "users/\(uid)/photos/\(name)" : "users/\(uid)/gallery/\(name)"
@@ -263,6 +337,8 @@ enum Media {
         let (_, resp) = try await URLSession.shared.upload(for: put, from: jpg)
         let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
         guard (200..<300).contains(code) else { throw AppError.msg("The photo could not be saved (code \(code)).") }
+        // Ask the file service to confirm it stored the file. A hiccup here never throws the upload away.
+        _ = try? await call(["class": "user-media", "name": name, "ownerUid": uid, "bytes": jpg.count, "contentType": "image/jpeg"], path: "/v1/confirm")
         return key
     }
     static func url(for key: String) async -> URL? {

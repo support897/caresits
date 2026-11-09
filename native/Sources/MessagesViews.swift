@@ -11,10 +11,10 @@ struct MessagesView: View {
             ScrollView { VStack(alignment: .leading, spacing: 12) {
                 Header(role: role, title: role == .family ? "Your carers" : "Your \(role.otherPlural)", subtitle: "Chat opens when a booking is accepted")
                 if !loaded { ProgressView().frame(maxWidth: .infinity).padding(30) }
-                else if rows.isEmpty { EmptyHint(emoji: "💬", text: role == .family ? "No chats yet" : "No chats yet") }
+                else if rows.isEmpty { EmptyHint(icon: .chat, text: role == .family ? "No chats yet" : "No chats yet") }
                 ForEach(rows, id: \.rel.id) { r in
                     NavigationLink { ChatView(rel: r.rel, other: r.other) } label: {
-                        Card { HStack(spacing: 12) { PhotoView(key: r.other?.photoKey ?? "", size: 52, fallback: r.other?.role.emoji ?? "🐰"); VStack(alignment: .leading) { Text(r.other?.name ?? "…").font(.headline).foregroundStyle(Brand.ink); Text(r.other.map { $0.side == "carer" ? "\($0.role.emoji) \($0.role.name)" : "🏡 Family" } ?? "").font(.subheadline).foregroundStyle(Brand.muted) }; Spacer(); Image(systemName: "chevron.right").foregroundStyle(Brand.muted) } }
+                        Card { HStack(spacing: 12) { PhotoView(key: r.other?.photoKey ?? "", size: 52, fallback: r.other?.role.icon ?? .bunny); VStack(alignment: .leading) { Text(r.other?.name ?? "…").font(.headline).foregroundStyle(Brand.ink); Text(r.other.map { $0.side == "carer" ? $0.role.name : "Family" } ?? "").font(.subheadline).foregroundStyle(Brand.muted) }; Spacer(); BrandIcon(kind: .chevron, size: 18, color: Brand.muted) } }
                     }.buttonStyle(.plain).padding(.horizontal, 20)
                 }
             }.padding(.bottom, 100) }
@@ -40,7 +40,7 @@ struct ChatView: View {
         VStack(spacing: 0) {
             ScrollViewReader { proxy in
                 ScrollView { LazyVStack(spacing: 8) {
-                    if msgs.isEmpty { EmptyHint(emoji: "👋", text: "Say hello to \(other?.firstName ?? "them")!") }
+                    if msgs.isEmpty { EmptyHint(icon: .chat, text: "Say hello to \(other?.firstName ?? "them")!") }
                     ForEach(msgs) { m in
                         let mine = m.from == s.uid
                         HStack { if mine { Spacer(minLength: 50) }
@@ -53,7 +53,7 @@ struct ChatView: View {
             if !err.isEmpty { Text(err).font(.caption).foregroundStyle(.red) }
             HStack(spacing: 10) {
                 TextField("Message", text: $text, axis: .vertical).lineLimit(1...4).padding(12).background(Brand.field).clipShape(RoundedRectangle(cornerRadius: 20))
-                Button { Task { await send() } } label: { Image(systemName: "paperplane.fill").font(.title3).padding(12).background(s.role.tint).foregroundStyle(.white).clipShape(Circle()) }.disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
+                Button { Task { await send() } } label: { BrandIcon(kind: .send, size: 22, color: .white, mono: true).padding(12).background(s.role.tint).clipShape(Circle()) }.disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
             }.padding(12).background(.ultraThinMaterial)
         }
         .background(Brand.cream.ignoresSafeArea()).navigationTitle(other?.firstName ?? "Chat").navigationBarTitleDisplayMode(.inline)
