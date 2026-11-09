@@ -20,6 +20,7 @@ struct OnboardingView: View {
     @State private var langs: Set<String> = ["English"]
     @State private var resume: Resume?; @State private var showFile = false; @State private var resumeMsg = ""
     @State private var busy = false; @State private var err = ""
+    @State private var skippedFamily = false; @State private var showFamilySheet = false
 
     var role: Role { side == "family" ? .family : (service == "babysitter" ? .babysitter : service == "au_pair" ? .auPair : .nanny) }
     var steps: [String] { side == "family" ? ["you", "care", "kids", "when"] : ["you", "kind", "resume", "about", "when"] }
@@ -30,22 +31,35 @@ struct OnboardingView: View {
             ProgressView(value: Double(step + 1), total: Double(steps.count)).tint(role.tint).padding([.horizontal, .top], 20)
             ScrollView {
                 VStack(spacing: 16) {
-                    BunnyView(size: 84)
+                    BunnyView(size: 84, mood: bunnyMood)
                     Text(title).font(Brand.title(28)).foregroundStyle(role.tint).multilineTextAlignment(.center).accessibilityIdentifier("onbTitle").onTapGesture { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) }
+                    if skippedFamily && current != "you" && (name.trimmingCharacters(in: .whitespaces).isEmpty || (postcode.isEmpty && suburb.isEmpty)) { FamilySkippedNotice { showFamilySheet = true } }
                     content
                     if !err.isEmpty { Text(err).foregroundStyle(.red).font(.callout) }
                 }.padding(20)
             }.scrollDismissesKeyboard(.interactively)
             HStack(spacing: 12) {
                 if step > 0 { Button("Back") { step -= 1 }.font(.headline).frame(width: 90, height: 52) }
-                if current == "resume" { Button("⏭️ Skip") { step += 1 }.font(.headline).frame(width: 100, height: 52) }
-                BigButton(title: step == steps.count - 1 ? "🎉 Finish" : "Next ➜", tint: role.tint, busy: busy) { Task { await next() } }
+                if current == "resume" { Button("Skip") { step += 1 }.font(.headline).frame(width: 100, height: 52) }
+                if current == "you" && side == "family" { Button("Skip for now") { err = ""; skippedFamily = true; withAnimation { step += 1 } }.font(.headline).frame(width: 130, height: 52).accessibilityIdentifier("skipFamily") }
+                BigButton(title: step == steps.count - 1 ? "Finish" : "Next", tint: role.tint, busy: busy, icon: step == steps.count - 1 ? .sparkle : nil) { Task { await next() } }
             }.padding(20).background(.ultraThinMaterial)
         }
         .background(Brand.cream.ignoresSafeArea())
         .onAppear { side = s.chosenSide; if let n = s.me?.name, name.isEmpty { name = n } }
         .fileImporter(isPresented: $showFile, allowedContentTypes: [.pdf, .plainText]) { r in readResume(r) }
         .onChange(of: pick) { _, item in Task { await choosePhoto(item) } }
+        .sheet(isPresented: $showFamilySheet) {
+            ScrollView { VStack(spacing: 16) {
+                Text("My family").font(Brand.title(28)).foregroundStyle(Brand.ink).padding(.top, 24)
+                FamilyDetailsFields(name: $name, postcode: $postcode, suburb: $suburb)
+                BigButton(title: "Done", tint: role.tint) { showFamilySheet = false }
+            }.padding(20) }.background(Brand.cream.ignoresSafeArea())
+        }
+    }
+
+    var bunnyMood: BunnyMood {
+        switch current { case "you": return .hello; case "care", "kind": return .think; case "resume": return .point; case "kids", "about": return .encourage; default: return .celebrate }
     }
 
     var title: String {
@@ -67,18 +81,16 @@ struct OnboardingView: View {
                 ZStack {
                     Circle().fill(role.soft).frame(width: 130, height: 130)
                     if let p = photoPreview { Image(uiImage: p).resizable().scaledToFill().frame(width: 130, height: 130).clipShape(Circle()) }
-                    else { VStack { Text("📷").font(.system(size: 36)); Text("Add photo").font(.footnote) } }
+                    else { VStack(spacing: 4) { BrandIcon(kind: .camera, size: 38, color: role.tint); Text("Add photo").font(.footnote).foregroundStyle(Brand.ink) } }
                     if busy && photoPreview != nil && photoKey.isEmpty { ProgressView() }
                 }
             }
-            field("Your name", $name, content: .name)
-            field("Postcode", $postcode, content: .postalCode, keyboard: .numberPad)
-            field("Suburb", $suburb, content: .addressCity)
+            FamilyDetailsFields(name: $name, postcode: $postcode, suburb: $suburb)
             Text("Your exact address is never shown.").font(.footnote).foregroundStyle(Brand.muted)
         case "care":
             ForEach(["nanny", "babysitter", "au_pair"], id: \.self) { svc in
                 Button { if wants.contains(svc) { if wants.count > 1 { wants.remove(svc) } } else { wants.insert(svc) } } label: {
-                    HStack { Text(emoji(svc)).font(.largeTitle); Text(serviceLabels[svc] ?? svc).font(.title3.weight(.semibold)); Spacer(); Image(systemName: wants.contains(svc) ? "checkmark.circle.fill" : "circle").font(.title2) }
+                    HStack { BrandIcon(kind: icon(svc), size: 36); Text(serviceLabels[svc] ?? svc).font(.title3.weight(.semibold)); Spacer(); BrandIcon(kind: wants.contains(svc) ? .checkCircle : .circle, size: 28, color: Brand.ink) }
                         .padding(16).background(wants.contains(svc) ? Brand.sage.opacity(0.5) : .white).foregroundStyle(Brand.ink).clipShape(RoundedRectangle(cornerRadius: 18))
                 }
             }
@@ -89,21 +101,21 @@ struct OnboardingView: View {
                     Stepper("\(kids[i].age) y", value: Binding(get: { kids[i].age }, set: { kids[i].age = $0 }), in: 0...17).fixedSize()
                 } }
             }
-            Button("➕ Add a child") { if kids.count < 8 { kids.append(("", 3)) } }.font(.headline)
+            Button { if kids.count < 8 { kids.append(("", 3)) } } label: { IconLabel(icon: .plus, text: "Add a child") }.font(.headline)
             Text("Children's details stay private.").font(.footnote).foregroundStyle(Brand.muted)
         case "kind":
             ForEach([Role.nanny, .babysitter, .auPair], id: \.self) { r in
                 Button { service = r.service ?? "nanny" } label: {
-                    HStack { Text(r.emoji).font(.largeTitle); VStack(alignment: .leading) { Text(r.name).font(.title3.weight(.semibold)); Text(r.greeting).font(.footnote) }; Spacer(); Image(systemName: service == r.service ? "checkmark.circle.fill" : "circle").font(.title2) }
+                    HStack { BrandIcon(kind: r.icon, size: 36, color: r.tint); VStack(alignment: .leading) { Text(r.name).font(.title3.weight(.semibold)); Text(r.greeting).font(.footnote) }; Spacer(); BrandIcon(kind: service == r.service ? .checkCircle : .circle, size: 28, color: r.tint) }
                         .padding(16).background(service == r.service ? r.soft : .white).foregroundStyle(r.tint).clipShape(RoundedRectangle(cornerRadius: 18))
                 }
             }
             Text("Your own app, made for you.").font(.footnote).foregroundStyle(Brand.muted).multilineTextAlignment(.center)
         case "resume":
             Text("We fill in your profile for you.").foregroundStyle(Brand.muted)
-            BigButton(title: resume == nil ? "📄 Add resume" : "✅ Resume read", tint: role.tint) { showFile = true }
+            BigButton(title: resume == nil ? "Add resume" : "Resume read", tint: role.tint, icon: resume == nil ? .doc : .checkCircle) { showFile = true }
             if !resumeMsg.isEmpty { Text(resumeMsg).font(.callout).multilineTextAlignment(.center) }
-            Text("🔒 Read on your phone only").font(.footnote).foregroundStyle(Brand.muted)
+            IconLabel(icon: .lock, text: "Read on your phone only", size: 14, color: Brand.muted).font(.footnote).foregroundStyle(Brand.muted)
         case "about":
             field("A few words about your care", $headline)
             VStack(alignment: .leading) { Text("About you").font(.subheadline); TextEditor(text: $intro).frame(height: 110).padding(8).background(Brand.field).clipShape(RoundedRectangle(cornerRadius: 12)); Text("\(intro.count)/300").font(.caption).foregroundStyle(Brand.muted) }
@@ -120,7 +132,7 @@ struct OnboardingView: View {
         }
     }
 
-    func emoji(_ svc: String) -> String { svc == "nanny" ? "🧸" : svc == "babysitter" ? "🌙" : "🌍" }
+    func icon(_ svc: String) -> BI { svc == "nanny" ? .nanny : svc == "babysitter" ? .moon : .globe }
     func field(_ t: String, _ b: Binding<String>, content: UITextContentType? = nil, keyboard: UIKeyboardType = .default) -> some View {
         TextField(t, text: b).textContentType(content).keyboardType(keyboard).padding(14).background(Brand.field).clipShape(RoundedRectangle(cornerRadius: 12))
     }
@@ -135,8 +147,9 @@ struct OnboardingView: View {
         defer { busy = false }
         do {
             let data = try await Media.load(item)
-            photoPreview = UIImage(data: data)
-            photoKey = try await Media.uploadSafe(data, kind: "avatar")
+            let prepared = try Media.prepare(data)          // small, clean copy: this is what we show and what we upload
+            photoPreview = UIImage(data: prepared)
+            photoKey = try await Media.uploadPreparedSafe(prepared, kind: "avatar")
         } catch { err = "Photo problem: " + error.localizedDescription }
     }
 
@@ -154,7 +167,7 @@ struct OnboardingView: View {
     }
 
     func validate() -> String? {
-        if current == "you" && (name.trimmingCharacters(in: .whitespaces).isEmpty || (postcode.isEmpty && suburb.isEmpty)) { return "Add your name and a postcode or suburb." }
+        if current == "you" && !(skippedFamily && side == "family") && (name.trimmingCharacters(in: .whitespaces).isEmpty || (postcode.isEmpty && suburb.isEmpty)) { return "Add your name and a postcode or suburb." }
         if current == "about" && headline.trimmingCharacters(in: .whitespaces).isEmpty { return "Add a few words about your care." }
         if current == "when" && days.isEmpty { return "Pick at least one day." }
         return nil
@@ -177,7 +190,7 @@ struct OnboardingView: View {
             card["experienceYears"] = years; card["rate"] = rate; card["availability"] = sched; card["maxDistanceKm"] = km
         }
         do {
-            try await Backend.saveProfile(uid, side: side, name: name.trimmingCharacters(in: .whitespaces), postcode: postcode, photoKey: photoKey.isEmpty ? nil : photoKey, about: side == "family" ? "" : intro, card: card)
+            try await Backend.saveProfile(uid, side: side, name: name.trimmingCharacters(in: .whitespaces).isEmpty ? "A family" : name.trimmingCharacters(in: .whitespaces), postcode: postcode, photoKey: photoKey.isEmpty ? nil : photoKey, about: side == "family" ? "" : intro, card: card)
             if let r = resume { try? await Backend.saveResume(uid, r) }
             await s.reload()
         } catch { err = "Could not save: " + error.localizedDescription }

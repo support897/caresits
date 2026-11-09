@@ -1,0 +1,9 @@
+JPEG in: 238720 bytes, 4032x3024, GPS true, Exif true
+JPEG old path (no strip): blocks ["FFE1:ExifMM", "FFED:Photosho"], PUT -> 422 {"error":"exif"}
+JPEG new path prepared: 49572 bytes, 1200x1600, blocks [], GPS false, Exif false
+JPEG SAVED key photos/avatar-003f559ee43611a9f8c0.jpg: served 49572 bytes, 1200x1600, blocks [], GPS false, Exif false, identical to prepared true, decodes true
+HEIC in: 26528 bytes, 4032x3024, GPS true, Exif true
+HEIC old path (no strip): blocks ["FFE1:ExifMM", "FFED:Photosho"], PUT -> 422 {"error":"exif"}
+HEIC new path prepared: 48809 bytes, 1200x1600, blocks [], GPS false, Exif false
+HEIC SAVED key gallery/photo-076a32c3ffce0351bc42.jpg: served 48809 bytes, 1200x1600, blocks [], GPS false, Exif false, identical to prepared true, decodes true
+PROOF OK

@@ -7,6 +7,8 @@ struct MeView: View {
     @EnvironmentObject var s: Session
     @State private var pick: PhotosPickerItem?; @State private var galleryPick: [PhotosPickerItem] = []
     @State private var busy = false; @State private var err = ""; @State private var ok = ""
+    @AppStorage("caresits.bunnyDown") private var bunnyDown = false
+    @State private var showFamily = false
     @State private var showResume = false; @State private var showEdit = false; @State private var confirmDelete = false; @State private var showReauth = false
     @State private var rating: (avg: Double, count: Int)?; @State private var reviews: [(rating: Int, text: String)] = []
     var role: Role { s.role }
@@ -19,48 +21,52 @@ struct MeView: View {
         NavigationStack {
             ScrollView { VStack(spacing: 14) {
                 Header(role: role, title: "Me", subtitle: role == .family ? "Your family" : "\(role.name) · Free for carers, always")
+                PhotoProofBadge()
                 PhotosPicker(selection: $pick, matching: .images) {
                     ZStack(alignment: .bottomTrailing) {
-                        PhotoView(key: me.photoKey, size: 120, fallback: role.emoji)
-                        Text("📷").padding(8).background(.white).clipShape(Circle()).shadow(radius: 2)
+                        PhotoView(key: me.photoKey, size: 120, fallback: role.icon)
+                        BrandIcon(kind: .camera, size: 20, color: role.tint).padding(8).background(.white).clipShape(Circle()).shadow(radius: 2)
                         if busy { ProgressView() }
                     }
                 }
                 Text(me.name).font(Brand.title(26)).foregroundStyle(Brand.ink)
-                if !ok.isEmpty { Text(ok).foregroundStyle(role.tint).font(.callout) }
+                if !ok.isEmpty { IconLabel(icon: .checkCircle, text: ok, size: 18, color: role.tint).foregroundStyle(role.tint).font(.callout) }
                 if !err.isEmpty { Text(err).foregroundStyle(.red).font(.callout).multilineTextAlignment(.center) }
 
                 Card { VStack(alignment: .leading, spacing: 8) {
                     Text("My photos").font(.headline)
                     ScrollView(.horizontal, showsIndicators: false) { HStack {
                         ForEach(me.gallery, id: \.self) { k in PhotoView(key: k, size: 80, round: false) }
-                        if me.gallery.count < 6 { PhotosPicker(selection: $galleryPick, maxSelectionCount: 6 - me.gallery.count, matching: .images) { ZStack { RoundedRectangle(cornerRadius: 16).fill(role.soft); Text("➕").font(.title) }.frame(width: 80, height: 80) } }
+                        if me.gallery.count < 6 { PhotosPicker(selection: $galleryPick, maxSelectionCount: 6 - me.gallery.count, matching: .images) { ZStack { RoundedRectangle(cornerRadius: 16).fill(role.soft); BrandIcon(kind: .plus, size: 30, color: role.tint) }.frame(width: 80, height: 80) } }
                     } }
                 } }.padding(.horizontal, 20)
 
                 if me.side == "carer" {
                     Card { VStack(alignment: .leading, spacing: 8) {
-                        Text("\(role.emoji) My \(role.name.lowercased()) profile").font(.headline)
+                        IconLabel(icon: role.icon, text: "My \(role.name.lowercased()) profile", size: 20).font(.headline)
                         Text(me.headline.isEmpty ? "Add a headline" : me.headline)
-                        Text("💲\(Int(me.rate))/h  ·  ⭐ \(me.years) years").font(.subheadline).foregroundStyle(Brand.muted)
-                        if let r = rating { Text("★ \(String(format: "%.1f", r.avg)) from \(r.count) review\(r.count == 1 ? "" : "s")").foregroundStyle(.orange) }
+                        HStack(spacing: 12) { if me.rate > 0 { IconLabel(icon: .rate, text: "\(Int(me.rate))/h", size: 16, color: Brand.muted) }; if me.years > 0 { IconLabel(icon: .star, text: "\(me.years) years", size: 16, color: Brand.muted) } }.font(.subheadline).foregroundStyle(Brand.muted)
+                        if let r = rating { IconLabel(icon: .star, text: "\(String(format: "%.1f", r.avg)) from \(r.count) review\(r.count == 1 ? "" : "s")", size: 16, color: .orange).foregroundStyle(.orange) }
                         else { Text("No reviews yet").font(.footnote).foregroundStyle(Brand.muted) }
-                        Button("✏️ Edit") { showEdit = true }
+                        Button { showEdit = true } label: { IconLabel(icon: .pencil, text: "Edit") }
                     } }.padding(.horizontal, 20)
-                    Button { showResume = true } label: { row("📄", "My resume", "Add a file. We fill your profile.") }.buttonStyle(.plain).padding(.horizontal, 20)
-                    ForEach(reviews.indices, id: \.self) { i in Card { Text(String(repeating: "★", count: reviews[i].rating) + (reviews[i].text.isEmpty ? "" : "  " + reviews[i].text)).font(.subheadline) }.padding(.horizontal, 20) }
+                    Button { showResume = true } label: { row(.doc, "My resume", "Add a file. We fill your profile.") }.buttonStyle(.plain).padding(.horizontal, 20)
+                    ForEach(reviews.indices, id: \.self) { i in Card { HStack(spacing: 8) { Stars(count: reviews[i].rating); if !reviews[i].text.isEmpty { Text(reviews[i].text) } }.font(.subheadline) }.padding(.horizontal, 20) }
                 } else {
                     Card { VStack(alignment: .leading, spacing: 6) {
-                        Text("🏡 My family").font(.headline)
+                        IconLabel(icon: .home, text: "My family", size: 20).font(.headline)
+                        if !me.postcode.isEmpty || !me.suburb.isEmpty { IconLabel(icon: .pin, text: [me.suburb, me.postcode].filter { !$0.isEmpty }.joined(separator: " "), size: 16) }
                         Text("Looking for: " + me.services.map { serviceLabels[$0] ?? $0 }.joined(separator: ", "))
-                        if !me.kids.isEmpty { Text("👶 " + me.kids.map { "\($0.name) \($0.age)" }.joined(separator: ", ")) }
-                        if me.budgetMax > 0 { Text("💲 Up to \(Int(me.budgetMax)) per hour").foregroundStyle(Brand.muted) }
+                        if !me.kids.isEmpty { IconLabel(icon: .child, text: me.kids.map { "\($0.name) \($0.age)" }.joined(separator: ", "), size: 16) }
+                        if me.budgetMax > 0 { IconLabel(icon: .rate, text: "Up to \(Int(me.budgetMax)) per hour", size: 16, color: Brand.muted).foregroundStyle(Brand.muted) }
                         Text("Children's details are private.").font(.caption).foregroundStyle(Brand.muted)
+                        Button { showFamily = true } label: { IconLabel(icon: .pencil, text: me.postcode.isEmpty && me.suburb.isEmpty ? "Finish my family details" : "Edit my family") }.accessibilityIdentifier("editFamily")
                     } }.padding(.horizontal, 20)
                 }
                 Card { VStack(alignment: .leading, spacing: 8) {
                     Text("Safety and privacy").font(.headline)
-                    Text("🔒 Photos are private until you connect.").font(.footnote).foregroundStyle(Brand.muted)
+                    IconLabel(icon: .lock, text: "Photos are private until you connect.", size: 14, color: Brand.muted).font(.footnote).foregroundStyle(Brand.muted)
+                    Toggle("Turn the bunny down", isOn: $bunnyDown).font(.subheadline).tint(role.tint)
                 } }.padding(.horizontal, 20)
                 Button("Sign out") { s.signOut() }.font(.headline).padding(.top, 8)
                 Button("Delete my account", role: .destructive) { confirmDelete = true }.font(.footnote)
@@ -71,13 +77,16 @@ struct MeView: View {
             .sheet(isPresented: $showReauth) { ReauthSheet { Task { await doDelete() } } }
             .sheet(isPresented: $showResume) { ResumeEditor() }
             .sheet(isPresented: $showEdit) { ProfileEditor() }
+            .sheet(isPresented: $showFamily) { FamilyEditor() }
+            .onAppear { if s.goMyFamily { s.goMyFamily = false; showFamily = true } }
+            .onChange(of: s.goMyFamily) { _, go in if go { s.goMyFamily = false; showFamily = true } }
             .confirmationDialog("Delete your account and profile? This cannot be undone.", isPresented: $confirmDelete, titleVisibility: .visible) {
                 Button("Delete everything", role: .destructive) { if s.needsReauth { showReauth = true } else { Task { await doDelete() } } }
             }
             .task { if me.side == "carer" { rating = await Backend.reviewSummary(me.id); reviews = await Backend.reviewsFor(carer: me.id) } }
         }
     }
-    func row(_ e: String, _ t: String, _ sub: String) -> some View { Card { HStack { Text(e).font(.title); VStack(alignment: .leading) { Text(t).font(.headline).foregroundStyle(Brand.ink); Text(sub).font(.footnote).foregroundStyle(Brand.muted) }; Spacer(); Image(systemName: "chevron.right") } } }
+    func row(_ e: BI, _ t: String, _ sub: String) -> some View { Card { HStack { BrandIcon(kind: e, size: 34); VStack(alignment: .leading) { Text(t).font(.headline).foregroundStyle(Brand.ink); Text(sub).font(.footnote).foregroundStyle(Brand.muted) }; Spacer(); BrandIcon(kind: .chevron, size: 18, color: Brand.muted) } } }
 
     func doDelete() async {
         do { try await Backend.deleteAccount((s.uid ?? "")); s.signOut() } catch { err = "Could not delete: " + error.localizedDescription }
@@ -89,7 +98,7 @@ struct MeView: View {
             let data = try await Media.load(item)
             let key = try await Media.uploadSafe(data, kind: "avatar")
             try await Backend.saveProfile(me.id, photoKey: key)
-            await s.reload(); ok = "Photo saved ✅"
+            await s.reload(); ok = "Photo saved"
         } catch { err = "Photo problem: " + error.localizedDescription }
     }
     func addGallery(_ items: [PhotosPickerItem]) async {
@@ -103,7 +112,7 @@ struct MeView: View {
                 catch { skipped += 1; why = error.localizedDescription }
             }
             if keys.count > me.gallery.count { try await Backend.saveProfile(me.id, card: ["gallery": keys, "mainPhotoIndex": 0]); await s.reload() }
-            if skipped > 0 { err = "\(skipped) photo(s) skipped. " + why } else { ok = "Photos saved ✅" }
+            if skipped > 0 { err = "\(skipped) photo(s) skipped. " + why } else { ok = "Photos saved" }
         } catch { err = "Photo problem: " + error.localizedDescription }
     }
 }
@@ -133,10 +142,10 @@ struct ResumeEditor: View {
     @State private var r = Resume(); @State private var showFile = false; @State private var msg = ""; @State private var busy = false
     var body: some View {
         ScrollView { VStack(spacing: 14) {
-            BunnyView(size: 80).padding(.top, 16)
+            BunnyView(size: 80, mood: .think).padding(.top, 16)
             Text("My resume").font(Brand.title(26))
-            BigButton(title: "📄 Choose a resume file", tint: s.role.tint) { showFile = true }
-            Text("🔒 Read on your phone only").font(.footnote).foregroundStyle(Brand.muted)
+            BigButton(title: "Choose a resume file", tint: s.role.tint, icon: .doc) { showFile = true }
+            IconLabel(icon: .lock, text: "Read on your phone only", size: 14, color: Brand.muted).font(.footnote).foregroundStyle(Brand.muted)
             if !msg.isEmpty { Text(msg).font(.callout) }
             editor("About you", Binding(get: { r.summary }, set: { r.summary = $0 }))
             LinesEditor(title: "Work (one per line)", items: $r.jobs); LinesEditor(title: "Study (one per line)", items: $r.education); LinesEditor(title: "Skills (one per line)", items: $r.skills); LinesEditor(title: "Certificates you list (one per line)", items: $r.certificates)

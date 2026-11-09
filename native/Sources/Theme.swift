@@ -22,7 +22,7 @@ enum Role: String, CaseIterable, Identifiable {
     case family, nanny, babysitter, auPair
     var id: String { rawValue }
     var service: String? { switch self { case .family: return nil; case .nanny: return "nanny"; case .babysitter: return "babysitter"; case .auPair: return "au_pair" } }
-    var emoji: String { switch self { case .family: return "🏡"; case .nanny: return "🧸"; case .babysitter: return "🌙"; case .auPair: return "🌍" } }
+    var icon: BI { switch self { case .family: return .home; case .nanny: return .nanny; case .babysitter: return .moon; case .auPair: return .globe } }
     var name: String { switch self { case .family: return "Family"; case .nanny: return "Nanny"; case .babysitter: return "Babysitter"; case .auPair: return "Au pair" } }
     var tint: Color { switch self { case .family: return Brand.ink; case .nanny: return Color(hex: 0x2E7D6B); case .babysitter: return Color(hex: 0x5B4B9A); case .auPair: return Color(hex: 0xC2557A) } }
     var soft: Color { switch self { case .family: return Brand.sage.opacity(0.35); case .nanny: return Color(hex: 0xD6EDE5); case .babysitter: return Color(hex: 0xE3DDF5); case .auPair: return Color(hex: 0xFBDDE8) } }
@@ -38,31 +38,20 @@ enum Role: String, CaseIterable, Identifiable {
     var otherPlural: String { switch self { case .family: return "carers"; case .nanny, .babysitter: return "families"; case .auPair: return "host families" } }
 }
 
-struct BunnyView: View {
-    var size: CGFloat = 96
-    @State private var up = false
-    var body: some View {
-        Image("bunny").resizable().scaledToFit().frame(width: size, height: size)
-            .offset(y: up ? -4 : 2).rotationEffect(.degrees(up ? 2 : -2))
-            .animation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true), value: up)
-            .onAppear { up = true }.accessibilityHidden(true)
-    }
-}
-
 struct BigButton: View {
-    let title: String; var tint: Color = Brand.ink; var busy = false; let action: () -> Void
+    let title: String; var tint: Color = Brand.ink; var busy = false; var icon: BI? = nil; let action: () -> Void
     var body: some View {
         Button(action: action) {
-            HStack { if busy { ProgressView().tint(.white) }; Text(title).font(.system(size: 18, weight: .semibold)) }
+            HStack(spacing: 8) { if busy { ProgressView().tint(.white) }; if let icon { BrandIcon(kind: icon, size: 20, color: .white, mono: true) }; Text(title).font(.system(size: 18, weight: .semibold)) }
                 .frame(maxWidth: .infinity, minHeight: 52).background(tint).foregroundStyle(.white).clipShape(RoundedRectangle(cornerRadius: 16))
         }.disabled(busy)
     }
 }
 
 struct Chip: View {
-    let text: String; var on = false; var tint: Color = Brand.ink
+    let text: String; var on = false; var tint: Color = Brand.ink; var icon: BI? = nil
     var body: some View {
-        Text(text).font(.system(size: 16, weight: .medium)).padding(.horizontal, 14).padding(.vertical, 9)
+        HStack(spacing: 6) { if let icon { BrandIcon(kind: icon, size: 16, color: on ? .white : Brand.ink, mono: on) }; Text(text) }.font(.system(size: 16, weight: .medium)).padding(.horizontal, 14).padding(.vertical, 9)
             .background(on ? tint : Color.white).foregroundStyle(on ? .white : Brand.ink)
             .overlay(Capsule().stroke(tint.opacity(0.35), lineWidth: 1.5)).clipShape(Capsule())
     }

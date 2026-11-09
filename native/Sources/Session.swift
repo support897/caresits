@@ -10,6 +10,8 @@ final class Session: ObservableObject {
     @Published var uid: String?
     @Published var me: Person?
     @Published var loading = true
+    /// Set to true to open Me and then My family (the link shown after "Skip for now").
+    @Published var goMyFamily = false
     @Published var chosenSide: String = UserDefaults.standard.string(forKey: "caresits.side") ?? "family"
     private var handle: AuthStateDidChangeListenerHandle?
     fileprivate var nonce = ""

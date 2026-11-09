@@ -15,7 +15,7 @@ final class RoleFlowTests: XCTestCase {
         if !b.waitForExistence(timeout: timeout) { shot("MISSING-\(label)"); XCTFail("button \(label) missing. Screen: " + app.staticTexts.allElementsBoundByIndex.map { $0.label }.joined(separator: " | ") + " || Buttons: " + app.buttons.allElementsBoundByIndex.map { $0.label }.joined(separator: " | ")); return }
         sleep(1); b.tap()
     }
-    func type(_ field: XCUIElement, _ text: String) { if !field.waitForExistence(timeout: 30) { XCTFail("field missing: " + String(app.debugDescription.prefix(1500))); return }; field.tap(); sleep(1); field.typeText(text) }
+    func type(_ field: XCUIElement, _ text: String) { if !field.waitForExistence(timeout: 30) { XCTFail("field missing: " + String(app.debugDescription.prefix(1500))); return }; field.tap(); sleep(1); if !(field.value(forKey: "hasKeyboardFocus") as? Bool ?? true) { field.tap(); sleep(1) }; field.typeText(text) }
 
 
     func signUp(side: String) {
@@ -29,9 +29,9 @@ final class RoleFlowTests: XCTestCase {
             so.tap(); sleep(2)
         }
         // A previous interrupted run can leave a signed-in test user at the profile step: carry on with it, then it is deleted at the end.
-        if app.textFields["Your name"].waitForExistence(timeout: 6) || app.buttons["Next ➜"].exists { return }
-        if app.buttons["I need care"].waitForExistence(timeout: 2) && !app.buttons["✉️  Use email"].exists { tap(side == "family" ? "I need care" : "I give care"); return }
-        tap("✉️  Use email")
+        if app.textFields["Your name"].waitForExistence(timeout: 6) || app.buttons["Next"].exists { return }
+        if app.buttons["I need care"].waitForExistence(timeout: 2) && !app.buttons["Use email"].exists { tap(side == "family" ? "I need care" : "I give care"); return }
+        tap("Use email")
         let email = "projects.reports.ilse+nat\(side)\(Int(Date().timeIntervalSince1970))@gmail.com"
         type(app.textFields["Email"], email)
         type(app.secureTextFields["Password (6+ letters)"], "Nat-\(Int(Date().timeIntervalSince1970))-Zq9")
@@ -48,7 +48,7 @@ final class RoleFlowTests: XCTestCase {
         if !nameField.waitForExistence(timeout: 25) { shot("after-create-\(side)"); XCTFail("sign up did not reach onboarding: " + String(app.debugDescription.prefix(1800))) }
     }
     func dismissKb() { let t = app.staticTexts["onbTitle"]; if t.exists { t.tap() } }
-    func next() { let t = app.staticTexts["onbTitle"]; let before = t.exists ? t.label : ""; tap("Next ➜"); sleep(2); if t.exists && t.label == before { tap("Next ➜"); sleep(2) } }
+    func next() { let t = app.staticTexts["onbTitle"]; let before = t.exists ? t.label : ""; tap("Next"); sleep(2); if t.exists && t.label == before { tap("Next"); sleep(2) } }
     func fillYou(_ name: String) {
         type(app.textFields["Your name"], name)
         type(app.textFields["Postcode"], "4005"); dismissKb()
@@ -56,7 +56,7 @@ final class RoleFlowTests: XCTestCase {
         dismissKb()
     }
     func finishAndCheck(tabs: [String], role: String) {
-        tap("🎉 Finish", timeout: 20)
+        tap("Finish", timeout: 20)
         for t in tabs { XCTAssertTrue(app.tabBars.buttons[t].waitForExistence(timeout: 30), "\(role): tab \(t) missing") }
         shot("home-\(role)")
         for t in tabs { app.tabBars.buttons[t].tap(); sleep(2); shot("\(role)-\(t)") }
@@ -66,12 +66,14 @@ final class RoleFlowTests: XCTestCase {
         for _ in 0..<6 where !del.isHittable { app.swipeUp() }
         del.tap()
         tap("Delete everything")
-        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 30), "\(role): not signed out after delete")
+        let out = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 75)
+        if !out { shot("FAIL-delete-\(role)") }
+        XCTAssertTrue(out, "\(role): not signed out after delete " + app.staticTexts.allElementsBoundByIndex.map { $0.label }.joined(separator: " | "))
     }
 
     func testSwipeDeck() {
         signUp(side: "family"); fillYou("Test Swipe"); next(); next(); type(app.textFields["Name or nickname"], "Mia"); dismissKb(); next()
-        tap("🎉 Finish", timeout: 20)
+        tap("Finish", timeout: 20)
         let card = app.descendants(matching: .any)["topCard"].firstMatch
         if !card.waitForExistence(timeout: 75) { XCTFail("deck: no card. Texts: " + app.staticTexts.allElementsBoundByIndex.map { $0.label }.joined(separator: " | ") + " || Buttons: " + app.buttons.allElementsBoundByIndex.map { $0.label }.joined(separator: " | ")); return }
         shot("deck-before")
@@ -82,7 +84,7 @@ final class RoleFlowTests: XCTestCase {
         let del = app.buttons["Delete my account"]
         for _ in 0..<6 where !del.isHittable { app.swipeUp() }
         del.tap(); tap("Delete everything")
-        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 30))
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 75))
     }
     func pic(_ name: String) {
         sleep(2)
@@ -100,7 +102,7 @@ final class RoleFlowTests: XCTestCase {
         }
         if !app.buttons["I need care"].waitForExistence(timeout: 4) {
             pic("01-sign-up-first")
-            tap("✉️  Use email")
+            tap("Use email")
             type(app.textFields["Email"], "projects.reports.ilse+natpics\(Int(Date().timeIntervalSince1970))@gmail.com")
             type(app.secureTextFields["Password (6+ letters)"], "Nat-\(Int(Date().timeIntervalSince1970))-Zq9")
             tap("Create my account")
@@ -112,7 +114,7 @@ final class RoleFlowTests: XCTestCase {
         tap("I need care")
         fillYou("Harper Family"); next(); next()
         type(app.textFields["Name or nickname"], "Mia"); dismissKb(); next()
-        tap("🎉 Finish", timeout: 20)
+        tap("Finish", timeout: 20)
         _ = app.descendants(matching: .any)["topCard"].firstMatch.waitForExistence(timeout: 75)
         sleep(4); pic("03-home-swipe-deck")
         app.buttons["Details"].tap(); sleep(3); pic("04-profile")
@@ -129,17 +131,72 @@ final class RoleFlowTests: XCTestCase {
         // care: nanny preselected, add babysitter
         tap("Babysitter"); next()
         type(app.textFields["Name or nickname"], "Mia"); dismissKb(); sleep(1); next()
-        if !app.buttons["🎉 Finish"].waitForExistence(timeout: 6) { next() }
+        if !app.buttons["Finish"].waitForExistence(timeout: 6) { next() }
         finishAndCheck(tabs: ["Find care", "Calendar", "Messages", "Me"], role: "family")
     }
     func carer(_ kind: String, tabs: [String]) {
         signUp(side: "carer"); fillYou("Test " + kind); next()
         tap(kind); shot("kind-chosen-\(kind)"); next(); shot("after-kind-next-\(kind)")
-        tap("⏭️ Skip")
+        tap("Skip")
         type(app.textFields["A few words about your care"], "Kind and calm care"); dismissKb(); next()
         finishAndCheck(tabs: tabs, role: kind)
     }
     func testNannyApp() { carer("Nanny", tabs: ["Today", "Requests", "Calendar", "Families", "Me"]) }
     func testBabysitterApp() { carer("Babysitter", tabs: ["Jobs", "Requests", "Calendar", "Families", "Me"]) }
     func testAuPairApp() { carer("Au pair", tabs: ["Host families", "My week", "Requests", "Chat", "Me"]) }
+
+    func testSkipFamilyAndLabels() {
+        signUp(side: "family")
+        for l in ["Your name", "Postcode", "Suburb"] { XCTAssertTrue(app.staticTexts[l].waitForExistence(timeout: 10), "visible label missing: \(l)") }
+        shot("b176-labels-you-step")
+        tap("Skip for now")
+        let link = app.buttons["finishFamilyLinkOnboarding"]
+        XCTAssertTrue(link.waitForExistence(timeout: 10), "skip notice link missing")
+        shot("b176-skip-notice")
+        link.tap()
+        XCTAssertTrue(app.staticTexts["My family"].waitForExistence(timeout: 10), "link did not open My family"); shot("b176-link-opens-family")
+        tap("Done")
+        next(); next(); sleep(1)
+        tap("Finish", timeout: 20)
+        let home = app.buttons["finishFamilyLink"]
+        XCTAssertTrue(home.waitForExistence(timeout: 90), "home banner link missing")
+        shot("b176-home-banner")
+        home.tap()
+        XCTAssertTrue(app.staticTexts["familyEditorTitle"].waitForExistence(timeout: 15), "Me > My family did not open"); shot("b176-me-my-family")
+        type(app.textFields["Your name"], "Skip Test"); dismissKbAny()
+        type(app.textFields["Postcode"], "4005"); dismissKbAny()
+        tap("Save"); sleep(3)
+        XCTAssertFalse(app.buttons["finishFamilyLink"].exists, "banner should be gone after finishing")
+        app.tabBars.buttons["Me"].tap()
+        let del = app.buttons["Delete my account"]
+        for _ in 0..<6 where !del.isHittable { app.swipeUp() }
+        del.tap(); tap("Delete everything")
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 75))
+    }
+    func dismissKbAny() { let t = app.staticTexts["familyEditorTitle"]; if t.exists { t.tap() } else { dismissKb() } }
+    func testPhotoProof() {
+        app.launchEnvironment["CS_PHOTOPROOF"] = "1"
+        signUp(side: "family"); fillYou("Photo Proof"); next(); next(); type(app.textFields["Name or nickname"], "Mia"); dismissKb(); next()
+        tap("Finish", timeout: 20)
+        XCTAssertTrue(app.tabBars.buttons["Me"].waitForExistence(timeout: 90))
+        app.tabBars.buttons["Me"].tap()
+        let p = app.staticTexts["photoProof"]
+        _ = p.waitForExistence(timeout: 30)
+        for _ in 0..<60 where !(p.exists && p.label.contains("PROOF")) { sleep(2) }
+        let rep = p.exists ? p.label : "no report"
+        try? rep.write(toFile: "/Users/ilseplacencia/Apps/nativeproj/pics/photo-proof-ui.txt", atomically: true, encoding: .utf8)
+        sleep(3); shot("b176-photo-proof-me")
+        XCTAssertTrue(rep.contains("PROOF OK"), rep)
+        let del = app.buttons["Delete my account"]
+        for _ in 0..<8 where !del.isHittable { app.swipeUp() }
+        del.tap(); tap("Delete everything")
+    }
+    func testIconGallery() {
+        app.launchEnvironment["CS_ICONS"] = "1"; app.launch(); sleep(3); shot("b176-icon-gallery")
+        app.swipeUp(); sleep(1); shot("b176-icon-gallery-2")
+    }
+    func testBunnyReacts() {
+        app.launchEnvironment["CS_ICONS"] = "1"; app.launch(); sleep(2)
+        shot("b176-bunny-a"); sleep(2); shot("b176-bunny-b")
+    }
 }

@@ -1,0 +1,121 @@
+import SwiftUI
+import UIKit
+
+#if DEBUG
+import ImageIO
+import UniformTypeIdentifiers
+import FirebaseAuth
+
+/// Test only (never in the shipped Release build). Runs the REAL photo path against the live file service with a
+/// big phone style photo that carries Exif and GPS, then reads the served bytes back and reports what is in them.
+extension Media {
+    static func samplePhoto(heic: Bool) -> Data? {
+        let w = 4032, h = 3024
+        let fmt = UIGraphicsImageRendererFormat(); fmt.scale = 1; fmt.opaque = true
+        let img = UIGraphicsImageRenderer(size: CGSize(width: w, height: h), format: fmt).image { c in
+            UIColor(red: 0.55, green: 0.78, blue: 0.95, alpha: 1).setFill(); c.fill(CGRect(x: 0, y: 0, width: w, height: h / 2))
+            UIColor(red: 0.35, green: 0.65, blue: 0.40, alpha: 1).setFill(); c.fill(CGRect(x: 0, y: h / 2, width: w, height: h / 2))
+            UIColor.yellow.setFill(); c.cgContext.fillEllipse(in: CGRect(x: 3000, y: 300, width: 500, height: 500))
+            UIColor(red: 0.96, green: 0.66, blue: 0.74, alpha: 1).setFill(); c.cgContext.fillEllipse(in: CGRect(x: 1300, y: 900, width: 1400, height: 1400))
+            UIColor(red: 0.12, green: 0.30, blue: 0.27, alpha: 1).setFill(); c.cgContext.fillEllipse(in: CGRect(x: 1750, y: 1350, width: 150, height: 150)); c.cgContext.fillEllipse(in: CGRect(x: 2150, y: 1350, width: 150, height: 150))
+        }
+        guard let cg = img.cgImage else { return nil }
+        let d = NSMutableData()
+        guard let dest = CGImageDestinationCreateWithData(d, (heic ? UTType.heic : UTType.jpeg).identifier as CFString, 1, nil) else { return nil }
+        let props: [CFString: Any] = [
+            kCGImageDestinationLossyCompressionQuality: 0.9,
+            kCGImagePropertyOrientation: 6,
+            kCGImagePropertyExifDictionary: [kCGImagePropertyExifDateTimeOriginal: "2026:11:09 10:00:00", kCGImagePropertyExifLensModel: "iPhone back camera"],
+            kCGImagePropertyTIFFDictionary: [kCGImagePropertyTIFFMake: "Apple", kCGImagePropertyTIFFModel: "iPhone"],
+            kCGImagePropertyGPSDictionary: [kCGImagePropertyGPSLatitude: 27.4698, kCGImagePropertyGPSLatitudeRef: "S", kCGImagePropertyGPSLongitude: 153.0251, kCGImagePropertyGPSLongitudeRef: "E"],
+        ]
+        CGImageDestinationAddImage(dest, cg, props as CFDictionary)
+        return CGImageDestinationFinalize(dest) ? d as Data : nil
+    }
+    static func props(_ d: Data) -> (gps: Bool, exif: Bool, w: Int, h: Int) {
+        guard let src = CGImageSourceCreateWithData(d as CFData, nil), let p = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [CFString: Any] else { return (false, false, 0, 0) }
+        return (p[kCGImagePropertyGPSDictionary] != nil, p[kCGImagePropertyExifDictionary] != nil, (p[kCGImagePropertyPixelWidth] as? Int) ?? 0, (p[kCGImagePropertyPixelHeight] as? Int) ?? 0)
+    }
+    /// PUT bytes straight to a fresh upload link and report the status code (negative control: the old, unstripped bytes).
+    static func rawPutStatus(_ jpg: Data) async -> String {
+        guard let uid = Auth.auth().currentUser?.uid else { return "no user" }
+        do {
+            let name = "avatar-ctl\(randomId()).jpg"
+            let link = try await call(["class": "user-media", "name": name, "ownerUid": uid, "bytes": jpg.count, "contentType": "image/jpeg", "op": "put"])
+            guard let s = link["url"] as? String, let u = URL(string: s) else { return "no link" }
+            var put = URLRequest(url: u); put.httpMethod = "PUT"; put.setValue("image/jpeg", forHTTPHeaderField: "content-type")
+            let (data, resp) = try await URLSession.shared.upload(for: put, from: jpg)
+            return "\((resp as? HTTPURLResponse)?.statusCode ?? 0) \(String(data: data, encoding: .utf8) ?? "")"
+        } catch { return "error \(error.localizedDescription)" }
+    }
+    static func proof() async -> (report: String, key: String?, ok: Bool) {
+        var L: [String] = []; var avatarKey: String?; var allOK = true
+        for heic in [false, true] {
+            let tag = heic ? "HEIC" : "JPEG"
+            guard let raw = samplePhoto(heic: heic) else { L.append("\(tag): sample could not be built (skipped)"); continue }
+            let pin = props(raw)
+            L.append("\(tag) in: \(raw.count) bytes, \(pin.w)x\(pin.h), GPS \(pin.gps), Exif \(pin.exif)")
+            // Old behaviour: plain redraw + jpegData, no strip.
+            if let ui = UIImage(data: raw) {
+                let f = UIGraphicsImageRendererFormat(); f.scale = 1; f.opaque = true; f.preferredRange = .standard
+                let sz = CGSize(width: 1600, height: 1200)
+                let redraw = UIGraphicsImageRenderer(size: sz, format: f).image { _ in ui.draw(in: CGRect(origin: .zero, size: sz)) }
+                if let old = redraw.jpegData(compressionQuality: 0.84) {
+                    L.append("\(tag) old path (no strip): blocks \(metadataBlocks(old)), PUT -> \(await rawPutStatus(old))")
+                }
+            }
+            do {
+                let prepared = try prepare(raw)
+                let pb = metadataBlocks(prepared); let pp = props(prepared)
+                L.append("\(tag) new path prepared: \(prepared.count) bytes, \(pp.w)x\(pp.h), blocks \(pb), GPS \(pp.gps), Exif \(pp.exif)")
+                let key = try await uploadPreparedSafe(prepared, kind: heic ? "gallery" : "avatar")
+                if !heic { avatarKey = key }
+                let served = try await servedBytes(key)
+                let sb = metadataBlocks(served); let sp = props(served)
+                let same = served == prepared
+                let decodes = UIImage(data: served) != nil
+                L.append("\(tag) SAVED key \(key.split(separator: "/").suffix(2).joined(separator: "/")): served \(served.count) bytes, \(sp.w)x\(sp.h), blocks \(sb), GPS \(sp.gps), Exif \(sp.exif), identical to prepared \(same), decodes \(decodes)")
+                if !(sb.isEmpty && !sp.gps && !sp.exif && decodes) { allOK = false }
+            } catch { L.append("\(tag) FAILED: \(error.localizedDescription)"); allOK = false }
+        }
+        L.append(allOK ? "PROOF OK" : "PROOF FAILED")
+        return (L.joined(separator: "\n"), avatarKey, allOK)
+    }
+}
+
+struct IconGallery: View {
+    var body: some View {
+        ScrollView { VStack(spacing: 14) {
+            Text("Caresitters icons").font(Brand.title(24))
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 5), spacing: 12) {
+                ForEach(BI.allCases, id: \.self) { k in VStack(spacing: 4) { BrandIcon(kind: k, size: 36); Text(k.rawValue).font(.system(size: 9)) } }
+            }
+            Text("Solid star and heart").font(.footnote)
+            HStack(spacing: 18) { BrandIcon(kind: .star, size: 30, color: .orange, solid: true); BrandIcon(kind: .heart, size: 30, color: Brand.bunny, solid: true); Stars(count: 4) }
+            Text("Bunny moods (tap, drag a finger, wait)").font(.footnote)
+            BunnyMoodsRow()
+            HStack { BunnyView(size: 120, mood: .celebrate); BunnyView(size: 120, mood: .think) }
+        }.padding(16) }.background(Color.white)
+    }
+}
+
+struct PhotoProofBadge: View {
+    @EnvironmentObject var s: Session
+    @State private var text = ""
+    var body: some View {
+        Group {
+            Text(text.isEmpty ? "proof idle" : text).font(.system(size: 9, design: .monospaced)).accessibilityIdentifier("photoProof").padding(6)
+        }.task {
+            guard ProcessInfo.processInfo.environment["CS_PHOTOPROOF"] == "1", text.isEmpty else { return }
+            text = "running"
+            try? "started".write(toFile: "/Users/ilseplacencia/Apps/nativeproj/pics/photo-proof-start.txt", atomically: true, encoding: .utf8)
+            let r = await Media.proof()
+            if let k = r.key, let uid = s.uid { try? await Backend.saveProfile(uid, photoKey: k); await s.reload() }
+            text = r.report
+            try? r.report.write(toFile: "/Users/ilseplacencia/Apps/nativeproj/pics/photo-proof.txt", atomically: true, encoding: .utf8)
+        }
+    }
+}
+#else
+struct PhotoProofBadge: View { var body: some View { EmptyView() } }
+#endif
