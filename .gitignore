@@ -3,3 +3,4 @@ native/*.xcodeproj
 build/
 build176/
 *.xcresult
+ship176/
