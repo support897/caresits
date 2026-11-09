@@ -1,0 +1,4 @@
+native/GoogleService-Info.plist
+native/*.xcodeproj
+build/
+*.xcresult
