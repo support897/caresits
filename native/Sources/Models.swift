@@ -73,7 +73,7 @@ struct Booking: Identifiable {
     }
 }
 
-struct ChatMessage: Identifiable { let id: String; var from: String; var text: String; var at: Date }
+struct ChatMessage: Identifiable { let id: String; var from: String; var text: String; var at: Date; var kind = "text"; var mediaKey = "" }
 
 struct Resume {
     var summary = ""; var jobs: [String] = []; var education: [String] = []; var skills: [String] = []; var certificates: [String] = []
@@ -82,20 +82,29 @@ struct Resume {
 extension Person: Hashable { static func == (a: Person, b: Person) -> Bool { a.id == b.id }; func hash(into h: inout Hasher) { h.combine(id) } }
 
 /// Simple, honest match: care types, days and budget only. It never says anyone is safe.
+/// A missing answer is never counted as a good sign: it adds nothing, and it caps the score at 85.
 struct MatchInfo { let percent: Int; let reasons: [(icon: BI, text: String)] }
 extension Person {
     func match(with me: Person) -> MatchInfo {
         let fam = me.side == "family" ? me : self, car = me.side == "family" ? self : me
-        let sv = Set(fam.services).intersection(car.services)
-        let dy = Set(fam.days).intersection(car.days)
-        let svScore = fam.services.isEmpty ? 0.5 : Double(sv.count) / Double(fam.services.count)
-        let dyScore = fam.days.isEmpty || car.days.isEmpty ? 0.5 : min(1, Double(dy.count) / Double(max(1, min(fam.days.count, car.days.count))))
-        let budgetOK = fam.budgetMax <= 0 || car.rate <= 0 || car.rate <= fam.budgetMax
-        let pct = Int((40 * svScore + 30 * dyScore + (budgetOK ? 30 : 8)).rounded())
+        var got = 0.0, total = 0.0, unknown = false
         var r: [(BI, String)] = []
-        if !sv.isEmpty { r.append((.nanny, sv.map { serviceLabels[$0] ?? $0 }.sorted().joined(separator: ", "))) }
-        if !dy.isEmpty { r.append((.calendar, dy.sorted().prefix(4).joined(separator: " "))) }
-        if budgetOK && car.rate > 0 { r.append((.rate, "Fits budget")) }
+        if fam.services.isEmpty { unknown = true } else {
+            let sv = Set(fam.services).intersection(car.services)
+            total += 40; got += 40 * Double(sv.count) / Double(fam.services.count)
+            if !sv.isEmpty { r.append((.nanny, "Care type: " + sv.map { serviceLabels[$0] ?? $0 }.sorted().joined(separator: ", "))) }
+        }
+        if fam.days.isEmpty || car.days.isEmpty { unknown = true } else {
+            let dy = Set(fam.days).intersection(car.days)
+            total += 30; got += 30 * min(1, Double(dy.count) / Double(max(1, min(fam.days.count, car.days.count))))
+            if !dy.isEmpty { r.append((.calendar, "Shared days: " + allDays.filter { dy.contains($0) }.prefix(4).joined(separator: " "))) }
+        }
+        if fam.budgetMax <= 0 || car.rate <= 0 { unknown = true } else {
+            total += 30
+            if car.rate <= fam.budgetMax { got += 30; r.append((.rate, "Rate fits the budget")) } else { r.append((.rate, "Rate is above the budget")) }
+        }
+        var pct = total > 0 ? Int((got / total * 100).rounded()) : 0
+        if unknown { pct = min(pct, 85); r.append((.info, "Some answers are missing")) }
         return MatchInfo(percent: min(100, pct), reasons: r)
     }
 }

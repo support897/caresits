@@ -98,13 +98,21 @@ enum Backend {
         db.collection("relationships").document(relId).collection("messages").order(by: "at").addSnapshotListener { snap, _ in
             let rows = (snap?.documents ?? []).map { d -> ChatMessage in
                 let x = d.data()
-                return ChatMessage(id: d.documentID, from: x["from"] as? String ?? "", text: x["text"] as? String ?? "", at: (x["at"] as? Timestamp)?.dateValue() ?? Date())
+                return ChatMessage(id: d.documentID, from: x["from"] as? String ?? "", text: x["text"] as? String ?? "", at: (x["at"] as? Timestamp)?.dateValue() ?? Date(), kind: x["kind"] as? String ?? "text", mediaKey: x["mediaKey"] as? String ?? "")
             }
             cb(rows)
         }
     }
     static func send(_ relId: String, from: String, text: String) async throws {
         _ = try await db.collection("relationships").document(relId).collection("messages").addDocument(data: ["from": from, "kind": "text", "text": String(text.prefix(1000)), "at": FieldValue.serverTimestamp()])
+    }
+
+    /// Chat photo. Same strip route as the profile photo: Media.prepare removes every metadata block, then the
+    /// stripped bytes go up through the file service and only the storage key goes into the message.
+    static func sendPhoto(_ relId: String, from: String, raw: Data) async throws {
+        let jpg = try Media.prepare(raw)
+        let key = try await Media.uploadPreparedSafe(jpg, kind: "gallery")
+        _ = try await db.collection("relationships").document(relId).collection("messages").addDocument(data: ["from": from, "kind": "photo", "text": "", "mediaKey": key, "mediaSize": jpg.count, "mimeType": "image/jpeg", "at": FieldValue.serverTimestamp()])
     }
 
     // MARK: Bookings

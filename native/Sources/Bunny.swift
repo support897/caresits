@@ -29,7 +29,7 @@ struct BunnyView: View {
             .scaleEffect(calm ? 1 : (breathe ? 1.03 : 1), anchor: .bottom)
             .rotationEffect(.degrees(tilt), anchor: .bottom)
             .offset(x: lean, y: hop)
-            .overlay(alignment: .topTrailing) { badge.offset(x: size * 0.12, y: -size * 0.04) }
+            .overlay(alignment: .topTrailing) { badge.offset(x: size * 0.05, y: -size * 0.01) }
             .overlay(alignment: .top) {
                 if puffKey > 0 { BrandIcon(kind: .heart, size: size * 0.24, color: Brand.bunny, solid: true).offset(y: puffGo ? -size * 0.45 : -size * 0.1).opacity(puffGo ? 0 : 1) }
             }
@@ -54,7 +54,7 @@ struct BunnyView: View {
 
     @ViewBuilder var badge: some View {
         switch mood {
-        case .celebrate: BrandIcon(kind: .sparkle, size: size * 0.3, color: Brand.bunny)
+        case .celebrate: BrandIcon(kind: .sparkle, size: size * 0.28, color: Brand.bunny)
         case .encourage: BrandIcon(kind: .heart, size: size * 0.26, color: Brand.bunny, solid: true)
         case .oops: BrandIcon(kind: .cross, size: size * 0.2, color: Brand.muted)
         case .rest: BrandIcon(kind: .moon, size: size * 0.26, color: Brand.sage)

@@ -15,10 +15,10 @@ struct RoleTabs: View {
                 MessagesView().tabItem { tab("Messages", .chat) }.tag(2)
                 MeView().tabItem { tab("Me", .person) }.tag(3)
             case .nanny:
-                TodayView().tabItem { tab("Today", .sun) }.tag(0)
+                DiscoverView().tabItem { tab("Families", .nanny) }.tag(0)
                 RequestsView().tabItem { tab("Requests", .tray) }.tag(1)
                 BookingsCalendarView().tabItem { tab("Calendar", .calendar) }.tag(2)
-                MessagesView().tabItem { tab("Families", .chat) }.tag(3)
+                MessagesView().tabItem { tab("Chat", .chat) }.tag(3)
                 MeView().tabItem { tab("Me", .person) }.tag(4)
             case .babysitter:
                 DiscoverView().tabItem { tab("Jobs", .moon) }.tag(0)
@@ -44,7 +44,7 @@ struct Header: View {
         HStack(spacing: 12) {
             BrandIcon(kind: role.icon, size: 34, color: role.tint)
             VStack(alignment: .leading, spacing: 2) { Text(title).font(Brand.title(26)).foregroundStyle(role.tint); if !subtitle.isEmpty { Text(subtitle).font(.subheadline).foregroundStyle(Brand.muted) } }
-            Spacer(); BunnyView(size: 48)
+            Spacer(); BunnyView(size: 36)
         }.padding(.horizontal, 20).padding(.top, 8)
     }
 }

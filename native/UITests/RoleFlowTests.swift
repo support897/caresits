@@ -78,8 +78,8 @@ final class RoleFlowTests: XCTestCase {
         if !card.waitForExistence(timeout: 75) { XCTFail("deck: no card. Texts: " + app.staticTexts.allElementsBoundByIndex.map { $0.label }.joined(separator: " | ") + " || Buttons: " + app.buttons.allElementsBoundByIndex.map { $0.label }.joined(separator: " | ")); return }
         shot("deck-before")
         card.swipeRight(); sleep(2); shot("deck-after-like")
-        app.buttons["Skip"].tap(); sleep(2); shot("deck-after-skip")
-        app.buttons["Saved"].tap(); sleep(2); shot("deck-saved")
+        app.buttons["Pass"].tap(); sleep(2); shot("deck-after-skip")
+        app.buttons["Matches"].tap(); sleep(2); shot("deck-saved")
         app.tabBars.buttons["Me"].tap()
         let del = app.buttons["Delete my account"]
         for _ in 0..<6 where !del.isHittable { app.swipeUp() }
@@ -137,11 +137,11 @@ final class RoleFlowTests: XCTestCase {
     func carer(_ kind: String, tabs: [String]) {
         signUp(side: "carer"); fillYou("Test " + kind); next()
         tap(kind); shot("kind-chosen-\(kind)"); next(); shot("after-kind-next-\(kind)")
-        tap("Skip")
+        tap("Pass")
         type(app.textFields["A few words about your care"], "Kind and calm care"); dismissKb(); next()
         finishAndCheck(tabs: tabs, role: kind)
     }
-    func testNannyApp() { carer("Nanny", tabs: ["Today", "Requests", "Calendar", "Families", "Me"]) }
+    func testNannyApp() { carer("Nanny", tabs: ["Families", "Requests", "Calendar", "Chat", "Me"]) }
     func testBabysitterApp() { carer("Babysitter", tabs: ["Jobs", "Requests", "Calendar", "Families", "Me"]) }
     func testAuPairApp() { carer("Au pair", tabs: ["Host families", "My week", "Requests", "Chat", "Me"]) }
 
@@ -198,5 +198,94 @@ final class RoleFlowTests: XCTestCase {
     func testBunnyReacts() {
         app.launchEnvironment["CS_ICONS"] = "1"; app.launch(); sleep(2)
         shot("b176-bunny-a"); sleep(2); shot("b176-bunny-b")
+    }
+    func testChatPhoto() {
+        addTeardownBlock { [self] in cleanupProof() }
+        app.launchEnvironment["CS_CHATPROOF"] = "1"; app.launchArguments += ["-AppleLanguages", "(en)"]; app.launch()
+        let msgs = app.tabBars.buttons["Messages"]
+        XCTAssertTrue(msgs.waitForExistence(timeout: 240), "chat proof setup did not finish: " + ((try? String(contentsOfFile: "/Users/ilseplacencia/Apps/nativeproj/pics/chat-proof.txt")) ?? app.staticTexts["chatProof"].label))
+        let rep = (try? String(contentsOfFile: "/Users/ilseplacencia/Apps/nativeproj/pics/chat-proof.txt")) ?? "no report"
+        XCTAssertTrue(rep.contains("CHAT PROOF OK"), rep)
+        msgs.tap(); sleep(2); shot("b177-chat-list")
+        let row = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Proof")).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 20)); row.tap()
+        let ph = app.descendants(matching: .any)["chatPhoto"].firstMatch
+        XCTAssertTrue(ph.waitForExistence(timeout: 30), "photo not in thread"); sleep(4); shot("b177-chat-photo-1")
+        app.navigationBars.buttons.firstMatch.tap(); sleep(2)
+        row.tap()
+        XCTAssertTrue(ph.waitForExistence(timeout: 30), "photo not in thread after return"); sleep(4); shot("b177-chat-photo-2-after-return")
+        app.navigationBars.buttons.firstMatch.tap(); sleep(1)
+        app.buttons["proofCleanup"].tap(); sleep(12)
+    }
+    func win(_ x: Double, _ y: Double) -> XCUICoordinate { app.windows.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: x, dy: y)) }
+    func dragCard(left: Bool) { win(left ? 0.8 : 0.2, 0.4).press(forDuration: 0.1, thenDragTo: win(left ? 0.1 : 0.9, 0.42)) }
+    func proofName() -> String { let r = (try? String(contentsOfFile: "/Users/ilseplacencia/Apps/nativeproj/pics/chat-proof.txt")) ?? ""; return r.split(separator: "\n").first(where: { $0.hasPrefix("carer name: ") }).map { String($0.dropFirst(12)) } ?? "Proof" }
+    /// Old test pairs may still sit in the live pool. Pass cards until this run's own person is on top.
+    func topIs(_ name: String) { for _ in 0..<10 where !(app.staticTexts[name].exists && app.staticTexts[name].isHittable) { dragCard(left: true); sleep(2) } }
+    func tapTop(_ label: String) {
+        let b = app.buttons.matching(NSPredicate(format: "label == %@", label)).allElementsBoundByIndex.last
+        XCTAssertNotNil(b, "no tappable \(label)"); b?.tap()
+    }
+    func testDeckFamily() {
+        addTeardownBlock { [self] in cleanupProof() }
+        app.launchEnvironment["CS_CHATPROOF"] = "1"; app.launchArguments += ["-AppleLanguages", "(en)"]; app.launch()
+        let card = app.descendants(matching: .any)["topCard"].firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 240), "no deck card: " + ((try? String(contentsOfFile: "/Users/ilseplacencia/Apps/nativeproj/pics/chat-proof.txt")) ?? ""))
+        XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@ OR identifier == %@", "%", "matchPercent")).firstMatch.waitForExistence(timeout: 20), "no match percent on card")
+        topIs(proofName()); sleep(3); shot("b177-deck-1-card-percent-distance")
+        win(0.8, 0.3).tap(); sleep(1); shot("b177-deck-2-description-slide")
+        win(0.2, 0.3).tap(); sleep(1)
+        dragCard(left: true); sleep(2); shot("b177-deck-3-left-pass")
+        if app.buttons["See again"].waitForExistence(timeout: 3) { app.buttons["See again"].tap() }; XCTAssertTrue(card.waitForExistence(timeout: 20)); topIs(proofName())
+        dragCard(left: false); sleep(2)
+        XCTAssertTrue(app.descendants(matching: .any)["matchBanner"].firstMatch.waitForExistence(timeout: 10), "no match banner"); shot("b177-deck-4-right-match")
+        tapTop("Message"); sleep(4)
+        XCTAssertTrue(app.textFields["Message"].waitForExistence(timeout: 20), "Message did not open a chat"); shot("b177-deck-5-message-opens-chat")
+        tap("Close"); sleep(1)
+        tap("Map"); sleep(6); shot("b177-deck-6-map")
+        cleanupProof()
+    }
+    func testDeckCarer() {
+        addTeardownBlock { [self] in cleanupProof() }
+        app.launchEnvironment["CS_CHATPROOF"] = "1"; app.launchEnvironment["CS_CHATPROOF_END"] = "carer"; app.launchArguments += ["-AppleLanguages", "(en)"]; app.launch()
+        XCTAssertTrue(app.tabBars.buttons["Families"].waitForExistence(timeout: 240), "carer app did not open"); app.tabBars.buttons["Families"].tap()
+        let card = app.descendants(matching: .any)["topCard"].firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 90), "no deck card for carer")
+        sleep(3); topIs(proofName()); shot("b177-deck-7-carer-card")
+        tapTop("Send resume"); sleep(3); shot("b177-deck-8-send-resume-sheet")
+        tapTop("Send resume")
+        XCTAssertTrue(app.staticTexts["Sent"].waitForExistence(timeout: 20), "resume not sent"); sleep(1); shot("b177-deck-9-resume-sent")
+        tap("Close"); sleep(1)
+        cleanupProof()
+    }
+    func cleanupProof() { if app.buttons["proofCleanup"].exists { app.buttons["proofCleanup"].tap(); sleep(14) } }
+    func deleteFlow(_ name: String) {
+        signUp(side: "family"); fillYou(name); next(); next(); type(app.textFields["Name or nickname"], "Mia"); dismissKb(); next()
+        tap("Finish", timeout: 20)
+        XCTAssertTrue(app.tabBars.buttons["Me"].waitForExistence(timeout: 90))
+        app.tabBars.buttons["Me"].tap()
+        let del = app.buttons["Delete my account"]
+        for _ in 0..<6 where !del.isHittable { app.swipeUp() }
+        del.tap(); tap("Delete everything")
+    }
+    func testDeleteSlow() {
+        app.launchEnvironment["CS_DELETE_DELAY"] = "30"
+        deleteFlow("Slow Delete")
+        XCTAssertTrue(app.descendants(matching: .any)["deleteBusy"].firstMatch.waitForExistence(timeout: 15), "no busy state"); sleep(2); shot("b177-delete-1-busy")
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "taking longer")).firstMatch.waitForExistence(timeout: 20), "no slow line"); shot("b177-delete-2-slow-line")
+        let out = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 90)
+        shot("b177-delete-3-lands-on-sign-in"); XCTAssertTrue(out, "slow delete did not land on the sign in door")
+    }
+    func testDeleteTimeout() {
+        app.launchEnvironment["CS_DELETE_DELAY"] = "40"; app.launchEnvironment["CS_DELETE_TIMEOUT"] = "14"
+        deleteFlow("Timeout Delete")
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Still not done")).firstMatch.waitForExistence(timeout: 40), "no timeout line"); sleep(1); shot("b177-delete-4-timeout-line")
+        app.terminate(); app.launchEnvironment["CS_DELETE_DELAY"] = "0"; app.launchEnvironment["CS_DELETE_TIMEOUT"] = "60"; app.launch()
+        app.tabBars.buttons["Me"].tap()
+        let del = app.buttons["Delete my account"]
+        for _ in 0..<6 where !del.isHittable { app.swipeUp() }
+        del.tap(); tap("Delete everything")
+        let out = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 90)
+        shot("b177-delete-5-normal-lands-on-sign-in"); XCTAssertTrue(out, "normal delete did not land on the sign in door")
     }
 }

@@ -1,4 +1,6 @@
 import SwiftUI
+import MapKit
+import CoreLocation
 
 struct DiscoverView: View {
     @EnvironmentObject var s: Session
@@ -7,13 +9,28 @@ struct DiscoverView: View {
     @State private var loaded = false
     @State private var filter = "all"
     @State private var onlySaved = false
+    @AppStorage("caresits.radiusKm") private var radius = 25
+    @State private var myCoord: CLLocationCoordinate2D?
+    @State private var coords: [String: CLLocationCoordinate2D] = [:]
+    @State private var showMap = false
+    @State private var mapPick: String?
+    @State private var banner: Person?
 
     var role: Role { s.role }
     var services: [String] { s.me?.services ?? [] }
-    var shown: [Person] {
-        people.filter { (filter == "all" || $0.services.contains(filter)) && (!onlySaved || saved.contains($0.id)) }
+    /// Distance in km from me to a person, when both postcodes could be placed.
+    func km(_ p: Person) -> Double? {
+        guard let a = myCoord, let b = coords[p.postcode.trimmingCharacters(in: .whitespaces)] else { return nil }
+        return Geo.km(a, b)
     }
-    var title: String { role == .family ? "Find care" : role.greeting }
+    /// The deck pool: my city or the chosen distance. "Any" (0) shows everyone. A person whose place is unknown is kept.
+    var shown: [Person] {
+        people.filter { p in
+            (filter == "all" || p.services.contains(filter)) && (!onlySaved || saved.contains(p.id))
+                && (onlySaved || radius == 0 || (km(p).map { $0 <= Double(radius) } ?? true))
+        }
+    }
+    var title: String { switch role { case .family: return "Find care"; case .nanny: return "Families"; case .babysitter: return "Jobs"; case .auPair: return "Host families" } }
 
     @State private var skipped: Set<String> = []
     @State private var detail: Person?
@@ -24,65 +41,96 @@ struct DiscoverView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 10) {
-                HStack {
+                HStack(spacing: 10) {
                     Text(title).font(Brand.title(30)).foregroundStyle(Brand.ink)
                     Spacer()
-                    Button { onlySaved.toggle(); skipped = [] } label: { BrandIcon(kind: .heart, size: 26, color: Brand.bunny, solid: onlySaved).padding(10).background(Brand.field).clipShape(Circle()) }.accessibilityLabel("Saved")
+                    Menu {
+                        ForEach([10, 25, 50, 0], id: \.self) { k in Button(k == 0 ? "Any distance" : "\(k) km") { radius = k; skipped = [] } }
+                    } label: { Text(radius == 0 ? "Any" : "\(radius) km").font(.system(size: 16, weight: .semibold)).foregroundStyle(Brand.ink).padding(.horizontal, 14).padding(.vertical, 10).background(Brand.field).clipShape(Capsule()) }.accessibilityIdentifier("radiusMenu")
+                    Button { showMap.toggle() } label: { BrandIcon(kind: .pin, size: 24, color: Brand.ink, solid: showMap).padding(10).background(Brand.field).clipShape(Circle()) }.accessibilityLabel(showMap ? "Deck" : "Map").accessibilityIdentifier("mapToggle")
+                    Button { onlySaved.toggle(); skipped = [] } label: { BrandIcon(kind: .heart, size: 24, color: Brand.bunny, solid: onlySaved).padding(10).background(Brand.field).clipShape(Circle()) }.accessibilityLabel("Matches")
                 }.padding(.horizontal, 20).padding(.top, 8)
                 if role == .family, let m = s.me, m.postcode.isEmpty && m.suburb.isEmpty {
                     HStack(spacing: 8) {
-                        Text("Your family details are not finished.").font(.footnote).foregroundStyle(Brand.muted)
+                        Text("Family details missing.").font(.footnote).foregroundStyle(Brand.muted)
                         Button { s.goMyFamily = true } label: { HStack(spacing: 4) { Text("Me → My family").font(.footnote.weight(.semibold)).underline(); BrandIcon(kind: .arrow, size: 14, color: role.tint) } }.accessibilityIdentifier("finishFamilyLink")
                         Spacer()
                     }.padding(.horizontal, 20)
                 }
-                if role == .family && services.count > 1 {
+                if role == .family && services.count > 1 && !showMap {
                     ScrollView(.horizontal, showsIndicators: false) { HStack {
                         Button { filter = "all"; skipped = [] } label: { Chip(text: "All", on: filter == "all", tint: role.tint) }
                         ForEach(services, id: \.self) { sv in Button { filter = sv; skipped = [] } label: { Chip(text: (serviceLabels[sv] ?? sv) + "s", on: filter == sv, tint: role.tint) } }
                     }.padding(.horizontal, 20) }
                 }
-                ZStack {
-                    if !loaded { ProgressView() }
-                    else if deck.isEmpty {
-                        VStack(spacing: 10) {
-                            BunnyView(size: 80, mood: onlySaved ? .encourage : .rest)
-                            Text(onlySaved ? "No hearts yet" : "You saw everyone").font(.headline).foregroundStyle(Brand.muted)
-                            if !skipped.isEmpty { Button { skipped = [] } label: { IconLabel(icon: .undo, text: "See again") }.buttonStyle(.bordered) }
-                        }
-                    }
-                    ForEach(Array(deck.prefix(3).enumerated().reversed()), id: \.element.id) { i, p in
-                        SwipeCard(person: p, tint: role.tint, top: i == 0, offset: i == 0 ? drag : .zero, depth: i, match: s.me.map { p.match(with: $0) })
-                            .gesture(i == 0 ? DragGesture()
-                                .onChanged { drag = $0.translation }
-                                .onEnded { v in
-                                    if abs(v.translation.width) > 110 { fling(p, like: v.translation.width > 0) }
-                                    else { withAnimation(.spring()) { drag = .zero } }
-                                } : nil)
-                            .onTapGesture { if i == 0 { detail = p } }
-                            .accessibilityIdentifier(i == 0 ? "topCard" : "card\(i)")
-                    }
-                }.padding(.horizontal, 20).frame(maxHeight: .infinity)
-                HStack(spacing: 14) {
-                    roundBtn(.cross, .gray, "Skip") { if let p = deck.first { fling(p, like: false) } }
-                    roundBtn(.chat, Brand.ink, "Message") { if let p = deck.first { deckContact = (p, .message) } }
-                    if s.me?.side == "carer" { roundBtn(.doc, Brand.ink, "Send resume") { if let p = deck.first { deckContact = (p, .resume) } } }
-                    roundBtn(.info, Brand.ink, "Details") { detail = deck.first }
-                    roundBtn(.heart, Brand.bunny, "Like", solid: true) { if let p = deck.first { fling(p, like: true) } }
-                }.padding(.bottom, 8)
+                if showMap { mapView.padding(.horizontal, 20).frame(maxHeight: .infinity) } else { deckStack }
+                if !showMap {
+                    HStack(spacing: 18) {
+                        roundBtn(.cross, .gray, "Pass") { if let p = deck.first { fling(p, like: false) } }
+                        roundBtn(.info, Brand.ink, "Details") { detail = deck.first }
+                        roundBtn(.heart, Brand.bunny, "Match", solid: true) { if let p = deck.first { fling(p, like: true) } }
+                    }.padding(.bottom, 8)
+                }
+            }
+            .overlay(alignment: .top) {
+                if let b = banner {
+                    HStack(spacing: 10) {
+                        BrandIcon(kind: .heart, size: 20, color: Brand.bunny, solid: true)
+                        Text("Matched with \(b.firstName)").font(.system(size: 16, weight: .semibold)).foregroundStyle(Brand.ink)
+                        Spacer()
+                        Button("Message") { deckContact = (b, .message); banner = nil }.font(.system(size: 16, weight: .semibold)).foregroundStyle(role.tint)
+                    }.padding(14).background(.white).clipShape(RoundedRectangle(cornerRadius: 16)).overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.black.opacity(0.1), lineWidth: 1)).padding(.horizontal, 20).padding(.top, 60).transition(.move(edge: .top).combined(with: .opacity)).accessibilityIdentifier("matchBanner")
+                }
             }
             .background(Brand.cream.ignoresSafeArea()).refreshable { await load() }.task { await load() }
             .sheet(isPresented: Binding(get: { deckContact != nil }, set: { if !$0 { deckContact = nil } })) { if let d = deckContact { ContactSheet(person: d.person, mode: d.mode) } }
             .navigationDestination(item: $detail) { p in PersonDetailView(person: p, saved: saved.contains(p.id)) { on in if on { saved.insert(p.id) } else { saved.remove(p.id) } } }
+            .onChange(of: mapPick) { _, id in if let id, let p = people.first(where: { $0.id == id }) { detail = p; mapPick = nil } }
         }
     }
+    var deckStack: some View {
+        ZStack {
+            if !loaded { ProgressView() }
+            else if deck.isEmpty {
+                VStack(spacing: 10) {
+                    BunnyView(size: 80, mood: onlySaved ? .encourage : .rest)
+                    Text(onlySaved ? "No matches yet" : "You saw everyone").font(.headline).foregroundStyle(Brand.muted)
+                    if !skipped.isEmpty { Button { skipped = [] } label: { IconLabel(icon: .undo, text: "See again") }.buttonStyle(.bordered) }
+                    if !onlySaved && radius != 0 && !people.isEmpty { Button("Any distance") { radius = 0 }.font(.subheadline) }
+                }
+            }
+            ForEach(Array(deck.prefix(3).enumerated().reversed()), id: \.element.id) { i, p in
+                SwipeCard(person: p, tint: role.tint, top: i == 0, offset: i == 0 ? drag : .zero, depth: i, match: s.me.map { p.match(with: $0) }, distance: km(p),
+                          onMessage: { deckContact = (p, .message) }, onResume: s.me?.side == "carer" ? { deckContact = (p, .resume) } : nil)
+                    .gesture(i == 0 ? DragGesture(minimumDistance: 16)
+                        .onChanged { drag = $0.translation }
+                        .onEnded { v in
+                            if abs(v.translation.width) > 110 { fling(p, like: v.translation.width > 0) }
+                            else { withAnimation(.spring()) { drag = .zero } }
+                        } : nil)
+                    .accessibilityIdentifier(i == 0 ? "topCard" : "card\(i)")
+            }
+        }.padding(.horizontal, 20).frame(maxHeight: .infinity)
+    }
+    /// The map shows everyone (not limited by the deck distance), still only the other side of the match.
+    var mapView: some View {
+        let pins = people.filter { coords[$0.postcode.trimmingCharacters(in: .whitespaces)] != nil }
+        return Map(selection: $mapPick) {
+            ForEach(pins) { p in
+                Marker(p.firstName, coordinate: coords[p.postcode.trimmingCharacters(in: .whitespaces)]!).tint(p.role.tint).tag(p.id)
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 24)).accessibilityIdentifier("peopleMap")
+        .overlay(alignment: .bottom) { Text("\(pins.count) \(pins.count == 1 ? "person" : "people") on the map").font(.system(size: 15, weight: .semibold)).foregroundStyle(Brand.ink).padding(.horizontal, 14).padding(.vertical, 8).background(.white).clipShape(Capsule()).padding(12) }
+    }
     func roundBtn(_ icon: BI, _ c: Color, _ label: String, solid: Bool = false, _ f: @escaping () -> Void) -> some View {
-        Button(action: f) { BrandIcon(kind: icon, size: 26, color: c, solid: solid).frame(width: 56, height: 56).background(.white).clipShape(Circle()).shadow(color: .black.opacity(0.12), radius: 8, y: 3) }.accessibilityLabel(label)
+        Button(action: f) { BrandIcon(kind: icon, size: 26, color: c, solid: solid).frame(width: 56, height: 56).background(.white).clipShape(Circle()).overlay(Circle().stroke(Color.black.opacity(0.1), lineWidth: 1)) }.accessibilityLabel(label)
     }
     func fling(_ p: Person, like: Bool) {
         withAnimation(.easeIn(duration: 0.22)) { drag = CGSize(width: like ? 700 : -700, height: 40) }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.23) {
-            if like, let me = s.me { saved.insert(p.id); Task { await Backend.setSaved(me.id, p.id, true) } }
+            if like, let me = s.me { saved.insert(p.id); Task { await Backend.setSaved(me.id, p.id, true) }; withAnimation { banner = p }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 4) { withAnimation { if banner?.id == p.id { banner = nil } } } }
             if !onlySaved || !like { skipped.insert(p.id) }
             drag = .zero
         }
@@ -92,6 +140,13 @@ struct DiscoverView: View {
         async let list = Backend.discover(me: me, services: me.services)
         async let sv = Backend.savedIds(me.id)
         people = await list; saved = await sv; loaded = true
+        // Place me and everyone by postcode, one lookup per postcode.
+        myCoord = await Geo.coord(postcode: me.postcode)
+        var found: [String: CLLocationCoordinate2D] = [:]
+        for pc in Set(people.map { $0.postcode.trimmingCharacters(in: .whitespaces) }) where !pc.isEmpty {
+            if let c = await Geo.coord(postcode: pc) { found[pc] = c; coords = found }
+        }
+        coords = found
     }
 }
 
@@ -161,7 +216,7 @@ struct PersonDetailView: View {
                     ForEach(reviews.indices, id: \.self) { i in HStack(spacing: 8) { Stars(count: reviews[i].rating); if !reviews[i].text.isEmpty { Text(reviews[i].text) } }.font(.subheadline) }
                 } } }
                 if role == .family && person.side == "carer" { BigButton(title: "Book \(person.firstName)", tint: role.tint, icon: .calendar) { showBook = true } }
-                else if person.side == "family" { Text("Families book you. You say yes.").font(.footnote).foregroundStyle(Brand.muted) }
+                else if person.side == "family" { EmptyView() }
                 HStack(spacing: 10) {
                     Button { contact = .message } label: { IconLabel(icon: .chat, text: "Message", size: 20).font(.system(size: 17, weight: .semibold)).frame(maxWidth: .infinity, minHeight: 48).background(Brand.field).foregroundStyle(Brand.ink).clipShape(RoundedRectangle(cornerRadius: 14)) }
                     if s.me?.side == "carer" && person.side == "family" { Button { contact = .resume } label: { IconLabel(icon: .doc, text: "Send resume", size: 20).font(.system(size: 17, weight: .semibold)).frame(maxWidth: .infinity, minHeight: 48).background(Brand.field).foregroundStyle(Brand.ink).clipShape(RoundedRectangle(cornerRadius: 14)) } }
@@ -227,30 +282,77 @@ struct BookSheet: View {
 
 struct SwipeCard: View {
     let person: Person; let tint: Color; let top: Bool; let offset: CGSize; let depth: Int; var match: MatchInfo? = nil
+    var distance: Double? = nil
+    var onMessage: () -> Void = {}; var onResume: (() -> Void)? = nil
+    @State private var slide = 0
+    /// Photo slides first (profile photo, then gallery), then one description slide.
+    var photos: [String] { var out: [String] = []; for k in [person.photoKey] + person.gallery where !k.isEmpty && !out.contains(k) { out.append(k) }; return out }
+    var slideCount: Int { max(1, photos.count) + 1 }
+    var onInfo: Bool { slide >= max(1, photos.count) }
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            RoundedRectangle(cornerRadius: 28).fill(person.role == .family ? Brand.blush.opacity(0.4) : Brand.sage.opacity(0.35))
-            PhotoView(key: person.photoKey, size: 260, round: false, fallback: person.role.icon, fill: true).clipped().clipShape(RoundedRectangle(cornerRadius: 28))
-            LinearGradient(colors: [.clear, .black.opacity(0.6)], startPoint: .center, endPoint: .bottom).clipShape(RoundedRectangle(cornerRadius: 28))
-            VStack(alignment: .leading, spacing: 6) {
-                Text(person.firstName).font(.system(size: 32, weight: .bold, design: .serif))
-                HStack(spacing: 12) {
-                    IconLabel(icon: person.role.icon, text: person.role.name, size: 16, color: .white)
-                    if person.rate > 0 { IconLabel(icon: .rate, text: "\(Int(person.rate))/h", size: 16, color: .white) }
-                    else if person.budgetMax > 0 { IconLabel(icon: .rate, text: "\(Int(person.budgetMax))/h", size: 16, color: .white) }
-                    if !person.suburb.isEmpty { IconLabel(icon: .pin, text: person.suburb, size: 16, color: .white) }
-                }.font(.subheadline.weight(.semibold)).lineLimit(1)
-                if let mt = match { HStack(spacing: 8) { ForEach(Array(mt.reasons.enumerated()), id: \.offset) { _, r in IconLabel(icon: r.icon, text: r.text, size: 13, color: .white, gap: 4).font(.caption.weight(.semibold)).lineLimit(1).padding(.horizontal, 10).padding(.vertical, 5).background(.white.opacity(0.25)).clipShape(Capsule()) } } }
-            }.foregroundStyle(.white).padding(20)
-            if let mt = match { Text("\(mt.percent)%").font(.system(size: 17, weight: .heavy)).foregroundStyle(Brand.ink).padding(.horizontal, 12).padding(.vertical, 6).background(.white).clipShape(Capsule()).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing).padding(16).opacity(top && abs(offset.width) > 60 ? 0 : 1) }
+            RoundedRectangle(cornerRadius: 28).fill(Brand.field)
+            if onInfo { infoSlide } else {
+                PhotoView(key: photos.isEmpty ? "" : photos[min(slide, photos.count - 1)], size: 260, round: false, fallback: person.role.icon, fill: true).clipped().clipShape(RoundedRectangle(cornerRadius: 28))
+                LinearGradient(colors: [.clear, .black.opacity(0.55)], startPoint: .center, endPoint: .bottom).clipShape(RoundedRectangle(cornerRadius: 28))
+            }
             if top {
-                Text("LIKE").font(.system(size: 34, weight: .heavy)).foregroundStyle(.green).padding(8).overlay(RoundedRectangle(cornerRadius: 10).stroke(.green, lineWidth: 4)).rotationEffect(.degrees(-14)).opacity(max(0, min(1, Double(offset.width) / 100))).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading).padding(26)
-                Text("SKIP").font(.system(size: 34, weight: .heavy)).foregroundStyle(.red).padding(8).overlay(RoundedRectangle(cornerRadius: 10).stroke(.red, lineWidth: 4)).rotationEffect(.degrees(14)).opacity(max(0, min(1, Double(-offset.width) / 100))).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing).padding(26)
+                HStack(spacing: 0) {
+                    Color.clear.contentShape(Rectangle()).onTapGesture { slide = max(0, slide - 1) }.accessibilityHidden(true)
+                    Color.clear.contentShape(Rectangle()).onTapGesture { slide = min(slideCount - 1, slide + 1) }.accessibilityIdentifier("nextSlide")
+                }.padding(.bottom, 130)
+            }
+            if !onInfo {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(person.firstName).font(.system(size: 32, weight: .bold, design: .serif))
+                    HStack(spacing: 12) {
+                        Text(person.role.name)
+                        if person.rate > 0 { Text("\(Int(person.rate))/h") } else if person.budgetMax > 0 { Text("\(Int(person.budgetMax))/h") }
+                        if let d = distance { IconLabel(icon: .pin, text: Geo.label(d), size: 15, color: .white) } else if !person.suburb.isEmpty { IconLabel(icon: .pin, text: person.suburb, size: 15, color: .white) }
+                    }.font(.subheadline.weight(.semibold)).lineLimit(1)
+                    actions.padding(.top, 6)
+                }.foregroundStyle(.white).padding(20)
+            }
+            HStack(spacing: 4) { ForEach(0..<slideCount, id: \.self) { i in Capsule().fill(i == slide ? Color.white : Color.white.opacity(0.4)).frame(height: 4) } }
+                .padding(.horizontal, 16).padding(.top, 12).frame(maxHeight: .infinity, alignment: .top).allowsHitTesting(false)
+            if let mt = match { Text("\(mt.percent)%").font(.system(size: 17, weight: .heavy)).foregroundStyle(Brand.ink).padding(.horizontal, 12).padding(.vertical, 6).background(.white).clipShape(Capsule()).accessibilityIdentifier("matchPercent").frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing).padding(.horizontal, 16).padding(.top, 28).opacity(top && abs(offset.width) > 60 ? 0 : 1).allowsHitTesting(false) }
+            if top {
+                Text("MATCH").font(.system(size: 34, weight: .heavy)).foregroundStyle(.green).padding(8).overlay(RoundedRectangle(cornerRadius: 10).stroke(.green, lineWidth: 4)).rotationEffect(.degrees(-14)).opacity(max(0, min(1, Double(offset.width) / 100))).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading).padding(26).allowsHitTesting(false)
+                Text("PASS").font(.system(size: 34, weight: .heavy)).foregroundStyle(.red).padding(8).overlay(RoundedRectangle(cornerRadius: 10).stroke(.red, lineWidth: 4)).rotationEffect(.degrees(14)).opacity(max(0, min(1, Double(-offset.width) / 100))).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing).padding(26).allowsHitTesting(false)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .shadow(color: .black.opacity(0.15), radius: 12, y: 6)
+        .shadow(color: .black.opacity(0.08), radius: 10, y: 4)
         .scaleEffect(1 - CGFloat(depth) * 0.05).offset(y: CGFloat(depth) * 14)
         .offset(x: offset.width, y: offset.height / 4).rotationEffect(.degrees(Double(offset.width) / 18))
+    }
+    /// Message and Send resume sit on the card itself.
+    @ViewBuilder var actions: some View {
+        if top { actionRow }
+    }
+    var actionRow: some View {
+        HStack(spacing: 10) {
+            pill("Message", .chat, onMessage)
+            if let r = onResume { pill("Send resume", .doc, r) }
+        }
+    }
+    func pill(_ t: String, _ i: BI, _ f: @escaping () -> Void) -> some View {
+        Button(action: f) { IconLabel(icon: i, text: t, size: 18, color: Brand.ink).font(.system(size: 16, weight: .semibold)).foregroundStyle(Brand.ink).padding(.horizontal, 16).frame(minHeight: 44).background(.white).clipShape(Capsule()) }.accessibilityLabel(t)
+    }
+    /// The description slide: about, kids, days needed, and why it matches. Plain facts only.
+    var infoSlide: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(person.firstName).font(.system(size: 28, weight: .bold, design: .serif)).foregroundStyle(Brand.ink).padding(.top, 22)
+            if !person.about.isEmpty { Text(person.about).font(.system(size: 17)).foregroundStyle(Brand.ink).lineLimit(5) }
+            else if !person.headline.isEmpty { Text(person.headline).font(.system(size: 17)).foregroundStyle(Brand.ink).lineLimit(3) }
+            if !person.kids.isEmpty { IconLabel(icon: .child, text: person.kids.map { "\($0.name.isEmpty ? "Child" : $0.name), \($0.age)" }.joined(separator: "  "), size: 18) }
+            if !person.days.isEmpty { IconLabel(icon: .calendar, text: person.side == "family" ? "Help needed: " + person.days.joined(separator: " ") : "Free: " + person.days.joined(separator: " "), size: 18) }
+            if let mt = match, !mt.reasons.isEmpty {
+                Text("Why it matches").font(.system(size: 15, weight: .semibold)).foregroundStyle(Brand.muted).padding(.top, 4)
+                ForEach(Array(mt.reasons.enumerated()), id: \.offset) { _, r in IconLabel(icon: r.icon, text: r.text, size: 18) }
+            }
+            Spacer(minLength: 0)
+            actions
+        }.font(.system(size: 17)).padding(.horizontal, 20).padding(.bottom, 20).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }

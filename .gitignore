@@ -1,4 +1,6 @@
-node_modules/
-dist/
+native/GoogleService-Info.plist
+native/*.xcodeproj
+build/
 build176/
+*.xcresult
 ship176/

@@ -9,6 +9,7 @@ struct MeView: View {
     @State private var busy = false; @State private var err = ""; @State private var ok = ""
     @AppStorage("caresits.bunnyDown") private var bunnyDown = false
     @State private var showFamily = false
+    @State private var deleting = false; @State private var deleteSlow = false
     @State private var showResume = false; @State private var showEdit = false; @State private var confirmDelete = false; @State private var showReauth = false
     @State private var rating: (avg: Double, count: Int)?; @State private var reviews: [(rating: Int, text: String)] = []
     var role: Role { s.role }
@@ -20,12 +21,12 @@ struct MeView: View {
     var content: some View {
         NavigationStack {
             ScrollView { VStack(spacing: 14) {
-                Header(role: role, title: "Me", subtitle: role == .family ? "Your family" : "\(role.name) · Free for carers, always")
+                Header(role: role, title: "Me", subtitle: role == .family ? "" : "Free for carers, always")
                 PhotoProofBadge()
                 PhotosPicker(selection: $pick, matching: .images) {
                     ZStack(alignment: .bottomTrailing) {
                         PhotoView(key: me.photoKey, size: 120, fallback: role.icon)
-                        BrandIcon(kind: .camera, size: 20, color: role.tint).padding(8).background(.white).clipShape(Circle()).shadow(radius: 2)
+                        BrandIcon(kind: .camera, size: 20, color: role.tint).padding(8).background(.white).clipShape(Circle()).overlay(Circle().stroke(Color.black.opacity(0.1), lineWidth: 1))
                         if busy { ProgressView() }
                     }
                 }
@@ -50,7 +51,7 @@ struct MeView: View {
                         else { Text("No reviews yet").font(.footnote).foregroundStyle(Brand.muted) }
                         Button { showEdit = true } label: { IconLabel(icon: .pencil, text: "Edit") }
                     } }.padding(.horizontal, 20)
-                    Button { showResume = true } label: { row(.doc, "My resume", "Add a file. We fill your profile.") }.buttonStyle(.plain).padding(.horizontal, 20)
+                    Button { showResume = true } label: { row(.doc, "My resume", "Add a file") }.buttonStyle(.plain).padding(.horizontal, 20)
                     ForEach(reviews.indices, id: \.self) { i in Card { HStack(spacing: 8) { Stars(count: reviews[i].rating); if !reviews[i].text.isEmpty { Text(reviews[i].text) } }.font(.subheadline) }.padding(.horizontal, 20) }
                 } else {
                     Card { VStack(alignment: .leading, spacing: 6) {
@@ -59,19 +60,27 @@ struct MeView: View {
                         Text("Looking for: " + me.services.map { serviceLabels[$0] ?? $0 }.joined(separator: ", "))
                         if !me.kids.isEmpty { IconLabel(icon: .child, text: me.kids.map { "\($0.name) \($0.age)" }.joined(separator: ", "), size: 16) }
                         if me.budgetMax > 0 { IconLabel(icon: .rate, text: "Up to \(Int(me.budgetMax)) per hour", size: 16, color: Brand.muted).foregroundStyle(Brand.muted) }
-                        Text("Children's details are private.").font(.caption).foregroundStyle(Brand.muted)
                         Button { showFamily = true } label: { IconLabel(icon: .pencil, text: me.postcode.isEmpty && me.suburb.isEmpty ? "Finish my family details" : "Edit my family") }.accessibilityIdentifier("editFamily")
                     } }.padding(.horizontal, 20)
                 }
                 Card { VStack(alignment: .leading, spacing: 8) {
-                    Text("Safety and privacy").font(.headline)
-                    IconLabel(icon: .lock, text: "Photos are private until you connect.", size: 14, color: Brand.muted).font(.footnote).foregroundStyle(Brand.muted)
+                    Text("Privacy").font(.headline)
+                    IconLabel(icon: .lock, text: "Photos stay private until you connect", size: 14, color: Brand.muted).font(.footnote).foregroundStyle(Brand.muted)
                     Toggle("Turn the bunny down", isOn: $bunnyDown).font(.subheadline).tint(role.tint)
                 } }.padding(.horizontal, 20)
                 Button("Sign out") { s.signOut() }.font(.headline).padding(.top, 8)
                 Button("Delete my account", role: .destructive) { confirmDelete = true }.font(.footnote)
             }.padding(.bottom, 100) }
             .background(Brand.cream.ignoresSafeArea())
+            .overlay {
+                if deleting {
+                    VStack(spacing: 14) {
+                        BunnyView(size: 96, mood: .rest)
+                        HStack(spacing: 10) { ProgressView(); Text("Deleting your account").font(.system(size: 20, weight: .semibold)).foregroundStyle(Brand.ink) }
+                        if deleteSlow { Text("This is taking longer than usual. Please keep the app open.").multilineTextAlignment(.center).foregroundStyle(Brand.muted).padding(.horizontal, 40).accessibilityIdentifier("deleteSlow") }
+                    }.frame(maxWidth: .infinity, maxHeight: .infinity).background(Color.white.opacity(0.96).ignoresSafeArea()).accessibilityIdentifier("deleteBusy")
+                }
+            }
             .onChange(of: pick) { _, i in Task { await setAvatar(i) } }
             .onChange(of: galleryPick) { _, items in Task { await addGallery(items) } }
             .sheet(isPresented: $showReauth) { ReauthSheet { Task { await doDelete() } } }
@@ -88,8 +97,31 @@ struct MeView: View {
     }
     func row(_ e: BI, _ t: String, _ sub: String) -> some View { Card { HStack { BrandIcon(kind: e, size: 34); VStack(alignment: .leading) { Text(t).font(.headline).foregroundStyle(Brand.ink); Text(sub).font(.footnote).foregroundStyle(Brand.muted) }; Spacer(); BrandIcon(kind: .chevron, size: 18, color: Brand.muted) } } }
 
+    /// Delete shows a busy screen while it works, a calm line if it runs past 10 seconds, and stops with a plain
+    /// message after 60 seconds so the person is never left staring at a spinner.
     func doDelete() async {
-        do { try await Backend.deleteAccount((s.uid ?? "")); s.signOut() } catch { err = "Could not delete: " + error.localizedDescription }
+        deleting = true; deleteSlow = false; err = ""
+        let uid = s.uid ?? ""
+        var limit: UInt64 = 60; var lag: UInt64 = 0
+        #if DEBUG
+        // Test only: simulate a slow network in the debug build.
+        let env = ProcessInfo.processInfo.environment
+        if let v = env["CS_DELETE_TIMEOUT"], let n = UInt64(v) { limit = n }
+        if let v = env["CS_DELETE_DELAY"], let n = UInt64(v) { lag = n }
+        #endif
+        let slowTimer = Task { try? await Task.sleep(nanoseconds: 10_000_000_000); if !Task.isCancelled { deleteSlow = true } }
+        defer { slowTimer.cancel() }
+        do {
+            try await withThrowingTaskGroup(of: Void.self) { g in
+                g.addTask { if lag > 0 { try await Task.sleep(nanoseconds: lag * 1_000_000_000) }; try await Backend.deleteAccount(uid) }
+                g.addTask { try await Task.sleep(nanoseconds: limit * 1_000_000_000); throw AppError.msg("timeout") }
+                _ = try await g.next(); g.cancelAll()
+            }
+            deleting = false; s.signOut()
+        } catch {
+            deleting = false; deleteSlow = false
+            err = error.localizedDescription.contains("timeout") ? "Still not done. Check your connection and try again. Nothing else is lost." : "Could not delete: " + error.localizedDescription
+        }
     }
     func setAvatar(_ item: PhotosPickerItem?) async {
         guard let item else { return }

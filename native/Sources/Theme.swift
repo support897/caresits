@@ -25,7 +25,7 @@ enum Role: String, CaseIterable, Identifiable {
     var icon: BI { switch self { case .family: return .home; case .nanny: return .nanny; case .babysitter: return .moon; case .auPair: return .globe } }
     var name: String { switch self { case .family: return "Family"; case .nanny: return "Nanny"; case .babysitter: return "Babysitter"; case .auPair: return "Au pair" } }
     var tint: Color { switch self { case .family: return Brand.ink; case .nanny: return Color(hex: 0x2E7D6B); case .babysitter: return Color(hex: 0x5B4B9A); case .auPair: return Color(hex: 0xC2557A) } }
-    var soft: Color { switch self { case .family: return Brand.sage.opacity(0.35); case .nanny: return Color(hex: 0xD6EDE5); case .babysitter: return Color(hex: 0xE3DDF5); case .auPair: return Color(hex: 0xFBDDE8) } }
+    var soft: Color { Brand.field }
     var greeting: String {
         switch self {
         case .family: return "Find care. Share the day."
@@ -59,7 +59,7 @@ struct Chip: View {
 
 struct Card<Content: View>: View {
     @ViewBuilder var content: Content
-    var body: some View { content.padding(16).frame(maxWidth: .infinity, alignment: .leading).background(Color.white).clipShape(RoundedRectangle(cornerRadius: 20)).shadow(color: .black.opacity(0.06), radius: 8, y: 3) }
+    var body: some View { content.padding(16).frame(maxWidth: .infinity, alignment: .leading).background(Color.white).clipShape(RoundedRectangle(cornerRadius: 20)).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.black.opacity(0.08), lineWidth: 1)) }
 }
 
 struct LogoView: View { var size: CGFloat = 120; var body: some View { Image("logo").resizable().scaledToFit().frame(width: size, height: size).accessibilityLabel("Caresitters") } }
