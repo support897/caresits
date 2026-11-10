@@ -126,6 +126,8 @@ struct ChatProofGate: View {
             try await s.email(carEmail, pw, create: false)
             let bs = await Backend.bookings(cu, side: "carer")
             guard let b = bs.first else { return fail("carer sees no booking") }
+            UserDefaults.standard.set([fu, cu], forKey: "cs.proof.first")
+            try await Backend.saveResume(cu, Resume(summary: "Calm nanny, five years with toddlers and school age children.", jobs: ["Nanny, two families, 2021 to now"], education: [], skills: ["First aid"], certificates: []))
             try await Backend.transition(b, to: "accepted", actorUid: cu, actorIsCarer: true)
             L.append("carer accepted, chat open")
             try? Auth.auth().signOut(); try await Task.sleep(nanoseconds: 1_500_000_000)

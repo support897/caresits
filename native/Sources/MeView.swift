@@ -66,6 +66,7 @@ struct MeView: View {
                 Card { VStack(alignment: .leading, spacing: 8) {
                     Text("Privacy").font(.headline)
                     IconLabel(icon: .lock, text: "Photos stay private until you connect", size: 14, color: Brand.muted).font(.footnote).foregroundStyle(Brand.muted)
+                    if s.role == .family { Text("Children's details are private.").font(.footnote).foregroundStyle(Brand.muted) }
                     Toggle("Turn the bunny down", isOn: $bunnyDown).font(.subheadline).tint(role.tint)
                 } }.padding(.horizontal, 20)
                 Button("Sign out") { s.signOut() }.font(.headline).padding(.top, 8)
@@ -120,7 +121,7 @@ struct MeView: View {
             deleting = false; s.signOut()
         } catch {
             deleting = false; deleteSlow = false
-            err = error.localizedDescription.contains("timeout") ? "Still not done. Check your connection and try again. Nothing else is lost." : "Could not delete: " + error.localizedDescription
+            err = error.localizedDescription.contains("timeout") ? "Still not done. Check your connection and try again. Your profile may already be gone, and trying again is safe." : "Could not delete: " + error.localizedDescription
         }
     }
     func setAvatar(_ item: PhotosPickerItem?) async {

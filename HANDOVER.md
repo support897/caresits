@@ -30,3 +30,12 @@ Delete the GitHub token polar-caresits-push.
 4. Logo options proposed only, not in the app.
 5. Bunny sparkle badge moved and resized (Bunny.swift). Shot in pictures-b177/bunny.
 6. Delete shows a busy screen, a slow line after 10 s, a plain timeout after 60 s. Proof in pictures-b177/delete.
+
+## Build 178 (fix round from the 177 QA verdict)
+1. Send resume: ContactSheet now finds the accepted relationship robustly (uses the live uid, reloads the profile and asks again up to 3 times before saying "Chat opens after a yes"). Proved end to end: sheet offers Send, then "Sent" (pictures-b178 deck-8b and deck-9). The proof carer now has a saved resume, and the proof run pins its own two people to the top of the deck (DEBUG only), so old test profiles in the live pool cannot hide them.
+2. The five logo options are committed in brand/logo-options/ (index.html and five SVGs). Logo pick is still Ilse's to make in words.
+3. "Children's details are private." restored in MeView (family).
+4. Match banner now sits above the deck, clear of the 100% pill (stays 7 s). Map frames its first view on all pins. With many test profiles on the same postcodes the pins overlap, so a crowded map shows few separate pins.
+5. Delete timeout line is now honest: "Still not done. Check your connection and try again. Your profile may already be gone, and trying again is safe." Order of deletion is unchanged (profile first, then Auth).
+Test fixes: Skip button name restored in carer onboarding tests, Message tap targets the banner. testSkipFamilyAndLabels waits 120 s for delete to land (live backend latency made it flaky at 75 s).
+Version 178.

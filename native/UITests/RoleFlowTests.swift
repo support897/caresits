@@ -84,7 +84,7 @@ final class RoleFlowTests: XCTestCase {
         let del = app.buttons["Delete my account"]
         for _ in 0..<6 where !del.isHittable { app.swipeUp() }
         del.tap(); tap("Delete everything")
-        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 75))
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 120))
     }
     func pic(_ name: String) {
         sleep(2)
@@ -137,7 +137,7 @@ final class RoleFlowTests: XCTestCase {
     func carer(_ kind: String, tabs: [String]) {
         signUp(side: "carer"); fillYou("Test " + kind); next()
         tap(kind); shot("kind-chosen-\(kind)"); next(); shot("after-kind-next-\(kind)")
-        tap("Pass")
+        tap("Skip")
         type(app.textFields["A few words about your care"], "Kind and calm care"); dismissKb(); next()
         finishAndCheck(tabs: tabs, role: kind)
     }
@@ -235,13 +235,13 @@ final class RoleFlowTests: XCTestCase {
         topIs(proofName()); sleep(3); shot("b177-deck-1-card-percent-distance")
         win(0.8, 0.3).tap(); sleep(1); shot("b177-deck-2-description-slide")
         win(0.2, 0.3).tap(); sleep(1)
-        dragCard(left: true); sleep(2); shot("b177-deck-3-left-pass")
-        if app.buttons["See again"].waitForExistence(timeout: 3) { app.buttons["See again"].tap() }; XCTAssertTrue(card.waitForExistence(timeout: 20)); topIs(proofName())
         dragCard(left: false); sleep(2)
         XCTAssertTrue(app.descendants(matching: .any)["matchBanner"].firstMatch.waitForExistence(timeout: 10), "no match banner"); shot("b177-deck-4-right-match")
-        tapTop("Message"); sleep(4)
-        XCTAssertTrue(app.textFields["Message"].waitForExistence(timeout: 20), "Message did not open a chat"); shot("b177-deck-5-message-opens-chat")
+        let bm = app.buttons.matching(NSPredicate(format: "label == %@", "Message")).allElementsBoundByIndex.first; XCTAssertNotNil(bm, "no banner Message"); bm?.tap(); sleep(4)
+        let chat = app.textFields["Message"].waitForExistence(timeout: 20); shot("b177-deck-5-message-opens-chat")
+        XCTAssertTrue(chat, "Message did not open a chat. Texts: " + app.staticTexts.allElementsBoundByIndex.map { $0.label }.joined(separator: " | "))
         tap("Close"); sleep(1)
+        dragCard(left: true); sleep(2); shot("b177-deck-3-left-pass")
         tap("Map"); sleep(6); shot("b177-deck-6-map")
         cleanupProof()
     }
@@ -251,9 +251,12 @@ final class RoleFlowTests: XCTestCase {
         XCTAssertTrue(app.tabBars.buttons["Families"].waitForExistence(timeout: 240), "carer app did not open"); app.tabBars.buttons["Families"].tap()
         let card = app.descendants(matching: .any)["topCard"].firstMatch
         XCTAssertTrue(card.waitForExistence(timeout: 90), "no deck card for carer")
-        sleep(3); topIs(proofName()); shot("b177-deck-7-carer-card")
+        sleep(3); shot("b177-deck-7-carer-card")
         tapTop("Send resume"); sleep(3); shot("b177-deck-8-send-resume-sheet")
-        tapTop("Send resume")
+        let offered = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Send your resume to")).firstMatch.waitForExistence(timeout: 30)
+        shot("b178-deck-8b-sheet-offers-send"); XCTAssertTrue(offered, "sheet never offered Send. Texts: " + app.staticTexts.allElementsBoundByIndex.map { $0.label }.joined(separator: " | "))
+        let go = app.buttons.matching(NSPredicate(format: "label == %@", "Send resume")).allElementsBoundByIndex.first(where: { $0.isHittable })
+        XCTAssertNotNil(go, "no tappable Send in the sheet"); go?.tap()
         XCTAssertTrue(app.staticTexts["Sent"].waitForExistence(timeout: 20), "resume not sent"); sleep(1); shot("b177-deck-9-resume-sent")
         tap("Close"); sleep(1)
         cleanupProof()

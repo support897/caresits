@@ -33,10 +33,28 @@ struct DiscoverView: View {
     var title: String { switch role { case .family: return "Find care"; case .nanny: return "Families"; case .babysitter: return "Jobs"; case .auPair: return "Host families" } }
 
     @State private var skipped: Set<String> = []
+    @State private var camera: MapCameraPosition = .automatic
+    /// Frame the first view on the pins so everyone on the map is in sight.
+    func frame(_ pins: [Person]) {
+        let pts = pins.compactMap { coords[$0.postcode.trimmingCharacters(in: .whitespaces)] }.map { MKMapPoint($0) }
+        guard let f = pts.first else { return }
+        var r = MKMapRect(origin: f, size: MKMapSize(width: 0, height: 0))
+        for p in pts { r = r.union(MKMapRect(origin: p, size: MKMapSize(width: 0, height: 0))) }
+        let padW = max(r.size.width * 0.25, 20000), padH = max(r.size.height * 0.25, 20000)
+        camera = .rect(r.insetBy(dx: -padW, dy: -padH))
+    }
     @State private var detail: Person?
     @State private var drag: CGSize = .zero
     @State private var deckContact: (person: Person, mode: ContactMode)?
-    var deck: [Person] { let base = shown.filter { !skipped.contains($0.id) }; guard let me = s.me else { return base }; return base.sorted { $0.match(with: me).percent > $1.match(with: me).percent } }
+    var deck: [Person] {
+        let base = shown.filter { !skipped.contains($0.id) }; guard let me = s.me else { return base }
+        let sorted = base.sorted { $0.match(with: me).percent > $1.match(with: me).percent }
+        #if DEBUG
+        // Test only: the proof run's own person goes first, so old test profiles in the live pool never hide it.
+        if let first = UserDefaults.standard.stringArray(forKey: "cs.proof.first"), let i = sorted.firstIndex(where: { first.contains($0.id) }) { var a = sorted; let x = a.remove(at: i); a.insert(x, at: 0); return a }
+        #endif
+        return sorted
+    }
 
     var body: some View {
         NavigationStack {
@@ -63,6 +81,14 @@ struct DiscoverView: View {
                         ForEach(services, id: \.self) { sv in Button { filter = sv; skipped = [] } label: { Chip(text: (serviceLabels[sv] ?? sv) + "s", on: filter == sv, tint: role.tint) } }
                     }.padding(.horizontal, 20) }
                 }
+                if let b = banner {
+                    HStack(spacing: 10) {
+                        BrandIcon(kind: .heart, size: 20, color: Brand.bunny, solid: true)
+                        Text("Matched with \(b.firstName)").font(.system(size: 16, weight: .semibold)).foregroundStyle(Brand.ink)
+                        Spacer()
+                        Button("Message") { deckContact = (b, .message); banner = nil }.font(.system(size: 16, weight: .semibold)).foregroundStyle(role.tint)
+                    }.padding(14).background(.white).clipShape(RoundedRectangle(cornerRadius: 16)).overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.black.opacity(0.1), lineWidth: 1)).padding(.horizontal, 20).padding(.top, 00).transition(.move(edge: .top).combined(with: .opacity)).accessibilityIdentifier("matchBanner")
+                }
                 if showMap { mapView.padding(.horizontal, 20).frame(maxHeight: .infinity) } else { deckStack }
                 if !showMap {
                     HStack(spacing: 18) {
@@ -70,16 +96,6 @@ struct DiscoverView: View {
                         roundBtn(.info, Brand.ink, "Details") { detail = deck.first }
                         roundBtn(.heart, Brand.bunny, "Match", solid: true) { if let p = deck.first { fling(p, like: true) } }
                     }.padding(.bottom, 8)
-                }
-            }
-            .overlay(alignment: .top) {
-                if let b = banner {
-                    HStack(spacing: 10) {
-                        BrandIcon(kind: .heart, size: 20, color: Brand.bunny, solid: true)
-                        Text("Matched with \(b.firstName)").font(.system(size: 16, weight: .semibold)).foregroundStyle(Brand.ink)
-                        Spacer()
-                        Button("Message") { deckContact = (b, .message); banner = nil }.font(.system(size: 16, weight: .semibold)).foregroundStyle(role.tint)
-                    }.padding(14).background(.white).clipShape(RoundedRectangle(cornerRadius: 16)).overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.black.opacity(0.1), lineWidth: 1)).padding(.horizontal, 20).padding(.top, 60).transition(.move(edge: .top).combined(with: .opacity)).accessibilityIdentifier("matchBanner")
                 }
             }
             .background(Brand.cream.ignoresSafeArea()).refreshable { await load() }.task { await load() }
@@ -115,11 +131,12 @@ struct DiscoverView: View {
     /// The map shows everyone (not limited by the deck distance), still only the other side of the match.
     var mapView: some View {
         let pins = people.filter { coords[$0.postcode.trimmingCharacters(in: .whitespaces)] != nil }
-        return Map(selection: $mapPick) {
+        return Map(position: $camera, selection: $mapPick) {
             ForEach(pins) { p in
                 Marker(p.firstName, coordinate: coords[p.postcode.trimmingCharacters(in: .whitespaces)]!).tint(p.role.tint).tag(p.id)
             }
         }
+        .onAppear { frame(pins) }.onChange(of: pins.count) { _, _ in frame(pins) }
         .clipShape(RoundedRectangle(cornerRadius: 24)).accessibilityIdentifier("peopleMap")
         .overlay(alignment: .bottom) { Text("\(pins.count) \(pins.count == 1 ? "person" : "people") on the map").font(.system(size: 15, weight: .semibold)).foregroundStyle(Brand.ink).padding(.horizontal, 14).padding(.vertical, 8).background(.white).clipShape(Capsule()).padding(12) }
     }
@@ -130,7 +147,7 @@ struct DiscoverView: View {
         withAnimation(.easeIn(duration: 0.22)) { drag = CGSize(width: like ? 700 : -700, height: 40) }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.23) {
             if like, let me = s.me { saved.insert(p.id); Task { await Backend.setSaved(me.id, p.id, true) }; withAnimation { banner = p }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 4) { withAnimation { if banner?.id == p.id { banner = nil } } } }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 7) { withAnimation { if banner?.id == p.id { banner = nil } } } }
             if !onlySaved || !like { skipped.insert(p.id) }
             drag = .zero
         }

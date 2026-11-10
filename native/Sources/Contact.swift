@@ -38,10 +38,23 @@ struct ContactSheet: View {
             .sheet(isPresented: $showBook) { BookSheet(carer: person) }
         }
         .task {
-            for r in await Backend.relationships(me.id, side: me.side) where r.other(me.id) == person.id && (r.state == "contact" || r.state == "hired") { rel = r }
+            rel = await findRel()
             if mode == .resume { resume = await Backend.loadResume(me.id) }
             loaded = true
         }
+    }
+    /// Looks up the accepted relationship with this person. The sheet can open before the session has settled
+    /// (empty id, or a first query that comes back empty), so reload the profile and ask again before saying no.
+    func findRel() async -> Relationship? {
+        for attempt in 0..<3 {
+            if s.me == nil || attempt > 0 { await s.reload() }
+            if let uid = s.uid, let side = s.me?.side {
+                let rels = await Backend.relationships(uid, side: side)
+                if let r = rels.first(where: { $0.other(uid) == person.id && ($0.state == "contact" || $0.state == "hired") }) { return r }
+            }
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+        }
+        return nil
     }
     @ViewBuilder func info(_ rel: Relationship?) -> some View {
         VStack(spacing: 14) {
