@@ -1,0 +1,7 @@
+carer account + profile ok
+family account + profile + booking ok
+carer accepted, chat open
+sample photo in: 238720 bytes, GPS true, Exif true
+chat photo SENT through Backend.sendPhoto (Media.prepare strip route)
+message stored kind photo, key gallery/photo-4ae97f210c8459c3c576.jpg, served 49572 bytes, blocks [], GPS false, Exif false, decodes true
+CHAT PROOF OK

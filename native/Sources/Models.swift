@@ -73,7 +73,7 @@ struct Booking: Identifiable {
     }
 }
 
-struct ChatMessage: Identifiable { let id: String; var from: String; var text: String; var at: Date }
+struct ChatMessage: Identifiable { let id: String; var from: String; var text: String; var at: Date; var kind = "text"; var mediaKey = "" }
 
 struct Resume {
     var summary = ""; var jobs: [String] = []; var education: [String] = []; var skills: [String] = []; var certificates: [String] = []

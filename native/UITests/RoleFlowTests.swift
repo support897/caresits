@@ -199,4 +199,21 @@ final class RoleFlowTests: XCTestCase {
         app.launchEnvironment["CS_ICONS"] = "1"; app.launch(); sleep(2)
         shot("b176-bunny-a"); sleep(2); shot("b176-bunny-b")
     }
+    func testChatPhoto() {
+        app.launchEnvironment["CS_CHATPROOF"] = "1"; app.launchArguments += ["-AppleLanguages", "(en)"]; app.launch()
+        let msgs = app.tabBars.buttons["Messages"]
+        XCTAssertTrue(msgs.waitForExistence(timeout: 240), "chat proof setup did not finish: " + ((try? String(contentsOfFile: "/Users/ilseplacencia/Apps/nativeproj/pics/chat-proof.txt")) ?? app.staticTexts["chatProof"].label))
+        let rep = (try? String(contentsOfFile: "/Users/ilseplacencia/Apps/nativeproj/pics/chat-proof.txt")) ?? "no report"
+        XCTAssertTrue(rep.contains("CHAT PROOF OK"), rep)
+        msgs.tap(); sleep(2); shot("b177-chat-list")
+        let row = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Proof Carer")).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 20)); row.tap()
+        let ph = app.descendants(matching: .any)["chatPhoto"].firstMatch
+        XCTAssertTrue(ph.waitForExistence(timeout: 30), "photo not in thread"); sleep(4); shot("b177-chat-photo-1")
+        app.navigationBars.buttons.firstMatch.tap(); sleep(2)
+        row.tap()
+        XCTAssertTrue(ph.waitForExistence(timeout: 30), "photo not in thread after return"); sleep(4); shot("b177-chat-photo-2-after-return")
+        app.navigationBars.buttons.firstMatch.tap(); sleep(1)
+        app.buttons["proofCleanup"].tap(); sleep(12)
+    }
 }
