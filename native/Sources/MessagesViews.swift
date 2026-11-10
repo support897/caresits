@@ -10,9 +10,9 @@ struct MessagesView: View {
     var body: some View {
         NavigationStack {
             ScrollView { VStack(alignment: .leading, spacing: 12) {
-                Header(role: role, title: role == .family ? "Your carers" : "Your \(role.otherPlural)", subtitle: "Chat opens when a booking is accepted")
+                Header(role: role, title: "Messages")
                 if !loaded { ProgressView().frame(maxWidth: .infinity).padding(30) }
-                else if rows.isEmpty { EmptyHint(icon: .chat, text: role == .family ? "No chats yet" : "No chats yet") }
+                else if rows.isEmpty { EmptyHint(icon: .chat, text: "Chats open after a booking is accepted") }
                 ForEach(rows, id: \.rel.id) { r in
                     NavigationLink { ChatView(rel: r.rel, other: r.other) } label: {
                         Card { HStack(spacing: 12) { PhotoView(key: r.other?.photoKey ?? "", size: 52, fallback: r.other?.role.icon ?? .bunny); VStack(alignment: .leading) { Text(r.other?.name ?? "…").font(.headline).foregroundStyle(Brand.ink); Text(r.other.map { $0.side == "carer" ? $0.role.name : "Family" } ?? "").font(.subheadline).foregroundStyle(Brand.muted) }; Spacer(); BrandIcon(kind: .chevron, size: 18, color: Brand.muted) } }
@@ -42,7 +42,7 @@ struct ChatView: View {
         VStack(spacing: 0) {
             ScrollViewReader { proxy in
                 ScrollView { LazyVStack(spacing: 8) {
-                    if msgs.isEmpty { EmptyHint(icon: .chat, text: "Say hello to \(other?.firstName ?? "them")!") }
+                    if msgs.isEmpty { EmptyHint(icon: .chat, text: "Say hello") }
                     ForEach(msgs) { m in
                         let mine = m.from == s.uid
                         HStack { if mine { Spacer(minLength: 50) }

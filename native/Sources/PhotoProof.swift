@@ -106,17 +106,19 @@ struct ChatProofGate: View {
     func fail(_ m: String) { status = "chat proof FAILED: " + m; try? status.write(toFile: "/Users/ilseplacencia/Apps/nativeproj/pics/chat-proof.txt", atomically: true, encoding: .utf8) }
     func run() async {
         var L: [String] = []
-        let t = Int(Date().timeIntervalSince1970); pw = "Cp-\(t)-Zq9x"
+        let t = Int(Date().timeIntervalSince1970); let carName = "Proof" + String(t % 100000); L.append("carer name: " + carName); pw = "Cp-\(t)-Zq9x"
         famEmail = "projects.reports.ilse+chatprooff\(t)@gmail.com"; carEmail = "projects.reports.ilse+chatproofc\(t)@gmail.com"
         do {
             try await s.email(carEmail, pw, create: true)
             guard let cu = Auth.auth().currentUser?.uid else { return fail("no carer uid") }
-            try await Backend.saveProfile(cu, side: "carer", name: "Proof Carer", postcode: "4005", about: "Chat photo proof carer", card: ["careTypes": ["nanny"], "rate": 35])
+            let sched: [String: Any] = ["Mon": ["from": "09:00", "to": "17:00"], "Tue": ["from": "09:00", "to": "17:00"], "Wed": ["from": "09:00", "to": "17:00"]]
+            try await Backend.saveProfile(cu, side: "carer", name: carName, postcode: "2000", about: "Calm, caring nanny with a love for outdoor play.", card: ["careTypes": ["nanny"], "rate": 35, "suburb": "Sydney", "headline": "Calm nanny, outdoor play", "experienceYears": 4, "availability": sched, "maxDistanceKm": 25])
+            try? await Backend.saveResume(cu, Resume(summary: "Nanny for four years", jobs: ["Nanny, two families, Sydney"], education: [], skills: ["First aid", "Cooking"], certificates: []))
             L.append("carer account + profile ok")
             try? Auth.auth().signOut(); try await Task.sleep(nanoseconds: 1_500_000_000)
             try await s.email(famEmail, pw, create: true)
             guard let fu = Auth.auth().currentUser?.uid else { return fail("no family uid") }
-            try await Backend.saveProfile(fu, side: "family", name: "Proof Family", postcode: "4005", about: "Chat photo proof family", card: ["careTypes": ["nanny"]])
+            try await Backend.saveProfile(fu, side: "family", name: "Proof" + String(t % 100000) + " Family", postcode: "2010", about: "Two kids, busy weekdays, need a calm helper.", card: ["careTypes": ["nanny"], "suburb": "Surry Hills", "budgetMax": 40, "kids": [["name": "Mia", "ageYears": 3], ["name": "Leo", "ageYears": 6]], "scheduleNeed": ["Mon": ["from": "09:00", "to": "12:00"], "Tue": ["from": "09:00", "to": "12:00"]], "maxDistanceKm": 25])
             let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; f.locale = Locale(identifier: "en_US_POSIX")
             try await Backend.createBooking(familyUid: fu, carerUid: cu, date: f.string(from: Date().addingTimeInterval(3 * 86400)), from: "09:00", to: "12:00", rate: 35, note: "chat photo proof")
             L.append("family account + profile + booking ok")
@@ -145,6 +147,9 @@ struct ChatProofGate: View {
             L.append(ok ? "CHAT PROOF OK" : "CHAT PROOF FAILED")
             let rep = L.joined(separator: "\n"); status = rep
             try? rep.write(toFile: "/Users/ilseplacencia/Apps/nativeproj/pics/chat-proof.txt", atomically: true, encoding: .utf8)
+            if ProcessInfo.processInfo.environment["CS_CHATPROOF_END"] == "carer" { try? Auth.auth().signOut(); try await Task.sleep(nanoseconds: 1_500_000_000); try await s.email(carEmail, pw, create: false); try await Task.sleep(nanoseconds: 2_000_000_000)
+                let rr = await Backend.relationships(cu, side: "carer"); L.append("carer sees relationships: " + rr.map { "\($0.id.prefix(6)) \($0.state) fam \($0.familyUid.prefix(6)) car \($0.carerUid.prefix(6))" }.joined(separator: "; ") + " | me.side \(s.meSafe.side) uid \(cu.prefix(6)) fu \(fu.prefix(6))")
+                try? L.joined(separator: "\n").write(toFile: "/Users/ilseplacencia/Apps/nativeproj/pics/chat-proof.txt", atomically: true, encoding: .utf8) }
             await s.reload(); ready = true
         } catch { fail(error.localizedDescription + " | " + L.joined(separator: "; ")) }
     }
@@ -168,6 +173,8 @@ struct IconGallery: View {
             Text("Bunny moods (tap, drag a finger, wait)").font(.footnote)
             BunnyMoodsRow()
             HStack { BunnyView(size: 120, mood: .celebrate); BunnyView(size: 120, mood: .think) }
+            Text("Large celebrate bunny").font(.footnote)
+            BunnyView(size: 300, mood: .celebrate).padding(.bottom, 40)
         }.padding(16) }.background(Color.white)
     }
 }
@@ -177,7 +184,7 @@ struct PhotoProofBadge: View {
     @State private var text = ""
     var body: some View {
         Group {
-            Text(text.isEmpty ? "proof idle" : text).font(.system(size: 9, design: .monospaced)).accessibilityIdentifier("photoProof").padding(6)
+            Text(text.isEmpty ? "proof idle" : text).font(.system(size: 9, design: .monospaced)).accessibilityIdentifier("photoProof").padding(6).opacity(text.isEmpty ? 0 : 1).frame(height: text.isEmpty ? 0 : nil)
         }.task {
             guard ProcessInfo.processInfo.environment["CS_PHOTOPROOF"] == "1", text.isEmpty else { return }
             text = "running"

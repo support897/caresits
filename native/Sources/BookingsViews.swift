@@ -83,7 +83,7 @@ struct BookingsCalendarView: View {
     var body: some View {
         NavigationStack {
             ScrollView { VStack(spacing: 14) {
-                Header(role: role, title: role == .auPair ? "My week" : "Calendar", subtitle: role == .family ? "Your bookings, in one place" : "Your jobs and free days")
+                Header(role: role, title: role == .auPair ? "My week" : "Calendar")
                 Card { VStack(spacing: 8) {
                     HStack {
                         Button { month = cal.date(byAdding: .month, value: -1, to: month)! } label: { BrandIcon(kind: .chevron, size: 20).rotationEffect(.degrees(180)) }
@@ -112,7 +112,7 @@ struct BookingsCalendarView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     Text(selected, format: .dateTime.weekday(.wide).day().month(.wide)).font(.headline).padding(.horizontal, 20)
                     if !store.loaded { ProgressView().frame(maxWidth: .infinity) }
-                    else if todays.isEmpty { EmptyHint(icon: .sun, text: role == .family ? "Nothing booked. Tap New booking." : "Nothing booked this day.") }
+                    else if todays.isEmpty { EmptyHint(icon: .sun, text: role == .family ? "Nothing booked" : "Nothing booked") }
                     ForEach(todays) { b in BookingRow(b: b, other: store.other(b, me: s.meSafe)) { await store.load(s.meSafe) }.padding(.horizontal, 20) }
                 }
             }.padding(.bottom, 100) }
@@ -131,7 +131,7 @@ struct NewBookingPicker: View {
         NavigationStack {
             ScrollView { VStack(spacing: 12) {
                 Text("Who would you like to book?").font(Brand.title(24)).padding(.top, 8)
-                if !loaded { ProgressView() } else if carers.isEmpty { EmptyHint(icon: .bunny, text: "No carers yet. Check back soon!") }
+                if !loaded { ProgressView() } else if carers.isEmpty { EmptyHint(icon: .bunny, text: "No carers yet") }
                 ForEach(carers) { c in Button { chosen = c } label: { PersonRow(person: c, saved: false, tint: s.role.tint) }.buttonStyle(.plain) }
             }.padding(20) }
             .background(Brand.cream.ignoresSafeArea()).toolbar { ToolbarItem(placement: .topBarLeading) { Button("Close") { dismiss() } } }
@@ -174,7 +174,7 @@ struct RequestsView: View {
     var body: some View {
         NavigationStack {
             ScrollView { VStack(alignment: .leading, spacing: 12) {
-                Header(role: role, title: "Requests", subtitle: "Families asking for you")
+                Header(role: role, title: "Requests")
                 let waiting = store.items.filter { $0.state == "requested" }
                 let coming = store.items.filter { $0.state == "accepted" }
                 if !store.loaded { ProgressView().frame(maxWidth: .infinity).padding(30) }
@@ -195,7 +195,7 @@ struct TodayView: View {
     var body: some View {
         NavigationStack {
             ScrollView { VStack(alignment: .leading, spacing: 12) {
-                Header(role: .nanny, title: "Hello, \(s.me?.firstName ?? "")!", subtitle: "Your day with the little ones")
+                Header(role: .nanny, title: "Hello, \(s.me?.firstName ?? "")")
                 let mine = store.items.filter { $0.state == "accepted" || $0.state == "completed" }
                 let week = mine.filter { cal.isDate($0.dateValue, equalTo: Date(), toGranularity: .weekOfYear) }
                 HStack(spacing: 12) {
@@ -206,7 +206,7 @@ struct TodayView: View {
                 IconLabel(icon: .sun, text: "Today", size: 18).font(.headline).padding(.horizontal, 20)
                 let today = mine.filter { cal.isDateInToday($0.dateValue) }
                 if !store.loaded { ProgressView().frame(maxWidth: .infinity) }
-                else if today.isEmpty { EmptyHint(icon: .nanny, text: "Nothing today. Enjoy the quiet!") }
+                else if today.isEmpty { EmptyHint(icon: .nanny, text: "Nothing today") }
                 ForEach(today) { b in BookingRow(b: b, other: store.other(b, me: s.meSafe)) { await store.load(s.meSafe) }.padding(.horizontal, 20) }
                 let up = mine.filter { $0.dateValue > Date() && !cal.isDateInToday($0.dateValue) && $0.state == "accepted" }.prefix(4)
                 if !up.isEmpty { IconLabel(icon: .arrow, text: "Coming up", size: 18).font(.headline).padding(.horizontal, 20); ForEach(Array(up)) { b in BookingRow(b: b, other: store.other(b, me: s.meSafe)) { await store.load(s.meSafe) }.padding(.horizontal, 20) } }
