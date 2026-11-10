@@ -22,3 +22,11 @@ rt176.sh <Test|ALL>. All 11 UI tests pass (au pair and skip tests needed a longe
 ## Open for Ilse
 Logo pick (shipped mark 2891222f vs A/B), chat-before-booking, delete ~40 leftover test profiles.
 Delete the GitHub token polar-caresits-push.
+
+## Build 177
+1. Chat photos on the strip route (Backend.sendPhoto, gallery folder, metadata stripped). Proof in pictures-b177.
+2. White, cleaner design pass: flat hairline cards, fewer words, shorter empty states. Before and after in pictures-b177/before and after.
+3. Swipe deck home: match percent, distance, radius, map, Message and Send resume on the card. Nanny home is now the deck (Today retired). Send resume proof from the carer side did not pass in the UI test.
+4. Logo options proposed only, not in the app.
+5. Bunny sparkle badge moved and resized (Bunny.swift). Shot in pictures-b177/bunny.
+6. Delete shows a busy screen, a slow line after 10 s, a plain timeout after 60 s. Proof in pictures-b177/delete.
