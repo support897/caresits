@@ -121,7 +121,7 @@ struct LogoMark: View {
 struct HouseHeart: Shape {
     func path(in r: CGRect) -> Path {
         var p = Path()
-        let w = r.width, h = r.height
+        let h = r.height
         p.move(to: CGPoint(x: r.minX, y: r.minY + h * 0.38))
         p.addLine(to: CGPoint(x: r.midX, y: r.minY))
         p.addLine(to: CGPoint(x: r.maxX, y: r.minY + h * 0.38))
