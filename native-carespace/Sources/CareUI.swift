@@ -23,7 +23,7 @@ struct Heading: View {
     var body: some View { Text(text).font(Brand.title(24)).foregroundStyle(th.theme.text).accessibilityAddTraits(.isHeader) }
 }
 
-struct Body: View {
+struct BodyText: View {
     @EnvironmentObject var th: ThemeStore
     let text: String
     var muted = false

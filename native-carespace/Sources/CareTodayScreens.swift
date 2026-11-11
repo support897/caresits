@@ -42,7 +42,7 @@ struct TodayView: View {
                 NavigationLink { DailyReportView(model: model) } label: { Pill(title: "Daily report", icon: "report", on: false) }.buttonStyle(.plain) }
             if shownItems.isEmpty { EmptyState(title: "Nothing logged yet today", detail: "Add the first update below.") }
             ForEach(shownItems) { item in TimelineRow(model: model, item: item) }
-            if CareAccess.canPost(model.space.role) { composer } else { Body(text: "You can read the day and ask questions. Posting is for carers and admins.", muted: true) }
+            if CareAccess.canPost(model.space.role) { composer } else { BodyText(text: "You can read the day and ask questions. Posting is for carers and admins.", muted: true) }
         }
         .task(id: model.children.count) { if childId == nil, model.children.count == 1 { childId = model.children.first?.id } }
     }
@@ -61,7 +61,7 @@ struct TodayView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack { ForEach(Self.quickKinds, id: \.self) { k in Button { kind = k } label: { Pill(title: k.label, icon: k.icon, on: kind == k) }.buttonStyle(.plain) } }
             }
-            Body(text: "Meals go in the daily report, so the allergy check runs first.", muted: true)
+            BodyText(text: "Meals go in the daily report, so the allergy check runs first.", muted: true)
             CareField(title: childId == nil ? "What happened (for everyone)" : "What happened for \(child?.name ?? "this child")", text: $text, lines: 2)
             if !note.isEmpty { Notice(text: note) }
             BigButton(title: "Add to today") {
@@ -170,7 +170,7 @@ struct DailyReportView: View {
     var body: some View {
         Screen {
             Heading(text: "Daily report")
-            Body(text: "Log the day for one child. Everything you add shows on Today for the family.", muted: true)
+            BodyText(text: "Log the day for one child. Everything you add shows on Today for the family.", muted: true)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack { ForEach(model.children) { c in Button { childId = c.id; result = nil; confirmed = false } label: { Pill(title: c.name, on: childId == c.id) }.buttonStyle(.plain) } }
             }
@@ -183,7 +183,7 @@ struct DailyReportView: View {
             }
             if !note.isEmpty { Notice(text: note) }
             Heading(text: "So far today")
-            if todays.isEmpty { Body(text: "Nothing logged yet.", muted: true) }
+            if todays.isEmpty { BodyText(text: "Nothing logged yet.", muted: true) }
             ForEach(todays) { i in
                 Card { HStack(alignment: .top, spacing: 12) { CareIcon(name: i.kind.icon, size: 26)
                     VStack(alignment: .leading) { Text("\(i.kind.label)  \(CareTime.clock(i.at))").font(Brand.body(15)).foregroundStyle(th.theme.muted)
@@ -224,7 +224,7 @@ struct DailyReportView: View {
                         }.frame(minHeight: 44)
                     }.buttonStyle(.plain).accessibilityAddTraits(confirmed ? .isSelected : [])
                     let stale = checkedText != ingredients
-                    if stale { Body(text: "The ingredients changed. Check them again.", muted: true) }
+                    if stale { BodyText(text: "The ingredients changed. Check them again.", muted: true) }
                     BigButton(title: "Log meal") { if confirmed && !stale { post(.meal, ingredients); ingredients = ""; result = nil; confirmed = false } }
                         .opacity(confirmed && !stale ? 1 : 0.4)
                 }

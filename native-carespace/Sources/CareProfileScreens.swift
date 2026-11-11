@@ -13,7 +13,7 @@ struct ProfileHome: View {
                 BunnyView(size: 72)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(s.myName).font(Brand.title(26)).foregroundStyle(th.theme.text)
-                    Body(text: "Signed in with \(s.provider == "password" ? "email" : s.provider.replacingOccurrences(of: ".com", with: ""))", muted: true)
+                    BodyText(text: "Signed in with \(s.provider == "password" ? "email" : s.provider.replacingOccurrences(of: ".com", with: ""))", muted: true)
                 }
             }
             RowLink(icon: "user", title: "Your name", subtitle: "Shown in greetings and to your team") { EditNameView() }
@@ -44,7 +44,7 @@ struct ThemePicker: View {
         Card {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Theme").font(Brand.title(22)).foregroundStyle(th.theme.text)
-                Body(text: "Pick the look you like. Change it any time. It is saved for you.", muted: true)
+                BodyText(text: "Pick the look you like. Change it any time. It is saved for you.", muted: true)
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                     ForEach(AppTheme.allCases) { t in
                         Button { pick(t) } label: {

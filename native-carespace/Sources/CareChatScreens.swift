@@ -31,7 +31,7 @@ struct ChatsHome: View {
     var body: some View {
         Screen {
             Text("Hello, \(s.myName)").font(Brand.title(28)).foregroundStyle(th.theme.text)
-            Body(text: "Find care. Share the day.", muted: true)
+            BodyText(text: "Find care. Share the day.", muted: true)
             HStack(spacing: 10) {
                 CareIcon(name: "search", size: 20, tint: th.theme.muted, fill: false)
                 TextField("Search your spaces", text: $query).font(Brand.body()).foregroundStyle(th.theme.text)
@@ -84,7 +84,7 @@ struct NewSpaceView: View {
     var body: some View {
         Screen {
             Heading(text: "New care space")
-            Body(text: "A care space is one shared place for a family and the people who help care for their children.", muted: true)
+            BodyText(text: "A care space is one shared place for a family and the people who help care for their children.", muted: true)
             CareField(title: "Space name", text: $name)
             if !error.isEmpty { Notice(text: error, warn: true) }
             BigButton(title: "Make space", busy: busy) {

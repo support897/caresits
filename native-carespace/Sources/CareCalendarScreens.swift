@@ -54,7 +54,7 @@ struct CalendarHome: View {
             }
             Heading(text: day.formatted(.dateTime.weekday(.wide).day().month(.wide)))
             if !note.isEmpty { Notice(text: note) }
-            if dayEvents.isEmpty { Body(text: "Nothing on this day.", muted: true) }
+            if dayEvents.isEmpty { BodyText(text: "Nothing on this day.", muted: true) }
             ForEach(dayEvents) { e in EventRow(event: e, role: ctx.space(e.spaceId)?.role ?? .viewer, childName: ctx.children[e.spaceId]?.first { $0.id == e.childId }?.name ?? "", onDecide: { ok in decide(e, ok) }) }
             RowLink(icon: "plus", title: "Add to calendar", subtitle: "Shifts, bookings, school, pickups and time off") { AddEventView(day: day) }
         }
