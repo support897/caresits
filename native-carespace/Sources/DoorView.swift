@@ -1,7 +1,7 @@
 import SwiftUI
 import AuthenticationServices
 
-/// DOOR LAW — NEW SHAPE (Ilse, 11 Nov): the first page shows ONLY Google and
+/// DOOR LAW — NEW SHAPE (standing): the first page shows ONLY Google and
 /// Apple, plus ONE small button for email instead. No unnecessary text.
 /// The email door is its own page (EmailDoorView). Sign-up is the first screen.
 struct DoorView: View {
@@ -100,8 +100,8 @@ struct GoogleG: View {
 }
 
 /// The CareSpace mark, drawn in code from the approved brand SVG geometry
-/// (house + heart). The logo redo concepts wait on Ilse's pick; until she
-/// approves one, the current mark geometry stands.
+/// (house + heart). The logo redo concepts wait on the owner's pick; until
+/// one is approved, the current mark geometry stands.
 struct LogoMark: View {
     var size: CGFloat = 120
     var body: some View {

@@ -18,7 +18,7 @@ enum Brand {
     static func body(_ size: CGFloat = 17) -> Font { .custom("Atkinson Hyperlegible", size: size) }
 }
 
-/// THEME LAW (Ilse, 11 Nov): every app offers light, dark, beige and a brand
+/// THEME LAW (standing): every app offers light, dark, beige and a brand
 /// colour theme. White (light) is the default. The pick survives restore —
 /// it is saved on the user's profile as well as on the device.
 enum AppTheme: String, CaseIterable, Identifiable {
