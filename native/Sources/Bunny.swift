@@ -1,10 +1,10 @@
 import SwiftUI
 
-/// The seven moods from the brief of record. Ilse's drawing stays exactly as it is; the mood changes how it moves
-/// and which small brand icon sits by it.
+/// The seven moods. Ilse's drawing stays exactly as drawn, the same bunny on every screen, with NOTHING drawn on her.
+/// A mood only changes how she moves. No badge, no icon, no puff is ever laid over the artwork.
 enum BunnyMood: String, CaseIterable { case hello, point, celebrate, encourage, oops, rest, think }
 
-/// The mascot. It breathes and shifts its weight, looks around, hops when tapped, leans toward a finger,
+/// The mascot (the clean art of record, bunny.png). It breathes and shifts its weight, looks around, hops when tapped, leans toward a finger,
 /// tilts its head when nothing happens for a while, and moves in its own way for each mood.
 /// Reduced motion, or "Turn the bunny down" in Me, gives a still bunny. It pauses when off screen and never blocks a tap.
 struct BunnyView: View {
@@ -18,8 +18,6 @@ struct BunnyView: View {
     @State private var squash: CGFloat = 1
     @State private var tilt: Double = 0
     @State private var lean: CGFloat = 0
-    @State private var puffKey = 0
-    @State private var puffGo = false
     @State private var lastTouch = Date()
     var calm: Bool { reduce || down }
 
@@ -29,10 +27,6 @@ struct BunnyView: View {
             .scaleEffect(calm ? 1 : (breathe ? 1.03 : 1), anchor: .bottom)
             .rotationEffect(.degrees(tilt), anchor: .bottom)
             .offset(x: lean, y: hop)
-            .overlay(alignment: .topTrailing) { badge.offset(x: size * 0.05, y: -size * 0.01) }
-            .overlay(alignment: .top) {
-                if puffKey > 0 { BrandIcon(kind: .heart, size: size * 0.24, color: Brand.bunny, solid: true).offset(y: puffGo ? -size * 0.45 : -size * 0.1).opacity(puffGo ? 0 : 1) }
-            }
             .contentShape(Rectangle())
             .simultaneousGesture(DragGesture(minimumDistance: 0)
                 .onChanged { v in
@@ -52,18 +46,6 @@ struct BunnyView: View {
             .onChange(of: calm) { _, c in if c { breathe = false; hop = 0; tilt = 0; lean = 0; squash = 1 } else { withAnimation(.easeInOut(duration: 1.9).repeatForever(autoreverses: true)) { breathe = true } } }
     }
 
-    @ViewBuilder var badge: some View {
-        switch mood {
-        case .celebrate: BrandIcon(kind: .sparkle, size: size * 0.28, color: Brand.bunny)
-        case .encourage: BrandIcon(kind: .heart, size: size * 0.26, color: Brand.bunny, solid: true)
-        case .oops: BrandIcon(kind: .cross, size: size * 0.2, color: Brand.muted)
-        case .rest: BrandIcon(kind: .moon, size: size * 0.26, color: Brand.sage)
-        case .think: BrandIcon(kind: .search, size: size * 0.26, color: Brand.ink)
-        case .point: BrandIcon(kind: .arrow, size: size * 0.26, color: Brand.ink)
-        case .hello: EmptyView()
-        }
-    }
-
     func spring(_ r: Double = 0.28, _ d: Double = 0.55, _ f: () -> Void) { withAnimation(.spring(response: r, dampingFraction: d)) { f() } }
     func pause(_ s: Double) async { try? await Task.sleep(nanoseconds: UInt64(s * 1_000_000_000)) }
 
@@ -73,10 +55,9 @@ struct BunnyView: View {
         spring(0.3, 0.6) { hop = 0; squash = 0.94 }; await pause(0.2)
         spring(0.3, 0.6) { squash = 1 }
     }
-    func puff() { puffKey += 1; puffGo = false; DispatchQueue.main.async { withAnimation(.easeOut(duration: 0.9)) { puffGo = true } } }
     func tapped() async {
-        if calm { puff(); return }
-        puff(); await jump(16)
+        if calm { return }
+        await jump(16)
     }
     func look() async {
         spring(0.4, 0.7) { lean = -5; tilt = -5 }; await pause(0.8)
@@ -94,9 +75,9 @@ struct BunnyView: View {
         case .hello:
             for a in [10.0, -10.0, 8.0, -8.0, 0.0] { spring(0.25, 0.5) { tilt = a }; await pause(0.25) }
         case .celebrate:
-            for _ in 0..<2 { guard !Task.isCancelled else { return }; puff(); await jump(20) }
+            for _ in 0..<2 { guard !Task.isCancelled else { return }; await jump(20) }
         case .encourage:
-            puff(); spring(0.3, 0.5) { squash = 0.93 }; await pause(0.25); spring(0.3, 0.5) { squash = 1 }
+            spring(0.3, 0.5) { squash = 0.93 }; await pause(0.25); spring(0.3, 0.5) { squash = 1 }
         case .oops:
             for a in [-7.0, 7.0, -5.0, 5.0, -3.0] { spring(0.1, 0.4) { tilt = a }; await pause(0.1) }
             spring(0.6, 0.8) { tilt = -4; squash = 0.96 }

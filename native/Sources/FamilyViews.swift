@@ -35,7 +35,7 @@ struct FamilyEditor: View {
     var body: some View {
         ScrollView { VStack(spacing: 16) {
             BunnyView(size: 80, mood: .hello).padding(.top, 16)
-            Text("My family").font(Brand.title(28)).foregroundStyle(Brand.ink).accessibilityIdentifier("familyEditorTitle")
+            Text("My family").font(Brand.title(28)).foregroundStyle(Brand.titleColor).accessibilityIdentifier("familyEditorTitle")
             FamilyDetailsFields(name: $name, postcode: $postcode, suburb: $suburb)
             ForEach(kids.indices, id: \.self) { i in
                 Card { HStack {
@@ -45,7 +45,7 @@ struct FamilyEditor: View {
             }
             Button { if kids.count < 8 { kids.append(("", 3)) } } label: { IconLabel(icon: .plus, text: "Add a child") }.font(.headline)
             Text("Your exact address is never shown. Children's details stay private.").font(.footnote).foregroundStyle(Brand.muted).multilineTextAlignment(.center)
-            if !err.isEmpty { Text(err).foregroundStyle(.red).font(.callout) }
+            if !err.isEmpty { Text(err).foregroundStyle(Brand.ink).font(.callout) }
             BigButton(title: "Save", tint: s.role.tint, busy: busy) { Task { await save() } }
             Button("Close") { dismiss() }.font(.headline)
         }.padding(20) }
@@ -71,6 +71,6 @@ struct FamilySkippedNotice: View {
             Text("You skipped your family details. Finish them later in").font(.footnote).foregroundStyle(Brand.muted)
             Button(action: open) { HStack(spacing: 4) { Text("Me → My family").font(.callout.weight(.semibold)).underline(); BrandIcon(kind: .arrow, size: 16) } }
                 .accessibilityIdentifier("finishFamilyLinkOnboarding")
-        }.frame(maxWidth: .infinity, alignment: .leading).padding(12).background(Brand.sage.opacity(0.25)).clipShape(RoundedRectangle(cornerRadius: 14))
+        }.frame(maxWidth: .infinity, alignment: .leading).padding(12).background(Brand.blush.opacity(0.25)).clipShape(RoundedRectangle(cornerRadius: 14))
     }
 }

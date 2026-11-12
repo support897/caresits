@@ -20,7 +20,18 @@ enum Backend {
     // MARK: Profiles
     static func loadProfile(_ uid: String) async -> Person? {
         guard let s = try? await db.collection("profiles").document(uid).getDocument(), s.exists, let d = s.data() else { return nil }
-        return Person(id: uid, data: d)
+        let p = Person(id: uid, data: d); profileCache[uid] = p; return p
+    }
+    /// Profiles already read in this run. Lists paint from these first.
+    static var profileCache: [String: Person] = [:]
+    /// Many profiles at once (one trip each, all in parallel), so a list never waits on a chain.
+    static func loadProfiles(_ ids: [String]) async -> [String: Person] {
+        await withTaskGroup(of: (String, Person?).self) { g in
+            for id in Set(ids) { g.addTask { (id, profileCache[id] != nil ? profileCache[id] : await loadProfile(id)) } }
+            var out: [String: Person] = [:]
+            for await (id, p) in g { if let p { out[id] = p } }
+            return out
+        }
     }
 
     /// Merge a patch into the profile document. The card is merged one level deep.
@@ -94,14 +105,47 @@ enum Backend {
         return snap.documents.map { Relationship(id: $0.documentID, familyUid: $0.data()["familyUid"] as? String ?? "", carerUid: $0.data()["carerUid"] as? String ?? "", state: $0.data()["state"] as? String ?? "") }
     }
 
+    static let chatWindow = 40
+    static func chatMessage(_ d: QueryDocumentSnapshot) -> ChatMessage {
+        let x = d.data()
+        return ChatMessage(id: d.documentID, from: x["from"] as? String ?? "", text: x["text"] as? String ?? "", at: (x["at"] as? Timestamp)?.dateValue() ?? Date(), kind: x["kind"] as? String ?? "text", mediaKey: x["mediaKey"] as? String ?? "")
+    }
+    /// Only the latest window of a chat is listened to (newest 40), so opening a long chat never waits on the whole history,
+    /// and a new message delivers one row, not the whole set. Older rows come on request through `olderMessages`.
+    /// The phone's own copy paints first when it has one.
     static func listenMessages(_ relId: String, _ cb: @escaping ([ChatMessage]) -> Void) -> ListenerRegistration {
-        db.collection("relationships").document(relId).collection("messages").order(by: "at").addSnapshotListener { snap, _ in
-            let rows = (snap?.documents ?? []).map { d -> ChatMessage in
-                let x = d.data()
-                return ChatMessage(id: d.documentID, from: x["from"] as? String ?? "", text: x["text"] as? String ?? "", at: (x["at"] as? Timestamp)?.dateValue() ?? Date(), kind: x["kind"] as? String ?? "text", mediaKey: x["mediaKey"] as? String ?? "")
-            }
+        db.collection("relationships").document(relId).collection("messages").order(by: "at", descending: true).limit(to: chatWindow).addSnapshotListener { snap, _ in
+            let rows = (snap?.documents ?? []).map(chatMessage).reversed() as [ChatMessage]
             cb(rows)
         }
+    }
+    /// The next older page, before the oldest row already shown.
+    static func olderMessages(_ relId: String, before: Date) async -> [ChatMessage] {
+        guard let snap = try? await db.collection("relationships").document(relId).collection("messages").order(by: "at", descending: true).start(after: [Timestamp(date: before)]).limit(to: chatWindow).getDocuments() else { return [] }
+        return snap.documents.map(chatMessage).reversed()
+    }
+    /// Chat opens on the match. Makes sure the pair has a standing relationship (state contact) so the chat is open at once,
+    /// with no booking needed first. The rules let either side create it with state contact once the other profile exists.
+    /// A waiting booking request from an earlier build keeps its own state until the carer answers.
+    static func openChat(me: Person, other: Person) async throws -> Relationship {
+        let fam = me.side == "family" ? me.id : other.id, car = me.side == "family" ? other.id : me.id
+        guard me.side != other.side, !fam.isEmpty, !car.isEmpty else { throw AppError.msg("Chat is between a family and a carer.") }
+        let pid = pairId(fam, car)
+        let ref = db.collection("relationships").document(pid)
+        let snap = try? await ref.getDocument()
+        if let d = snap?.data(), snap?.exists == true {
+            let st = d["state"] as? String ?? ""
+            if st == "contact" || st == "hired" { return Relationship(id: pid, familyUid: fam, carerUid: car, state: st) }
+            if st == "pending", d["createdBy"] as? String != me.id {
+                try await ref.updateData(["state": "contact", "contactBy": me.id])
+                return Relationship(id: pid, familyUid: fam, carerUid: car, state: "contact")
+            }
+            if st == "pending" { throw AppError.msg("\(other.firstName) has your booking request. Messages open as soon as they reply.") }
+            throw AppError.msg("This chat is closed.")
+        }
+        let iso = ISO8601DateFormatter().string(from: Date())
+        try await ref.setData(["members": [fam, car].sorted(), "familyUid": fam, "carerUid": car, "state": "contact", "createdBy": me.id, "createdAt": iso, "createdDay": String(iso.prefix(10))])
+        return Relationship(id: pid, familyUid: fam, carerUid: car, state: "contact")
     }
     static func send(_ relId: String, from: String, text: String) async throws {
         _ = try await db.collection("relationships").document(relId).collection("messages").addDocument(data: ["from": from, "kind": "text", "text": String(text.prefix(1000)), "at": FieldValue.serverTimestamp()])
@@ -117,13 +161,18 @@ enum Backend {
 
     // MARK: Bookings
     static func bookings(_ uid: String, side: String) async -> [Booking] {
-        var out: [Booking] = []
-        for r in await relationships(uid, side: side) {
-            guard let snap = try? await db.collection("relationships").document(r.id).collection("bookings").getDocuments() else { continue }
-            for d in snap.documents {
-                let x = d.data()
-                out.append(Booking(id: d.documentID, pairId: r.id, familyUid: x["familyUid"] as? String ?? "", carerUid: x["carerUid"] as? String ?? "", date: x["date"] as? String ?? "", from: x["from"] as? String ?? "", to: x["to"] as? String ?? "", rate: (x["rate"] as? NSNumber)?.doubleValue ?? 0, estimate: (x["estimate"] as? NSNumber)?.doubleValue ?? 0, state: x["state"] as? String ?? "requested", note: x["note"] as? String ?? ""))
-            }
+        let rels = await relationships(uid, side: side)
+        let out: [Booking] = await withTaskGroup(of: [Booking].self) { g in
+            for r in rels { g.addTask {
+                guard let snap = try? await db.collection("relationships").document(r.id).collection("bookings").getDocuments() else { return [] }
+                return snap.documents.map { d in
+                    let x = d.data()
+                    return Booking(id: d.documentID, pairId: r.id, familyUid: x["familyUid"] as? String ?? "", carerUid: x["carerUid"] as? String ?? "", date: x["date"] as? String ?? "", from: x["from"] as? String ?? "", to: x["to"] as? String ?? "", rate: (x["rate"] as? NSNumber)?.doubleValue ?? 0, estimate: (x["estimate"] as? NSNumber)?.doubleValue ?? 0, state: x["state"] as? String ?? "requested", note: x["note"] as? String ?? "", cancelledBy: x["cancelledBy"] as? String ?? "", pay: PayInfo(x["pay"] as? [String: Any]))
+                }
+            } }
+            var all: [Booking] = []
+            for await part in g { all += part }
+            return all
         }
         return out.sorted { ($0.date + $0.from) < ($1.date + $1.from) }
     }

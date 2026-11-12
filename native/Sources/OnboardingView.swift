@@ -32,10 +32,10 @@ struct OnboardingView: View {
             ScrollView {
                 VStack(spacing: 16) {
                     BunnyView(size: 84, mood: bunnyMood)
-                    Text(title).font(Brand.title(28)).foregroundStyle(role.tint).multilineTextAlignment(.center).accessibilityIdentifier("onbTitle").onTapGesture { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) }
+                    Text(title).font(Brand.title(28)).foregroundStyle(Brand.titleColor).multilineTextAlignment(.center).accessibilityIdentifier("onbTitle").onTapGesture { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) }
                     if skippedFamily && current != "you" && (name.trimmingCharacters(in: .whitespaces).isEmpty || (postcode.isEmpty && suburb.isEmpty)) { FamilySkippedNotice { showFamilySheet = true } }
                     content
-                    if !err.isEmpty { Text(err).foregroundStyle(.red).font(.callout) }
+                    if !err.isEmpty { Text(err).foregroundStyle(Brand.ink).font(.callout) }
                 }.padding(20)
             }.scrollDismissesKeyboard(.interactively)
             HStack(spacing: 12) {
@@ -51,7 +51,7 @@ struct OnboardingView: View {
         .onChange(of: pick) { _, item in Task { await choosePhoto(item) } }
         .sheet(isPresented: $showFamilySheet) {
             ScrollView { VStack(spacing: 16) {
-                Text("My family").font(Brand.title(28)).foregroundStyle(Brand.ink).padding(.top, 24)
+                Text("My family").font(Brand.title(28)).foregroundStyle(Brand.titleColor).padding(.top, 24)
                 FamilyDetailsFields(name: $name, postcode: $postcode, suburb: $suburb)
                 BigButton(title: "Done", tint: role.tint) { showFamilySheet = false }
             }.padding(20) }.background(Brand.cream.ignoresSafeArea())
@@ -91,7 +91,7 @@ struct OnboardingView: View {
             ForEach(["nanny", "babysitter", "au_pair"], id: \.self) { svc in
                 Button { if wants.contains(svc) { if wants.count > 1 { wants.remove(svc) } } else { wants.insert(svc) } } label: {
                     HStack { BrandIcon(kind: icon(svc), size: 36); Text(serviceLabels[svc] ?? svc).font(.title3.weight(.semibold)); Spacer(); BrandIcon(kind: wants.contains(svc) ? .checkCircle : .circle, size: 28, color: Brand.ink) }
-                        .padding(16).background(wants.contains(svc) ? Brand.sage.opacity(0.5) : .white).foregroundStyle(Brand.ink).clipShape(RoundedRectangle(cornerRadius: 18))
+                        .padding(16).background(wants.contains(svc) ? Brand.blush.opacity(0.5) : .white).foregroundStyle(Brand.ink).clipShape(RoundedRectangle(cornerRadius: 18))
                 }
             }
         case "kids":
@@ -138,7 +138,7 @@ struct OnboardingView: View {
     }
     func timeField(_ t: String, _ b: Binding<String>) -> some View {
         let times = stride(from: 5, through: 23, by: 1).flatMap { h in ["00", "30"].map { String(format: "%02d:%@", h, $0) } }
-        return Picker(t, selection: b) { ForEach(times, id: \.self) { Text($0).tag($0) } }.pickerStyle(.menu).padding(6).background(.white).clipShape(RoundedRectangle(cornerRadius: 12))
+        return Picker(t, selection: b) { ForEach(times, id: \.self) { Text($0).tag($0) } }.pickerStyle(.menu).padding(6).background(Brand.card).clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     func choosePhoto(_ item: PhotosPickerItem?) async {

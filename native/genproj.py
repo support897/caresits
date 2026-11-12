@@ -5,7 +5,7 @@ swift = sorted(f for f in os.listdir(os.path.join(root,'Sources')) if f.endswith
 out=[]
 A=out.append
 files=[('Sources/'+f, 'sourcecode.swift') for f in swift]
-res=[('Assets.xcassets','folder.assetcatalog'),('GoogleService-Info.plist','text.plist.xml')]
+res=[('Assets.xcassets','folder.assetcatalog'),('Resources/Fraunces-Black.ttf','file'),('GoogleService-Info.plist','text.plist.xml')]
 other=[('Info.plist','text.plist.xml'),('App.entitlements','text.plist.entitlements')]
 A('// !$*UTF8*$!\n{\n\tarchiveVersion = 1;\n\tclasses = {\n\t};\n\tobjectVersion = 60;\n\tobjects = {\n')
 A('/* Begin PBXBuildFile section */')
@@ -54,7 +54,7 @@ def cfg(name, common, extra):
     for k,v in {**common, **extra}.items(): s+=f'\t\t\t\t{k} = {v};\n'
     return s+f'\t\t\t}};\n\t\t\tname = {name.split("-")[1]};\n\t\t}};'
 proj={'ALWAYS_SEARCH_USER_PATHS':'NO','CLANG_ENABLE_MODULES':'YES','CLANG_ENABLE_OBJC_ARC':'YES','IPHONEOS_DEPLOYMENT_TARGET':'17.0','SDKROOT':'iphoneos','SWIFT_VERSION':'5.0','ENABLE_USER_SCRIPT_SANDBOXING':'NO'}
-tgt={'ASSETCATALOG_COMPILER_APPICON_NAME':'AppIcon','CODE_SIGN_ENTITLEMENTS':'App.entitlements','CODE_SIGN_STYLE':'Automatic','CURRENT_PROJECT_VERSION':'178','DEVELOPMENT_TEAM':'GZ9Z6BPTFR','GENERATE_INFOPLIST_FILE':'NO','INFOPLIST_FILE':'Info.plist','MARKETING_VERSION':'1.0.0','PRODUCT_BUNDLE_IDENTIFIER':'com.ilse.caresits','PRODUCT_NAME':'Caresitters','TARGETED_DEVICE_FAMILY':'1','LD_RUNPATH_SEARCH_PATHS':'"$(inherited) @executable_path/Frameworks"','SWIFT_EMIT_LOC_STRINGS':'YES'}
+tgt={'ASSETCATALOG_COMPILER_APPICON_NAME':'AppIcon','CODE_SIGN_ENTITLEMENTS':'App.entitlements','CODE_SIGN_STYLE':'Automatic','CURRENT_PROJECT_VERSION':'179','DEVELOPMENT_TEAM':'GZ9Z6BPTFR','GENERATE_INFOPLIST_FILE':'NO','INFOPLIST_FILE':'Info.plist','MARKETING_VERSION':'1.0.0','PRODUCT_BUNDLE_IDENTIFIER':'com.ilse.caresits','PRODUCT_NAME':'Caresitters','TARGETED_DEVICE_FAMILY':'1','LD_RUNPATH_SEARCH_PATHS':'"$(inherited) @executable_path/Frameworks"','SWIFT_EMIT_LOC_STRINGS':'YES'}
 A('/* Begin XCBuildConfiguration section */')
 A(cfg('p-Debug',proj,{'SWIFT_ACTIVE_COMPILATION_CONDITIONS':'DEBUG','ONLY_ACTIVE_ARCH':'YES','SWIFT_OPTIMIZATION_LEVEL':'"-Onone"','DEBUG_INFORMATION_FORMAT':'dwarf'}))
 A(cfg('p-Release',proj,{'SWIFT_COMPILATION_MODE':'wholemodule','DEBUG_INFORMATION_FORMAT':'"dwarf-with-dsym"','VALIDATE_PRODUCT':'YES'}))

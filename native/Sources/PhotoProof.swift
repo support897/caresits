@@ -166,12 +166,12 @@ struct ChatProofGate: View {
 struct IconGallery: View {
     var body: some View {
         ScrollView { VStack(spacing: 14) {
-            Text("Caresitters icons").font(Brand.title(24))
+            Text("Caresitters icons").font(Brand.title(24)).foregroundStyle(Brand.titleColor)
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 5), spacing: 12) {
                 ForEach(BI.allCases, id: \.self) { k in VStack(spacing: 4) { BrandIcon(kind: k, size: 36); Text(k.rawValue).font(.system(size: 9)) } }
             }
             Text("Solid star and heart").font(.footnote)
-            HStack(spacing: 18) { BrandIcon(kind: .star, size: 30, color: .orange, solid: true); BrandIcon(kind: .heart, size: 30, color: Brand.bunny, solid: true); Stars(count: 4) }
+            HStack(spacing: 18) { BrandIcon(kind: .star, size: 30, color: Brand.bunny, solid: true); BrandIcon(kind: .heart, size: 30, color: Brand.bunny, solid: true); Stars(count: 4) }
             Text("Bunny moods (tap, drag a finger, wait)").font(.footnote)
             BunnyMoodsRow()
             HStack { BunnyView(size: 120, mood: .celebrate); BunnyView(size: 120, mood: .think) }

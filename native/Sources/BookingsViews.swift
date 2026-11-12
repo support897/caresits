@@ -18,6 +18,7 @@ struct BookingRow: View {
     @EnvironmentObject var s: Session
     let b: Booking; let other: Person?; var reload: () async -> Void
     @State private var busy = false; @State private var err = ""; @State private var showReview = false; @State private var reviewed = true
+    @State private var showRecord = false; @State private var askCancel = false
     var me: Person { s.meSafe }
     var isCarer: Bool { me.side == "carer" }
     var ended: Bool { (Backend.endDate(b.date, b.to) ?? .distantFuture) < Date() }
@@ -30,20 +31,39 @@ struct BookingRow: View {
             }
             if b.estimate > 0 { IconLabel(icon: .rate, text: "About $\(Int(b.estimate))", size: 15).font(.footnote) }
             if !b.note.isEmpty { Text("“\(b.note)”").font(.footnote).italic().foregroundStyle(Brand.muted) }
+            if b.state == "cancelled" && !b.cancelledBy.isEmpty { Text(b.cancelledBy == me.id ? "You cancelled this booking." : "\(other?.firstName ?? "They") cancelled this booking.").font(.footnote).foregroundStyle(Brand.muted) }
+            if PayConfig.visible {
+                PayLines(b: b, isCarer: isCarer, otherName: other?.firstName ?? "them")
+                if !isCarer && b.pay?.state == "held" { PayActions(b: b, reload: reload) }
+                Button { showRecord = true } label: { IconLabel(icon: .doc, text: "Payment record", size: 16) }.font(.footnote.weight(.semibold)).accessibilityIdentifier("paymentRecord")
+            }
             HStack {
-                if isCarer && b.state == "requested" { act("Accept", "accepted", s.role.tint, icon: .check); act("Decline", "declined", .gray) }
-                if !isCarer && (b.state == "requested" || b.state == "accepted") { act("Cancel", "cancelled", .gray) }
+                if isCarer && b.state == "requested" { act("Accept", "accepted", s.role.tint, icon: .check); act("Decline", "declined", Brand.field, ink: true) }
+                if !isCarer && (b.state == "requested" || b.state == "accepted") {
+                    if PayConfig.visible && b.state == "accepted" { Button { askCancel = true } label: { Text("Cancel").font(.subheadline.bold()).padding(.horizontal, 16).padding(.vertical, 10).background(Brand.field).foregroundStyle(Brand.ink).clipShape(Capsule()) } }
+                    else { act("Cancel", "cancelled", Brand.field, ink: true) }
+                }
                 if isCarer && b.state == "accepted" && ended { act("Mark done", "completed", s.role.tint, icon: .sparkle) }
-                if isCarer && b.state == "accepted" && !ended { act("Cancel", "cancelled", .gray) }
+                if isCarer && b.state == "accepted" && !ended { act("Cancel", "cancelled", Brand.field, ink: true) }
                 if !isCarer && b.state == "completed" && !reviewed { Button { showReview = true } label: { Chip(text: "Leave a review", on: true, tint: s.role.tint, icon: .star) } }
             }
-            if !err.isEmpty { Text(err).font(.caption).foregroundStyle(.red) }
+            if !err.isEmpty { Text(err).font(.caption).foregroundStyle(Brand.ink) }
         } }
+        .confirmationDialog(cancelWords, isPresented: $askCancel, titleVisibility: .visible) {
+            Button("Cancel this booking", role: .destructive) { Task { busy = true; err = ""; do { try await Backend.transition(b, to: "cancelled", actorUid: me.id, actorIsCarer: isCarer); await reload() } catch { err = "That did not work. Please try again." }; busy = false } }
+            Button("Keep it", role: .cancel) {}
+        }
+        .sheet(isPresented: $showRecord) { PaymentRecordSheet(b: b, otherName: other?.firstName ?? "them") }
         .sheet(isPresented: $showReview) { ReviewSheet(booking: b, name: other?.firstName ?? "your carer") { reviewed = true } }
         .task { if !isCarer && b.state == "completed" { reviewed = await Backend.hasReview(b) } }
     }
-    func act(_ title: String, _ to: String, _ tint: Color, icon: BI? = nil) -> some View {
-        Button { Task { busy = true; err = ""; do { try await Backend.transition(b, to: to, actorUid: me.id, actorIsCarer: isCarer); await reload() } catch { err = "That did not work. Please try again." }; busy = false } } label: { HStack(spacing: 6) { if let icon { BrandIcon(kind: icon, size: 16, color: .white, mono: true) }; Text(title) }.font(.subheadline.bold()).padding(.horizontal, 16).padding(.vertical, 10).background(tint).foregroundStyle(.white).clipShape(Capsule()) }.disabled(busy)
+    /// Which step of the ladder this cancel is on, in plain words.
+    var cancelWords: String {
+        let start = Backend.endDate(b.date, b.from) ?? .distantFuture
+        return start.timeIntervalSinceNow > 24 * 3600 ? "More than a day ahead. Cancelling is free." : "Inside a day. \(other?.firstName ?? "The carer") is paid half and the rest comes back to you."
+    }
+    func act(_ title: String, _ to: String, _ tint: Color, icon: BI? = nil, ink: Bool = false) -> some View {
+        Button { Task { busy = true; err = ""; do { try await Backend.transition(b, to: to, actorUid: me.id, actorIsCarer: isCarer); await reload() } catch { err = "That did not work. Please try again." }; busy = false } } label: { HStack(spacing: 6) { if let icon { BrandIcon(kind: icon, size: 16, color: ink ? Brand.ink : Color(hex: 0x3A2E33), mono: true) }; Text(title) }.font(.subheadline.bold()).padding(.horizontal, 16).padding(.vertical, 10).background(tint).foregroundStyle(ink ? Brand.ink : Color(hex: 0x3A2E33)).clipShape(Capsule()) }.disabled(busy)
     }
     func pretty(_ d: Date) -> String { let f = DateFormatter(); f.dateFormat = "EEE d MMM"; return f.string(from: d) }
 }
@@ -55,11 +75,11 @@ struct ReviewSheet: View {
     var body: some View {
         VStack(spacing: 16) {
             BunnyView(size: 90, mood: .encourage)
-            Text("How was \(name)?").font(Brand.title(26))
-            HStack { ForEach(1...5, id: \.self) { i in Button { stars = i } label: { BrandIcon(kind: .star, size: 34, color: .orange, solid: i <= stars) } } }
+            Text("How was \(name)?").font(Brand.title(26)).foregroundStyle(Brand.titleColor)
+            HStack { ForEach(1...5, id: \.self) { i in Button { stars = i } label: { BrandIcon(kind: .star, size: 34, color: Brand.bunny, solid: i <= stars) } } }
             TextField("Say something kind (optional)", text: $text, axis: .vertical).lineLimit(3...5).padding(14).background(Brand.field).clipShape(RoundedRectangle(cornerRadius: 12))
             Text("Reviews can't be edited later.").font(.footnote).foregroundStyle(Brand.muted)
-            if !err.isEmpty { Text(err).foregroundStyle(.red) }
+            if !err.isEmpty { Text(err).foregroundStyle(Brand.ink) }
             BigButton(title: "Save review", busy: busy) { Task { busy = true; do { try await Backend.addReview(booking, rating: stars, text: text); done(); dismiss() } catch { err = "Could not save. Please try again." }; busy = false } }
             Button("Not now") { dismiss() }
         }.padding(24).background(Brand.cream.ignoresSafeArea())
@@ -98,13 +118,13 @@ struct BookingsCalendarView: View {
                                 Button { selected = d } label: {
                                     VStack(spacing: 2) {
                                         Text("\(cal.component(.day, from: d))").font(.system(size: 16, weight: sel ? .bold : .regular))
-                                        Circle().fill(n.isEmpty ? .clear : (n.contains { $0.state == "requested" } ? Color.orange : role.tint)).frame(width: 6, height: 6)
+                                        Circle().fill(n.isEmpty ? .clear : (n.contains { $0.state == "requested" } ? Brand.honey : role.tint)).frame(width: 6, height: 6)
                                     }.frame(maxWidth: .infinity, minHeight: 42).background(sel ? role.soft : .clear).clipShape(RoundedRectangle(cornerRadius: 10)).foregroundStyle(cal.isDateInToday(d) ? role.tint : Brand.ink)
                                 }
                             } else { Color.clear.frame(height: 42) }
                         }
                     }
-                    HStack(spacing: 14) { HStack(spacing: 5) { Circle().fill(.orange).frame(width: 9, height: 9); Text("Waiting") }; HStack(spacing: 5) { Circle().fill(role.tint).frame(width: 9, height: 9); Text("Confirmed") } }.font(.caption)
+                    HStack(spacing: 14) { HStack(spacing: 5) { Circle().fill(Brand.honey).frame(width: 9, height: 9); Text("Waiting") }; HStack(spacing: 5) { Circle().fill(role.tint).frame(width: 9, height: 9); Text("Confirmed") } }.font(.caption)
                 } }.padding(.horizontal, 20)
                 if role == .family { BigButton(title: "New booking", tint: role.tint, icon: .plus) { showNew = true }.padding(.horizontal, 20) }
                 else { BigButton(title: "My free days and hours", tint: role.tint, icon: .clock) { showFree = true }.padding(.horizontal, 20) }
@@ -130,7 +150,7 @@ struct NewBookingPicker: View {
     var body: some View {
         NavigationStack {
             ScrollView { VStack(spacing: 12) {
-                Text("Who would you like to book?").font(Brand.title(24)).padding(.top, 8)
+                Text("Who would you like to book?").font(Brand.title(24)).foregroundStyle(Brand.titleColor).padding(.top, 8)
                 if !loaded { ProgressView() } else if carers.isEmpty { EmptyHint(icon: .bunny, text: "No carers yet") }
                 ForEach(carers) { c in Button { chosen = c } label: { PersonRow(person: c, saved: false, tint: s.role.tint) }.buttonStyle(.plain) }
             }.padding(20) }
@@ -147,10 +167,10 @@ struct AvailabilityEditor: View {
     @State private var days: Set<String> = []; @State private var from = "08:00"; @State private var to = "17:00"; @State private var busy = false; @State private var err = ""
     var body: some View {
         VStack(spacing: 16) {
-            Text("When are you free?").font(Brand.title(26)).padding(.top, 20)
+            Text("When are you free?").font(Brand.title(26)).foregroundStyle(Brand.titleColor).padding(.top, 20)
             FlowChips(items: allDays, selected: $days, tint: s.role.tint)
             HStack { picker("From", $from); picker("To", $to) }
-            if !err.isEmpty { Text(err).foregroundStyle(.red) }
+            if !err.isEmpty { Text(err).foregroundStyle(Brand.ink) }
             BigButton(title: "Save", tint: s.role.tint, busy: busy) { Task {
                 busy = true; defer { busy = false }
                 let sched: [String: Any] = Dictionary(uniqueKeysWithValues: days.map { ($0, ["from": from, "to": to] as [String: Any]) })
@@ -162,7 +182,7 @@ struct AvailabilityEditor: View {
     }
     func picker(_ t: String, _ b: Binding<String>) -> some View {
         let times = stride(from: 5, through: 23, by: 1).flatMap { h in ["00", "30"].map { String(format: "%02d:%@", h, $0) } }
-        return Picker(t, selection: b) { ForEach(times, id: \.self) { Text($0).tag($0) } }.pickerStyle(.menu).padding(6).background(.white).clipShape(RoundedRectangle(cornerRadius: 12))
+        return Picker(t, selection: b) { ForEach(times, id: \.self) { Text($0).tag($0) } }.pickerStyle(.menu).padding(6).background(Brand.card).clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 

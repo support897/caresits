@@ -12,6 +12,7 @@ final class Session: ObservableObject {
     @Published var loading = true
     /// Set to true to open Me and then My family (the link shown after "Skip for now").
     @Published var goMyFamily = false
+    @Published var tab = 0
     @Published var chosenSide: String = UserDefaults.standard.string(forKey: "caresits.side") ?? "family"
     private var handle: AuthStateDidChangeListenerHandle?
     fileprivate var nonce = ""
@@ -29,7 +30,10 @@ final class Session: ObservableObject {
     var meSafe: Person { me ?? Person(id: "", data: [:]) }
     var role: Role { me?.role ?? (chosenSide == "carer" ? .nanny : .family) }
     var needsOnboarding: Bool { uid != nil && (me == nil || me!.services.isEmpty) }
-    func reload() async { if let u = uid { me = await Backend.loadProfile(u) } }
+    func reload() async {
+        if let u = uid { me = await Backend.loadProfile(u)
+            if let t = me?.card["theme"] as? String, let p = ThemePick(rawValue: t), p != ThemeStore.shared.pick { ThemeStore.shared.pick = p } }
+    }
     @Published var sideConfirmed = false
     func chooseSide(_ s: String) { chosenSide = s; UserDefaults.standard.set(s, forKey: "caresits.side") }
     // Deleting an account needs a recent sign in. These helpers ask the person to confirm it is them.

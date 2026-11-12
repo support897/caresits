@@ -3,11 +3,10 @@ import SwiftUI
 /// Each role gets its own app: different tabs, names, colours and tools.
 struct RoleTabs: View {
     @EnvironmentObject var s: Session
-    @State private var sel = 0
     func tab(_ title: String, _ k: BI) -> some View { Label { Text(title) } icon: { BrandIcon.image(k) } }
     var body: some View {
         let r = s.role
-        TabView(selection: $sel) {
+        TabView(selection: $s.tab) {
             switch r {
             case .family:
                 DiscoverView().tabItem { tab("Find care", .findCare) }.tag(0)
@@ -33,8 +32,8 @@ struct RoleTabs: View {
                 MessagesView().tabItem { tab("Chat", .chat) }.tag(3)
                 MeView().tabItem { tab("Me", .person) }.tag(4)
             }
-        }.tint(r.tint)
-        .onChange(of: s.goMyFamily) { _, go in if go { sel = r == .family ? 3 : 4 } }
+        }.tint(Brand.bunny)
+        .onChange(of: s.goMyFamily) { _, go in if go { s.tab = r == .family ? 3 : 4 } }
     }
 }
 
@@ -43,7 +42,7 @@ struct Header: View {
     var body: some View {
         HStack(spacing: 12) {
             BrandIcon(kind: role.icon, size: 34, color: role.tint)
-            VStack(alignment: .leading, spacing: 2) { Text(title).font(Brand.title(26)).foregroundStyle(role.tint); if !subtitle.isEmpty { Text(subtitle).font(.subheadline).foregroundStyle(Brand.muted) } }
+            VStack(alignment: .leading, spacing: 2) { Text(title).font(Brand.title(26)).foregroundStyle(Brand.titleColor); if !subtitle.isEmpty { Text(subtitle).font(.subheadline).foregroundStyle(Brand.muted) } }
             Spacer(); BunnyView(size: 36)
         }.padding(.horizontal, 20).padding(.top, 8)
     }
@@ -63,5 +62,5 @@ struct PhotoView: View {
 
 struct EmptyHint: View {
     let icon: BI; let text: String
-    var body: some View { VStack(spacing: 8) { BrandIcon(kind: icon, size: 56, color: Brand.sage); Text(text).foregroundStyle(Brand.muted).multilineTextAlignment(.center) }.padding(40).frame(maxWidth: .infinity) }
+    var body: some View { VStack(spacing: 8) { BrandIcon(kind: icon, size: 56, color: Brand.blush); Text(text).foregroundStyle(Brand.muted).multilineTextAlignment(.center) }.padding(40).frame(maxWidth: .infinity) }
 }

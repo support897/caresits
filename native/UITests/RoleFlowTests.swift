@@ -134,6 +134,44 @@ final class RoleFlowTests: XCTestCase {
         if !app.buttons["Finish"].waitForExistence(timeout: 6) { next() }
         finishAndCheck(tabs: ["Find care", "Calendar", "Messages", "Me"], role: "family")
     }
+    /// Door law: the first page has only Apple, Google and one small email button. Email is on its own page.
+    func testDoorPages() {
+        app.launchArguments += ["-AppleLanguages", "(en)"]; app.launch()
+        if app.tabBars.buttons["Me"].waitForExistence(timeout: 5) { return }
+        XCTAssertTrue(app.buttons["Use email"].waitForExistence(timeout: 60), "no door"); shot("b179-door-1")
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Google")).firstMatch.exists, "no Google")
+        XCTAssertFalse(app.textFields["Email"].exists, "email field must not be on the first page")
+        XCTAssertFalse(app.staticTexts["Care, close to home"].exists, "spare text still there")
+        app.buttons["Use email"].tap()
+        XCTAssertTrue(app.textFields["Email"].waitForExistence(timeout: 10), "no email page"); shot("b179-door-2-email")
+        XCTAssertTrue(app.buttons["Create my account"].exists); XCTAssertTrue(app.buttons["I already have an account"].exists)
+        // swipe from the left edge goes back to the door
+        let s = app.coordinate(withNormalizedOffset: CGVector(dx: 0.01, dy: 0.5)), e = app.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.5))
+        s.press(forDuration: 0.1, thenDragTo: e)
+        XCTAssertTrue(app.buttons["Use email"].waitForExistence(timeout: 10), "back swipe did not return to the door")
+    }
+    /// A fresh account: the typed name shows in Me (never "Member"), the theme pick works and sticks, pay screens stay hidden.
+    func testFreshNameThemePay() {
+        signUp(side: "family"); fillYou("Zelda Proofname"); next()
+        tap("Babysitter"); next()
+        type(app.textFields["Name or nickname"], "Mia"); dismissKb(); sleep(1); next()
+        if !app.buttons["Finish"].waitForExistence(timeout: 6) { next() }
+        tap("Finish", timeout: 20)
+        XCTAssertTrue(app.tabBars.buttons["Me"].waitForExistence(timeout: 30)); app.tabBars.buttons["Me"].tap(); sleep(2)
+        XCTAssertTrue(app.staticTexts["Zelda Proofname"].waitForExistence(timeout: 10), "typed name not shown in Me"); shot("b179-me-light")
+        XCTAssertFalse(app.staticTexts["Member"].exists, "Member placeholder leaked")
+        XCTAssertFalse(app.buttons["Set up payments"].exists, "pay screens must be hidden when not live")
+        for p in ["dark", "beige", "brand", "light"] {
+            let b = app.buttons["theme-\(p)"]; for _ in 0..<4 where !b.exists { app.swipeUp() }
+            if !b.exists { XCTFail("no theme button \(p)"); break }
+            b.tap(); sleep(2); app.tabBars.buttons["Me"].tap(); shot("b179-me-\(p)")
+            XCTAssertTrue(app.tabBars.buttons["Me"].exists, "tabs lost after theme \(p)")
+        }
+        let del = app.buttons["Delete my account"]
+        for _ in 0..<8 where !del.isHittable { app.swipeUp() }
+        del.tap(); tap("Delete everything")
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 120), "not signed out after delete")
+    }
     func carer(_ kind: String, tabs: [String]) {
         signUp(side: "carer"); fillYou("Test " + kind); next()
         tap(kind); shot("kind-chosen-\(kind)"); next(); shot("after-kind-next-\(kind)")
@@ -292,3 +330,4 @@ final class RoleFlowTests: XCTestCase {
         shot("b177-delete-5-normal-lands-on-sign-in"); XCTAssertTrue(out, "normal delete did not land on the sign in door")
     }
 }
+                                                                                                                                                                                                                                                                       

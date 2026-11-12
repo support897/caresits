@@ -63,6 +63,8 @@ struct Booking: Identifiable {
     var estimate: Double
     var state: String
     var note: String
+    var cancelledBy = ""          // set by the server when it records who cancelled; the app only reads it
+    var pay: PayInfo? = nil       // set by the payment service once it is live; the app only reads it
     var dateValue: Date { Booking.fmt.date(from: date) ?? .distantPast }
     static let fmt: DateFormatter = { let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; f.locale = Locale(identifier: "en_AU"); return f }()
     var stateLabel: String {
@@ -71,6 +73,34 @@ struct Booking: Identifiable {
     var stateIcon: BI {
         switch state { case "requested": return .clock; case "accepted": return .checkCircle; case "declined": return .banned; case "cancelled": return .cross; case "completed": return .sparkle; default: return .circle }
     }
+}
+
+/// What the payment service says about one booking. Read only here. No number is ever worked out or assumed in the app.
+struct PayInfo {
+    var state: String            // held, released, refunded, partRefunded, disputed
+    var amount: Double?; var refunded: Double?; var appFee: Double?; var processingFee: Double?
+    var autoReleaseAt: String; var releasedAt: String
+    init?(_ d: [String: Any]?) {
+        guard let d, let s = d["state"] as? String else { return nil }
+        state = s
+        func n(_ k: String) -> Double? { (d[k] as? NSNumber)?.doubleValue }
+        amount = n("amount"); refunded = n("refunded"); appFee = n("appFee"); processingFee = n("processingFee")
+        autoReleaseAt = d["autoReleaseAt"] as? String ?? ""; releasedAt = d["releasedAt"] as? String ?? ""
+    }
+}
+
+/// Finished of booked, as the server counts it. Absent means the carer is new: nothing is invented.
+struct Completion {
+    let finished: Int; let booked: Int
+    var text: String { "Finished \(finished) of \(booked) bookings" }
+}
+extension Person {
+    var completion: Completion? {
+        guard let m = card["completion"] as? [String: Any], let b = (m["booked"] as? NSNumber)?.intValue, b > 0 else { return nil }
+        return Completion(finished: (m["finished"] as? NSNumber)?.intValue ?? 0, booked: b)
+    }
+    /// The words shown on a carer's profile and deck card.
+    var completionText: String { side == "carer" ? (completion?.text ?? "New here") : "" }
 }
 
 struct ChatMessage: Identifiable { let id: String; var from: String; var text: String; var at: Date; var kind = "text"; var mediaKey = "" }

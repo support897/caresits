@@ -1,19 +1,52 @@
 import SwiftUI
+import UIKit
 
 extension Color {
     init(hex: UInt32) {
         self.init(red: Double((hex >> 16) & 255) / 255, green: Double((hex >> 8) & 255) / 255, blue: Double(hex & 255) / 255)
     }
 }
+
+/// The four themes of record: Light, Dark, Beige, Brand colour. White (Light) is the default.
+enum ThemePick: String, CaseIterable, Identifiable {
+    case light, dark, beige, brand
+    var id: String { rawValue }
+    var label: String { switch self { case .light: return "Light"; case .dark: return "Dark"; case .beige: return "Beige"; case .brand: return "Brand colour" } }
+    var scheme: ColorScheme { self == .dark ? .dark : .light }
+}
+
+/// The pick is kept on the phone at once and saved on the account, so a fresh install brings it back.
+final class ThemeStore: ObservableObject {
+    static let shared = ThemeStore()
+    @Published var pick: ThemePick { didSet { UserDefaults.standard.set(pick.rawValue, forKey: "caresits.theme") } }
+    init() { pick = ThemePick(rawValue: UserDefaults.standard.string(forKey: "caresits.theme") ?? "") ?? .light }
+}
+
+/// Colours. Pink is the brand: Bunny Pink, Bunny Blush, Blush Pink. No green anywhere.
+/// Grounds and text change with the theme; the three pinks do not.
 enum Brand {
-    static let ink = Color(hex: 0x1E4D44)
-    static let cream = Color.white
-    static let field = Color(hex: 0xF3F6F4)
-    static let sage = Color(hex: 0x9CC5B5)
-    static let blush = Color(hex: 0xF6CBD3)
-    static let bunny = Color(hex: 0xF4A9BC)
-    static let muted = Color(hex: 0x5B6B66)
-    static func title(_ size: CGFloat) -> Font { .system(size: size, weight: .bold, design: .serif) }
+    static var pick: ThemePick { ThemeStore.shared.pick }
+    // The three pinks of record
+    static let bunny = Color(hex: 0xF4A9BC)       // Bunny Pink
+    static let blush = Color(hex: 0xF6CBD3)       // Blush Pink
+    static let bunnyBlush = Color(hex: 0xF2C4CE)  // Bunny Blush
+    static let paleGround = Color(hex: 0xFBEFF2)  // Pale Pink Ground (opening screen)
+    static let porcelain = Color(hex: 0xFDF8F0)   // Warm Porcelain
+    static let rose = Color(hex: 0xF2B8B5)        // Soft Rose (errors, pastel)
+    static let honey = Color(hex: 0xF2D492)       // Honey Tint (stars, pastel)
+    /// Text and line colour: warm plum grey, readable on every ground.
+    static var ink: Color { pick == .dark ? Color(hex: 0xF5EDEF) : Color(hex: 0x3A2E33) }
+    static var muted: Color { pick == .dark ? Color(hex: 0xBBA9B0) : Color(hex: 0x7A686F) }
+    /// The ground of every screen.
+    static var cream: Color { switch pick { case .light: return Color(hex: 0xFFFFFF); case .dark: return Color(hex: 0x1E1719); case .beige: return Color(hex: 0xF5EDE0); case .brand: return Color(hex: 0xFBEFF2) } }
+    /// Cards and sheets that sit on the ground.
+    static var card: Color { switch pick { case .light: return Color(hex: 0xFFFFFF); case .dark: return Color(hex: 0x2B2327); case .beige: return Color(hex: 0xFBF6EC); case .brand: return Color(hex: 0xFFFFFF) } }
+    /// Input fields and quiet chips.
+    static var field: Color { switch pick { case .light: return Color(hex: 0xF8F2F4); case .dark: return Color(hex: 0x3A2F34); case .beige: return Color(hex: 0xEBE0CE); case .brand: return Color(hex: 0xF6CBD3).opacity(0.45) } }
+    static var line: Color { pick == .dark ? Color.white.opacity(0.14) : Color.black.opacity(0.08) }
+    /// Titles are Fraunces Black in Bunny Pink. Body text stays Atkinson-like system text.
+    static var titleColor: Color { bunny }
+    static func title(_ size: CGFloat) -> Font { .custom("Fraunces-Black", size: size) }
     static let body = Font.system(size: 17, design: .default)
 }
 
@@ -24,7 +57,8 @@ enum Role: String, CaseIterable, Identifiable {
     var service: String? { switch self { case .family: return nil; case .nanny: return "nanny"; case .babysitter: return "babysitter"; case .auPair: return "au_pair" } }
     var icon: BI { switch self { case .family: return .home; case .nanny: return .nanny; case .babysitter: return .moon; case .auPair: return .globe } }
     var name: String { switch self { case .family: return "Family"; case .nanny: return "Nanny"; case .babysitter: return "Babysitter"; case .auPair: return "Au pair" } }
-    var tint: Color { switch self { case .family: return Brand.ink; case .nanny: return Color(hex: 0x2E7D6B); case .babysitter: return Color(hex: 0x5B4B9A); case .auPair: return Color(hex: 0xC2557A) } }
+    /// Every role wears the brand pink; the icon tells the roles apart.
+    var tint: Color { Brand.bunny }
     var soft: Color { Brand.field }
     var greeting: String {
         switch self {
@@ -39,27 +73,43 @@ enum Role: String, CaseIterable, Identifiable {
 }
 
 struct BigButton: View {
-    let title: String; var tint: Color = Brand.ink; var busy = false; var icon: BI? = nil; let action: () -> Void
+    let title: String; var tint: Color = Brand.bunny; var busy = false; var icon: BI? = nil; let action: () -> Void
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 8) { if busy { ProgressView().tint(.white) }; if let icon { BrandIcon(kind: icon, size: 20, color: .white, mono: true) }; Text(title).font(.system(size: 18, weight: .semibold)) }
-                .frame(maxWidth: .infinity, minHeight: 52).background(tint).foregroundStyle(.white).clipShape(RoundedRectangle(cornerRadius: 16))
+            HStack(spacing: 8) { if busy { ProgressView().tint(Color(hex: 0x3A2E33)) }; if let icon { BrandIcon(kind: icon, size: 20, color: Color(hex: 0x3A2E33), mono: true) }; Text(title).font(.system(size: 18, weight: .semibold)) }
+                .frame(maxWidth: .infinity, minHeight: 52).background(tint).foregroundStyle(Color(hex: 0x3A2E33)).clipShape(RoundedRectangle(cornerRadius: 16))
         }.disabled(busy)
     }
 }
 
 struct Chip: View {
-    let text: String; var on = false; var tint: Color = Brand.ink; var icon: BI? = nil
+    let text: String; var on = false; var tint: Color = Brand.bunny; var icon: BI? = nil
     var body: some View {
-        HStack(spacing: 6) { if let icon { BrandIcon(kind: icon, size: 16, color: on ? .white : Brand.ink, mono: on) }; Text(text) }.font(.system(size: 16, weight: .medium)).padding(.horizontal, 14).padding(.vertical, 9)
-            .background(on ? tint : Color.white).foregroundStyle(on ? .white : Brand.ink)
-            .overlay(Capsule().stroke(tint.opacity(0.35), lineWidth: 1.5)).clipShape(Capsule())
+        HStack(spacing: 6) { if let icon { BrandIcon(kind: icon, size: 16, color: on ? Color(hex: 0x3A2E33) : Brand.ink, mono: on) }; Text(text) }.font(.system(size: 16, weight: .medium)).padding(.horizontal, 14).padding(.vertical, 9)
+            .background(on ? tint : Brand.card).foregroundStyle(on ? Color(hex: 0x3A2E33) : Brand.ink)
+            .overlay(Capsule().stroke(Brand.bunny.opacity(0.7), lineWidth: 1.5)).clipShape(Capsule())
     }
 }
 
 struct Card<Content: View>: View {
     @ViewBuilder var content: Content
-    var body: some View { content.padding(16).frame(maxWidth: .infinity, alignment: .leading).background(Color.white).clipShape(RoundedRectangle(cornerRadius: 20)).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.black.opacity(0.08), lineWidth: 1)) }
+    var body: some View { content.padding(16).frame(maxWidth: .infinity, alignment: .leading).background(Brand.card).clipShape(RoundedRectangle(cornerRadius: 20)).overlay(RoundedRectangle(cornerRadius: 20).stroke(Brand.line, lineWidth: 1)) }
 }
 
+/// The in-app logo: the vector master logo-of-record.svg, exported to the asset. Transparent, never boxed.
 struct LogoView: View { var size: CGFloat = 120; var body: some View { Image("logo").resizable().scaledToFit().frame(width: size, height: size).accessibilityLabel("Caresitters") } }
+
+/// The wordmark: Fraunces Black in Bunny Pink.
+struct Wordmark: View { var size: CGFloat = 40; var body: some View { Text("Caresitters").font(Brand.title(size)).foregroundStyle(Brand.bunny) } }
+
+/// Slide in from the left edge to go back, like a website. Used on every screen that is not the deck.
+struct BackSwipe: ViewModifier {
+    let action: () -> Void
+    func body(content: Content) -> some View {
+        content.overlay(alignment: .leading) {
+            Color.clear.frame(width: 22).contentShape(Rectangle())
+                .gesture(DragGesture(minimumDistance: 24).onEnded { v in if v.translation.width > 70 && abs(v.translation.height) < 80 { action() } })
+        }
+    }
+}
+extension View { func backSwipe(_ action: @escaping () -> Void) -> some View { modifier(BackSwipe(action: action)) } }

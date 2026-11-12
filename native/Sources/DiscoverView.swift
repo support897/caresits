@@ -14,6 +14,7 @@ struct DiscoverView: View {
     @State private var coords: [String: CLLocationCoordinate2D] = [:]
     @State private var showMap = false
     @State private var mapPick: String?
+    @State private var pinSel: String?
     @State private var banner: Person?
 
     var role: Role { s.role }
@@ -60,7 +61,7 @@ struct DiscoverView: View {
         NavigationStack {
             VStack(spacing: 10) {
                 HStack(spacing: 10) {
-                    Text(title).font(Brand.title(30)).foregroundStyle(Brand.ink)
+                    Text(title).font(Brand.title(30)).foregroundStyle(Brand.titleColor)
                     Spacer()
                     Menu {
                         ForEach([10, 25, 50, 0], id: \.self) { k in Button(k == 0 ? "Any distance" : "\(k) km") { radius = k; skipped = [] } }
@@ -87,12 +88,12 @@ struct DiscoverView: View {
                         Text("Matched with \(b.firstName)").font(.system(size: 16, weight: .semibold)).foregroundStyle(Brand.ink)
                         Spacer()
                         Button("Message") { deckContact = (b, .message); banner = nil }.font(.system(size: 16, weight: .semibold)).foregroundStyle(role.tint)
-                    }.padding(14).background(.white).clipShape(RoundedRectangle(cornerRadius: 16)).overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.black.opacity(0.1), lineWidth: 1)).padding(.horizontal, 20).padding(.top, 00).transition(.move(edge: .top).combined(with: .opacity)).accessibilityIdentifier("matchBanner")
+                    }.padding(14).background(Brand.card).clipShape(RoundedRectangle(cornerRadius: 16)).overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.black.opacity(0.1), lineWidth: 1)).padding(.horizontal, 20).padding(.top, 00).transition(.move(edge: .top).combined(with: .opacity)).accessibilityIdentifier("matchBanner")
                 }
                 if showMap { mapView.padding(.horizontal, 20).frame(maxHeight: .infinity) } else { deckStack }
                 if !showMap {
                     HStack(spacing: 18) {
-                        roundBtn(.cross, .gray, "Pass") { if let p = deck.first { fling(p, like: false) } }
+                        roundBtn(.cross, Brand.muted, "Pass") { if let p = deck.first { fling(p, like: false) } }
                         roundBtn(.info, Brand.ink, "Details") { detail = deck.first }
                         roundBtn(.heart, Brand.bunny, "Match", solid: true) { if let p = deck.first { fling(p, like: true) } }
                     }.padding(.bottom, 8)
@@ -131,17 +132,19 @@ struct DiscoverView: View {
     /// The map shows everyone (not limited by the deck distance), still only the other side of the match.
     var mapView: some View {
         let pins = people.filter { coords[$0.postcode.trimmingCharacters(in: .whitespaces)] != nil }
-        return Map(position: $camera, selection: $mapPick) {
+        return Map(position: $camera) {
             ForEach(pins) { p in
-                Marker(p.firstName, coordinate: coords[p.postcode.trimmingCharacters(in: .whitespaces)]!).tint(p.role.tint).tag(p.id)
+                Annotation("", coordinate: coords[p.postcode.trimmingCharacters(in: .whitespaces)]!, anchor: .bottom) {
+                    Button { pinSel = p.id; mapPick = p.id } label: { BunnyPin(selected: pinSel == p.id) }.buttonStyle(.plain).accessibilityLabel(p.firstName)
+                }
             }
         }
         .onAppear { frame(pins) }.onChange(of: pins.count) { _, _ in frame(pins) }
         .clipShape(RoundedRectangle(cornerRadius: 24)).accessibilityIdentifier("peopleMap")
-        .overlay(alignment: .bottom) { Text("\(pins.count) \(pins.count == 1 ? "person" : "people") on the map").font(.system(size: 15, weight: .semibold)).foregroundStyle(Brand.ink).padding(.horizontal, 14).padding(.vertical, 8).background(.white).clipShape(Capsule()).padding(12) }
+        .overlay(alignment: .bottom) { Text("\(pins.count) \(pins.count == 1 ? "person" : "people") on the map").font(.system(size: 15, weight: .semibold)).foregroundStyle(Brand.ink).padding(.horizontal, 14).padding(.vertical, 8).background(Brand.card).clipShape(Capsule()).padding(12) }
     }
     func roundBtn(_ icon: BI, _ c: Color, _ label: String, solid: Bool = false, _ f: @escaping () -> Void) -> some View {
-        Button(action: f) { BrandIcon(kind: icon, size: 26, color: c, solid: solid).frame(width: 56, height: 56).background(.white).clipShape(Circle()).overlay(Circle().stroke(Color.black.opacity(0.1), lineWidth: 1)) }.accessibilityLabel(label)
+        Button(action: f) { BrandIcon(kind: icon, size: 26, color: c, solid: solid).frame(width: 56, height: 56).background(Brand.card).clipShape(Circle()).overlay(Circle().stroke(Color.black.opacity(0.1), lineWidth: 1)) }.accessibilityLabel(label)
     }
     func fling(_ p: Person, like: Bool) {
         withAnimation(.easeIn(duration: 0.22)) { drag = CGSize(width: like ? 700 : -700, height: 40) }
@@ -176,11 +179,12 @@ struct PersonRow: View {
             HStack(spacing: 14) {
                 PhotoView(key: person.photoKey, size: 72, fallback: person.role.icon)
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack { Text(person.firstName).font(.title3.bold()).foregroundStyle(Brand.ink); if verified != nil { IconLabel(icon: .shield, text: "Checked", size: 12, gap: 4).font(.caption.bold()).padding(.horizontal, 6).padding(.vertical, 2).background(Brand.sage.opacity(0.5)).clipShape(Capsule()) } ; Spacer(); if saved { BrandIcon(kind: .heart, size: 20, color: Brand.bunny, solid: true) } }
+                    HStack { Text(person.firstName).font(.title3.bold()).foregroundStyle(Brand.ink); if verified != nil { IconLabel(icon: .shield, text: "Checked", size: 12, gap: 4).font(.caption.bold()).padding(.horizontal, 6).padding(.vertical, 2).background(Brand.blush.opacity(0.5)).clipShape(Capsule()) } ; Spacer(); if saved { BrandIcon(kind: .heart, size: 20, color: Brand.bunny, solid: true) } }
                     if person.side == "carer" {
                         if !person.headline.isEmpty { Text(person.headline).font(.subheadline).foregroundStyle(Brand.muted).lineLimit(2) }
                         HStack(spacing: 10) { IconLabel(icon: person.role.icon, text: person.role.name, size: 14); if person.rate > 0 { IconLabel(icon: .rate, text: "\(Int(person.rate))/h", size: 14) }; if person.years > 0 { IconLabel(icon: .star, text: "\(person.years)y", size: 14) } }.font(.footnote)
-                        if let r = rating { IconLabel(icon: .star, text: "\(String(format: "%.1f", r.avg)) (\(r.count))", size: 13, color: .orange).font(.footnote).foregroundStyle(.orange) }
+                        if person.side == "carer" { Text(person.completionText).font(.caption).foregroundStyle(Brand.muted) }
+                        if let r = rating { IconLabel(icon: .star, text: "\(String(format: "%.1f", r.avg)) (\(r.count))", size: 13, color: Brand.bunny).font(.footnote).foregroundStyle(Brand.ink) }
                     } else {
                         Text(person.suburb.isEmpty ? "Family" : person.suburb).font(.subheadline).foregroundStyle(Brand.muted)
                         HStack(spacing: 10) { Text(person.services.map { serviceLabels[$0] ?? $0 }.joined(separator: " · ")); if person.budgetMax > 0 { IconLabel(icon: .rate, text: "up to \(Int(person.budgetMax))/h", size: 14) } }.font(.footnote)
@@ -207,10 +211,11 @@ struct PersonDetailView: View {
         ScrollView {
             VStack(spacing: 14) {
                 PhotoView(key: person.photoKey, size: 150, fallback: person.role.icon).padding(.top, 10)
-                Text(person.name).font(Brand.title(30)).foregroundStyle(Brand.ink)
+                Text(person.name).font(Brand.title(30)).foregroundStyle(Brand.titleColor)
                 if person.side == "carer" {
                     if !person.headline.isEmpty { Text(person.headline).font(.title3).foregroundStyle(Brand.muted).multilineTextAlignment(.center) }
                     HStack { Chip(text: person.role.name, on: true, tint: person.role.tint, icon: person.role.icon); if person.rate > 0 { Chip(text: "\(Int(person.rate))/h", icon: .rate) }; if person.years > 0 { Chip(text: "\(person.years) yrs", icon: .star) } }
+                    Text(person.completionText).font(.subheadline).foregroundStyle(Brand.muted).accessibilityIdentifier("completionRate")
                 }
                 Card { VStack(alignment: .leading, spacing: 8) {
                     Text("Checks").font(.headline)
@@ -228,7 +233,7 @@ struct PersonDetailView: View {
                 } } }
                 if person.side == "carer" { Card { VStack(alignment: .leading, spacing: 6) {
                     IconLabel(icon: .star, text: "Reviews", size: 18).font(.headline)
-                    if let r = rating { Text("\(String(format: "%.1f", r.avg)) out of 5 from \(r.count)").foregroundStyle(.orange) }
+                    if let r = rating { Text("\(String(format: "%.1f", r.avg)) out of 5 from \(r.count)").foregroundStyle(Brand.ink) }
                     if reviews.isEmpty { Text("No reviews yet").font(.subheadline).foregroundStyle(Brand.muted) }
                     ForEach(reviews.indices, id: \.self) { i in HStack(spacing: 8) { Stars(count: reviews[i].rating); if !reviews[i].text.isEmpty { Text(reviews[i].text) } }.font(.subheadline) }
                 } } }
@@ -265,11 +270,11 @@ struct BookSheet: View {
         NavigationStack {
             ScrollView { VStack(spacing: 14) {
                 if done {
-                    BunnyView(size: 120, mood: .celebrate); Text("Request sent!").font(Brand.title(28))
-                    Text("\(carer.firstName) will reply soon. Chat opens after a yes.").multilineTextAlignment(.center)
+                    BunnyView(size: 120, mood: .celebrate); Text("Request sent!").font(Brand.title(28)).foregroundStyle(Brand.titleColor)
+                    Text("\(carer.firstName) will reply soon. You can say hello in Messages now.").multilineTextAlignment(.center)
                     BigButton(title: "Done", tint: s.role.tint) { dismiss() }
                 } else {
-                    HStack { PhotoView(key: carer.photoKey, size: 56, fallback: carer.role.icon); Text("Book \(carer.firstName)").font(Brand.title(24)); Spacer() }
+                    HStack { PhotoView(key: carer.photoKey, size: 56, fallback: carer.role.icon); Text("Book \(carer.firstName)").font(Brand.title(24)).foregroundStyle(Brand.titleColor); Spacer() }
                     Card { VStack(alignment: .leading) {
                         DatePicker("Day", selection: $date, in: Date()..., displayedComponents: .date)
                         DatePicker("From", selection: $from, displayedComponents: .hourAndMinute)
@@ -278,10 +283,10 @@ struct BookSheet: View {
                     Card { VStack(alignment: .leading, spacing: 4) {
                         IconLabel(icon: .rate, text: "\(Int(carer.rate)) per hour × \(String(format: "%.1f", hours)) h", size: 16).font(.subheadline)
                         Text("About $\(Int(carer.rate * hours))").font(.title2.bold())
-                        Text("Free to cancel up to 24 hours before.").font(.caption).foregroundStyle(Brand.muted)
+                        if PayConfig.visible { PayPromise(name: carer.firstName, estimate: carer.rate * hours) } else { Text("Free to cancel up to 24 hours before.").font(.caption).foregroundStyle(Brand.muted) }
                     } }
                     TextField("Note (optional)", text: $note, axis: .vertical).lineLimit(3...5).padding(14).background(Brand.field).clipShape(RoundedRectangle(cornerRadius: 12))
-                    if !err.isEmpty { Text(err).foregroundStyle(.red) }
+                    if !err.isEmpty { Text(err).foregroundStyle(Brand.ink) }
                     BigButton(title: "Send request", tint: s.role.tint, busy: busy) { Task { await send() } }
                 }
             }.padding(20) }
@@ -321,21 +326,22 @@ struct SwipeCard: View {
             }
             if !onInfo {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(person.firstName).font(.system(size: 32, weight: .bold, design: .serif))
+                    Text(person.firstName).font(Brand.title(32))
                     HStack(spacing: 12) {
                         Text(person.role.name)
                         if person.rate > 0 { Text("\(Int(person.rate))/h") } else if person.budgetMax > 0 { Text("\(Int(person.budgetMax))/h") }
                         if let d = distance { IconLabel(icon: .pin, text: Geo.label(d), size: 15, color: .white) } else if !person.suburb.isEmpty { IconLabel(icon: .pin, text: person.suburb, size: 15, color: .white) }
                     }.font(.subheadline.weight(.semibold)).lineLimit(1)
+                    if person.side == "carer" { Text(person.completionText).font(.footnote.weight(.semibold)) }
                     actions.padding(.top, 6)
                 }.foregroundStyle(.white).padding(20)
             }
             HStack(spacing: 4) { ForEach(0..<slideCount, id: \.self) { i in Capsule().fill(i == slide ? Color.white : Color.white.opacity(0.4)).frame(height: 4) } }
                 .padding(.horizontal, 16).padding(.top, 12).frame(maxHeight: .infinity, alignment: .top).allowsHitTesting(false)
-            if let mt = match { Text("\(mt.percent)%").font(.system(size: 17, weight: .heavy)).foregroundStyle(Brand.ink).padding(.horizontal, 12).padding(.vertical, 6).background(.white).clipShape(Capsule()).accessibilityIdentifier("matchPercent").frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing).padding(.horizontal, 16).padding(.top, 28).opacity(top && abs(offset.width) > 60 ? 0 : 1).allowsHitTesting(false) }
+            if let mt = match { Text("\(mt.percent)%").font(.system(size: 17, weight: .heavy)).foregroundStyle(Brand.ink).padding(.horizontal, 12).padding(.vertical, 6).background(Brand.card).clipShape(Capsule()).accessibilityIdentifier("matchPercent").frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing).padding(.horizontal, 16).padding(.top, 28).opacity(top && abs(offset.width) > 60 ? 0 : 1).allowsHitTesting(false) }
             if top {
-                Text("MATCH").font(.system(size: 34, weight: .heavy)).foregroundStyle(.green).padding(8).overlay(RoundedRectangle(cornerRadius: 10).stroke(.green, lineWidth: 4)).rotationEffect(.degrees(-14)).opacity(max(0, min(1, Double(offset.width) / 100))).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading).padding(26).allowsHitTesting(false)
-                Text("PASS").font(.system(size: 34, weight: .heavy)).foregroundStyle(.red).padding(8).overlay(RoundedRectangle(cornerRadius: 10).stroke(.red, lineWidth: 4)).rotationEffect(.degrees(14)).opacity(max(0, min(1, Double(-offset.width) / 100))).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing).padding(26).allowsHitTesting(false)
+                Text("MATCH").font(.system(size: 34, weight: .heavy)).foregroundStyle(Brand.bunny).padding(8).overlay(RoundedRectangle(cornerRadius: 10).stroke(Brand.bunny, lineWidth: 4)).rotationEffect(.degrees(-14)).opacity(max(0, min(1, Double(offset.width) / 100))).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading).padding(26).allowsHitTesting(false)
+                Text("PASS").font(.system(size: 34, weight: .heavy)).foregroundStyle(.white).padding(8).overlay(RoundedRectangle(cornerRadius: 10).stroke(Brand.bunnyBlush, lineWidth: 4)).rotationEffect(.degrees(14)).opacity(max(0, min(1, Double(-offset.width) / 100))).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing).padding(26).allowsHitTesting(false)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -354,7 +360,7 @@ struct SwipeCard: View {
         }
     }
     func pill(_ t: String, _ i: BI, _ f: @escaping () -> Void) -> some View {
-        Button(action: f) { IconLabel(icon: i, text: t, size: 18, color: Brand.ink).font(.system(size: 16, weight: .semibold)).foregroundStyle(Brand.ink).padding(.horizontal, 16).frame(minHeight: 44).background(.white).clipShape(Capsule()) }.accessibilityLabel(t)
+        Button(action: f) { IconLabel(icon: i, text: t, size: 18, color: Brand.ink).font(.system(size: 16, weight: .semibold)).foregroundStyle(Brand.ink).padding(.horizontal, 16).frame(minHeight: 44).background(Brand.card).clipShape(Capsule()) }.accessibilityLabel(t)
     }
     /// The description slide: about, kids, days needed, and why it matches. Plain facts only.
     var infoSlide: some View {

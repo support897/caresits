@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-/// Caresitters' own icon set. Drawn on a 24 grid with one rounded 2 point line, ink green,
+/// Caresitters' own icon set. Drawn on a 24 grid with one rounded 2 point line, warm plum ink,
 /// and a small bunny pink heart where an icon needs a spark. No emoji, no system symbols.
 enum BI: String, CaseIterable {
     case home, nanny, moon, globe, bunny, rate, star, calendar, doc, lock, camera, plus, check, checkCircle, circle
@@ -134,5 +134,5 @@ struct IconLabel: View {
 /// Row of star icons for a rating (1 to 5).
 struct Stars: View {
     let count: Int; var size: CGFloat = 14
-    var body: some View { HStack(spacing: 2) { ForEach(0..<max(0, min(5, count)), id: \.self) { _ in BrandIcon(kind: .star, size: size, color: .orange, solid: true) } } }
+    var body: some View { HStack(spacing: 2) { ForEach(0..<max(0, min(5, count)), id: \.self) { _ in BrandIcon(kind: .star, size: size, color: Brand.bunny, solid: true) } } }
 }

@@ -15,6 +15,8 @@ struct MeView: View {
     var role: Role { s.role }
     var me: Person { s.me ?? Person(id: "", data: [:]) }
 
+    @ObservedObject private var themeStore = ThemeStore.shared
+    var themePick: ThemePick { themeStore.pick }
     var body: some View {
         if s.me == nil { Color.clear } else { content }
     }
@@ -26,14 +28,21 @@ struct MeView: View {
                 PhotosPicker(selection: $pick, matching: .images) {
                     ZStack(alignment: .bottomTrailing) {
                         PhotoView(key: me.photoKey, size: 120, fallback: role.icon)
-                        BrandIcon(kind: .camera, size: 20, color: role.tint).padding(8).background(.white).clipShape(Circle()).overlay(Circle().stroke(Color.black.opacity(0.1), lineWidth: 1))
+                        BrandIcon(kind: .camera, size: 20, color: role.tint).padding(8).background(Brand.card).clipShape(Circle()).overlay(Circle().stroke(Color.black.opacity(0.1), lineWidth: 1))
                         if busy { ProgressView() }
                     }
                 }
-                Text(me.name).font(Brand.title(26)).foregroundStyle(Brand.ink)
+                Text(me.name).font(Brand.title(26)).foregroundStyle(Brand.titleColor)
                 if !ok.isEmpty { IconLabel(icon: .checkCircle, text: ok, size: 18, color: role.tint).foregroundStyle(role.tint).font(.callout) }
-                if !err.isEmpty { Text(err).foregroundStyle(.red).font(.callout).multilineTextAlignment(.center) }
+                if !err.isEmpty { Text(err).foregroundStyle(Brand.ink).font(.callout).multilineTextAlignment(.center) }
 
+                Card { VStack(alignment: .leading, spacing: 8) {
+                    Text("Look").font(.headline)
+                    HStack(spacing: 8) { ForEach(ThemePick.allCases, id: \.self) { p in
+                        Button { ThemeStore.shared.pick = p; if let uid = s.uid { Task { try? await Backend.saveProfile(uid, card: ["theme": p.rawValue]) } } } label: { Text(p.label).font(.footnote.weight(.semibold)).padding(.horizontal, 10).padding(.vertical, 8).background(themePick == p ? Brand.bunny : Brand.field).foregroundStyle(themePick == p ? Color(hex: 0x3A2E33) : Brand.ink).clipShape(Capsule()) }.accessibilityIdentifier("theme-\(p.rawValue)")
+                    } }
+                } }.padding(.horizontal, 20)
+                if me.side == "carer" && PayConfig.visible { GetPaidCard().padding(.horizontal, 20) }
                 Card { VStack(alignment: .leading, spacing: 8) {
                     Text("My photos").font(.headline)
                     ScrollView(.horizontal, showsIndicators: false) { HStack {
@@ -46,8 +55,9 @@ struct MeView: View {
                     Card { VStack(alignment: .leading, spacing: 8) {
                         IconLabel(icon: role.icon, text: "My \(role.name.lowercased()) profile", size: 20).font(.headline)
                         Text(me.headline.isEmpty ? "Add a headline" : me.headline)
+                        IconLabel(icon: .check, text: me.completionText, size: 16, color: Brand.muted).font(.subheadline).foregroundStyle(Brand.muted)
                         HStack(spacing: 12) { if me.rate > 0 { IconLabel(icon: .rate, text: "\(Int(me.rate))/h", size: 16, color: Brand.muted) }; if me.years > 0 { IconLabel(icon: .star, text: "\(me.years) years", size: 16, color: Brand.muted) } }.font(.subheadline).foregroundStyle(Brand.muted)
-                        if let r = rating { IconLabel(icon: .star, text: "\(String(format: "%.1f", r.avg)) from \(r.count) review\(r.count == 1 ? "" : "s")", size: 16, color: .orange).foregroundStyle(.orange) }
+                        if let r = rating { IconLabel(icon: .star, text: "\(String(format: "%.1f", r.avg)) from \(r.count) review\(r.count == 1 ? "" : "s")", size: 16, color: Brand.bunny).foregroundStyle(Brand.ink) }
                         else { Text("No reviews yet").font(.footnote).foregroundStyle(Brand.muted) }
                         Button { showEdit = true } label: { IconLabel(icon: .pencil, text: "Edit") }
                     } }.padding(.horizontal, 20)
@@ -79,7 +89,7 @@ struct MeView: View {
                         BunnyView(size: 96, mood: .rest)
                         HStack(spacing: 10) { ProgressView(); Text("Deleting your account").font(.system(size: 20, weight: .semibold)).foregroundStyle(Brand.ink) }
                         if deleteSlow { Text("This is taking longer than usual. Please keep the app open.").multilineTextAlignment(.center).foregroundStyle(Brand.muted).padding(.horizontal, 40).accessibilityIdentifier("deleteSlow") }
-                    }.frame(maxWidth: .infinity, maxHeight: .infinity).background(Color.white.opacity(0.96).ignoresSafeArea()).accessibilityIdentifier("deleteBusy")
+                    }.frame(maxWidth: .infinity, maxHeight: .infinity).background(Brand.cream.opacity(0.96).ignoresSafeArea()).accessibilityIdentifier("deleteBusy")
                 }
             }
             .onChange(of: pick) { _, i in Task { await setAvatar(i) } }
@@ -155,12 +165,12 @@ struct ProfileEditor: View {
     @State private var headline = ""; @State private var intro = ""; @State private var years = 0; @State private var rate: Double = 30; @State private var err = ""; @State private var busy = false
     var body: some View {
         ScrollView { VStack(spacing: 14) {
-            Text("Edit profile").font(Brand.title(26)).padding(.top, 16)
+            Text("Edit profile").font(Brand.title(26)).foregroundStyle(Brand.titleColor).padding(.top, 16)
             TextField("A few words about your care", text: $headline).padding(14).background(Brand.field).clipShape(RoundedRectangle(cornerRadius: 12))
             TextEditor(text: $intro).frame(height: 120).padding(8).background(Brand.field).clipShape(RoundedRectangle(cornerRadius: 12))
             Card { Stepper("Years of experience: \(years)", value: $years, in: 0...40) }
             Card { VStack(alignment: .leading) { Text("Rate: $\(Int(rate)) per hour"); Slider(value: $rate, in: 15...90, step: 1) } }
-            if !err.isEmpty { Text(err).foregroundStyle(.red) }
+            if !err.isEmpty { Text(err).foregroundStyle(Brand.ink) }
             BigButton(title: "Save", tint: s.role.tint, busy: busy) { Task {
                 busy = true; defer { busy = false }
                 do { try await Backend.saveProfile((s.uid ?? ""), about: intro, card: ["headline": String(headline.prefix(80)), "experienceYears": years, "rate": rate]); await s.reload(); dismiss() } catch { err = "Could not save. Try again." }
@@ -176,7 +186,7 @@ struct ResumeEditor: View {
     var body: some View {
         ScrollView { VStack(spacing: 14) {
             BunnyView(size: 80, mood: .think).padding(.top, 16)
-            Text("My resume").font(Brand.title(26))
+            Text("My resume").font(Brand.title(26)).foregroundStyle(Brand.titleColor)
             BigButton(title: "Choose a resume file", tint: s.role.tint, icon: .doc) { showFile = true }
             IconLabel(icon: .lock, text: "Read on your phone only", size: 14, color: Brand.muted).font(.footnote).foregroundStyle(Brand.muted)
             if !msg.isEmpty { Text(msg).font(.callout) }
@@ -222,17 +232,17 @@ struct ReauthSheet: View {
     var body: some View {
         VStack(spacing: 16) {
             BunnyView(size: 90).padding(.top, 20)
-            Text("Is it really you?").font(Brand.title(26))
+            Text("Is it really you?").font(Brand.title(26)).foregroundStyle(Brand.titleColor)
             Text("Sign in once more to delete.").multilineTextAlignment(.center).foregroundStyle(Brand.muted)
             if s.provider == "password" {
                 SecureField("Your password", text: $pw).padding(14).background(Brand.field).clipShape(RoundedRectangle(cornerRadius: 12))
-                BigButton(title: "Confirm and delete", tint: .red, busy: busy) { run { try await s.reauth(password: pw) } }
+                BigButton(title: "Confirm and delete", tint: Brand.rose, busy: busy) { run { try await s.reauth(password: pw) } }
             } else if s.provider == "google.com" {
-                BigButton(title: "Continue with Google", tint: .red, busy: busy) { run { try await s.reauthGoogle() } }
+                BigButton(title: "Continue with Google", tint: Brand.rose, busy: busy) { run { try await s.reauthGoogle() } }
             } else {
                 SignInWithAppleButton(.continue) { s.prepareApple($0) } onCompletion: { r in run { try await s.reauthApple(r) } }.frame(height: 52)
             }
-            if !err.isEmpty { Text(err).foregroundStyle(.red).font(.callout) }
+            if !err.isEmpty { Text(err).foregroundStyle(Brand.ink).font(.callout) }
             Button("Cancel") { dismiss() }
             Spacer()
         }.padding(24).background(Brand.cream.ignoresSafeArea())
