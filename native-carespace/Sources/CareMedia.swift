@@ -44,10 +44,10 @@ enum SpaceMedia {
 
     static func randomId() -> String { String((0..<20).map { _ in "abcdef0123456789".randomElement() ?? "0" }) }
 
-    static func call(_ body: [String: Any]) async throws -> [String: Any] {
+    static func call(_ body: [String: Any], path: String = "/v1/link") async throws -> [String: Any] {
         guard let user = Auth.auth().currentUser else { throw CareError(message: "Please sign in again.") }
         let token = try await user.getIDToken()
-        guard let endpoint = URL(string: base + "/v1/link") else { throw CareError(message: "The photo service address is wrong.") }
+        guard let endpoint = URL(string: base + path) else { throw CareError(message: "The photo service address is wrong.") }
         var req = URLRequest(url: endpoint)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -84,6 +84,11 @@ enum SpaceMedia {
         let (_, resp) = try await URLSession.shared.upload(for: put, from: jpg)
         let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
         guard (200..<300).contains(code) else { throw CareError(message: "The photo could not be saved (code \(code)).") }
+        // Same third step as the web app (packages/core media upload): the
+        // service only serves the file after this confirm call answers ok.
+        let confirmed = try await call(["class": "space-media", "name": name, "ownerUid": uid, "spaceId": spaceId,
+                                        "bytes": jpg.count, "contentType": "image/jpeg"], path: "/v1/confirm")
+        guard (confirmed["ok"] as? Bool) == true else { throw CareError(message: "The photo could not be checked. Choose it again.") }
         return key
     }
 
