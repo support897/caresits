@@ -6,15 +6,22 @@ extension Color {
     }
 }
 
-/// CareSpace brand tokens — identical family to Caresitters (brand of record).
-/// Source: BRAND-OF-RECORD.md. These hex values are the brand; do not drift them.
+/// CareSpace brand tokens — the Caresitters brand, whole match (Way B,
+/// locked 12 Nov): pastel colours, pink is the queen (about 80 pink,
+/// 20 soft helpers for fast signs and telling roles apart), NO dark
+/// green ever. Source: the Caresitters BRAND-OF-RECORD.md.
+/// `ink` is the pink family's reading shade: the brand record's own
+/// rule says a colour that must do a reading job uses the nearest
+/// family shade that still reads clearly — a deep rose, never green.
 enum Brand {
-    static let ink = Color(hex: 0x1E4D44)
+    static let ink = Color(hex: 0x8A4258)
     static let cream = Color(hex: 0xFDF8F0)
-    static let sage = Color(hex: 0x9CC5B5)
+    static let palePink = Color(hex: 0xFBEFF2)
+    static let sage = Color(hex: 0xBFD8C0)
     static let blush = Color(hex: 0xF6CBD3)
+    static let bunnyBlush = Color(hex: 0xF2C4CE)
     static let bunny = Color(hex: 0xF4A9BC)
-    static func title(_ size: CGFloat) -> Font { .custom("Newsreader", size: size).weight(.semibold) }
+    static func title(_ size: CGFloat) -> Font { .custom("Fraunces", size: size).weight(.semibold) }
     static func body(_ size: CGFloat = 17) -> Font { .custom("Atkinson Hyperlegible", size: size) }
 }
 
@@ -35,41 +42,32 @@ enum AppTheme: String, CaseIterable, Identifiable {
     var bg: Color {
         switch self {
         case .light: return .white
-        case .dark: return Color(hex: 0x14201D)
-        case .beige: return Color(hex: 0xF3EAD9)
-        case .brand: return Brand.cream
+        case .dark: return Color(hex: 0xDDE8DE)
+        case .beige: return Color(hex: 0xF6EEDD)
+        case .brand: return Brand.palePink
         }
     }
     var surface: Color {
         switch self {
-        case .light: return Color(hex: 0xF7F4EE)
-        case .dark: return Color(hex: 0x1E2B27)
-        case .beige: return Color(hex: 0xEFE3CC)
+        case .light: return Brand.cream
+        case .dark: return Color(hex: 0xE6EEE6)
+        case .beige: return Color(hex: 0xF0E4D3)
         case .brand: return .white
         }
     }
-    var text: Color {
-        switch self {
-        case .light, .beige, .brand: return Brand.ink
-        case .dark: return Color(hex: 0xF2EFE9)
-        }
-    }
+    var text: Color { Brand.ink }
     var muted: Color {
         switch self {
-        case .dark: return Color(hex: 0xA9B8B2)
-        default: return Color(hex: 0x5B6B66)
+        case .dark: return Color(hex: 0xA9B8B1)
+        default: return Color(hex: 0x9C7A86)
         }
     }
-    var accent: Color {
-        switch self {
-        case .brand: return Brand.bunny
-        default: return Brand.ink
-        }
-    }
+    var accent: Color { Brand.bunny }
     var field: Color {
         switch self {
-        case .dark: return Color(hex: 0x26332E)
-        default: return Color(hex: 0xF1EDE4)
+        case .dark: return Color(hex: 0xC9D8CC)
+        case .brand: return Color(hex: 0xF6E3E9)
+        default: return Color(hex: 0xF6E9EC)
         }
     }
 }
@@ -85,14 +83,14 @@ final class ThemeStore: ObservableObject {
 
 struct BigButton: View {
     let title: String
-    var tint: Color = Brand.ink
+    var tint: Color = Brand.bunny
     var busy = false
     let action: () -> Void
     var body: some View {
         Button(action: action) {
-            HStack { if busy { ProgressView().tint(.white) }; Text(title).font(.system(size: 18, weight: .semibold)) }
+            HStack { if busy { ProgressView().tint(Brand.ink) }; Text(title).font(.system(size: 18, weight: .semibold)) }
                 .frame(maxWidth: .infinity, minHeight: 54)
-                .background(tint).foregroundStyle(.white)
+                .background(tint).foregroundStyle(Brand.ink)
                 .clipShape(RoundedRectangle(cornerRadius: 16))
         }.disabled(busy)
     }

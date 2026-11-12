@@ -108,7 +108,7 @@ struct EventRow: View {
                     }.buttonStyle(.plain)
                 }
                 if event.state == .requested && CareAccess.canManageTimeOff(role) {
-                    HStack { BigButton(title: "Approve") { onDecide(true) }; BigButton(title: "Decline", tint: Brand.ink.opacity(0.7)) { onDecide(false) } }
+                    HStack { BigButton(title: "Approve") { onDecide(true) }; BigButton(title: "Decline", tint: Brand.bunnyBlush) { onDecide(false) } }
                 }
             }
         }
