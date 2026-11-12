@@ -107,7 +107,7 @@ struct OnboardingView: View {
             ForEach([Role.nanny, .babysitter, .auPair], id: \.self) { r in
                 Button { service = r.service ?? "nanny" } label: {
                     HStack { BrandIcon(kind: r.icon, size: 36, color: r.tint); VStack(alignment: .leading) { Text(r.name).font(.title3.weight(.semibold)); Text(r.greeting).font(.footnote) }; Spacer(); BrandIcon(kind: service == r.service ? .checkCircle : .circle, size: 28, color: r.tint) }
-                        .padding(16).background(service == r.service ? r.soft : .white).foregroundStyle(r.tint).clipShape(RoundedRectangle(cornerRadius: 18))
+                        .padding(16).background(service == r.service ? r.sign.opacity(0.6) : Brand.card).foregroundStyle(r.tint).clipShape(RoundedRectangle(cornerRadius: 18))
                 }
             }
             Text("Your own app, made for you.").font(.footnote).foregroundStyle(Brand.muted).multilineTextAlignment(.center)

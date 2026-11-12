@@ -22,7 +22,7 @@ final class ThemeStore: ObservableObject {
     init() { pick = ThemePick(rawValue: UserDefaults.standard.string(forKey: "caresits.theme") ?? "") ?? .light }
 }
 
-/// Colours. Pink is the brand: Bunny Pink, Bunny Blush, Blush Pink. No green anywhere.
+/// Colours, WAY B: pink is the queen (about 80 percent). A few soft pastel helpers do two jobs only: fast signs and role signs. No dark green, ever.
 /// Grounds and text change with the theme; the three pinks do not.
 enum Brand {
     static var pick: ThemePick { ThemeStore.shared.pick }
@@ -34,6 +34,13 @@ enum Brand {
     static let porcelain = Color(hex: 0xFDF8F0)   // Warm Porcelain
     static let rose = Color(hex: 0xF2B8B5)        // Soft Rose (errors, pastel)
     static let honey = Color(hex: 0xF2D492)       // Honey Tint (stars, pastel)
+    // WAY B helpers, from the audited pastel palette. ONLY two jobs: fast signs and telling the roles apart. Never leads.
+    static let helperTeal = Color(hex: 0x9CC5B5)  // Morning Teal  : nanny
+    static let helperApricot = Color(hex: 0xF2B880) // Apricot     : family
+    static let helperLavender = Color(hex: 0xCFC3E8) // Lavender Haze : babysitter
+    static let helperSky = Color(hex: 0xB9D6EC)   // Powder Blue   : au pair
+    static let signBooked = Color(hex: 0xBFD8C0)  // Soft Sage     : booked
+    static let signMessage = Color(hex: 0xF6D67C) // Butter Glow   : new message, chat
     /// Text and line colour: warm plum grey, readable on every ground.
     static var ink: Color { pick == .dark ? Color(hex: 0xF5EDEF) : Color(hex: 0x3A2E33) }
     static var muted: Color { pick == .dark ? Color(hex: 0xBBA9B0) : Color(hex: 0x7A686F) }
@@ -60,6 +67,8 @@ enum Role: String, CaseIterable, Identifiable {
     /// Every role wears the brand pink; the icon tells the roles apart.
     var tint: Color { Brand.bunny }
     var soft: Color { Brand.field }
+    /// Way B: the soft helper that tells this role apart. Used only on role signs, never on buttons or titles.
+    var sign: Color { switch self { case .family: return Brand.helperApricot; case .nanny: return Brand.helperTeal; case .babysitter: return Brand.helperLavender; case .auPair: return Brand.helperSky } }
     var greeting: String {
         switch self {
         case .family: return "Find care. Share the day."

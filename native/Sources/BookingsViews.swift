@@ -27,7 +27,7 @@ struct BookingRow: View {
             HStack(spacing: 12) {
                 PhotoView(key: other?.photoKey ?? "", size: 48, fallback: other?.role.icon ?? .bunny)
                 VStack(alignment: .leading) { Text(other?.firstName ?? "…").font(.headline); Text("\(pretty(b.dateValue)) · \(b.from)–\(b.to)").font(.subheadline).foregroundStyle(Brand.muted) }
-                Spacer(); IconLabel(icon: b.stateIcon, text: b.stateLabel, size: 15).font(.footnote.bold())
+                Spacer(); IconLabel(icon: b.stateIcon, text: b.stateLabel, size: 15).font(.footnote.bold()).padding(.horizontal, 10).padding(.vertical, 5).background(b.state == "accepted" || b.state == "completed" ? Brand.signBooked : (b.state == "requested" ? Brand.honey : Color.clear)).clipShape(Capsule())
             }
             if b.estimate > 0 { IconLabel(icon: .rate, text: "About $\(Int(b.estimate))", size: 15).font(.footnote) }
             if !b.note.isEmpty { Text("“\(b.note)”").font(.footnote).italic().foregroundStyle(Brand.muted) }
@@ -118,13 +118,13 @@ struct BookingsCalendarView: View {
                                 Button { selected = d } label: {
                                     VStack(spacing: 2) {
                                         Text("\(cal.component(.day, from: d))").font(.system(size: 16, weight: sel ? .bold : .regular))
-                                        Circle().fill(n.isEmpty ? .clear : (n.contains { $0.state == "requested" } ? Brand.honey : role.tint)).frame(width: 6, height: 6)
+                                        Circle().fill(n.isEmpty ? .clear : (n.contains { $0.state == "requested" } ? Brand.honey : Brand.signBooked)).frame(width: 6, height: 6)
                                     }.frame(maxWidth: .infinity, minHeight: 42).background(sel ? role.soft : .clear).clipShape(RoundedRectangle(cornerRadius: 10)).foregroundStyle(cal.isDateInToday(d) ? role.tint : Brand.ink)
                                 }
                             } else { Color.clear.frame(height: 42) }
                         }
                     }
-                    HStack(spacing: 14) { HStack(spacing: 5) { Circle().fill(Brand.honey).frame(width: 9, height: 9); Text("Waiting") }; HStack(spacing: 5) { Circle().fill(role.tint).frame(width: 9, height: 9); Text("Confirmed") } }.font(.caption)
+                    HStack(spacing: 14) { HStack(spacing: 5) { Circle().fill(Brand.honey).frame(width: 9, height: 9); Text("Waiting") }; HStack(spacing: 5) { Circle().fill(Brand.signBooked).frame(width: 9, height: 9); Text("Booked") } }.font(.caption)
                 } }.padding(.horizontal, 20)
                 if role == .family { BigButton(title: "New booking", tint: role.tint, icon: .plus) { showNew = true }.padding(.horizontal, 20) }
                 else { BigButton(title: "My free days and hours", tint: role.tint, icon: .clock) { showFree = true }.padding(.horizontal, 20) }

@@ -182,7 +182,7 @@ struct PersonRow: View {
                     HStack { Text(person.firstName).font(.title3.bold()).foregroundStyle(Brand.ink); if verified != nil { IconLabel(icon: .shield, text: "Checked", size: 12, gap: 4).font(.caption.bold()).padding(.horizontal, 6).padding(.vertical, 2).background(Brand.blush.opacity(0.5)).clipShape(Capsule()) } ; Spacer(); if saved { BrandIcon(kind: .heart, size: 20, color: Brand.bunny, solid: true) } }
                     if person.side == "carer" {
                         if !person.headline.isEmpty { Text(person.headline).font(.subheadline).foregroundStyle(Brand.muted).lineLimit(2) }
-                        HStack(spacing: 10) { IconLabel(icon: person.role.icon, text: person.role.name, size: 14); if person.rate > 0 { IconLabel(icon: .rate, text: "\(Int(person.rate))/h", size: 14) }; if person.years > 0 { IconLabel(icon: .star, text: "\(person.years)y", size: 14) } }.font(.footnote)
+                        HStack(spacing: 10) { IconLabel(icon: person.role.icon, text: person.role.name, size: 14).padding(.horizontal, 8).padding(.vertical, 3).background(person.role.sign.opacity(0.7)).clipShape(Capsule()); if person.rate > 0 { IconLabel(icon: .rate, text: "\(Int(person.rate))/h", size: 14) }; if person.years > 0 { IconLabel(icon: .star, text: "\(person.years)y", size: 14) } }.font(.footnote)
                         if person.side == "carer" { Text(person.completionText).font(.caption).foregroundStyle(Brand.muted) }
                         if let r = rating { IconLabel(icon: .star, text: "\(String(format: "%.1f", r.avg)) (\(r.count))", size: 13, color: Brand.bunny).font(.footnote).foregroundStyle(Brand.ink) }
                     } else {
@@ -214,7 +214,7 @@ struct PersonDetailView: View {
                 Text(person.name).font(Brand.title(30)).foregroundStyle(Brand.titleColor)
                 if person.side == "carer" {
                     if !person.headline.isEmpty { Text(person.headline).font(.title3).foregroundStyle(Brand.muted).multilineTextAlignment(.center) }
-                    HStack { Chip(text: person.role.name, on: true, tint: person.role.tint, icon: person.role.icon); if person.rate > 0 { Chip(text: "\(Int(person.rate))/h", icon: .rate) }; if person.years > 0 { Chip(text: "\(person.years) yrs", icon: .star) } }
+                    HStack { Chip(text: person.role.name, on: true, tint: person.role.sign, icon: person.role.icon); if person.rate > 0 { Chip(text: "\(Int(person.rate))/h", icon: .rate) }; if person.years > 0 { Chip(text: "\(person.years) yrs", icon: .star) } }
                     Text(person.completionText).font(.subheadline).foregroundStyle(Brand.muted).accessibilityIdentifier("completionRate")
                 }
                 Card { VStack(alignment: .leading, spacing: 8) {
@@ -328,7 +328,7 @@ struct SwipeCard: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(person.firstName).font(Brand.title(32))
                     HStack(spacing: 12) {
-                        Text(person.role.name)
+                        Text(person.role.name).foregroundStyle(Color(hex: 0x3A2E33)).padding(.horizontal, 10).padding(.vertical, 3).background(person.role.sign).clipShape(Capsule())
                         if person.rate > 0 { Text("\(Int(person.rate))/h") } else if person.budgetMax > 0 { Text("\(Int(person.budgetMax))/h") }
                         if let d = distance { IconLabel(icon: .pin, text: Geo.label(d), size: 15, color: .white) } else if !person.suburb.isEmpty { IconLabel(icon: .pin, text: person.suburb, size: 15, color: .white) }
                     }.font(.subheadline.weight(.semibold)).lineLimit(1)

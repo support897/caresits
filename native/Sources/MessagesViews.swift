@@ -55,7 +55,7 @@ struct MessagesView: View {
                 else if store.rows.isEmpty { EmptyHint(icon: .chat, text: "Match with someone, then say hello") }
                 ForEach(store.rows) { r in
                     NavigationLink { ChatView(rel: r.rel, other: r.other) } label: {
-                        Card { HStack(spacing: 12) { PhotoView(key: r.other?.photoKey ?? "", size: 52, fallback: r.other?.role.icon ?? .bunny); VStack(alignment: .leading) { Text(r.other?.name ?? "…").font(.headline).foregroundStyle(Brand.ink); Text(r.other.map { $0.side == "carer" ? $0.role.name : "Family" } ?? "").font(.subheadline).foregroundStyle(Brand.muted) }; Spacer(); BrandIcon(kind: .chevron, size: 18, color: Brand.muted) } }
+                        Card { HStack(spacing: 12) { PhotoView(key: r.other?.photoKey ?? "", size: 52, fallback: r.other?.role.icon ?? .bunny); VStack(alignment: .leading) { Text(r.other?.name ?? "…").font(.headline).foregroundStyle(Brand.ink); Text(r.other.map { $0.side == "carer" ? $0.role.name : "Family" } ?? "").font(.subheadline).foregroundStyle(Brand.muted) }; Spacer(); BrandIcon(kind: .chat, size: 16, color: Color(hex: 0x3A2E33), mono: true).frame(width: 30, height: 30).background(Brand.signMessage).clipShape(Circle()) } }
                     }.buttonStyle(.plain).padding(.horizontal, 20)
                 }
             }.padding(.bottom, 100) }
@@ -82,7 +82,7 @@ struct ChatView: View {
                         let mine = m.from == s.uid
                         HStack { if mine { Spacer(minLength: 50) }
                             if m.kind == "photo" && !m.mediaKey.isEmpty { PhotoView(key: m.mediaKey, size: 220, round: false).accessibilityIdentifier("chatPhoto") }
-                            else { Text(m.text).padding(.horizontal, 14).padding(.vertical, 10).background(mine ? Brand.bunny : Brand.card).foregroundStyle(mine ? Color(hex: 0x3A2E33) : Brand.ink).clipShape(RoundedRectangle(cornerRadius: 18)) }
+                            else { Text(m.text).padding(.horizontal, 14).padding(.vertical, 10).background(mine ? Brand.bunny : Brand.signMessage.opacity(0.75)).foregroundStyle(mine ? Color(hex: 0x3A2E33) : (ThemeStore.shared.pick == .dark ? Color(hex: 0x3A2E33) : Brand.ink)).clipShape(RoundedRectangle(cornerRadius: 18)) }
                             if !mine { Spacer(minLength: 50) } }.id(m.id)
                     }
                 }.padding(14) }
