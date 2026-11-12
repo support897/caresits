@@ -58,6 +58,10 @@ enum CareAccess {
     static func canEditNotes(_ role: CareRole) -> Bool { role == .admin || role == .regular }
     static func canEditChildDetails(_ role: CareRole) -> Bool { role == .admin }
     static func canManageTimeOff(_ role: CareRole) -> Bool { role == .admin }
+    /// Photos: a parent admin, or a member whose record opens photos.
+    static func canSeePhotos(_ role: CareRole, _ perms: CarePerms) -> Bool { role == .admin || perms.photos }
+    static func canShareGallery(_ role: CareRole) -> Bool { role == .admin }
+    static func canInvite(_ role: CareRole) -> Bool { role == .admin }
 }
 
 // MARK: Spaces
@@ -126,6 +130,8 @@ struct ChildMilestone: Equatable {
     var title: String
     var at: Date
     var note: String
+    /// Key of a private photo kept with this milestone. Kept as is on every save.
+    var photoKey: String = ""
 }
 
 struct ChildProfile: Identifiable, Equatable {
@@ -226,6 +232,7 @@ struct TimelineItem: Identifiable, Equatable {
     var by: String?
     var mood: String?
     var asks: [TimelineAsk] = []
+    var photoKey: String = ""
 }
 
 enum CareTime {
@@ -238,6 +245,18 @@ enum CareTime {
         return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
     }
     static func clock(_ d: Date) -> String { d.formatted(date: .omitted, time: .shortened) }
+    static func isDayKey(_ s: String) -> Bool {
+        guard s.range(of: "^\\d{4}-\\d{2}-\\d{2}$", options: .regularExpression) != nil else { return false }
+        return dayDate(s) != nil
+    }
+    /// Noon on that local day, or nil when the text is not a real date.
+    static func dayDate(_ s: String) -> Date? {
+        let p = s.split(separator: "-").compactMap { Int($0) }
+        guard p.count == 3 else { return nil }
+        let c = DateComponents(year: p[0], month: p[1], day: p[2], hour: 12)
+        guard let d = Calendar.current.date(from: c), dayKey(d) == s else { return nil }
+        return d
+    }
 }
 
 enum CareTimeline {
@@ -295,12 +314,73 @@ struct CalendarEvent: Identifiable, Equatable {
     var ownerUid: String
     var childId: String?
     var state: EventState
+    var recurring: CalendarRecurrence? = nil
+    /// Day (yyyy-MM-dd) this copy of a repeating event falls on. Nil for a one off event.
+    var occurrenceDate: String? = nil
+    /// The id of the saved event, also for one copy of a repeating event.
+    var baseId: String { String(id.split(separator: "#").first ?? Substring(id)) }
+}
+
+/// A repeat rule, as the web app stores it: the weekdays it falls on and the last day (yyyy-MM-dd).
+struct CalendarRecurrence: Equatable {
+    var weekdays: [String]
+    var until: String
+    static let names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    static func valid(_ r: CalendarRecurrence, startDay: String) -> Bool {
+        !r.weekdays.isEmpty && r.weekdays.allSatisfy { names.contains($0) } && CareTime.isDayKey(r.until) && r.until >= startDay
+    }
+    var summary: String { "Repeats on \(weekdays.joined(separator: ", ")) until \(until)" }
 }
 
 enum CareCalendar {
     static func events(_ all: [CalendarEvent], on day: Date) -> [CalendarEvent] {
         all.filter { Calendar.current.isDate($0.start, inSameDayAs: day) }.sorted { $0.start < $1.start }
     }
+    /// Copies of events for every day from first to last (both included). Repeating events follow the web rules:
+    /// from the start day to the until day, on the chosen weekdays, same time of day and same length.
+    static func expand(_ all: [CalendarEvent], from first: Date, to last: Date) -> [CalendarEvent] {
+        let cal = Calendar.current
+        var out: [CalendarEvent] = []
+        var day = cal.startOfDay(for: first)
+        let end = cal.startOfDay(for: last)
+        var guardCount = 0
+        while day <= end && guardCount < 400 {
+            guardCount += 1
+            let key = CareTime.dayKey(day)
+            for e in all where e.end > e.start {
+                guard let r = e.recurring else {
+                    if cal.isDate(e.start, inSameDayAs: day) { var c = e; c.occurrenceDate = key; out.append(c) }
+                    continue
+                }
+                if key < CareTime.dayKey(e.start) || key > r.until { continue }
+                let name = CalendarRecurrence.names[cal.component(.weekday, from: day) - 1]
+                guard r.weekdays.contains(name) else { continue }
+                let t = cal.dateComponents([.hour, .minute, .second], from: e.start)
+                guard let s = cal.date(bySettingHour: t.hour ?? 0, minute: t.minute ?? 0, second: t.second ?? 0, of: day) else { continue }
+                var c = e
+                c.start = s; c.end = s.addingTimeInterval(e.end.timeIntervalSince(e.start)); c.occurrenceDate = key
+                c.id = "\(e.baseId)#\(key)"
+                out.append(c)
+            }
+            guard let next = cal.date(byAdding: .day, value: 1, to: day) else { break }
+            day = next
+        }
+        return out.sorted { $0.start < $1.start }
+    }
+
+    /// Titles of events that overlap a new one. A warning only. It never blocks saving.
+    static func conflicts(_ candidate: CalendarEvent, with all: [CalendarEvent]) -> [String] {
+        let kinds: [CalendarKind] = [.shift, .booking, .timeoff]
+        let lastDay = candidate.recurring.flatMap { CareTime.dayDate($0.until) } ?? candidate.start
+        let capped = min(lastDay, candidate.start.addingTimeInterval(366 * 86400))
+        let mine = expand([candidate], from: candidate.start, to: capped)
+        guard let lo = mine.first?.start, let hi = mine.last?.end else { return [] }
+        let others = expand(all.filter { kinds.contains($0.kind) && $0.state != .declined && $0.baseId != candidate.baseId }, from: lo, to: hi)
+        var titles: [String] = []
+        for m in mine { for o in others where m.start < o.end && o.start < m.end && !titles.contains(o.title) { titles.append(o.title) } }
+        return titles
+    }
+
     /// Cells for a month grid: leading blanks, then each day.
     static func cells(for month: Date) -> [Date?] {
         let cal = Calendar.current

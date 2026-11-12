@@ -44,7 +44,7 @@ struct ChatsHome: View {
             if !ctx.loaded {
                 ProgressView().frame(maxWidth: .infinity).padding(30)
             } else if ctx.spaces.isEmpty {
-                EmptyState(title: "No care spaces yet", detail: "Make one for your family. Join with a code comes soon.")
+                EmptyState(title: "No care spaces yet", detail: "Make one for your family, or join with a code.")
             } else if shown.isEmpty {
                 EmptyState(title: "Nothing here", detail: "Try another filter.")
             } else {
@@ -67,6 +67,7 @@ struct ChatsHome: View {
                     }.buttonStyle(.plain)
                 }
             }
+            RowLink(icon: "key", title: "Join with code", subtitle: "Paste the code or link from a parent") { JoinView() }
             RowLink(icon: "plus", title: "New care space", subtitle: "For your family or your care team") { NewSpaceView() }
         }
         .navigationTitle("Chats")
@@ -127,6 +128,14 @@ struct SpaceView: View {
         }
         .background(th.theme.bg.ignoresSafeArea())
         .navigationTitle(space.name).navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if CareAccess.canInvite(space.role) {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink { InviteView(space: space) } label: { CareIcon(name: "people", size: 26, fill: false).frame(width: 44, height: 44) }
+                        .accessibilityLabel("Invite someone")
+                }
+            }
+        }
         .task { await model.load(); model.listen() }
         .onDisappear { model.stop() }
     }

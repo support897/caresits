@@ -121,6 +121,7 @@ struct ChildSectionPage: View {
     @State private var bed = ""
     @State private var naps: [ChildNap] = []
     @State private var milestone = ""
+    @State private var milestonePhoto = ""
     @State private var note = ""
     @State private var loaded = false
     var canEdit: Bool { page == .memories ? CareAccess.canPost(space.role) : CareAccess.canEditNotes(space.role) }
@@ -149,10 +150,17 @@ struct ChildSectionPage: View {
                 if !child.milestones.isEmpty {
                     Text("Milestones").font(Brand.title(20)).foregroundStyle(th.theme.text)
                     ForEach(Array(child.milestones.enumerated()), id: \.offset) { _, m in
-                        Card { VStack(alignment: .leading) { Text(m.title).font(Brand.body(18).weight(.semibold)).foregroundStyle(th.theme.text); Text(m.at.shortDay).font(Brand.body(15)).foregroundStyle(th.theme.muted); if !m.note.isEmpty { BodyText(text: m.note) } } }
+                        Card { VStack(alignment: .leading) { if !m.photoKey.isEmpty, CareAccess.canSeePhotos(space.role, space.perms) { SpacePhoto(key: m.photoKey, height: 160) }; Text(m.title).font(Brand.body(18).weight(.semibold)).foregroundStyle(th.theme.text); Text(m.at.shortDay).font(Brand.body(15)).foregroundStyle(th.theme.muted); if !m.note.isEmpty { BodyText(text: m.note) } } }
                     }
                 }
-                if canEdit { CareField(title: "New milestone (optional)", text: $milestone) }
+                if canEdit {
+                    CareField(title: "New milestone (optional)", text: $milestone)
+                    if CareAccess.canSeePhotos(space.role, space.perms) {
+                        PhotoAddButton(spaceId: space.id, title: milestonePhoto.isEmpty ? "Add a photo to the milestone" : "Change the milestone photo", onKey: { milestonePhoto = $0; note = "Photo ready. Save to keep it with the milestone." }, onError: { note = $0 })
+                        if !milestonePhoto.isEmpty { SpacePhoto(key: milestonePhoto, height: 140) }
+                    }
+                }
+                RowLink(icon: "photo", title: "Photo gallery", subtitle: "Private. A parent decides what is shared.") { GalleryView(space: space, child: child) }
             }
             if !note.isEmpty { Notice(text: note) }
             if canEdit { BigButton(title: "Save") { save() } } else { BodyText(text: "You can read this page. A carer or admin can change it.", muted: true) }
@@ -186,7 +194,7 @@ struct ChildSectionPage: View {
             case .learning: c.learningGoals = CareText.list(list, maxItems: 30, maxLength: 60)
             case .memories:
                 c.memories = list.split(separator: "\n").map { String($0).trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }.prefix(50).map { String($0.prefix(300)) }
-                if !milestone.trimmingCharacters(in: .whitespaces).isEmpty { c.milestones.append(ChildMilestone(title: String(milestone.prefix(80)), at: Date(), note: "")); milestone = "" }
+                if !milestone.trimmingCharacters(in: .whitespaces).isEmpty { c.milestones.append(ChildMilestone(title: String(milestone.prefix(80)), at: Date(), note: "", photoKey: milestonePhoto)); milestone = ""; milestonePhoto = "" }
             case .sleep: c.wake = wake; c.bed = bed; c.naps = naps.filter { !$0.from.isEmpty && !$0.to.isEmpty }
             default: break
             }

@@ -97,7 +97,7 @@ enum CareRepo {
         c.foodPreferences = strings(m["foodPreferences"]); c.learningGoals = strings(m["learningGoals"])
         c.milestones = (m["milestones"] as? [[String: Any]] ?? []).compactMap { x in
             guard let t = x["title"] as? String else { return nil }
-            return ChildMilestone(title: t, at: date(x["at"]) ?? Date(), note: x["note"] as? String ?? "")
+            return ChildMilestone(title: t, at: date(x["at"]) ?? Date(), note: x["note"] as? String ?? "", photoKey: x["photoKey"] as? String ?? "")
         }
         let r = m["routine"] as? [String: Any] ?? [:]
         c.wake = r["wake"] as? String ?? ""; c.bed = r["bed"] as? String ?? ""
@@ -117,7 +117,7 @@ enum CareRepo {
         return [
             "name": c.name, "ageYears": c.ageYears, "interests": c.interests, "sections": sections,
             "foodPreferences": c.foodPreferences, "learningGoals": c.learningGoals,
-            "milestones": c.milestones.map { ["title": $0.title, "at": CareTime.iso($0.at), "note": $0.note] },
+            "milestones": c.milestones.map { m -> [String: Any] in var x: [String: Any] = ["title": m.title, "at": CareTime.iso(m.at), "note": m.note]; if !m.photoKey.isEmpty { x["photoKey"] = m.photoKey }; return x },
             "routine": ["wake": c.wake, "bed": c.bed, "naps": c.naps.map { ["from": $0.from, "to": $0.to] }]
         ]
     }
@@ -193,7 +193,7 @@ enum CareRepo {
                         answeredAt: $0["answeredAt"] as? String, answerText: $0["answerText"] as? String)
         }
         return TimelineItem(id: d.documentID, day: m["day"] as? String ?? "", kind: kind, at: at, text: m["text"] as? String ?? "",
-                            childId: m["childId"] as? String, by: m["by"] as? String, mood: m["mood"] as? String, asks: asks)
+                            childId: m["childId"] as? String, by: m["by"] as? String, mood: m["mood"] as? String, asks: asks, photoKey: m["photoKey"] as? String ?? "")
     }
 
     static func listenDay(spaceId: String, day: String, onChange: @escaping ([TimelineItem]) -> Void) -> ListenerRegistration {
@@ -204,10 +204,11 @@ enum CareRepo {
     }
 
     @discardableResult
-    static func addItem(spaceId: String, kind: TimelineKind, text: String, childId: String?, by uid: String, mood: String? = nil) async throws -> Bool {
+    static func addItem(spaceId: String, kind: TimelineKind, text: String, childId: String?, by uid: String, mood: String? = nil, photoKey: String? = nil) async throws -> Bool {
         var data: [String: Any] = ["day": CareTime.dayKey(), "kind": kind.rawValue, "at": CareTime.iso(Date()), "text": String(text.prefix(500)), "by": uid, "asks": []]
         if let c = childId, !c.isEmpty { data["childId"] = c }
         if let m = mood { data["mood"] = m }
+        if let p = photoKey, !p.isEmpty { data["photoKey"] = p }
         let ref = space(spaceId).collection("dayStory").document()
         return try await commit { done in ref.setData(data, completion: done) }
     }
@@ -265,18 +266,44 @@ enum CareRepo {
             guard let kind = CalendarKind(rawValue: m["kind"] as? String ?? ""), let st = date(m["start"]), let en = date(m["end"]) else { return nil }
             return CalendarEvent(id: d.documentID, spaceId: s.id, spaceName: s.name, title: m["title"] as? String ?? kind.label, kind: kind, start: st, end: en,
                                  ownerUid: m["ownerUid"] as? String ?? "", childId: m["childId"] as? String,
-                                 state: EventState(rawValue: m["state"] as? String ?? "active") ?? .active)
+                                 state: EventState(rawValue: m["state"] as? String ?? "active") ?? .active,
+                                 recurring: parseRecurrence(m["recurring"]))
         }
     }
 
+    static func parseRecurrence(_ any: Any?) -> CalendarRecurrence? {
+        guard let r = any as? [String: Any], let until = r["until"] as? String else { return nil }
+        let days = strings(r["weekdays"]).filter { CalendarRecurrence.names.contains($0) }
+        return days.isEmpty ? nil : CalendarRecurrence(weekdays: days, until: until)
+    }
+
     @discardableResult
-    static func addEvent(spaceId: String, title: String, kind: CalendarKind, start: Date, end: Date, childId: String?, by uid: String, role: CareRole) async throws -> Bool {
+    static func addEvent(spaceId: String, title: String, kind: CalendarKind, start: Date, end: Date, childId: String?, by uid: String, role: CareRole, recurring: CalendarRecurrence? = nil) async throws -> Bool {
         guard end > start else { throw CareError(message: "The end must be after the start.") }
         var data: [String: Any] = ["title": String(title.prefix(120)), "kind": kind.rawValue, "start": CareTime.iso(start), "end": CareTime.iso(end), "ownerUid": uid,
                                    "state": kind == .timeoff && role != .admin ? "requested" : "active"]
         if let c = childId, !c.isEmpty { data["childId"] = c }
+        if let r = recurring {
+            guard kind == .shift else { throw CareError(message: "Only shifts can repeat.") }
+            guard CalendarRecurrence.valid(r, startDay: CareTime.dayKey(start)) else { throw CareError(message: "Choose at least one day, and an end date on or after the first shift.") }
+            data["recurring"] = ["weekdays": r.weekdays, "until": r.until]
+        }
         let ref = space(spaceId).collection("calendar").document()
         return try await commit { done in ref.setData(data, completion: done) }
+    }
+
+    /// Edits one saved event. For a repeating event the change covers the whole series. Nothing is deleted:
+    /// ending a series only moves its last day earlier.
+    static func updateEvent(spaceId: String, event: CalendarEvent) async throws -> Bool {
+        guard event.end > event.start else { throw CareError(message: "The end must be after the start.") }
+        var data: [String: Any] = ["title": String(event.title.prefix(120)), "kind": event.kind.rawValue,
+                                   "start": CareTime.iso(event.start), "end": CareTime.iso(event.end)]
+        if let r = event.recurring {
+            guard CalendarRecurrence.valid(r, startDay: CareTime.dayKey(event.start)) else { throw CareError(message: "Choose at least one day, and an end date on or after the first shift.") }
+            data["recurring"] = ["weekdays": r.weekdays, "until": r.until]
+        }
+        let ref = space(spaceId).collection("calendar").document(event.baseId)
+        return try await commit { done in ref.setData(data, merge: true, completion: done) }
     }
 
     static func decide(spaceId: String, eventId: String, approve: Bool) async throws -> Bool {

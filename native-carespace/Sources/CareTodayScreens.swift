@@ -14,7 +14,10 @@ struct TodayView: View {
     static let quickKinds: [TimelineKind] = [.arrival, .drink, .nap, .activity, .mood, .pickup, .note]
     var child: ChildProfile? { model.children.first { $0.id == childId } }
     var shownItems: [TimelineItem] { CareTimeline.items(model.items, forChild: childId) }
-    var nextUp: CalendarEvent? { CareCalendar.nextUp(model.events.filter { childId == nil || $0.childId == nil || $0.childId == childId }) }
+    var nextUp: CalendarEvent? {
+        let mine = model.events.filter { childId == nil || $0.childId == nil || $0.childId == childId }
+        return CareCalendar.nextUp(CareCalendar.expand(mine, from: Date(), to: Date()))
+    }
 
     var body: some View {
         Screen {
@@ -91,6 +94,10 @@ struct TimelineRow: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("\(item.kind.label)  \(CareTime.clock(item.at))").font(Brand.body(15)).foregroundStyle(th.theme.muted)
                         if item.text.isEmpty == false { Text(item.text).font(Brand.body()).foregroundStyle(th.theme.text) }
+                        if !item.photoKey.isEmpty {
+                            if CareAccess.canSeePhotos(model.space.role, model.space.perms) { SpacePhoto(key: item.photoKey, height: 200).padding(.top, 6) }
+                            else { Text("A photo was shared. Ask a family admin to open photos for you.").font(Brand.body(15)).foregroundStyle(th.theme.muted) }
+                        }
                         let who = [childName, model.name(of: item.by, me: s.myName)].filter { !$0.isEmpty }.joined(separator: ", ")
                         if !who.isEmpty { Text(who).font(Brand.body(14)).foregroundStyle(th.theme.muted) }
                     }
@@ -138,6 +145,7 @@ struct SpaceChildrenView: View {
             ForEach(model.children) { c in
                 RowLink(icon: "care", title: c.name, subtitle: c.ageYears > 0 ? "Age \(c.ageText)" : "") { ChildView(space: model.space, child: c) }
             }
+            RowLink(icon: "photo", title: "Photos", subtitle: "Private memories for this care space") { GalleryView(space: model.space) }
             if CareAccess.canEditChildDetails(model.space.role) {
                 RowLink(icon: "plus", title: "Add a child") { AddChildView(space: model.space) }
             }
@@ -180,6 +188,7 @@ struct DailyReportView: View {
                 quickLog
                 mealLog
                 noteLog
+                photoLog
             }
             if !note.isEmpty { Notice(text: note) }
             Heading(text: "So far today")
@@ -187,7 +196,8 @@ struct DailyReportView: View {
             ForEach(todays) { i in
                 Card { HStack(alignment: .top, spacing: 12) { CareIcon(name: i.kind.icon, size: 26)
                     VStack(alignment: .leading) { Text("\(i.kind.label)  \(CareTime.clock(i.at))").font(Brand.body(15)).foregroundStyle(th.theme.muted)
-                        if !i.text.isEmpty { Text(i.text).font(Brand.body()).foregroundStyle(th.theme.text) } } } }
+                        if !i.text.isEmpty { Text(i.text).font(Brand.body()).foregroundStyle(th.theme.text) }
+                        if !i.photoKey.isEmpty, CareAccess.canSeePhotos(model.space.role, model.space.perms) { SpacePhoto(key: i.photoKey, height: 160) } } } }
             }
         }
         .navigationTitle("Daily report").navigationBarTitleDisplayMode(.inline)
@@ -242,9 +252,21 @@ struct DailyReportView: View {
         }
     }
 
-    func post(_ k: TimelineKind, _ t: String) {
+    var photoLog: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Add a photo").font(Brand.title(20)).foregroundStyle(th.theme.text)
+            if CareAccess.canSeePhotos(model.space.role, model.space.perms) {
+                BodyText(text: "The photo stays in this private care space. It shows on Today for people who can see photos.", muted: true)
+                PhotoAddButton(spaceId: model.space.id, onKey: { post(.photo, "Photo added to today's report.", photoKey: $0) }, onError: { note = $0 })
+            } else {
+                BodyText(text: "Only a parent or a member with photo access can add a photo.", muted: true)
+            }
+        }
+    }
+
+    func post(_ k: TimelineKind, _ t: String, photoKey: String? = nil) {
         guard let uid = s.uid else { return }
-        Task { do { let ok = try await CareRepo.addItem(spaceId: model.space.id, kind: k, text: t, childId: childId, by: uid); note = SaveText.result(ok) }
+        Task { do { let ok = try await CareRepo.addItem(spaceId: model.space.id, kind: k, text: t, childId: childId, by: uid, photoKey: photoKey); note = SaveText.result(ok) }
             catch { note = error.localizedDescription } }
     }
 }
