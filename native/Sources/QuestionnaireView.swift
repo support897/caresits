@@ -1,4 +1,5 @@
 import SwiftUI
+import FirebaseFirestore
 
 /// Build 181 item 2. The questionnaire as tick cards, from the HTML question set (QuestionBank.swift, generated).
 /// One tap ticks a card and that question counts as done. No typing here: name and postcode are asked in sign up.
@@ -93,7 +94,14 @@ struct QuestionnaireView: View {
     func list(_ id: String) -> [String] { (answers[id] as? [String]) ?? [] }
     func load() async {
         guard let uid = s.uid else { return }
+        // Proof hook: a test launch can wipe the device copy so only Firestore answers can come back.
+        if ProcessInfo.processInfo.environment["CS_QCLEAR_LOCAL"] != nil { AnswerStore.saveLocal(uid, [:]) }
         answers = AnswerStore.loadLocal(uid)
+        // Base answers live on the card under their own named keys (web ids).
+        let card = s.me?.card ?? [:]
+        for q in bank where q.set == "base" && q.code.isEmpty {
+            if let raw = card[Self.cardKey(q)], let v = Self.fromCard(q, raw) { answers[q.id] = v }
+        }
         let remote = await AnswerStore.loadAll(uid)
         for q in bank where !q.code.isEmpty {
             guard let d = remote[q.code], let v = d["v"] else { continue }
@@ -104,7 +112,14 @@ struct QuestionnaireView: View {
     func set(_ id: String, _ v: Any?) {
         if let v { answers[id] = v } else { answers.removeValue(forKey: id) }
         guard let uid = s.uid, let q = bank.first(where: { $0.id == id }) else { return }
+        if q.set == "base" && q.code.isEmpty {
+            let key = Self.cardKey(q); let val = v.flatMap { Self.toCard(q, $0) }
+            Task { do { try await Backend.saveProfile(uid, card: [key: val ?? FieldValue.delete()]); saveErr = ""; await s.reload() } catch { saveErr = "Could not save that answer. Try again." } }
+            return
+        }
         if q.code.isEmpty {
+            // DEVICE ONLY: the tick sets (tk* ids: At home, Help your carer must have, The feel you want at home, My skills, My style with kids)
+            // stay in UserDefaults and are EXCLUDED from matching. No Firestore field exists for them.
             AnswerStore.saveLocal(uid, answers.filter { k, _ in bank.first(where: { $0.id == k })?.code.isEmpty ?? true })
             return
         }
@@ -117,6 +132,19 @@ struct QuestionnaireView: View {
                 do { try await AnswerStore.write(uid, code: q.code, v: val, strength: st, feed: q.feed); saveErr = "" } catch { saveErr = "Could not save that answer. Try again." }
             } else { await AnswerStore.remove(uid, code: q.code) }
         }
+    }
+    /// The card key for a base question. The web ids are kept; the two week grids use their own key so the native schedule maps stay untouched.
+    static func cardKey(_ q: QDef) -> String { q.kind == .grid ? q.id + "Grid" : q.id }
+    static func toCard(_ q: QDef, _ v: Any) -> Any? {
+        if q.kind == .yesno, let s = v as? String { return s == "Yes" }
+        if q.id == "maxDistanceKm", let s = v as? String { return Int(s.prefix { $0.isNumber }) }
+        return v
+    }
+    static func fromCard(_ q: QDef, _ v: Any) -> Any? {
+        if q.kind == .yesno { if let b = v as? Bool { return b ? "Yes" : "No" }; return v as? String }
+        if q.kind == .pick || q.kind == .text { if let n = v as? NSNumber { return n.stringValue }; return v as? String }
+        if q.kind == .many || q.kind == .many3 || q.kind == .grid { return v as? [String] }
+        return v
     }
     func setStrength(_ q: QDef, _ st: String) { strengths[q.id] = st; if let v = answers[q.id] { set(q.id, v) } }
     func toggle(_ q: QDef, _ o: String) {

@@ -48,7 +48,7 @@ enum Backend {
         if let photoKey { next["photoUrl"] = photoKey }
         if let about { next["about"] = String(about.prefix(300)) }
         var c = (cur["card"] as? [String: Any]) ?? [:]
-        for (k, v) in card { c[k] = v }
+        for (k, v) in card { if v is FieldValue { c.removeValue(forKey: k) } else { c[k] = v } }
         next["card"] = c
         next["updatedAt"] = FieldValue.serverTimestamp()
         try await ref.setData(next)

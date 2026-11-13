@@ -187,7 +187,7 @@ final class RoleFlowTests: XCTestCase {
         let a = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); a.name = name; a.lifetime = .keepAlways; add(a)
     }
     func reveal(_ el: XCUIElement, max: Int = 40) -> Bool {
-        for _ in 0..<max { if el.exists && el.isHittable { return true }; app.swipeUp() }
+        for _ in 0..<max { if (el.exists || el.waitForExistence(timeout: 2)) && el.isHittable { return true }; app.swipeUp(velocity: .slow) }
         return false
     }
     func openQuestionnaire() {
@@ -208,7 +208,7 @@ final class RoleFlowTests: XCTestCase {
         openQuestionnaire()
         let prog = app.staticTexts["qProgress"]; let start = prog.label
         qshot("q181-\(side)-1-top-\(start.replacingOccurrences(of: " ", with: "_"))")
-        let ticks = side == "family" ? ["Dog", "Can drive", "First aid", "Calm", "Playful", "Talk calmly and explain"] : ["Driving licence", "First aid", "Strong swimmer", "Calm", "Playful", "Talk calmly and explain"]
+        let ticks = side == "family" ? ["Dog", "Can drive", "First aid", "Calm", "Playful", "Spanish", "Talk calmly and explain"] : ["Driving licence", "First aid", "Strong swimmer", "Calm", "Playful", "Talk calmly and explain"]
         for t in ticks {
             let c = app.buttons["tick-\(t)"].firstMatch
             if !c.exists { for _ in 0..<40 where !c.exists { app.swipeDown() } }
@@ -224,9 +224,9 @@ final class RoleFlowTests: XCTestCase {
         XCTAssertNotEqual(start, after, "progress did not move: \(start) / \(after)")
         try? "\(side) start=\(start) after=\(after)".write(toFile: "/Users/ilseplacencia/cs181/pics/progress-\(side).txt", atomically: true, encoding: .utf8)
         // relaunch: ticks stand (coded ones come back from profiles/uid/answers/code, the rest from the device)
-        app.terminate(); app.launchArguments += ["-AppleLanguages", "(en)"]; app.launch()
+        app.terminate(); app.launchArguments += ["-AppleLanguages", "(en)"]; app.launchEnvironment["CS_QCLEAR_LOCAL"] = "1"; app.launch()
         openQuestionnaire()
-        for t in ["Calm", "Talk calmly and explain"] {
+        for t in ["Spanish", "Talk calmly and explain"] {
             let c = app.buttons["tick-\(t)"].firstMatch
             XCTAssertTrue(reveal(c), "after relaunch card missing: \(t)"); XCTAssertEqual(c.value as? String, "ticked", "\(t) lost after relaunch"); qshot("q181-\(side)-relaunch-\(t.replacingOccurrences(of: " ", with: "_"))")
         }
