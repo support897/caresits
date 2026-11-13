@@ -179,7 +179,7 @@ final class RoleFlowTests: XCTestCase {
         type(app.textFields["A few words about your care"], "Kind and calm care"); dismissKb(); next()
         finishAndCheck(tabs: tabs, role: kind)
     }
-    // MARK: Build 181 item 2 questionnaire proof (pictured, both sides)
+    // MARK: Build 181 item 2 asking proof (pictured, both sides)
     func qshot(_ name: String) {
         sleep(2)
         let d = "/Users/ilseplacencia/cs181/pics"; try? FileManager.default.createDirectory(atPath: d, withIntermediateDirectories: true)
@@ -190,12 +190,12 @@ final class RoleFlowTests: XCTestCase {
         for _ in 0..<max { if (el.exists || el.waitForExistence(timeout: 2)) && el.isHittable { return true }; app.swipeUp(velocity: .slow) }
         return false
     }
-    func openQuestionnaire() {
+    func openAsking() {
         XCTAssertTrue(app.tabBars.buttons["Me"].waitForExistence(timeout: 60)); app.tabBars.buttons["Me"].tap(); sleep(2)
-        let b = app.buttons["openQuestionnaire"]; XCTAssertTrue(reveal(b, max: 8), "no My questionnaire row in Me"); b.tap()
-        XCTAssertTrue(app.staticTexts["qProgress"].waitForExistence(timeout: 30), "questionnaire did not open")
+        let b = app.buttons["openAsking"]; XCTAssertTrue(reveal(b, max: 8), "no asking row in Me"); b.tap()
+        XCTAssertTrue(app.staticTexts["askingTitle"].waitForExistence(timeout: 30), "asking did not open")
     }
-    func questionnaire(side: String) {
+    func asking(side: String) {
         if side == "family" {
             signUp(side: "family"); fillYou("Test QFam"); next(); tap("Babysitter"); next()
             type(app.textFields["Name or nickname"], "Mia"); dismissKb(); sleep(1); next()
@@ -205,39 +205,42 @@ final class RoleFlowTests: XCTestCase {
             type(app.textFields["A few words about your care"], "Kind and calm care"); dismissKb(); next()
         }
         tap("Finish", timeout: 20)
-        openQuestionnaire()
-        let prog = app.staticTexts["qProgress"]; let start = prog.label
-        qshot("q181-\(side)-1-top-\(start.replacingOccurrences(of: " ", with: "_"))")
-        let ticks = side == "family" ? ["Dog", "Can drive", "First aid", "Calm", "Playful", "Spanish", "Talk calmly and explain"] : ["Driving licence", "First aid", "Strong swimmer", "Calm", "Playful", "Talk calmly and explain"]
+        openAsking()
+        qshot("ask-\(side)-0-top")
+        let pets = side == "family" ? "Pets at home" : "Fine with pets"
+        let ticks = ["Dancing", pets, "Languages", "Calm", "Driving licence", "First aid", "CPR", "Own room", "Pocket money"]
         for t in ticks {
             let c = app.buttons["tick-\(t)"].firstMatch
-            if !c.exists { for _ in 0..<40 where !c.exists { app.swipeDown() } }
-            XCTAssertTrue(reveal(c), "card missing: \(t)"); c.tap(); sleep(1)
-            XCTAssertEqual(c.value as? String, "ticked", "\(t) did not tick")
-            qshot("q181-\(side)-tick-\(t.replacingOccurrences(of: " ", with: "_"))")
+            XCTAssertTrue(reveal(c), "pick missing: \(t)"); c.tap(); sleep(1)
+            if t != "Languages" && t != "Pocket money" { XCTAssertEqual(c.value as? String, "ticked", "\(t) did not tick") }
+            if t == "Languages" { let ch = app.buttons["chip-languages-Spanish"]; XCTAssertTrue(reveal(ch)); ch.tap(); sleep(1); XCTAssertEqual(ch.value as? String, "ticked"); XCTAssertEqual(c.value as? String, "ticked", "Languages card did not tick"); qshot("ask-\(side)-chip-Spanish") }
+            if t == "Pocket money" { let ch = app.buttons["chip-pocket-$150"]; XCTAssertTrue(reveal(ch)); ch.tap(); sleep(1); XCTAssertEqual(ch.value as? String, "ticked"); XCTAssertEqual(c.value as? String, "ticked", "Pocket money card did not tick"); qshot("ask-\(side)-chip-pocket") }
+            qshot("ask-\(side)-tick-\(t.replacingOccurrences(of: " ", with: "_"))")
         }
-        // scroll the whole sheet top to bottom, pictured every screen, so every question stands in a picture
-        for _ in 0..<60 { app.swipeDown() }
-        for i in 0..<14 { qshot("q181-\(side)-page-\(String(format: "%02d", i))"); app.swipeUp(); app.swipeUp() }
-        for _ in 0..<80 { app.swipeDown() }
-        let after = app.staticTexts["qProgress"].label
-        XCTAssertNotEqual(start, after, "progress did not move: \(start) / \(after)")
-        try? "\(side) start=\(start) after=\(after)".write(toFile: "/Users/ilseplacencia/cs181/pics/progress-\(side).txt", atomically: true, encoding: .utf8)
-        // relaunch: ticks stand (coded ones come back from profiles/uid/answers/code, the rest from the device)
-        app.terminate(); app.launchArguments += ["-AppleLanguages", "(en)"]; app.launchEnvironment["CS_QCLEAR_LOCAL"] = "1"; app.launch()
-        openQuestionnaire()
-        for t in ["Spanish", "Talk calmly and explain"] {
+        // every screen of the sheet, top to bottom, so the au pair section stands in a picture
+        for _ in 0..<60 { app.swipeDown(velocity: .fast) }
+        for i in 0..<12 { qshot("ask-\(side)-page-\(String(format: "%02d", i))"); app.swipeUp(); app.swipeUp() }
+        // relaunch: card key picks and the coded first aid pick come back from the account, the device picks from the device
+        app.terminate(); app.launchArguments += ["-AppleLanguages", "(en)"]; app.launch()
+        openAsking()
+        for t in ["Dancing", pets, "Languages", "Calm", "Driving licence", "First aid", "CPR", "Own room", "Pocket money"] {
             let c = app.buttons["tick-\(t)"].firstMatch
-            XCTAssertTrue(reveal(c), "after relaunch card missing: \(t)"); XCTAssertEqual(c.value as? String, "ticked", "\(t) lost after relaunch"); qshot("q181-\(side)-relaunch-\(t.replacingOccurrences(of: " ", with: "_"))")
+            XCTAssertTrue(reveal(c), "after relaunch pick missing: \(t)"); XCTAssertEqual(c.value as? String, "ticked", "\(t) lost after relaunch")
+            if t == "Languages" { c.tap(); sleep(1); let ch = app.buttons["chip-languages-Spanish"]; XCTAssertTrue(reveal(ch)); XCTAssertEqual(ch.value as? String, "ticked", "Spanish lost after relaunch") }
+            if t == "Pocket money" { c.tap(); sleep(1); let ch = app.buttons["chip-pocket-$150"]; XCTAssertTrue(reveal(ch)); XCTAssertEqual(ch.value as? String, "ticked", "pocket money lost after relaunch") }
+            qshot("ask-\(side)-relaunch-\(t.replacingOccurrences(of: " ", with: "_"))")
         }
+        try? "\(side) all picks stood after relaunch".write(toFile: "/Users/ilseplacencia/cs181/pics/result-\(side).txt", atomically: true, encoding: .utf8)
+        for _ in 0..<60 { app.swipeDown(velocity: .fast) }
         app.navigationBars.buttons.firstMatch.tap(); sleep(1)
         let del = app.buttons["Delete my account"]
         for _ in 0..<8 where !del.isHittable { app.swipeUp() }
         del.tap(); tap("Delete everything")
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 120))
     }
-    func testQuestionnaireFamily() { questionnaire(side: "family") }
-    func testQuestionnaireCarer() { questionnaire(side: "carer") }
+    func testAskingFamily() { asking(side: "family") }
+    func testAskingCarer() { asking(side: "carer") }
+
 
     func testNannyApp() { carer("Nanny", tabs: ["Families", "Requests", "Calendar", "Chat", "Me"]) }
     func testBabysitterApp() { carer("Babysitter", tabs: ["Jobs", "Requests", "Calendar", "Families", "Me"]) }

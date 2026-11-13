@@ -9,6 +9,7 @@ enum BI: String, CaseIterable {
     case child, pin, undo, chevron, person, findCare, back, settings
     case car, warning, bed, screen, phone, school, pill, group, key, smoke, hourglass, bell, gift
     case wheel, firstAid, swim, bowl, book, paw, cat, leaf, ball, note
+    case balloon, calm, gentle, firm, tree, blocks, ruler, bend, dance, licence, pot, cpr, cap, door, bath, shower, plate, weekend, suitcase, flag, loop, bus
 
     /// line: stroked. fill: solid ink. accent: solid bunny pink.
     /// Commands (absolute): M L H V C Z, O cx cy r (circle), E cx cy rx ry (ellipse), Y cx cy size (heart).
@@ -75,6 +76,28 @@ enum BI: String, CaseIterable {
         case .hourglass: return ("M6.5 3.5H17.5 M6.5 20.5H17.5 M7.5 3.5C7.5 9 12 10 12 12C12 14 7.5 15 7.5 20.5 M16.5 3.5C16.5 9 12 10 12 12C12 14 16.5 15 16.5 20.5", "", "")
         case .bell: return ("M6 17.5V11C6 7.5 8.5 5 12 5C15.5 5 18 7.5 18 11V17.5H6Z M4.5 17.5H19.5 M10.5 20.5H13.5", "", "")
         case .gift: return ("M4.5 10.5H19.5V20H4.5Z M3.5 7.5H20.5V10.5H3.5Z M12 7.5V20", "", "O 9.6 5.4 1.8 O 14.4 5.4 1.8")
+        case .calm: return ("M3 12C6 9 9 9 12 12C15 15 18 15 21 12 M3 18C6 15 9 15 12 18C15 21 18 21 21 18", "", "Y 12 5.5 4")
+        case .gentle: return ("M19 4C10 4 6 9 6 15L6 20 M6 15C9 15 12 14 14 12 M19 4C19 10 16 14 10 16", "", "Y 17.5 19 4")
+        case .firm: return ("M8.5 3.5H15.5L20.5 8.5V15.5L15.5 20.5H8.5L3.5 15.5V8.5Z M8 12H16", "", "")
+        case .tree: return ("M12 3L6.5 11H9.5L5 16.5H19L14.5 11H17.5Z M12 16.5V21", "", "Y 12 12 3")
+        case .blocks: return ("M3.5 13H11.5V21H3.5Z M12.5 13H20.5V21H12.5Z M8 4.5H16V12.5H8Z", "", "Y 12 8.5 3")
+        case .ruler: return ("M3.5 8.5H20.5V15.5H3.5Z M7 8.5V12 M10.5 8.5V11 M14 8.5V12 M17.5 8.5V11", "", "")
+        case .bend: return ("M4 18C8 18 8 8 12 8C16 8 16 18 20 18 M17 15L20 18L17 21", "", "")
+        case .dance: return ("O 12 4.5 2 M12 7.5V14 M12 9.5L7 7 M12 9.5L17.5 12 M12 14L8.5 20.5 M12 14L16.5 20.5", "", "Y 18.5 5.5 3.6")
+        case .licence: return ("M3 6.5H21V17.5H3Z M13 10H18 M13 13.5H17", "", "O 8 10.8 2")
+        case .pot: return ("M5 10H19V17C19 19 17.5 20 16 20H8C6.5 20 5 19 5 17Z M3 11H5 M19 11H21 M9 6.5C9 5.5 10 5.3 10 4.2 M14 6.5C14 5.5 15 5.3 15 4.2", "", "")
+        case .cpr: return ("M12 21C5 15.5 3 11.5 3 8.5C3 5.5 5.3 3.5 7.8 3.5C9.7 3.5 11.2 4.6 12 6.2C12.8 4.6 14.3 3.5 16.2 3.5C18.7 3.5 21 5.5 21 8.5C21 11.5 19 15.5 12 21Z M7 11.5H10L11.5 8.5L13 14L14.5 11.5H17", "", "")
+        case .cap: return ("M2.5 9.5L12 5L21.5 9.5L12 14Z M6.5 11.8V16C6.5 17.5 9 19 12 19C15 19 17.5 17.5 17.5 16V11.8 M21.5 9.5V15", "", "Y 12 9.6 2.6")
+        case .door: return ("M6 20.5V4H18V20.5Z M4 20.5H20", "", "O 15 12.5 1.1")
+        case .bath: return ("M3.5 12H20.5V14C20.5 17 18.5 19 15.5 19H8.5C5.5 19 3.5 17 3.5 14Z M6 19L5 21 M18 19L19 21 M6 12V6.5C6 5 7 4 8.5 4C10 4 11 5 11 6.5", "", "O 15 6 1.2 O 18 8.5 0.9")
+        case .shower: return ("M6 4.5H12C15 4.5 17 6.5 17 9.5V10.5 M4 10.5H18 M7 13.5V14.5 M10 13.5V16 M13 13.5V14.5 M16 13.5V16 M8.5 18.5V19.5 M12 18.5V20.5", "", "O 5 4.5 1.2")
+        case .plate: return ("O 12 12 6 O 12 12 3 M3.5 4V10C3.5 11.5 5 12 5 12V20 M20.5 4C18.5 4.5 18 8 18 11H20.5V20", "", "")
+        case .weekend: return ("M5 11V8.5C5 7.5 6 7 7 7H17C18 7 19 7.5 19 8.5V11 M3 12C3 11 4 10.5 5 11.5V15H19V11.5C20 10.5 21 11 21 12V17H3Z M6 17V19.5 M18 17V19.5", "", "Y 12 11 3.4")
+        case .suitcase: return ("M4 8H20V19H4Z M9 8V5H15V8 M4 13H20", "", "O 12 13 1.3")
+        case .flag: return ("M6 21V4 M6 5H18L15.5 9L18 13H6", "", "")
+        case .loop: return ("M18.5 8C17 5.5 14.7 4.5 12 4.5C7.8 4.5 4.5 7.8 4.5 12C4.5 16.2 7.8 19.5 12 19.5C15.2 19.5 17.8 17.7 19 15 M18.5 3.5V8H14 M12 8.5V12L14.5 13.5", "", "")
+        case .bus: return ("M5 5H19V17.5H5Z M5 12H19 M7 17.5V20 M17 17.5V20", "", "O 8 15 1.1 O 16 15 1.1")
+        case .balloon: return ("M12 3C8 3 6 6 6 9C6 13 9 15.5 12 16C15 15.5 18 13 18 9C18 6 16 3 12 3Z M12 16L10.8 18H13.2L12 16 M12 18C12 20 13 21 14.5 21", "", "Y 12 9 4.4")
         case .findCare: return ("O 12 12 9.2", "", "Y 12 12.4 8.4")
         }
     }

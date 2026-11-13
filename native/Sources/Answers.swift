@@ -1,7 +1,7 @@
 import Foundation
 import FirebaseFirestore
 
-/// Build 181 item 2. Questionnaire answers live as per-answer documents under profiles/{uid}/answers/{code}.
+/// Build 181 item 2, the asking. The coded first aid pick lives as a per-answer document under profiles/{uid}/answers/{code}.
 /// Keys are only bucket, v, s, feed (the sealed v6 rules fence). Codes are F1 to F52 and C1 to C60. Never an answers key on the profile card.
 enum AnswerStore {
     static var col: (String) -> CollectionReference = { Backend.db.collection("profiles").document($0).collection("answers") }
@@ -23,7 +23,7 @@ enum AnswerStore {
         for d in snap.documents { out[d.documentID] = d.data() }
         return out
     }
-    // Questions with no sealed code (the base journey fields and the tick sets) are kept on this device only until HQ rules a code for them.
+    // DEVICE ONLY picks (CPR, Education, the au pair living picks): no sealed home, excluded from scoring until a rules amendment is sealed.
     static func localKey(_ uid: String) -> String { "caresits.qlocal.\(uid)" }
     static func loadLocal(_ uid: String) -> [String: Any] { (UserDefaults.standard.dictionary(forKey: localKey(uid))) ?? [:] }
     static func saveLocal(_ uid: String, _ d: [String: Any]) { UserDefaults.standard.set(d, forKey: localKey(uid)) }
