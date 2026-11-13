@@ -40,10 +40,31 @@ struct ThemePicker: View {
     @EnvironmentObject var s: Session
     @EnvironmentObject var th: ThemeStore
     @State private var note = ""
+    @State private var open = false
     var body: some View {
         Card {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Theme").font(Brand.title(22)).foregroundStyle(th.theme.text)
+                // Her word (13 Nov phone test): "for theme should be
+                // collapsable" — the section folds away and opens like
+                // the other collapsible areas; closed it shows the pick.
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) { open.toggle() }
+                } label: {
+                    HStack(spacing: 8) {
+                        Text("Theme").font(Brand.title(22)).foregroundStyle(th.theme.text)
+                        Spacer()
+                        Text(th.theme.label).font(Brand.body(16)).foregroundStyle(th.theme.muted)
+                        CareIcon(name: "chev", size: 20, fill: false)
+                            .rotationEffect(.degrees(open ? 180 : 0))
+                    }
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Theme")
+                .accessibilityValue(th.theme.label)
+                .accessibilityHint(open ? "Closes the theme choices" : "Opens the theme choices")
+                if open {
                 BodyText(text: "Pick the look you like. Change it any time. It is saved for you.", muted: true)
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                     ForEach(AppTheme.allCases) { t in
@@ -52,7 +73,7 @@ struct ThemePicker: View {
                                 ZStack {
                                     RoundedRectangle(cornerRadius: 14).fill(t.bg).frame(height: 64)
                                     RoundedRectangle(cornerRadius: 14).stroke(th.theme == t ? Brand.ink : Color.gray.opacity(0.4), lineWidth: th.theme == t ? 3 : 1).frame(height: 64)
-                                    HStack(spacing: 6) { Circle().fill(t.accent).frame(width: 18, height: 18); Circle().fill(Brand.sage).frame(width: 18, height: 18); Circle().fill(Brand.blush).frame(width: 18, height: 18) }
+                                    HStack(spacing: 6) { Circle().fill(t.accent).frame(width: 18, height: 18); Circle().fill(Brand.sky).frame(width: 18, height: 18); Circle().fill(Brand.blush).frame(width: 18, height: 18) }
                                 }
                                 HStack(spacing: 4) { if th.theme == t { CareIcon(name: "check", size: 18, fill: false) }; Text(t.label).font(Brand.body(16)).foregroundStyle(th.theme.text) }
                             }
@@ -60,6 +81,7 @@ struct ThemePicker: View {
                     }
                 }
                 if !note.isEmpty { Notice(text: note) }
+                }
             }
         }
     }

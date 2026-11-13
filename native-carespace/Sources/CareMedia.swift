@@ -105,12 +105,12 @@ enum SpaceMedia {
 
 // MARK: Pieces
 
-/// Drawn stand in for a photo: soft sage tile, the bunny, a small picture mark. Never a stock photo.
+/// Drawn stand in for a photo: soft sky tile, the bunny, a small picture mark. Never a stock photo.
 struct PhotoPlaceholder: View {
     var loading = false
     var body: some View {
         ZStack {
-            Brand.sage.opacity(0.35)
+            Brand.sky.opacity(0.35)
             VStack(spacing: 6) {
                 BunnyView(size: 56)
                 if loading { ProgressView() } else { CareIcon(name: "photo", size: 26) }

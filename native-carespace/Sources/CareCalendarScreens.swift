@@ -100,7 +100,7 @@ struct EventRow: View {
                 }
                 if let r = event.recurring { Text(r.summary).font(Brand.body(15)).foregroundStyle(th.theme.muted) }
                 if event.state == .requested { Text("Waiting for approval").font(Brand.body(16).weight(.semibold)).foregroundStyle(Brand.ink).padding(8).background(Brand.blush).clipShape(Capsule()) }
-                if event.state == .approved { Text("Approved").font(Brand.body(16).weight(.semibold)).foregroundStyle(Brand.ink).padding(8).background(Brand.sage.opacity(0.6)).clipShape(Capsule()) }
+                if event.state == .approved { Text("Approved").font(Brand.body(16).weight(.semibold)).foregroundStyle(Brand.ink).padding(8).background(Brand.sky.opacity(0.6)).clipShape(Capsule()) }
                 if event.state == .declined { Text("Declined").font(Brand.body(16).weight(.semibold)).foregroundStyle(th.theme.muted) }
                 if let b = base, CareAccess.canPost(role), b.kind != .booking, b.kind != .timeoff {
                     NavigationLink { EditEventView(event: b, occurrenceDay: event.occurrenceDate) } label: {

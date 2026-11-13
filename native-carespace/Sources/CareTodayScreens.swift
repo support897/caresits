@@ -105,7 +105,7 @@ struct TimelineRow: View {
                 ForEach(Array(item.asks.enumerated()), id: \.offset) { i, a in
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Question: \(a.text)").font(Brand.body(16)).foregroundStyle(th.theme.text)
-                        if let ans = a.answerText { Text("Answer: \(ans)").font(Brand.body(16)).foregroundStyle(Brand.ink).padding(8).background(Brand.sage.opacity(0.5)).clipShape(RoundedRectangle(cornerRadius: 10)) }
+                        if let ans = a.answerText { Text("Answer: \(ans)").font(Brand.body(16)).foregroundStyle(Brand.ink).padding(8).background(Brand.sky.opacity(0.5)).clipShape(RoundedRectangle(cornerRadius: 10)) }
                         else if CareAccess.canPost(model.space.role) {
                             if answerIndex == i {
                                 CareField(title: "Your answer", text: $draft)
@@ -289,7 +289,7 @@ struct AllergyResultView: View {
             Text(AllergyChecker.safetyCopy).font(Brand.body(16).weight(.bold))
         }
         .foregroundStyle(Brand.ink).padding(14).frame(maxWidth: .infinity, alignment: .leading)
-        .background(result.status == .noMatchFound ? Brand.sage.opacity(0.55) : Brand.blush)
+        .background(result.status == .noMatchFound ? Brand.sky.opacity(0.55) : Brand.blush)
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 }

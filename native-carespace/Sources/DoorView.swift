@@ -56,10 +56,15 @@ struct DoorView: View {
 
     func run(_ f: () async throws -> Void) async {
         busy = true; err = ""
-        do { try await f() } catch { err = Self.spoken(error) }
+        do { try await f() }
+        // A cancel or walk-back is a quiet return — the door stands clean,
+        // no error line (F-CS27-2).
+        catch let e where Session.isCancel(e) { }
+        catch { err = Self.spoken(error) }
         busy = false
     }
     static func spoken(_ e: Error) -> String {
+        if case AppError.msg(let m) = e { return m }
         let t = e.localizedDescription
         if t.contains("17011") || t.lowercased().contains("no user record") || t.lowercased().contains("user-not-found") {
             return "No account with that email. Use Sign up to make one."
@@ -99,56 +104,17 @@ struct GoogleG: View {
     }
 }
 
-/// The CareSpace mark, drawn in code from the approved brand SVG geometry
-/// (house + heart). The logo redo concepts wait on the owner's pick; until
-/// one is approved, the current mark geometry stands.
+/// The CareSpace mark — her pick of record, "way 1 The Answer Back"
+/// (Logo Boss carespace-logo-pro.svg, md5 a4fa07a2; the PNG in the asset
+/// catalog is byte-identical to the Logo Boss export). Proper graphic
+/// artwork, never drawn in code: the old code-drawn house+heart is gone.
 struct LogoMark: View {
     var size: CGFloat = 120
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: size * 0.225).fill(Brand.blush)
-            HouseHeart().fill(Brand.ink)
-                .padding(size * 0.13)
-            HeartShape().fill(Brand.cream)
-                .frame(width: size * 0.34, height: size * 0.30)
-                .offset(y: size * 0.10)
-        }
-        .frame(width: size, height: size)
-        .accessibilityLabel("CareSpace")
-    }
-}
-
-struct HouseHeart: Shape {
-    func path(in r: CGRect) -> Path {
-        var p = Path()
-        let h = r.height
-        p.move(to: CGPoint(x: r.minX, y: r.minY + h * 0.38))
-        p.addLine(to: CGPoint(x: r.midX, y: r.minY))
-        p.addLine(to: CGPoint(x: r.maxX, y: r.minY + h * 0.38))
-        p.addLine(to: CGPoint(x: r.maxX, y: r.maxY))
-        p.addLine(to: CGPoint(x: r.minX, y: r.maxY))
-        p.closeSubpath()
-        return p
-    }
-}
-
-struct HeartShape: Shape {
-    func path(in r: CGRect) -> Path {
-        var p = Path()
-        let w = r.width, h = r.height
-        p.move(to: CGPoint(x: r.midX, y: r.maxY))
-        p.addCurve(to: CGPoint(x: r.minX, y: r.minY + h * 0.35),
-                   control1: CGPoint(x: r.minX + w * 0.1, y: r.minY + h * 0.75),
-                   control2: CGPoint(x: r.minX, y: r.minY + h * 0.55))
-        p.addCurve(to: CGPoint(x: r.midX, y: r.minY + h * 0.28),
-                   control1: CGPoint(x: r.minX, y: r.minY + h * 0.05),
-                   control2: CGPoint(x: r.midX - w * 0.18, y: r.minY))
-        p.addCurve(to: CGPoint(x: r.maxX, y: r.minY + h * 0.35),
-                   control1: CGPoint(x: r.midX + w * 0.18, y: r.minY),
-                   control2: CGPoint(x: r.maxX, y: r.minY + h * 0.05))
-        p.addCurve(to: CGPoint(x: r.midX, y: r.maxY),
-                   control1: CGPoint(x: r.maxX, y: r.minY + h * 0.55),
-                   control2: CGPoint(x: r.maxX - w * 0.1, y: r.minY + h * 0.75))
-        return p
+        Image("CareSpaceMark")
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(height: size)
+            .accessibilityLabel("CareSpace")
     }
 }

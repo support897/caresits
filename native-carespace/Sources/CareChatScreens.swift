@@ -52,7 +52,7 @@ struct ChatsHome: View {
                     NavigationLink { SpaceView(space: sp, uid: s.uid ?? "") } label: {
                         Card {
                             HStack(spacing: 14) {
-                                ZStack { Circle().fill([Brand.sage, Brand.blush, Brand.bunny.opacity(0.6), Brand.sage.opacity(0.6)][sp.colorIndex]).frame(width: 48, height: 48)
+                                ZStack { Circle().fill([Brand.sky, Brand.blush, Brand.bunny.opacity(0.6), Brand.sun][sp.colorIndex]).frame(width: 48, height: 48)
                                     CareIcon(name: "people", size: 26, fill: false) }
                                 VStack(alignment: .leading, spacing: 3) {
                                     HStack { Text(sp.name).font(Brand.body(18).weight(.semibold)).foregroundStyle(th.theme.text)

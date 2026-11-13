@@ -1,7 +1,7 @@
 import SwiftUI
 
 // MARK: Drawn icons for CareSpace. No SF Symbols and no stock glyphs. Each icon is a short path on a 24 by 24 grid.
-// Commands: M L H V C Z (absolute) and "O cx cy r" for a circle. Soft sage body, ink line, one bunny pink dot.
+// Commands: M L H V C Z (absolute) and "O cx cy r" for a circle. Soft sky body, ink line, one bunny pink dot.
 
 struct CareIconShape: Shape {
     let path: String
@@ -44,6 +44,7 @@ enum CareGlyphs {
         "user": ("M 20 20 C 20 16 16 14 12 14 C 8 14 4 16 4 20 M 16 8 C 16 10.2 14.2 12 12 12 C 9.8 12 8 10.2 8 8 C 8 5.8 9.8 4 12 4 C 14.2 4 16 5.8 16 8 Z", "M 16 8 C 16 10.2 14.2 12 12 12 C 9.8 12 8 10.2 8 8 C 8 5.8 9.8 4 12 4 C 14.2 4 16 5.8 16 8 Z", nil),
         "plus": ("M 12 5 V 19 M 5 12 H 19", "", nil),
         "check": ("M 5 12.5 L 10 17.5 L 19 7", "", nil),
+        "chev": ("M 6 9.5 L 12 15.5 L 18 9.5", "", nil),
         "chevron.left": ("M 15 5 L 8 12 L 15 19", "", nil),
         "chevron.right": ("M 9 5 L 16 12 L 9 19", "", nil),
         "xmark": ("M 6 6 L 18 18 M 18 6 L 6 18", "", nil),
@@ -75,7 +76,7 @@ enum CareGlyphs {
     ]
 }
 
-/// One drawn icon. `size` is the box. `tint` is the ink line. The soft body fill uses the sage colour.
+/// One drawn icon. `size` is the box. `tint` is the ink line. The soft body fill uses the sky helper colour.
 struct CareIcon: View {
     let name: String
     var size: CGFloat = 24
@@ -85,7 +86,7 @@ struct CareIcon: View {
         let g = CareGlyphs.table[name]
         ZStack {
             if fill, let g = g, !g.body.isEmpty {
-                CareIconShape(path: g.body).fill(Brand.sage.opacity(0.45))
+                CareIconShape(path: g.body).fill(Brand.sky.opacity(0.45))
             }
             if let g = g {
                 CareIconShape(path: g.line).stroke(tint, style: StrokeStyle(lineWidth: max(1.4, size / 14), lineCap: .round, lineJoin: .round))

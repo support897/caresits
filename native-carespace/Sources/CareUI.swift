@@ -74,7 +74,7 @@ struct Notice: View {
     var body: some View {
         Text(text).font(Brand.body()).foregroundStyle(Brand.ink)
             .padding(14).frame(maxWidth: .infinity, alignment: .leading)
-            .background(warn ? Brand.blush : Brand.sage.opacity(0.55))
+            .background(warn ? Brand.blush : Brand.sky.opacity(0.55))
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .accessibilityAddTraits(.updatesFrequently)
     }

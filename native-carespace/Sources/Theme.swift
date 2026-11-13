@@ -17,7 +17,11 @@ enum Brand {
     static let ink = Color(hex: 0x8A4258)
     static let cream = Color(hex: 0xFDF8F0)
     static let palePink = Color(hex: 0xFBEFF2)
-    static let sage = Color(hex: 0xBFD8C0)
+    /// Helper colours are a BIT of blue and yellow shades only — her words,
+    /// 13 Nov phone test ("Pastel colors we said, PINK, and shades of blue
+    /// and yellow but a bit only"). The green sage is out of the palette.
+    static let sky = Color(hex: 0xBCD7F5)
+    static let sun = Color(hex: 0xF7E3A1)
     static let blush = Color(hex: 0xF6CBD3)
     static let bunnyBlush = Color(hex: 0xF2C4CE)
     static let bunny = Color(hex: 0xF4A9BC)
@@ -42,7 +46,9 @@ enum AppTheme: String, CaseIterable, Identifiable {
     var bg: Color {
         switch self {
         case .light: return .white
-        case .dark: return Color(hex: 0xDDE8DE)
+        // "dark is black, not green" — her words, 13 Nov phone test.
+        // The old pale "night porcelain" greens are dead.
+        case .dark: return .black
         case .beige: return Color(hex: 0xF6EEDD)
         case .brand: return Brand.palePink
         }
@@ -50,22 +56,27 @@ enum AppTheme: String, CaseIterable, Identifiable {
     var surface: Color {
         switch self {
         case .light: return Brand.cream
-        case .dark: return Color(hex: 0xE6EEE6)
+        case .dark: return Color(hex: 0x1D1A1C)
         case .beige: return Color(hex: 0xF0E4D3)
         case .brand: return .white
         }
     }
-    var text: Color { Brand.ink }
+    var text: Color {
+        switch self {
+        case .dark: return Brand.cream
+        default: return Brand.ink
+        }
+    }
     var muted: Color {
         switch self {
-        case .dark: return Color(hex: 0xA9B8B1)
+        case .dark: return Color(hex: 0xB9A7AF)
         default: return Color(hex: 0x9C7A86)
         }
     }
     var accent: Color { Brand.bunny }
     var field: Color {
         switch self {
-        case .dark: return Color(hex: 0xC9D8CC)
+        case .dark: return Color(hex: 0x2B272A)
         case .brand: return Color(hex: 0xF6E3E9)
         default: return Color(hex: 0xF6E9EC)
         }

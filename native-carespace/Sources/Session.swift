@@ -7,6 +7,11 @@ import GoogleSignIn
 
 enum AppError: Error { case msg(String) }
 
+/// Thrown when the user leaves a provider sign-in before it completes —
+/// a cancel or a walk-back. The door swallows it silently: a cancel is
+/// not an error and never paints a red line (F-CS27-2).
+struct SignInCancelled: Error {}
+
 @MainActor
 final class Session: ObservableObject {
     @Published var uid: String?
@@ -14,18 +19,38 @@ final class Session: ObservableObject {
     @Published var loading = true
     private var handle: AuthStateDidChangeListenerHandle?
     fileprivate var nonce = ""
+    /// The uid the standing myName belongs to (F-CS27-1).
+    private var nameUid: String?
+    /// Generation of the latest auth event; stale listener passes drop (F-CS27-1).
+    private var authGen = 0
 
     init() {
         handle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
             Task { @MainActor in
                 guard let self else { return }
+                self.authGen += 1
+                let gen = self.authGen
                 self.uid = user?.uid
                 if let u = user {
                     // The greeting name is the user's OWN saved name: profile doc first,
                     // then the auth profile. Never a default, never anyone else's name.
-                    if let saved = await Backend.loadMyName(u.uid) { self.myName = saved }
-                    else { self.myName = u.displayName ?? "" }
-                } else { self.myName = "" }
+                    let saved = await Backend.loadMyName(u.uid)
+                    // A newer auth event owns the state now — this pass is stale
+                    // and must not write (F-CS27-1: its empty fallback landing
+                    // after signUpEmail's save is what sent new users to NameAsk).
+                    guard self.authGen == gen, self.uid == u.uid else { return }
+                    if let saved {
+                        self.myName = saved
+                        self.nameUid = u.uid
+                    } else if self.nameUid == u.uid && !self.myName.isEmpty {
+                        // A name saved this session for THIS account (the sign-up
+                        // form's) already stands — never erase it with the empty
+                        // fallback from a snapshot taken before the save.
+                    } else {
+                        self.myName = u.displayName ?? ""
+                        self.nameUid = u.uid
+                    }
+                } else { self.myName = ""; self.nameUid = nil }
                 self.loading = false
             }
         }
@@ -49,11 +74,32 @@ final class Session: ObservableObject {
         try await change.commitChanges()
         try await Backend.saveMyName(r.user.uid, name: clean)
         myName = clean
+        nameUid = r.user.uid
     }
 
     /// SIGN IN — sign in only. NEVER creates an account (the old web fault dies here).
+    /// F-CS27-3: the vendor call is raced against a hard time limit and the
+    /// landing is taken from THIS credential — a returned sign-in always lands
+    /// inside in session, and a stuck call surfaces a truthful line instead of
+    /// sitting dead and silent on the form.
     func signInEmail(email: String, password: String) async throws {
-        _ = try await Auth.auth().signIn(withEmail: email, password: password)
+        let r = try await Self.withTimeout(seconds: 20,
+            timeoutError: AppError.msg("Sign in is taking too long. Check your connection and try again.")) {
+            try await Auth.auth().signIn(withEmail: email, password: password)
+        }
+        let saved = try? await Self.withTimeout(seconds: 10,
+            timeoutError: AppError.msg("Sign in is taking too long. Check your connection and try again.")) {
+            await Backend.loadMyName(r.user.uid)
+        }
+        if let saved {
+            myName = saved
+            nameUid = r.user.uid
+        } else if nameUid != r.user.uid {
+            myName = r.user.displayName ?? ""
+            nameUid = r.user.uid
+        }
+        uid = r.user.uid
+        loading = false
     }
 
     /// After a Google/Apple first sign-in, if no name is saved yet the app asks for
@@ -66,6 +112,7 @@ final class Session: ObservableObject {
         try await change.commitChanges()
         try await Backend.saveMyName(u.uid, name: clean)
         myName = clean
+        nameUid = u.uid
     }
 
     // Sign in with Apple
@@ -75,10 +122,18 @@ final class Session: ObservableObject {
         req.nonce = Self.sha256(nonce)
     }
     func finishApple(_ result: Result<ASAuthorization, Error>) async throws {
-        let auth = try result.get()
+        let auth: ASAuthorization
+        do { auth = try result.get() }
+        // The Apple sheet never produced a credential: the user cancelled,
+        // dismissed it, or walked back from the account alert. All of those
+        // are a quiet return to the door, never a red line (F-CS27-2).
+        catch { throw SignInCancelled() }
         guard let c = auth.credential as? ASAuthorizationAppleIDCredential, let tok = c.identityToken, let s = String(data: tok, encoding: .utf8) else { throw AppError.msg("Apple sign in did not finish.") }
         let cred = OAuthProvider.appleCredential(withIDToken: s, rawNonce: nonce, fullName: c.fullName)
-        _ = try await Auth.auth().signIn(with: cred)
+        _ = try await Self.withTimeout(seconds: 20,
+            timeoutError: AppError.msg("Sign in is taking too long. Check your connection and try again.")) {
+            try await Auth.auth().signIn(with: cred)
+        }
     }
     func google() async throws {
         guard let id = FirebaseApp.app()?.options.clientID else { throw AppError.msg("Google sign in is not set up.") }
@@ -86,7 +141,36 @@ final class Session: ObservableObject {
         GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: id)
         let r = try await GIDSignIn.sharedInstance.signIn(withPresenting: vc)
         guard let t = r.user.idToken?.tokenString else { throw AppError.msg("Google sign in did not finish.") }
-        _ = try await Auth.auth().signIn(with: GoogleAuthProvider.credential(withIDToken: t, accessToken: r.user.accessToken.tokenString))
+        _ = try await Self.withTimeout(seconds: 20,
+            timeoutError: AppError.msg("Sign in is taking too long. Check your connection and try again.")) {
+            try await Auth.auth().signIn(with: GoogleAuthProvider.credential(withIDToken: t, accessToken: r.user.accessToken.tokenString))
+        }
+    }
+
+    /// True when an error is really the user leaving a provider flow —
+    /// a cancel is not an error (F-CS27-2).
+    static func isCancel(_ e: Error) -> Bool {
+        if e is SignInCancelled { return true }
+        if let a = e as? ASAuthorizationError, a.code == .canceled { return true }
+        let n = e as NSError
+        // Google SDK cancel: GIDSignInError, code -5 (canceled).
+        if n.domain == "com.google.GIDSignIn" && n.code == -5 { return true }
+        return false
+    }
+
+    /// Runs `op` against a hard time limit; on timeout the caller gets the
+    /// timeout error, so no sign-in path can sit dead and silent (F-CS27-3).
+    static func withTimeout<T>(seconds: Double, timeoutError: Error, _ op: @escaping () async throws -> T) async throws -> T {
+        try await withThrowingTaskGroup(of: T.self) { group in
+            group.addTask { try await op() }
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                throw timeoutError
+            }
+            guard let v = try await group.next() else { throw timeoutError }
+            group.cancelAll()
+            return v
+        }
     }
     static func randomNonce(_ n: Int = 32) -> String {
         let cs = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
