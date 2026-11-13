@@ -7,6 +7,7 @@ enum BI: String, CaseIterable {
     case home, nanny, moon, globe, bunny, rate, star, calendar, doc, lock, camera, plus, check, checkCircle, circle
     case pencil, chat, mail, clock, cross, banned, sparkle, sun, tray, search, shield, arrow, skip, heart, info, send
     case child, pin, undo, chevron, person, findCare, back, settings
+    case car, warning, bed, screen, phone, school, pill, group, key, smoke, hourglass, bell, gift
     case wheel, firstAid, swim, bowl, book, paw, cat, leaf, ball, note
 
     /// line: stroked. fill: solid ink. accent: solid bunny pink.
@@ -61,6 +62,19 @@ enum BI: String, CaseIterable {
         case .leaf: return ("M5 19C5 10 10 5 20 4.5C20 14 15 19 5 19Z M5 19L13 11", "", "")
         case .ball: return ("O 12 12 9 M3.4 9.5C8 10.5 16 10.5 20.6 9.5 M3.4 14.5C8 13.5 16 13.5 20.6 14.5 M12 3V21", "", "")
         case .note: return ("M9 18V5.5L19 3.5V16", "", "O 6.8 18 2.2 O 16.8 16 2.2")
+        case .car: return ("M4 14L6 8.5H18L20 14V18.5H4Z M4 14H20", "", "O 7.5 16.5 1.4 O 16.5 16.5 1.4")
+        case .warning: return ("M12 3.5L21 19.5H3Z M12 9.5V14", "", "O 12 16.8 1")
+        case .bed: return ("M3.5 18.5V6.5 M3.5 15H20.5V18.5 M20.5 15V12C20.5 10.6 19.4 10 18 10H10.5V15", "", "O 7 12.3 1.8")
+        case .screen: return ("M3.5 5.5H20.5V16H3.5Z M9 19.5H15 M12 16V19.5", "", "")
+        case .phone: return ("M7.5 3.5H16.5V20.5H7.5Z M10.5 17.5H13.5", "", "")
+        case .school: return ("M3.5 10L12 4.5L20.5 10 M5.5 10V19.5H18.5V10 M10 19.5V14.5H14V19.5", "", "")
+        case .pill: return ("O 12 12 8 M12 4V20", "", "")
+        case .group: return ("M3.5 19.5C3.5 15.5 5.5 13.5 8.5 13.5C11.5 13.5 13.5 15.5 13.5 19.5Z M14.5 14C17.5 13.5 20.5 15 20.5 19.5H15.5", "", "O 8.5 8 2.8 O 16 9 2.3")
+        case .key: return ("O 8 12 3.8 M11.8 12H21 M17.5 12V15.5 M20.5 12V14.5", "", "")
+        case .smoke: return ("M3.5 15H17.5V18.5H3.5Z M19.5 15V18.5 M17 12C17 10 19 10 19 8C19 6.5 18 6 17.5 5", "", "")
+        case .hourglass: return ("M6.5 3.5H17.5 M6.5 20.5H17.5 M7.5 3.5C7.5 9 12 10 12 12C12 14 7.5 15 7.5 20.5 M16.5 3.5C16.5 9 12 10 12 12C12 14 16.5 15 16.5 20.5", "", "")
+        case .bell: return ("M6 17.5V11C6 7.5 8.5 5 12 5C15.5 5 18 7.5 18 11V17.5H6Z M4.5 17.5H19.5 M10.5 20.5H13.5", "", "")
+        case .gift: return ("M4.5 10.5H19.5V20H4.5Z M3.5 7.5H20.5V10.5H3.5Z M12 7.5V20", "", "O 9.6 5.4 1.8 O 14.4 5.4 1.8")
         case .findCare: return ("O 12 12 9.2", "", "Y 12 12.4 8.4")
         }
     }

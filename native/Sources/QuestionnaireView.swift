@@ -26,17 +26,19 @@ struct TickCard: View {
 struct QuestionnaireView: View {
     @EnvironmentObject var s: Session
     @State private var answers: [String: Any] = [:]
-    @State private var openIds: Set<String> = []
+    @State private var strengths: [String: String] = [:]
+    @State private var saveErr = ""
     var side: String { s.me?.side == "carer" ? "carer" : "family" }
     var bank: [QDef] { side == "carer" ? QuestionBank.carer : QuestionBank.family }
-    var pages: [String] { var seen: [String] = []; for q in bank where !QuestionnaireView.asked(q) && !seen.contains(q.page) { seen.append(q.page) }; return seen }
-    var counted: [QDef] { bank.filter { $0.set != "tick" && !QuestionnaireView.asked($0) } }
+    var pages: [String] { var seen: [String] = []; for q in bank where QuestionnaireView.asked(q) && !seen.contains(q.page) { seen.append(q.page) }; return seen }
+    var counted: [QDef] { bank.filter { $0.set != "tick" && QuestionnaireView.asked($0) } }
     var doneCount: Int { counted.filter { done($0) }.count }
 
     var body: some View {
         ScrollView { VStack(spacing: 14) {
             Text("Tick what is true.").font(Brand.title(28)).foregroundStyle(Brand.titleColor)
             Text("One tap and that question is done. No typing.").font(.subheadline).foregroundStyle(Brand.muted)
+            if !saveErr.isEmpty { Text(saveErr).font(.footnote).foregroundStyle(Brand.ink).padding(.horizontal, 20) }
             Card { VStack(alignment: .leading, spacing: 6) {
                 Text("\(doneCount) of \(counted.count) done").font(.headline).accessibilityIdentifier("qProgress")
                 ProgressView(value: Double(doneCount), total: Double(max(counted.count, 1))).tint(Brand.bunny)
@@ -45,7 +47,7 @@ struct QuestionnaireView: View {
             ForEach(pages, id: \.self) { page in
                 VStack(alignment: .leading, spacing: 10) {
                     Text(page).font(Brand.title(20)).foregroundStyle(Brand.titleColor).padding(.horizontal, 20)
-                    ForEach(bank.filter { $0.page == page && !QuestionnaireView.asked($0) }, id: \.id) { q in
+                    ForEach(bank.filter { $0.page == page && QuestionnaireView.asked($0) }, id: \.id) { q in
                         Card { VStack(alignment: .leading, spacing: 10) {
                             HStack(alignment: .top) {
                                 VStack(alignment: .leading, spacing: 2) {
@@ -56,13 +58,17 @@ struct QuestionnaireView: View {
                                 if done(q) { BrandIcon(kind: .checkCircle, size: 20, color: Color(hex: 0xC2345B)) }
                             }
                             widget(q)
+                            if q.strength { HStack(spacing: 8) { ForEach([("must", "Must have"), ("pref", "I prefer"), ("either", "Either way")], id: \.0) { k in
+                                Button { setStrength(q, k.0) } label: { Text(k.1).font(.footnote.weight(.semibold)).padding(.horizontal, 12).padding(.vertical, 8)
+                                    .background((strengths[q.id] ?? "pref") == k.0 ? Brand.blush : Brand.paleGround).foregroundStyle(Brand.ink)
+                                    .overlay(Capsule().stroke((strengths[q.id] ?? "pref") == k.0 ? Brand.bunny : Brand.bunnyBlush, lineWidth: 1.5)).clipShape(Capsule()) }.buttonStyle(.plain).accessibilityIdentifier("strength-\(q.id)-\(k.0)") } } }
                         } }.padding(.horizontal, 20).accessibilityIdentifier("q-\(q.id)")
                     }
                 }
             }
         }.padding(.vertical, 16).padding(.bottom, 100) }
         .background(Brand.cream.ignoresSafeArea())
-        .onAppear { if let a = s.me?.card["answers"] as? [String: Any] { answers = a } }
+        .task { await load() }
     }
 
     // MARK: progress, by the level tags of the questionnaire partition
@@ -85,12 +91,34 @@ struct QuestionnaireView: View {
         return true
     }
     func list(_ id: String) -> [String] { (answers[id] as? [String]) ?? [] }
+    func load() async {
+        guard let uid = s.uid else { return }
+        answers = AnswerStore.loadLocal(uid)
+        let remote = await AnswerStore.loadAll(uid)
+        for q in bank where !q.code.isEmpty {
+            guard let d = remote[q.code], let v = d["v"] else { continue }
+            answers[q.id] = v; if let st = d["s"] as? String { strengths[q.id] = st }
+        }
+    }
+    /// One answer changes: coded questions write their own document; the rest stay on this device.
     func set(_ id: String, _ v: Any?) {
         if let v { answers[id] = v } else { answers.removeValue(forKey: id) }
-        guard let uid = s.uid else { return }
-        let snapshot = answers
-        Task { try? await Backend.saveProfile(uid, card: ["answers": snapshot]) }
+        guard let uid = s.uid, let q = bank.first(where: { $0.id == id }) else { return }
+        if q.code.isEmpty {
+            AnswerStore.saveLocal(uid, answers.filter { k, _ in bank.first(where: { $0.id == k })?.code.isEmpty ?? true })
+            return
+        }
+        let st = q.strength ? (strengths[id] ?? "pref") : nil
+        Task {
+            if let v {
+                var val = v; if let str = v as? String { val = String(str.prefix(q.kind == .text ? 2000 : 120)) }
+                if let l = v as? [String] { val = Array(l.prefix(q.code == "F8" ? 12 : 10)) }
+                if let v2 = (v as? String) ?? (v as? [String])?.first, v2.isEmpty { await AnswerStore.remove(uid, code: q.code); return }
+                do { try await AnswerStore.write(uid, code: q.code, v: val, strength: st, feed: q.feed); saveErr = "" } catch { saveErr = "Could not save that answer. Try again." }
+            } else { await AnswerStore.remove(uid, code: q.code) }
+        }
     }
+    func setStrength(_ q: QDef, _ st: String) { strengths[q.id] = st; if let v = answers[q.id] { set(q.id, v) } }
     func toggle(_ q: QDef, _ o: String) {
         var l = list(q.id)
         if let i = l.firstIndex(of: o) { l.remove(at: i) } else { if q.kind == .many3 && l.count >= 3 { l.removeFirst() }; l.append(o) }
