@@ -16,6 +16,7 @@ struct DiscoverView: View {
     @State private var mapPick: String?
     @State private var pinSel: String?
     @State private var banner: Person?
+    @State private var mapRegion: MKCoordinateRegion?
 
     var role: Role { s.role }
     var services: [String] { s.me?.services ?? [] }
@@ -119,6 +120,7 @@ struct DiscoverView: View {
             ForEach(Array(deck.prefix(3).enumerated().reversed()), id: \.element.id) { i, p in
                 SwipeCard(person: p, tint: role.tint, top: i == 0, offset: i == 0 ? drag : .zero, depth: i, match: s.me.map { p.match(with: $0) }, distance: km(p),
                           onMessage: { deckContact = (p, .message) }, onResume: s.me?.side == "carer" ? { deckContact = (p, .resume) } : nil)
+                    .clipShape(RoundedRectangle(cornerRadius: 28)).contentShape(RoundedRectangle(cornerRadius: 28))
                     .gesture(i == 0 ? DragGesture(minimumDistance: 16)
                         .onChanged { drag = $0.translation }
                         .onEnded { v in
@@ -132,16 +134,51 @@ struct DiscoverView: View {
     /// The map shows everyone (not limited by the deck distance), still only the other side of the match.
     var mapView: some View {
         let pins = people.filter { coords[$0.postcode.trimmingCharacters(in: .whitespaces)] != nil }
-        return Map(position: $camera) {
+        let picked = pins.first { $0.id == pinSel }
+        return Map(position: $camera, selection: $pinSel) {
             ForEach(pins) { p in
-                Annotation("", coordinate: coords[p.postcode.trimmingCharacters(in: .whitespaces)]!, anchor: .bottom) {
-                    Button { pinSel = p.id; mapPick = p.id } label: { BunnyPin(selected: pinSel == p.id) }.buttonStyle(.plain).accessibilityLabel(p.firstName)
-                }
+                Annotation("", coordinate: coords[p.postcode.trimmingCharacters(in: .whitespaces)]!, anchor: BunnyPin.tipAnchor) {
+                    BunnyPin(selected: pinSel == p.id)
+                        .accessibilityElement(children: .ignore).accessibilityAddTraits(.isButton)
+                        .accessibilityLabel(p.firstName).accessibilityIdentifier("mapPin").accessibilityValue(pinSel == p.id ? "selected" : "not selected")
+                }.tag(p.id)
             }
         }
+        .mapStyle(.standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll, showsTraffic: false))
+        .onMapCameraChange { ctx in mapRegion = ctx.region }
         .onAppear { frame(pins) }.onChange(of: pins.count) { _, _ in frame(pins) }
-        .clipShape(RoundedRectangle(cornerRadius: 24)).accessibilityIdentifier("peopleMap")
-        .overlay(alignment: .bottom) { Text("\(pins.count) \(pins.count == 1 ? "person" : "people") on the map").font(.system(size: 15, weight: .semibold)).foregroundStyle(Brand.ink).padding(.horizontal, 14).padding(.vertical, 8).background(Brand.card).clipShape(Capsule()).padding(12) }
+        .overlay { Brand.paleGround.opacity(0.8).blendMode(.multiply).allowsHitTesting(false) }
+        .overlay(alignment: .topTrailing) {
+            VStack(spacing: 12) {
+                mapBtn(.plus, "Zoom in") { zoom(0.5) }
+                mapBtn(.minus, "Zoom out") { zoom(2) }
+                mapBtn(.locate, "My place") { if let c = myCoord { camera = .region(MKCoordinateRegion(center: c, span: MKCoordinateSpan(latitudeDelta: 0.25, longitudeDelta: 0.25))) } }
+            }.padding(12)
+        }
+        .overlay(alignment: .bottom) {
+            HStack(alignment: .bottom, spacing: 6) {
+                Group {
+                    if let c = picked {
+                        Button { mapPick = c.id } label: { HStack(spacing: 6) { Text("Meet \(c.firstName)").font(.system(size: 16, weight: .semibold)); BrandIcon(kind: .arrow, size: 16, color: BunnyPin.raspberry) } }
+                            .buttonStyle(.plain).accessibilityIdentifier("meetPinned")
+                    } else {
+                        Text(pins.isEmpty ? "No one is on the map yet" : "Tap a pin to meet someone nearby.").font(.system(size: 16, weight: .medium))
+                    }
+                }.foregroundStyle(Brand.ink).padding(.horizontal, 16).padding(.vertical, 12).background(Brand.card).clipShape(Capsule())
+                Spacer(minLength: 0)
+                BunnyView(size: 64, mood: .hello)
+            }.padding(.horizontal, 10).padding(.bottom, 8)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 24)).overlay(RoundedRectangle(cornerRadius: 24).stroke(Brand.bunnyBlush, lineWidth: 1.5))
+        .accessibilityIdentifier("peopleMap").accessibilityValue("\(pins.count) on the map")
+    }
+    func mapBtn(_ icon: BI, _ label: String, _ f: @escaping () -> Void) -> some View {
+        Button(action: f) { BrandIcon(kind: icon, size: 22, color: BunnyPin.raspberry).frame(width: 46, height: 46).background(Brand.card).clipShape(Circle()).shadow(color: .black.opacity(0.08), radius: 3, y: 1) }
+            .buttonStyle(.plain).accessibilityLabel(label)
+    }
+    func zoom(_ k: Double) {
+        guard let r = mapRegion else { return }
+        camera = .region(MKCoordinateRegion(center: r.center, span: MKCoordinateSpan(latitudeDelta: min(max(r.span.latitudeDelta * k, 0.005), 120), longitudeDelta: min(max(r.span.longitudeDelta * k, 0.005), 120))))
     }
     func roundBtn(_ icon: BI, _ c: Color, _ label: String, solid: Bool = false, _ f: @escaping () -> Void) -> some View {
         Button(action: f) { BrandIcon(kind: icon, size: 26, color: c, solid: solid).frame(width: 56, height: 56).background(Brand.card).clipShape(Circle()).overlay(Circle().stroke(Color.black.opacity(0.1), lineWidth: 1)) }.accessibilityLabel(label)
@@ -316,7 +353,7 @@ struct SwipeCard: View {
             RoundedRectangle(cornerRadius: 28).fill(Brand.field)
             if onInfo { infoSlide } else {
                 PhotoView(key: photos.isEmpty ? "" : photos[min(slide, photos.count - 1)], size: 260, round: false, fallback: person.role.icon, fill: true).clipped().clipShape(RoundedRectangle(cornerRadius: 28))
-                LinearGradient(colors: [.clear, .black.opacity(0.55)], startPoint: .center, endPoint: .bottom).clipShape(RoundedRectangle(cornerRadius: 28))
+                LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .center, endPoint: .bottom).clipShape(RoundedRectangle(cornerRadius: 28))
             }
             if top {
                 HStack(spacing: 0) {

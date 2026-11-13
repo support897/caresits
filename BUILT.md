@@ -8,6 +8,8 @@
   - Sources/Answers.swift (AnswerStore): the coded first aid document and the device store.
   - The old question flow (QuestionBank, its generator, the 50 question sheet) is removed by her ruling.
   - native/tools/rt181.sh runs one UI test. UITests/RoleFlowTests.swift has testAskingFamily and testAskingCarer.
+- Item 3, the map (code done, pictured on three sides, see Proofs): Sources/BunnyPin.swift draws the pin of record (raspberry #C2345B teardrop, white outline, two upright ears #F3ABBD, white heart, no letter) and the selected state (white disc with a thin raspberry ring centred on the tip, behind the pin). Sources/DiscoverView.swift map: Map(selection:) with a pin per person placed by postcode, round white plus, minus and locate buttons on the right, bottom bubble "Tap a pin to meet someone nearby." that becomes "Meet <name>" when a pin is picked (opens the person), mascot bottom right. BrandIcon gains minus and locate. A map with no pins fails the test.
+- Item 3 also fixes a tap bug found while proving the nanny side: a photo card extended over the header and swallowed taps on the Map and Matches buttons. The deck cards are now clipped, so the header taps work with photo cards. This was true on 180 for any carer deck with a photo.
 - Item 9 folds into item 2. Item 12 and items 13 to 24 are cancelled; the tab layout stays.
 
 ## Where each pick is saved
@@ -27,10 +29,16 @@ No key and no code is invented.
 - Not run: a direct owner read of the stored card and the F21 and C22 documents. The relaunch read back is the evidence.
 - Test litter: the two relaunch runs and several earlier failed or killed runs could not delete their live test accounts (the delete asks for a password after a long run). The test now signs in once more and deletes, and every test email is appended to ~/cs181/test-accounts-made.txt.
 
+- Item 3 proofs: testMapFamily, testMapNanny, testMapAuPair each sign up, open the map, wait for pins, picture standing with pins, tap a pin and picture it selected, tap Meet and picture the person, then delete the account (all three passed and deleted). Pictures: ~/cs181/pics-map (3 per side plus a before tap picture).
+
 ## Gaps
+- Map land and sea colour: MapKit cannot recolour land or sea. I use the muted standard style plus a pale pink multiply layer. At street zoom the land reads pale pink; at wide zoom the sea stays blue and the land pale green beige, so it is close to but not the Map World page of record. An exact match needs a custom tile source (HQ decision).
+- Au pair "by chosen countries": the native app holds no country choice data, so the au pair map shows host families by postcode like the other sides. Nothing invented.
+- The QA fail list for the 180 map surfaces was not available to me, so I fixed to the page of record and re-proved all surfaces.
+- The map header keeps the app's own header (Find care, 25 km, pin, heart), the tab layout stands.
 - The native deck does not read these picks. Matching engine untouched.
 - Some picks are paired by key, not by a score yet.
-- Items 3 to 11, the new Reviews item and the new Essential notifications item are not started.
+- Items 4 to 11, the new Reviews item and the new Essential notifications item are not started.
 - ESSENTIAL NOTIFICATIONS (queued after Reviews): the app side registration stands from the push design of record (Security pass, 17 Oct): device docs under the profile, kind only payloads with no names and no message text, opt out in three layers. The OUTBOUND SENDER half waits on the Blaze upgrade and her APNs key; nothing is built around that. Live delivery is NOT PROVEN until the sender lands.
 - The Mac load average is 500 to 800, so each side takes 10 to 15 minutes.
 

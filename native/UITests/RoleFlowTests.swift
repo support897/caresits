@@ -277,6 +277,53 @@ final class RoleFlowTests: XCTestCase {
     func testIconsFamily() { askingIcons(side: "family") }
     func testIconsCarer() { askingIcons(side: "carer") }
 
+    // Build 181 item 3: the map as her Map World page, pictured on each side
+    func mapProof(_ tag: String, side: String, service: String = "Nanny") {
+        if side == "family" {
+            signUp(side: "family"); fillYou("Test MFam"); next(); tap("Babysitter"); next()
+            type(app.textFields["Name or nickname"], "Mia"); dismissKb(); sleep(1); next()
+            if !app.buttons["Finish"].waitForExistence(timeout: 6) { next() }
+        } else {
+            signUp(side: "carer"); fillYou("Test MCarer"); next(); tap(service); next()
+            if app.buttons["Skip"].waitForExistence(timeout: 4) { tap("Skip") }
+            let about = app.textFields["A few words about your care"]
+            if about.waitForExistence(timeout: 4) { type(about, "Kind and calm care"); dismissKb() }
+            next()
+        }
+        tap("Finish", timeout: 20)
+        XCTAssertTrue(app.tabBars.buttons.element(boundBy: 0).waitForExistence(timeout: 60)); app.tabBars.buttons.element(boundBy: 0).tap(); sleep(2)
+        let mapBtn = app.buttons["Map"]
+        if !mapBtn.waitForExistence(timeout: 60) { qshot("map-\(tag)-FAIL-no-map-button") }
+        XCTAssertTrue(mapBtn.exists, "no Map button"); sleep(6); qshot("map-\(tag)-0-before-tap")
+        for _ in 0..<4 {
+            let tg = app.descendants(matching: .any).matching(identifier: "mapToggle").firstMatch
+            if tg.exists && tg.label == "Deck" { break }
+            if tg.exists { if n % 2 == 0 { app.coordinate(withNormalizedOffset: CGVector(dx: 0.761, dy: 0.105)).tap() } else { tg.tap() } }; sleep(5)
+        }
+        if !(app.otherElements["peopleMap"].waitForExistence(timeout: 30) || app.maps.firstMatch.waitForExistence(timeout: 5)) { qshot("map-\(tag)-FAIL-map-did-not-open") }
+        let pin = app.descendants(matching: .any).matching(identifier: "mapPin").firstMatch
+        XCTAssertTrue(pin.waitForExistence(timeout: 90), "MAP WITH NO PINS (a fail)")
+        qshot("map-\(tag)-1-standing-with-pins")
+        pin.tap(); sleep(2)
+        let meet = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Meet ")).firstMatch
+        if !meet.waitForExistence(timeout: 15) { qshot("map-\(tag)-FAIL-pin-did-not-select") }
+        XCTAssertTrue(meet.exists, "pin did not select (no Meet button)")
+        qshot("map-\(tag)-2-pin-selected")
+        meet.tap(); sleep(3)
+        qshot("map-\(tag)-3-person-opened")
+        app.navigationBars.buttons.firstMatch.tap(); sleep(2)
+        app.tabBars.buttons["Me"].tap(); sleep(2)
+        let del = app.buttons["Delete my account"]
+        for _ in 0..<8 where !del.isHittable { app.swipeUp() }
+        del.tap(); tap("Delete everything")
+        if app.staticTexts["Is it really you?"].waitForExistence(timeout: 20) { type(app.secureTextFields["Your password"], testPw); dismissKb(); tap("Confirm and delete") }
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 240), "account not deleted")
+    }
+    func testMapFamily() { mapProof("family", side: "family") }
+    func testMapNanny() { mapProof("nanny", side: "carer", service: "Nanny") }
+    func testMapAuPair() { mapProof("aupair", side: "carer", service: "Au pair") }
+
+
     func testNannyApp() { carer("Nanny", tabs: ["Families", "Requests", "Calendar", "Chat", "Me"]) }
     func testBabysitterApp() { carer("Babysitter", tabs: ["Jobs", "Requests", "Calendar", "Families", "Me"]) }
     func testAuPairApp() { carer("Au pair", tabs: ["Host families", "My week", "Requests", "Chat", "Me"]) }

@@ -9,7 +9,7 @@ enum BI: String, CaseIterable {
     case child, pin, undo, chevron, person, findCare, back, settings
     case car, warning, bed, screen, phone, school, pill, group, key, smoke, hourglass, bell, gift
     case wheel, firstAid, swim, bowl, book, paw, cat, leaf, ball, note
-    case balloon, calm, gentle, firm, tree, blocks, ruler, bend, dance, licence, pot, cpr, cap, door, bath, shower, plate, weekend, suitcase, flag, loop, bus
+    case minus, locate, balloon, calm, gentle, firm, tree, blocks, ruler, bend, dance, licence, pot, cpr, cap, door, bath, shower, plate, weekend, suitcase, flag, loop, bus
 
     /// line: stroked. fill: solid ink. accent: solid bunny pink.
     /// Commands (absolute): M L H V C Z, O cx cy r (circle), E cx cy rx ry (ellipse), Y cx cy size (heart).
@@ -98,6 +98,8 @@ enum BI: String, CaseIterable {
         case .loop: return ("M18.5 8C17 5.5 14.7 4.5 12 4.5C7.8 4.5 4.5 7.8 4.5 12C4.5 16.2 7.8 19.5 12 19.5C15.2 19.5 17.8 17.7 19 15 M18.5 3.5V8H14 M12 8.5V12L14.5 13.5", "", "")
         case .bus: return ("M5 5H19V17.5H5Z M5 12H19 M7 17.5V20 M17 17.5V20", "", "O 8 15 1.1 O 16 15 1.1")
         case .balloon: return ("M12 3C8 3 6 6 6 9C6 13 9 15.5 12 16C15 15.5 18 13 18 9C18 6 16 3 12 3Z M12 16L10.8 18H13.2L12 16 M12 18C12 20 13 21 14.5 21", "", "Y 12 9 4.4")
+        case .minus: return ("M5 12H19", "", "")
+        case .locate: return ("O 12 12 6.5 M12 2.5V6 M12 18V21.5 M2.5 12H6 M18 12H21.5", "", "O 12 12 2")
         case .findCare: return ("O 12 12 9.2", "", "Y 12 12.4 8.4")
         }
     }

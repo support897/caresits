@@ -17,17 +17,20 @@ struct PinDrop: Shape {
 struct BunnyPin: View {
     var selected = false
     static let raspberry = Color(hex: 0xC2345B), ear = Color(hex: 0xF3ABBD)
+    /// The tip of the pin sits 26 points above the bottom of this view (the room below holds the selected ring), so a map anchors on tipAnchor.
+    static let height: CGFloat = 86, tipAnchor = UnitPoint(x: 0.5, y: 62.0 / 86.0)
     var body: some View {
         ZStack(alignment: .top) {
-            HStack(spacing: 8) {
-                Capsule().fill(Self.ear).frame(width: 8, height: 18).overlay(Capsule().stroke(.white, lineWidth: 1))
-                Capsule().fill(Self.ear).frame(width: 8, height: 18).overlay(Capsule().stroke(.white, lineWidth: 1))
-            }.offset(y: -10)
-            PinDrop().fill(Self.raspberry).overlay(PinDrop().stroke(.white, lineWidth: 1.5)).frame(width: 32, height: 42).offset(y: 6)
-            BrandIcon(kind: .heart, size: 12, color: .white, solid: true).offset(y: 15)
             if selected {
-                PinDrop().trim(from: 0.3, to: 0.95).stroke(Self.raspberry, lineWidth: 1.5).frame(width: 40, height: 52).offset(y: 1)
+                // Her selected pin: a white disc with a thin raspberry ring, centred on the tip, behind the pin.
+                Circle().fill(.white).overlay(Circle().stroke(Self.raspberry, lineWidth: 2.5)).frame(width: 40, height: 40).offset(y: 42)
             }
-        }.frame(width: 44, height: 62)
+            HStack(spacing: 10) {
+                Ellipse().fill(Self.ear).frame(width: 12, height: 28).rotationEffect(.degrees(-8))
+                Ellipse().fill(Self.ear).frame(width: 12, height: 28).rotationEffect(.degrees(8))
+            }.offset(y: 0)
+            PinDrop().fill(Self.raspberry).overlay(PinDrop().stroke(.white, lineWidth: 2)).frame(width: 34, height: 44).offset(y: 18)
+            BrandIcon(kind: .heart, size: 13, color: .white, solid: true).offset(y: 28)
+        }.frame(width: 50, height: Self.height, alignment: .top)
     }
 }
