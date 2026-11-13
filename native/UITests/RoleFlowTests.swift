@@ -179,6 +179,66 @@ final class RoleFlowTests: XCTestCase {
         type(app.textFields["A few words about your care"], "Kind and calm care"); dismissKb(); next()
         finishAndCheck(tabs: tabs, role: kind)
     }
+    // MARK: Build 181 item 2 questionnaire proof (pictured, both sides)
+    func qshot(_ name: String) {
+        sleep(2)
+        let d = "/Users/ilseplacencia/cs181/pics"; try? FileManager.default.createDirectory(atPath: d, withIntermediateDirectories: true)
+        try? XCUIScreen.main.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: "\(d)/\(name).png"))
+        let a = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); a.name = name; a.lifetime = .keepAlways; add(a)
+    }
+    func reveal(_ el: XCUIElement, max: Int = 40) -> Bool {
+        for _ in 0..<max { if el.exists && el.isHittable { return true }; app.swipeUp() }
+        return false
+    }
+    func openQuestionnaire() {
+        XCTAssertTrue(app.tabBars.buttons["Me"].waitForExistence(timeout: 60)); app.tabBars.buttons["Me"].tap(); sleep(2)
+        let b = app.buttons["openQuestionnaire"]; XCTAssertTrue(reveal(b, max: 8), "no My questionnaire row in Me"); b.tap()
+        XCTAssertTrue(app.staticTexts["qProgress"].waitForExistence(timeout: 30), "questionnaire did not open")
+    }
+    func questionnaire(side: String) {
+        if side == "family" {
+            signUp(side: "family"); fillYou("Test QFam"); next(); tap("Babysitter"); next()
+            type(app.textFields["Name or nickname"], "Mia"); dismissKb(); sleep(1); next()
+            if !app.buttons["Finish"].waitForExistence(timeout: 6) { next() }
+        } else {
+            signUp(side: "carer"); fillYou("Test QCarer"); next(); tap("Nanny"); next(); tap("Skip")
+            type(app.textFields["A few words about your care"], "Kind and calm care"); dismissKb(); next()
+        }
+        tap("Finish", timeout: 20)
+        openQuestionnaire()
+        let prog = app.staticTexts["qProgress"]; let start = prog.label
+        qshot("q181-\(side)-1-top-\(start.replacingOccurrences(of: " ", with: "_"))")
+        let ticks = side == "family" ? ["Dog", "Can drive", "First aid", "Calm", "Playful", "Talk calmly and explain"] : ["Driving licence", "First aid", "Strong swimmer", "Calm", "Playful", "Talk calmly and explain"]
+        for t in ticks {
+            let c = app.buttons["tick-\(t)"].firstMatch
+            if !c.exists { for _ in 0..<40 where !c.exists { app.swipeDown() } }
+            XCTAssertTrue(reveal(c), "card missing: \(t)"); c.tap(); sleep(1)
+            XCTAssertEqual(c.value as? String, "ticked", "\(t) did not tick")
+            qshot("q181-\(side)-tick-\(t.replacingOccurrences(of: " ", with: "_"))")
+        }
+        // scroll the whole sheet top to bottom, pictured every screen, so every question stands in a picture
+        for _ in 0..<60 { app.swipeDown() }
+        for i in 0..<14 { qshot("q181-\(side)-page-\(String(format: "%02d", i))"); app.swipeUp(); app.swipeUp() }
+        for _ in 0..<80 { app.swipeDown() }
+        let after = app.staticTexts["qProgress"].label
+        XCTAssertNotEqual(start, after, "progress did not move: \(start) / \(after)")
+        try? "\(side) start=\(start) after=\(after)".write(toFile: "/Users/ilseplacencia/cs181/pics/progress-\(side).txt", atomically: true, encoding: .utf8)
+        // relaunch: ticks stand (coded ones come back from profiles/uid/answers/code, the rest from the device)
+        app.terminate(); app.launchArguments += ["-AppleLanguages", "(en)"]; app.launch()
+        openQuestionnaire()
+        for t in ["Calm", "Talk calmly and explain"] {
+            let c = app.buttons["tick-\(t)"].firstMatch
+            XCTAssertTrue(reveal(c), "after relaunch card missing: \(t)"); XCTAssertEqual(c.value as? String, "ticked", "\(t) lost after relaunch"); qshot("q181-\(side)-relaunch-\(t.replacingOccurrences(of: " ", with: "_"))")
+        }
+        app.navigationBars.buttons.firstMatch.tap(); sleep(1)
+        let del = app.buttons["Delete my account"]
+        for _ in 0..<8 where !del.isHittable { app.swipeUp() }
+        del.tap(); tap("Delete everything")
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 120))
+    }
+    func testQuestionnaireFamily() { questionnaire(side: "family") }
+    func testQuestionnaireCarer() { questionnaire(side: "carer") }
+
     func testNannyApp() { carer("Nanny", tabs: ["Families", "Requests", "Calendar", "Chat", "Me"]) }
     func testBabysitterApp() { carer("Babysitter", tabs: ["Jobs", "Requests", "Calendar", "Families", "Me"]) }
     func testAuPairApp() { carer("Au pair", tabs: ["Host families", "My week", "Requests", "Chat", "Me"]) }
