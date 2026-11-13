@@ -19,3 +19,10 @@ Full suite on the final tree: 17 of 20 passed first time. Failed in the full run
 - The carer-side label "Member" for a nameless profile (Models.swift:38) is unchanged and unproven. Body text plum #3A2E33 needs her eye.
 - Flaky on this Mac: DeckCarer, DeleteTimeout, BabysitterApp, SwipeDeck.
 - Nothing uploaded. Waiting for the upload word. TestFlight only.
+
+# Build 181 item 2 (in progress): questionnaire as tick cards
+- Source of the question set: main branch app2/questions.js (base) + app2/questions2.js (kept expansion), converted by native/tools/gen_bank.py into Sources/QuestionBank.swift. Counted read: family 23 base + 27 kept = 50, carer 21 base + 29 kept = 50, option lists copied as is (family 220 options, carer 293).
+- Added from her mock (not in the HTML bank, her 14:04 correction): family tick sets At home, Help your carer must have, The feel you want at home; carer sets My skills, My style with kids. Ids tk*, set "tick", not counted in the 50.
+- QuestionnaireView.swift: one tap ticks a card, answers saved to the profile card under "answers", opened from Me, My questionnaire. Level line follows the quick/better/full tags.
+- Deviations to name: family "culture" free text became tick cards (no typing rule); name and postcode are not asked here (sign up asks them); the four write ins stay typed.
+- Gaps NOT done: generic option cards have no own icon yet (circle and tick stand in; only the mock's cards carry designed icons), the native deck does not read the answers yet (matching engine untouched), no pictured proof, no counted UI test, no simulator walk.

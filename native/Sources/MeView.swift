@@ -33,6 +33,7 @@ struct MeView: View {
                 if !ok.isEmpty { IconLabel(icon: .checkCircle, text: ok, size: 18, color: role.tint).foregroundStyle(role.tint).font(.callout) }
                 if !err.isEmpty { Text(err).foregroundStyle(Brand.ink).font(.callout).multilineTextAlignment(.center) }
 
+                NavigationLink { QuestionnaireView() } label: { row(.check, "My questionnaire", "Tick what is true") }.buttonStyle(.plain).padding(.horizontal, 20).accessibilityIdentifier("openQuestionnaire")
                 NavigationLink { SettingsView() } label: { row(.settings, "Settings", "Look and bunny") }.buttonStyle(.plain).padding(.horizontal, 20).accessibilityIdentifier("openSettings")
                 if me.side == "carer" && PayConfig.visible { GetPaidCard().padding(.horizontal, 20) }
                 Card { VStack(alignment: .leading, spacing: 8) {
