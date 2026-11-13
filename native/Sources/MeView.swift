@@ -7,7 +7,6 @@ struct MeView: View {
     @EnvironmentObject var s: Session
     @State private var pick: PhotosPickerItem?; @State private var galleryPick: [PhotosPickerItem] = []
     @State private var busy = false; @State private var err = ""; @State private var ok = ""
-    @AppStorage("caresits.bunnyDown") private var bunnyDown = false
     @State private var showFamily = false
     @State private var deleting = false; @State private var deleteSlow = false
     @State private var showResume = false; @State private var showEdit = false; @State private var confirmDelete = false; @State private var showReauth = false
@@ -15,8 +14,6 @@ struct MeView: View {
     var role: Role { s.role }
     var me: Person { s.me ?? Person(id: "", data: [:]) }
 
-    @ObservedObject private var themeStore = ThemeStore.shared
-    var themePick: ThemePick { themeStore.pick }
     var body: some View {
         if s.me == nil { Color.clear } else { content }
     }
@@ -36,12 +33,7 @@ struct MeView: View {
                 if !ok.isEmpty { IconLabel(icon: .checkCircle, text: ok, size: 18, color: role.tint).foregroundStyle(role.tint).font(.callout) }
                 if !err.isEmpty { Text(err).foregroundStyle(Brand.ink).font(.callout).multilineTextAlignment(.center) }
 
-                Card { VStack(alignment: .leading, spacing: 8) {
-                    Text("Look").font(.headline)
-                    HStack(spacing: 8) { ForEach(ThemePick.allCases, id: \.self) { p in
-                        Button { ThemeStore.shared.pick = p; if let uid = s.uid { Task { try? await Backend.saveProfile(uid, card: ["theme": p.rawValue]) } } } label: { Text(p.label).font(.footnote.weight(.semibold)).padding(.horizontal, 10).padding(.vertical, 8).background(themePick == p ? Brand.bunny : Brand.field).foregroundStyle(themePick == p ? Color(hex: 0x3A2E33) : Brand.ink).clipShape(Capsule()) }.accessibilityIdentifier("theme-\(p.rawValue)")
-                    } }
-                } }.padding(.horizontal, 20)
+                NavigationLink { SettingsView() } label: { row(.settings, "Settings", "Look and bunny") }.buttonStyle(.plain).padding(.horizontal, 20).accessibilityIdentifier("openSettings")
                 if me.side == "carer" && PayConfig.visible { GetPaidCard().padding(.horizontal, 20) }
                 Card { VStack(alignment: .leading, spacing: 8) {
                     Text("My photos").font(.headline)
@@ -77,7 +69,6 @@ struct MeView: View {
                     Text("Privacy").font(.headline)
                     IconLabel(icon: .lock, text: "Photos stay private until you connect", size: 14, color: Brand.muted).font(.footnote).foregroundStyle(Brand.muted)
                     if s.role == .family { Text("Children's details are private.").font(.footnote).foregroundStyle(Brand.muted) }
-                    Toggle("Turn the bunny down", isOn: $bunnyDown).font(.subheadline).tint(role.tint)
                 } }.padding(.horizontal, 20)
                 Button("Sign out") { s.signOut() }.font(.headline).padding(.top, 8)
                 Button("Delete my account", role: .destructive) { confirmDelete = true }.font(.footnote)

@@ -6,7 +6,7 @@ import UIKit
 enum BI: String, CaseIterable {
     case home, nanny, moon, globe, bunny, rate, star, calendar, doc, lock, camera, plus, check, checkCircle, circle
     case pencil, chat, mail, clock, cross, banned, sparkle, sun, tray, search, shield, arrow, skip, heart, info, send
-    case child, pin, undo, chevron, person, findCare, back
+    case child, pin, undo, chevron, person, findCare, back, settings
 
     /// line: stroked. fill: solid ink. accent: solid bunny pink.
     /// Commands (absolute): M L H V C Z, O cx cy r (circle), E cx cy rx ry (ellipse), Y cx cy size (heart).
@@ -49,6 +49,7 @@ enum BI: String, CaseIterable {
         case .undo: return ("M4 9H14C17.3 9 20 11.7 20 15C20 18.3 17.3 21 14 21H8 M8 5L4 9L8 13", "", "")
         case .chevron: return ("M9 5L16 12L9 19", "", "")
         case .person: return ("O 12 8 3.6 M5 20.5C5 16 8 13.6 12 13.6C16 13.6 19 16 19 20.5", "", "")
+        case .settings: return ("M4 7H8.8 M15.2 7H20 O 12 7 3.2 M4 17H4.8 M11.2 17H20 O 8 17 3.2", "", "Y 12 7 2.4")
         case .findCare: return ("O 12 12 9.2", "", "Y 12 12.4 8.4")
         }
     }
