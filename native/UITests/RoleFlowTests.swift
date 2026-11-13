@@ -18,6 +18,7 @@ final class RoleFlowTests: XCTestCase {
     func type(_ field: XCUIElement, _ text: String) { if !field.waitForExistence(timeout: 30) { XCTFail("field missing: " + String(app.debugDescription.prefix(1500))); return }; field.tap(); sleep(1); if !(field.value(forKey: "hasKeyboardFocus") as? Bool ?? true) { field.tap(); sleep(1) }; field.typeText(text) }
 
 
+    var testPw = ""; var testEmail = ""
     func signUp(side: String) {
         app.launchArguments += ["-AppleLanguages", "(en)"]
         app.launch()
@@ -34,7 +35,9 @@ final class RoleFlowTests: XCTestCase {
         tap("Use email")
         let email = "projects.reports.ilse+nat\(side)\(Int(Date().timeIntervalSince1970))@gmail.com"
         type(app.textFields["Email"], email)
-        type(app.secureTextFields["Password (6+ letters)"], "Nat-\(Int(Date().timeIntervalSince1970))-Zq9")
+        testPw = "Nat-\(Int(Date().timeIntervalSince1970))-Zq9"; testEmail = email
+        try? (email + "\n").appendLine(to: "/Users/ilseplacencia/cs181/test-accounts-made.txt")
+        type(app.secureTextFields["Password (6+ letters)"], testPw)
         shot("welcome-\(side)")
         tap("Create my account")
         let sb = XCUIApplication(bundleIdentifier: "com.apple.springboard")
@@ -242,6 +245,38 @@ final class RoleFlowTests: XCTestCase {
     func testAskingCarer() { asking(side: "carer") }
 
 
+    // Build 181 item 2 re-picture: every pick with its icon as shipped, both sides, au pair included
+    func askingIcons(side: String) {
+        if side == "family" {
+            signUp(side: "family"); fillYou("Test QFam"); next(); tap("Babysitter"); next()
+            type(app.textFields["Name or nickname"], "Mia"); dismissKb(); sleep(1); next()
+            if !app.buttons["Finish"].waitForExistence(timeout: 6) { next() }
+        } else {
+            signUp(side: "carer"); fillYou("Test QCarer"); next(); tap("Nanny"); next(); tap("Skip")
+            type(app.textFields["A few words about your care"], "Kind and calm care"); dismissKb(); next()
+        }
+        tap("Finish", timeout: 20)
+        openAsking()
+        for i in 0..<12 {
+            qshot("icons-\(side)-page-\(String(format: "%02d", i))")
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.72)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.44)))
+        }
+        for _ in 0..<60 { app.swipeDown(velocity: .fast) }
+        app.navigationBars.buttons.firstMatch.tap(); sleep(1)
+        let del = app.buttons["Delete my account"]
+        for _ in 0..<8 where !del.isHittable { app.swipeUp() }
+        del.tap(); tap("Delete everything")
+        // After a long run the account asks to sign in once more before it deletes.
+        if app.staticTexts["Is it really you?"].waitForExistence(timeout: 20) {
+            type(app.secureTextFields["Your password"], testPw); dismissKb(); tap("Confirm and delete")
+        }
+        let out = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 240)
+        qshot("icons-\(side)-after-delete")
+        XCTAssertTrue(out, "not signed out after delete: " + app.staticTexts.allElementsBoundByIndex.map { $0.label }.joined(separator: " | "))
+    }
+    func testIconsFamily() { askingIcons(side: "family") }
+    func testIconsCarer() { askingIcons(side: "carer") }
+
     func testNannyApp() { carer("Nanny", tabs: ["Families", "Requests", "Calendar", "Chat", "Me"]) }
     func testBabysitterApp() { carer("Babysitter", tabs: ["Jobs", "Requests", "Calendar", "Families", "Me"]) }
     func testAuPairApp() { carer("Au pair", tabs: ["Host families", "My week", "Requests", "Chat", "Me"]) }
@@ -410,5 +445,12 @@ final class RoleFlowTests: XCTestCase {
             app.buttons["emailBack"].tap()
             XCTAssertTrue(app.buttons["Use email"].waitForExistence(timeout: 10), "Back did not return to the door (round \(round))")
         }
+    }
+}
+
+extension String {
+    func appendLine(to path: String) throws {
+        let u = URL(fileURLWithPath: path)
+        if let h = try? FileHandle(forWritingTo: u) { h.seekToEndOfFile(); h.write(Data(self.utf8)); try h.close() } else { try write(to: u, atomically: true, encoding: .utf8) }
     }
 }

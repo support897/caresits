@@ -22,8 +22,10 @@ No key and no code is invented.
 
 ## Proofs on the packaged simulator build (iPhone 18 Pro)
 - Family and carer each: signed up, opened What I am asking for, ticked Dancing, Pets, Languages (Spanish), Calm, Driving licence, First aid, CPR, Own room, Pocket money ($150), pictured every screen top to bottom (12 pages a side, au pair section on both), relaunched the app, and every pick read back ticked. Card key picks and first aid come only from the account on relaunch; CPR and Own room only from the device. Pictures in ~/cs181/pics-fam and ~/cs181/pics-car, result-family.txt and result-carer.txt.
-- Not proven: the end of each run (delete my account) failed its last check on both sides, so two test accounts may remain on Firebase. A direct owner read of the stored card and the F21 and C22 documents was not run; the relaunch read back is the evidence.
-- Icon change after the pictures: Outdoorsy (tree) and Firm were redrawn and Language course help now uses the chat icon. Compiled, not re-pictured.
+- Re-picture of the redrawn icons (shipped build): Outdoorsy (pine tree), Firm (boundary sign) and Language course help (speech bubble) are pictured on the pick sheets, family and carer. Sets: ~/cs181/pics-fam2 and ~/cs181/pics-car2, 12 page pictures per side (top to bottom, au pair section included; the last pages meet the bottom of the sheet) plus an after delete picture. Both runs passed (family 420 s, carer 429 s), including the account delete.
+- The first proof sets (pics-fam, pics-car) kept their pre redraw icons; they stand as the relaunch evidence only.
+- Not run: a direct owner read of the stored card and the F21 and C22 documents. The relaunch read back is the evidence.
+- Test litter: the two relaunch runs and several earlier failed or killed runs could not delete their live test accounts (the delete asks for a password after a long run). The test now signs in once more and deletes, and every test email is appended to ~/cs181/test-accounts-made.txt.
 
 ## Gaps
 - The native deck does not read these picks. Matching engine untouched.
