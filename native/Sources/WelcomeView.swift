@@ -8,13 +8,19 @@ struct WelcomeView: View {
     @State private var showEmail = false
 
     var body: some View {
+        // The email page swaps in on the same screen. It is not a system presentation, so nothing the Apple flow
+        // leaves behind can stop it from opening.
+        if showEmail { EmailPage(onClose: { showEmail = false }).transition(.move(edge: .trailing)) }
+        else { door }
+    }
+    var door: some View {
         VStack(spacing: 18) {
             Spacer()
             LogoView(size: 130)
             Text("Caresitters").font(Brand.title(38)).foregroundStyle(Brand.titleColor)
             Spacer()
             VStack(spacing: 10) {
-                SignInWithAppleButton(.continue) { s.prepareApple($0) } onCompletion: { r in Task { await run { try await s.finishApple(r) } } }
+                SignInWithAppleButton(.continue) { s.prepareApple($0) } onCompletion: { r in Task { await runApple(r) } }
                     .signInWithAppleButtonStyle(.black).frame(height: 52).clipShape(RoundedRectangle(cornerRadius: 16))
                 Button { Task { await run { try await s.google() } } } label: {
                     HStack { Text("G").font(.system(size: 20, weight: .bold)).foregroundStyle(Brand.ink); Text("Continue with Google").font(.system(size: 18, weight: .semibold)) }
@@ -24,11 +30,23 @@ struct WelcomeView: View {
             }
             if !err.isEmpty { Text(err).foregroundStyle(Brand.ink).font(.callout).multilineTextAlignment(.center) }
         }.padding(20).padding(.bottom, 20).background(Brand.cream.ignoresSafeArea())
-        .fullScreenCover(isPresented: $showEmail) { EmailPage() }
     }
+    /// Apple: any dismissal (cancel, no Apple Account on the phone, any AuthenticationServices failure) leaves the door clean.
+    func runApple(_ r: Result<ASAuthorization, Error>) async {
+        err = ""
+        if case .failure = r { return }
+        await run { try await s.finishApple(r) }
+    }
+    /// The door never shows a raw system error. Our own plain sentences show; a cancel or any system failure is quiet,
+    /// except a plain line when sign in itself failed after the person did choose an account.
     func run(_ f: () async throws -> Void) async {
         busy = true; err = ""
-        do { try await f() } catch { let e = (error as NSError); if e.domain == ASAuthorizationError.errorDomain, e.code == ASAuthorizationError.canceled.rawValue { } else if e.code == -5 { } else { err = error.localizedDescription } }
+        do { try await f() } catch {
+            let e = (error as NSError)
+            if e.domain == ASAuthorizationError.errorDomain || e.code == -5 { }
+            else if error is AppError { err = error.localizedDescription }
+            else { err = "Could not sign in. Please try again." }
+        }
         busy = false
     }
 }
@@ -57,7 +75,8 @@ struct RolePickView: View {
 /// Email on its own page. Swipe from the left edge, or tap Back, to return to the door.
 struct EmailPage: View {
     @EnvironmentObject var s: Session
-    @Environment(\.dismiss) var dismiss
+    var onClose: () -> Void = {}
+    func dismiss() { onClose() }
     @State private var email = ""; @State private var pw = ""
     @State private var creating = true; @State private var busy = false; @State private var err = ""
     var body: some View {

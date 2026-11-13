@@ -183,33 +183,27 @@ final class RoleFlowTests: XCTestCase {
     func testBabysitterApp() { carer("Babysitter", tabs: ["Jobs", "Requests", "Calendar", "Families", "Me"]) }
     func testAuPairApp() { carer("Au pair", tabs: ["Host families", "My week", "Requests", "Chat", "Me"]) }
 
+    /// F-179-2: the name step has no skip. A family cannot pass it without a name, and the name stands on the profile.
     func testSkipFamilyAndLabels() {
         signUp(side: "family")
         for l in ["Your name", "Postcode", "Suburb"] { XCTAssertTrue(app.staticTexts[l].waitForExistence(timeout: 10), "visible label missing: \(l)") }
-        shot("b176-labels-you-step")
-        tap("Skip for now")
-        let link = app.buttons["finishFamilyLinkOnboarding"]
-        XCTAssertTrue(link.waitForExistence(timeout: 10), "skip notice link missing")
-        shot("b176-skip-notice")
-        link.tap()
-        XCTAssertTrue(app.staticTexts["My family"].waitForExistence(timeout: 10), "link did not open My family"); shot("b176-link-opens-family")
-        tap("Done")
-        next(); next(); sleep(1)
+        shot("b180-name-step-no-skip")
+        XCTAssertFalse(app.buttons["Skip for now"].exists || app.buttons["skipFamily"].exists, "Skip for now still stands on the name step")
+        tap("Next"); sleep(2)
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Add your name")).firstMatch.exists, "no name ask after Next with an empty name")
+        XCTAssertTrue(app.textFields["Your name"].exists, "the empty name got past the name step")
+        shot("b180-name-step-blocks-empty")
+        fillYou("Named Family"); next(); next(); type(app.textFields["Name or nickname"], "Mia"); dismissKb(); next()
         tap("Finish", timeout: 20)
-        let home = app.buttons["finishFamilyLink"]
-        XCTAssertTrue(home.waitForExistence(timeout: 90), "home banner link missing")
-        shot("b176-home-banner")
-        home.tap()
-        XCTAssertTrue(app.staticTexts["familyEditorTitle"].waitForExistence(timeout: 15), "Me > My family did not open"); shot("b176-me-my-family")
-        type(app.textFields["Your name"], "Skip Test"); dismissKbAny()
-        type(app.textFields["Postcode"], "4005"); dismissKbAny()
-        tap("Save"); sleep(3)
-        XCTAssertFalse(app.buttons["finishFamilyLink"].exists, "banner should be gone after finishing")
-        app.tabBars.buttons["Me"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Me"].waitForExistence(timeout: 90))
+        app.tabBars.buttons["Me"].tap(); sleep(2)
+        XCTAssertTrue(app.staticTexts["Named Family"].waitForExistence(timeout: 15), "the name is not on the profile. Texts: " + app.staticTexts.allElementsBoundByIndex.map { $0.label }.joined(separator: " | "))
+        shot("b180-me-name-stands")
         let del = app.buttons["Delete my account"]
         for _ in 0..<6 where !del.isHittable { app.swipeUp() }
         del.tap(); tap("Delete everything")
-        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 75))
+        let door = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 120)
+        shot("b180-after-delete"); XCTAssertTrue(door, "no door after delete. Texts: " + app.staticTexts.allElementsBoundByIndex.map { $0.label }.joined(separator: " | "))
     }
     func dismissKbAny() { let t = app.staticTexts["familyEditorTitle"]; if t.exists { t.tap() } else { dismissKb() } }
     func testPhotoProof() {
@@ -322,6 +316,7 @@ final class RoleFlowTests: XCTestCase {
         deleteFlow("Timeout Delete")
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Still not done")).firstMatch.waitForExistence(timeout: 40), "no timeout line"); sleep(1); shot("b177-delete-4-timeout-line")
         app.terminate(); app.launchEnvironment["CS_DELETE_DELAY"] = "0"; app.launchEnvironment["CS_DELETE_TIMEOUT"] = "60"; app.launch()
+        XCTAssertTrue(app.tabBars.buttons["Me"].waitForExistence(timeout: 90), "no tab bar after relaunch")
         app.tabBars.buttons["Me"].tap()
         let del = app.buttons["Delete my account"]
         for _ in 0..<6 where !del.isHittable { app.swipeUp() }
@@ -329,5 +324,28 @@ final class RoleFlowTests: XCTestCase {
         let out = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 90)
         shot("b177-delete-5-normal-lands-on-sign-in"); XCTAssertTrue(out, "normal delete did not land on the sign in door")
     }
+    /// F-179-1 and 180 item 4: the Apple flow dismissed (in whatever shape the sim offers), twice, then Use email opens the email page.
+    /// The door must stand with no raw error line.
+    func testDoorAfterApple() {
+        app.launchArguments += ["-AppleLanguages", "(en)"]; app.launch()
+        XCTAssertTrue(app.buttons["Use email"].waitForExistence(timeout: 40), "door did not appear")
+        let sb = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        for round in 1...2 {
+            let apple = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Apple")).firstMatch
+            XCTAssertTrue(apple.waitForExistence(timeout: 20), "Apple button missing")
+            apple.tap(); sleep(4); shot("b180-apple-flow-\(round)")
+            for n in ["Close", "Cancel", "OK"] where sb.buttons[n].exists { sb.buttons[n].tap(); break }
+            sleep(4)
+            XCTAssertTrue(app.buttons["Use email"].waitForExistence(timeout: 10), "door not back after Apple (round \(round))")
+            let texts = app.staticTexts.allElementsBoundByIndex.map { $0.label }
+            print("B180 door after Apple round \(round): \(texts)")
+            shot("b180-door-clean-\(round)")
+            XCTAssertFalse(texts.contains(where: { $0.lowercased().contains("couldn") || $0.contains("AuthenticationServices") || $0.lowercased().contains("error") }), "raw error line on the door: \(texts)")
+            tap("Use email")
+            XCTAssertTrue(app.textFields["Email"].waitForExistence(timeout: 15), "email page did not open after Apple dismissed (round \(round))")
+            shot("b180-email-page-\(round)")
+            app.buttons["emailBack"].tap()
+            XCTAssertTrue(app.buttons["Use email"].waitForExistence(timeout: 10), "Back did not return to the door (round \(round))")
+        }
+    }
 }
-                                                                                                                                                                                                                                                                       

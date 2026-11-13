@@ -41,7 +41,6 @@ struct OnboardingView: View {
             HStack(spacing: 12) {
                 if step > 0 { Button("Back") { step -= 1 }.font(.headline).frame(width: 90, height: 52) }
                 if current == "resume" { Button("Skip") { step += 1 }.font(.headline).frame(width: 100, height: 52) }
-                if current == "you" && side == "family" { Button("Skip for now") { err = ""; skippedFamily = true; withAnimation { step += 1 } }.font(.headline).frame(width: 130, height: 52).accessibilityIdentifier("skipFamily") }
                 BigButton(title: step == steps.count - 1 ? "Finish" : "Next", tint: role.tint, busy: busy, icon: step == steps.count - 1 ? .sparkle : nil) { Task { await next() } }
             }.padding(20).background(.ultraThinMaterial)
         }
