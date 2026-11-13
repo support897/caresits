@@ -83,6 +83,18 @@ brand-of-record files it read, with their fingerprints.
 - The Theme section on Profile folds away and opens, like the other
   collapsible areas ("for theme should be collapsable").
 
+## Settings live in Settings (her law, 13 Nov 14:11)
+- "All settings SHOULD BE IN SETTINGS not in me like bunny and
+  look, same for all apps so fix it." Every setting lives in a
+  Settings area — never in Me/Profile. A setting found in Me =
+  Not pass.
+- For CareSpace: Theme and the bunny setting move OUT of Profile
+  into Settings (her law overrides the brief's Profile row —
+  later words win the clash). Languages, notification choices,
+  permissions and privacy are settings too and live in Settings.
+  Profile keeps the person's own things: account identity, the
+  name, Care Team. Rides build 29 with slice 2.
+
 ## Moving around
 - Sliding back goes to the previous page on every screen (2026-11-11).
 
