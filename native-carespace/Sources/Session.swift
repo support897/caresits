@@ -96,8 +96,7 @@ final class Session: ObservableObject {
         let change = r.user.createProfileChangeRequest()
         change.displayName = clean
         try? await change.commitChanges()
-        try? await Backend.saveMyName(r.user.uid, name: clean)
-        try? await Backend.saveMySide(r.user.uid, side: side)
+        try? await Backend.ensureProfileBasics(r.user.uid, name: clean, side: side)
         Trace.log("signUp.return", "myNameLen=\(myName.count)")
     }
 
@@ -138,7 +137,7 @@ final class Session: ObservableObject {
     func saveMySide(_ side: String) async throws {
         guard side == "family" || side == "carer", let u = Auth.auth().currentUser else { throw AppError.msg("Please tell us who you are: family or carer.") }
         mySide = side
-        try await Backend.saveMySide(u.uid, side: side)
+        try await Backend.ensureProfileBasics(u.uid, name: myName.isEmpty ? nil : myName, side: side)
     }
 
     /// After a Google/Apple first sign-in, if no name is saved yet the app asks for
@@ -154,7 +153,7 @@ final class Session: ObservableObject {
         let change = u.createProfileChangeRequest()
         change.displayName = clean
         try? await change.commitChanges()
-        try? await Backend.saveMyName(u.uid, name: clean)
+        try? await Backend.ensureProfileBasics(u.uid, name: clean, side: mySide.isEmpty ? nil : mySide)
     }
 
     // Sign in with Apple

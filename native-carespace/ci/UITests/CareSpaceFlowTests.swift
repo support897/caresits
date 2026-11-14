@@ -96,7 +96,12 @@ final class CareSpaceFlowTests: XCTestCase {
         let signOut = app.buttons["Sign out"]
         XCTAssertTrue(signOut.waitForExistence(timeout: 15))
         signOut.tap()
-        let confirm = app.buttons["Sign out"]
+        // The confirm lives in the dialog's SHEET — scoped there,
+        // because the Profile button behind it carries the same label
+        // and an unscoped query matches both (run at this desk
+        // 2026-11-15: "Multiple matching elements found" at this tap,
+        // the sparse tree showing the sheet already open).
+        let confirm = app.sheets.buttons["Sign out"]
         XCTAssertTrue(confirm.waitForExistence(timeout: 10))
         confirm.tap()
 
@@ -111,9 +116,22 @@ final class CareSpaceFlowTests: XCTestCase {
         let pwField2 = app.secureTextFields["Password"]
         pwField2.tap(); pwField2.typeText(password)
         // The segmented control's own "Sign in" segment is also a button
-        // with this label — the submit is the LAST match in tree order.
+        // with this label, and tree order does NOT put the submit last
+        // (proven at this desk 2026-11-15: an index-1 tap hit the
+        // already-selected segment and the form never ran — the app's
+        // trace shows no tap line at all). The submit is the "Sign in"
+        // button BELOW the mode switch; pick it by geometry and say
+        // so in the log.
+        let switchFrame = app.segmentedControls.firstMatch.frame
         let signInMatches = app.buttons.matching(NSPredicate(format: "label == 'Sign in'"))
-        signInMatches.element(boundBy: signInMatches.count - 1).tap()
+        var submit: XCUIElement?
+        for i in 0..<signInMatches.count {
+            let el = signInMatches.element(boundBy: i)
+            print("SIGNIN-MATCH \(i): frame=\(el.frame)")
+            if el.frame.minY > switchFrame.maxY { submit = el; break }
+        }
+        XCTAssertTrue(submit != nil, "Sign-in submit not found below the mode switch")
+        submit!.tap()
 
         // Item 2: sign-in lands inside on its own.
         let landed2 = chatsTab.waitForExistence(timeout: 60)

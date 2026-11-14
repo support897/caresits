@@ -11,23 +11,46 @@ enum Backend {
     static func loadMyName(_ uid: String) async -> String? {
         do {
             let s = try await db.collection("profiles").document(uid).getDocument()
-            Trace.log("backend.loadName", "exists=\(s.exists) hasName=\((s.data()?["name"] as? String)?.isEmpty == false) keys=\((s.data() ?? [:]).keys.sorted())")
-            guard s.exists, let n = s.data()?["name"] as? String, !n.isEmpty else { return nil }
-            return n
+            Trace.log("backend.loadName", "exists=\(s.exists) hasName=\((s.data()?["displayName"] as? String)?.isEmpty == false) keys=\((s.data() ?? [:]).keys.sorted())")
+            guard s.exists else { return nil }
+            // The shared profile's name key of record is displayName
+            // (the key Caresitters writes and the rules allow); the
+            // legacy "name" key is read only as a fallback.
+            if let n = s.data()?["displayName"] as? String, !n.isEmpty { return n }
+            if let n = s.data()?["name"] as? String, !n.isEmpty { return n }
+            return nil
         } catch { let e = error as NSError; Trace.log("backend.loadName.THROW", "\(e.domain) \(e.code) \(e.localizedDescription)"); return nil }
     }
-    static func saveMyName(_ uid: String, name: String) async throws {
-        Trace.log("backend.saveName.call", "uid=\(uid.prefix(6)) nameLen=\(name.count)")
+    /// THE profile write for name + side (items 1 + 16 + 17).
+    /// RULES-PROVEN TWICE by instrumented drives (2026-11-15):
+    /// the shared profiles/{uid} rules (a) allow only Caresitters'
+    /// own keys — a payload carrying a "name" key is denied whole —
+    /// and (b) read the RESULTING document and require its card
+    /// and looking maps to stand (unguarded clauses:
+    /// card.keys(), looking.musts.keys(), looking.prefs.keys()),
+    /// so a minimal create on a fresh account is denied too
+    /// (saveName.THROW, Firestore error 7, both times). A create
+    /// therefore carries the empty shape maps; an update on an
+    /// existing doc rides merge and keeps the shape it finds.
+    /// displayName is the allowed name key of record — the same
+    /// key Caresitters reads: one profile, one name.
+    static func ensureProfileBasics(_ uid: String, name: String?, side: String?) async throws {
+        Trace.log("backend.ensureBasics.call", "uid=\(uid.prefix(6)) nameLen=\(name?.count ?? -1) side=\(side ?? "-")")
         do {
-            try await db.collection("profiles").document(uid).setData([
-                "name": name,
-                "displayName": name,
-                "updatedAt": FieldValue.serverTimestamp()
-            ], merge: true)
-            Trace.log("backend.saveName.ok")
+            let ref = db.collection("profiles").document(uid)
+            let snap = try? await ref.getDocument()
+            var data: [String: Any] = ["updatedAt": FieldValue.serverTimestamp()]
+            if let name { data["displayName"] = name }
+            if let side { data["side"] = side }
+            if let snap, !snap.exists {
+                data["card"] = [String: Any]()
+                data["looking"] = ["musts": [String: Any](), "prefs": [String: Any]()]
+            }
+            try await ref.setData(data, merge: true)
+            Trace.log("backend.ensureBasics.ok")
         } catch {
             let e = error as NSError
-            Trace.log("backend.saveName.THROW", "\(e.domain) \(e.code) \(e.localizedDescription)")
+            Trace.log("backend.ensureBasics.THROW", "\(e.domain) \(e.code) \(e.localizedDescription)")
             throw error
         }
     }
@@ -99,10 +122,8 @@ extension Backend {
               let v = s.data()?["side"] as? String, v == "family" || v == "carer" else { return nil }
         return v
     }
-    static func saveMySide(_ uid: String, side: String) async throws {
-        try await db.collection("profiles").document(uid).setData(
-            ["side": side, "updatedAt": FieldValue.serverTimestamp()], merge: true)
-    }
+    // saveMySide stood here once; its write folds into
+    // ensureProfileBasics above (the one profile write).
     /// Another person's shown name from the shared profile —
     /// displayName first, then the name key, never a default.
     static func loadProfileName(_ uid: String) async -> String {
