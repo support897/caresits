@@ -82,6 +82,8 @@ struct TeamMember: Identifiable, Equatable {
     var active: Bool
     /// The member's own saved name, or empty. Never a stand in name.
     var name: String
+    /// What this member may see and do, from their member record.
+    var perms: CarePerms = CarePerms()
     var shownName: String { name.isEmpty ? role.label : name }
 }
 
@@ -143,6 +145,10 @@ struct ChildProfile: Identifiable, Equatable {
     var memories: [String] = []
     var foodPreferences: [String] = []
     var learningGoals: [String] = []
+    /// Item 18: the family's chosen learning styles (the 8 of record)
+    /// and the family's language standing as a learning subject.
+    var learningStyles: [String] = []
+    var learningLanguage: String = ""
     var milestones: [ChildMilestone] = []
     var wake = ""
     var bed = ""

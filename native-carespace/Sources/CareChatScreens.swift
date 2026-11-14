@@ -176,6 +176,7 @@ struct ChatPanel: View {
                     HStack(spacing: 10) {
                         TextField("Write a message", text: $text, axis: .vertical).font(Brand.body()).foregroundStyle(th.theme.text)
                             .lineLimit(1...4).padding(12).background(th.theme.field).clipShape(RoundedRectangle(cornerRadius: 16))
+                        VoiceMicButton(text: $text)
                         Button {
                             guard let uid = s.uid else { return }
                             let t = String(text.prefix(1000)); text = ""

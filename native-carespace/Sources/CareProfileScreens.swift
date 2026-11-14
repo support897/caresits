@@ -1,11 +1,13 @@
 import SwiftUI
 
-// MARK: Profile: name, theme, bunny calm, sign out.
+// MARK: Profile: identity only — account, name, Care Team, sign out.
+// SETTINGS LAW (her word, 13 Nov 14:11): every setting lives in
+// Settings, never here. Theme and the bunny rows moved to Settings
+// in build 29 (item 5); a setting found on this page is Not pass.
 
 struct ProfileHome: View {
     @EnvironmentObject var s: Session
     @EnvironmentObject var th: ThemeStore
-    @AppStorage("carespace.bunnyCalm") private var bunnyCalm = false
     @State private var confirmOut = false
     var body: some View {
         Screen {
@@ -16,16 +18,15 @@ struct ProfileHome: View {
                     BodyText(text: "Signed in with \(s.provider == "password" ? "email" : s.provider.replacingOccurrences(of: ".com", with: ""))", muted: true)
                 }
             }
+            // Her word, main chat 2026-11-14 15:19 ("push my ai
+            // kindness brand to top"): the kindness item stands
+            // FIRST, at the very top of the menu, above everything
+            // else. Later word wins over the pack's low placement.
+            RowLink(icon: "care", title: "Join the AI kindness revolution", subtitle: "CareSpace stays free, kept free by kind humans") { KindnessView() }
             RowLink(icon: "user", title: "Your name", subtitle: "Shown in greetings and to your team") { EditNameView() }
-            ThemePicker()
-            Card {
-                Toggle(isOn: $bunnyCalm) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Calm bunny").font(Brand.body(18).weight(.semibold)).foregroundStyle(th.theme.text)
-                        Text("Less movement on screens with the bunny.").font(Brand.body(15)).foregroundStyle(th.theme.muted)
-                    }
-                }.tint(Brand.ink).frame(minHeight: 44)
-            }
+            RowLink(icon: "people", title: "Care Team", subtitle: "The people in your care spaces") { CareTeamView() }
+            RowLink(icon: "gear", title: "Settings", subtitle: "Theme, the bunny, language, notifications, permissions, privacy") { SettingsView() }
+            RowLink(icon: "sun", title: "Bunny tour", subtitle: "The bunny shows you around, one tab at a time") { BunnyTourView() }
             BigButton(title: "Sign out", tint: Brand.ink.opacity(0.85)) { confirmOut = true }
         }
         .navigationTitle("Profile")

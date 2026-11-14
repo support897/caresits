@@ -16,6 +16,11 @@ struct SignInCancelled: Error {}
 final class Session: ObservableObject {
     @Published var uid: String?
     @Published var myName: String = ""
+    /// Item 16: who this person is — "family" or "carer", the same
+    /// word Caresitters uses on the shared profile. Empty = the
+    /// question has not been answered yet; the app asks it, it
+    /// never guesses it and never defaults anyone to family.
+    @Published var mySide: String = ""
     @Published var loading = true
     private var handle: AuthStateDidChangeListenerHandle?
     fileprivate var nonce = ""
@@ -30,15 +35,19 @@ final class Session: ObservableObject {
                 guard let self else { return }
                 self.authGen += 1
                 let gen = self.authGen
+                Trace.log("listener.fire", "gen=\(gen) user=\(user != nil) nameLen=\(self.myName.count)")
                 self.uid = user?.uid
                 if let u = user {
                     // The greeting name is the user's OWN saved name: profile doc first,
                     // then the auth profile. Never a default, never anyone else's name.
                     let saved = await Backend.loadMyName(u.uid)
+                    let side = await Backend.loadMySide(u.uid)
+                    if let side, self.authGen == gen { self.mySide = side }
                     // A newer auth event owns the state now — this pass is stale
                     // and must not write (F-CS27-1: its empty fallback landing
                     // after signUpEmail's save is what sent new users to NameAsk).
-                    guard self.authGen == gen, self.uid == u.uid else { return }
+                    Trace.log("listener.loaded", "gen=\(gen) saved=\(saved != nil) cur=\(self.authGen)")
+                    guard self.authGen == gen, self.uid == u.uid else { Trace.log("listener.stale", "gen=\(gen)"); return }
                     if let saved {
                         self.myName = saved
                         self.nameUid = u.uid
@@ -50,8 +59,9 @@ final class Session: ObservableObject {
                         self.myName = u.displayName ?? ""
                         self.nameUid = u.uid
                     }
-                } else { self.myName = ""; self.nameUid = nil }
+                } else { self.myName = ""; self.nameUid = nil; self.mySide = "" }
                 self.loading = false
+                Trace.log("listener.done", "gen=\(gen) nameLen=\(self.myName.count) uidSet=\(self.uid != nil)")
             }
         }
     }
@@ -65,16 +75,30 @@ final class Session: ObservableObject {
 
     /// SIGN UP — the only road that creates an account. Asks the user's name and
     /// saves it to their own profile (auth profile + profile doc) before returning.
-    func signUpEmail(email: String, password: String, name: String) async throws {
+    func signUpEmail(email: String, password: String, name: String, side: String) async throws {
         let clean = name.trimmingCharacters(in: .whitespaces)
         guard !clean.isEmpty else { throw AppError.msg("Please add your name.") }
+        guard side == "family" || side == "carer" else { throw AppError.msg("Please tell us who you are: family or carer.") }
+        Trace.log("signUp.call", "nameLen=\(clean.count)")
         let r = try await Auth.auth().createUser(withEmail: email, password: password)
-        let change = r.user.createProfileChangeRequest()
-        change.displayName = clean
-        try await change.commitChanges()
-        try await Backend.saveMyName(r.user.uid, name: clean)
+        Trace.log("signUp.created", "uid=\(r.user.uid.prefix(6))")
+        // ITEM 1 FIX (the list's own words): the session owns the
+        // name locally from the moment createUser returns — set
+        // BEFORE any save that can throw or stall, so a denied or
+        // slow profile write can never send a brand-new user to
+        // the name ask with an empty field. Item 16's side is
+        // owned the same moment. The profile saves ride after,
+        // best-effort: the name still lands on the profile when
+        // the write is allowed, and the landing never waits on it.
         myName = clean
         nameUid = r.user.uid
+        mySide = side
+        let change = r.user.createProfileChangeRequest()
+        change.displayName = clean
+        try? await change.commitChanges()
+        try? await Backend.saveMyName(r.user.uid, name: clean)
+        try? await Backend.saveMySide(r.user.uid, side: side)
+        Trace.log("signUp.return", "myNameLen=\(myName.count)")
     }
 
     /// SIGN IN — sign in only. NEVER creates an account (the old web fault dies here).
@@ -83,10 +107,15 @@ final class Session: ObservableObject {
     /// inside in session, and a stuck call surfaces a truthful line instead of
     /// sitting dead and silent on the form.
     func signInEmail(email: String, password: String) async throws {
-        let r = try await Self.withTimeout(seconds: 20,
-            timeoutError: AppError.msg("Sign in is taking too long. Check your connection and try again.")) {
-            try await Auth.auth().signIn(withEmail: email, password: password)
-        }
+        Trace.log("signIn.call", "emailLen=\(email.count) pwLen=\(password.count)")
+        let r: AuthDataResult
+        do {
+            r = try await Self.withTimeout(seconds: 20,
+                timeoutError: AppError.msg("Sign in is taking too long. Check your connection and try again.")) {
+                try await Auth.auth().signIn(withEmail: email, password: password)
+            }
+        } catch { Trace.log("signIn.THROW", "\((error as NSError).domain) \((error as NSError).code) \(error.localizedDescription)"); throw error }
+        Trace.log("signIn.returned", "uid=\(r.user.uid.prefix(6))")
         let saved = try? await Self.withTimeout(seconds: 10,
             timeoutError: AppError.msg("Sign in is taking too long. Check your connection and try again.")) {
             await Backend.loadMyName(r.user.uid)
@@ -100,6 +129,16 @@ final class Session: ObservableObject {
         }
         uid = r.user.uid
         loading = false
+        Trace.log("signIn.landed", "uidSet=true nameLen=\(myName.count)")
+    }
+
+    /// Item 16: save the who-are-you answer (NameAsk for provider
+    /// first sign-ins, the one-time WhoAreYou step for older
+    /// accounts). The session owns it locally at once.
+    func saveMySide(_ side: String) async throws {
+        guard side == "family" || side == "carer", let u = Auth.auth().currentUser else { throw AppError.msg("Please tell us who you are: family or carer.") }
+        mySide = side
+        try await Backend.saveMySide(u.uid, side: side)
     }
 
     /// After a Google/Apple first sign-in, if no name is saved yet the app asks for
@@ -107,12 +146,15 @@ final class Session: ObservableObject {
     func saveMyName(_ name: String) async throws {
         let clean = name.trimmingCharacters(in: .whitespaces)
         guard !clean.isEmpty, let u = Auth.auth().currentUser else { throw AppError.msg("Please add your name.") }
-        let change = u.createProfileChangeRequest()
-        change.displayName = clean
-        try await change.commitChanges()
-        try await Backend.saveMyName(u.uid, name: clean)
+        // ITEM 1 FIX (same shape as sign-up): the session owns the
+        // name locally first; the saves ride after, best-effort, so
+        // the ask can never come back empty inside the session.
         myName = clean
         nameUid = u.uid
+        let change = u.createProfileChangeRequest()
+        change.displayName = clean
+        try? await change.commitChanges()
+        try? await Backend.saveMyName(u.uid, name: clean)
     }
 
     // Sign in with Apple

@@ -39,6 +39,10 @@
 	<string>Take a profile photo to share on your profile.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Choose photos to add to your profile.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>CareSpace listens only while you hold voice typing on, so you can speak a message or a care note instead of typing it.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>CareSpace turns your spoken words into text for messages and care notes, only when you tap voice typing.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Fonts/Fraunces.ttf</string>
@@ -50,7 +54,9 @@
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>
-		<string></string>
+		<string>LaunchBackground</string>
+		<key>UIImageName</key>
+		<string>CareSpaceMark</string>
 	</dict>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>

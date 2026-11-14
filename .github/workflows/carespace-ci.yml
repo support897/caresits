@@ -1,0 +1,73 @@
+name: CareSpace build 29 (cloud test lane)
+
+# Her order 2026-11-14 20:45: test in the cloud, one lane per app,
+# all at once, no Mac. Shape copied from Fit Hard's proven ios-native
+# lane (run 68 GREEN). Push to carespace-29 compiles the app and runs
+# the full UI test suite on GitHub's Macs. No signing, no ship here:
+# TestFlight still waits on the gates on the final build.
+
+on:
+  # Her word 2026-11-14 21:14: for care apps, don't test until
+  # ALL fully built. The push trigger is OFF until build 29
+  # stands fully built; then the lane fires ONCE, manually,
+  # end to end, the GitHub way.
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assemble the test project from the repo tree
+        run: |
+          mkdir -p cs-ci/UITests
+          cp -R native-carespace/Sources cs-ci/Sources
+          cp -R native-carespace/Assets.xcassets cs-ci/Assets.xcassets
+          cp -R native-carespace/Fonts cs-ci/Fonts
+          cp native-carespace/Info.plist native-carespace/App.entitlements native-carespace/ActivitiesCatalogue.json cs-ci/
+          cp store-build/carespace-GoogleService-Info.plist cs-ci/GoogleService-Info.plist
+          cp native-carespace/ci/UITests/CareSpaceFlowTests.swift cs-ci/UITests/
+          cp native-carespace/ci/genproj_test.py cs-ci/
+          ls cs-ci
+
+      - name: Generate the project
+        working-directory: cs-ci
+        run: |
+          python3 genproj_test.py
+          xcodebuild -version
+
+      - name: Boot a simulator
+        run: |
+          UDID=$(xcrun simctl list devices available | grep -E "iPhone" | head -1 | grep -oE "[0-9A-F]{8}-([0-9A-F]{4}-){3}[0-9A-F]{12}")
+          echo "UDID=$UDID" >> $GITHUB_ENV
+          xcrun simctl boot "$UDID" || true
+
+      - name: UI tests (AutoFill check + items 1 and 2 drive)
+        working-directory: cs-ci
+        run: |
+          set -o pipefail
+          xcodebuild test -project CareSpace.xcodeproj -scheme CareSpace -destination "id=$UDID" \
+            -only-testing:CareSpaceUITests -resultBundlePath "$RUNNER_TEMP/cs-ui.xcresult" CODE_SIGNING_ALLOWED=NO 2>&1 | tee ui.log | grep -E "Test Case|error:|Executed|TEST (SUCCEEDED|FAILED)" || true
+          grep -q "TEST SUCCEEDED" ui.log
+
+      - name: UI test failures
+        if: failure()
+        working-directory: cs-ci
+        run: grep -nE "error:|failed|AUTOFILL-VALUE" ui.log | head -80 || true
+
+      - name: Keep the full test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: carespace-ui-log
+          path: cs-ci/ui.log
+          if-no-files-found: warn
+
+      - name: Keep the result bundle (evidence, win or lose)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: carespace-xcresult
+          path: ${{ runner.temp }}/cs-ui.xcresult
+          if-no-files-found: warn

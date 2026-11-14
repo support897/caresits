@@ -25,8 +25,13 @@ struct BunnyView: View {
 
     var pose: Pose = .hello
     var size: CGFloat = 96
-    @AppStorage("carespace.bunnyCalm") private var calm = false
+    @AppStorage("carespace.bunnyCalm") private var calmSetting = false
+    @AppStorage("carespace.bunnyLessMovement") private var lessMovement = false
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
     @State private var up = false
+    /// Still when the person asked for calm, asked for less movement, or
+    /// the phone's own reduce-motion switch is on (item 5 + item 31).
+    private var calm: Bool { calmSetting || lessMovement || systemReduceMotion }
 
     var body: some View {
         Image(pose.asset)

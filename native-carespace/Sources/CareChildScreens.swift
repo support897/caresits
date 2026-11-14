@@ -120,6 +120,8 @@ struct ChildSectionPage: View {
     @State private var wake = ""
     @State private var bed = ""
     @State private var naps: [ChildNap] = []
+    @State private var styles: [String] = []
+    @State private var learnLang = ""
     @State private var milestone = ""
     @State private var milestonePhoto = ""
     @State private var note = ""
@@ -134,10 +136,29 @@ struct ChildSectionPage: View {
                 RowLink(icon: "pills", title: "Medical details", subtitle: "Allergies, medication and emergency. Each is its own record.") { MedicalView(space: space, child: child) }
             }
             if page.section != nil {
-                CareField(title: "Notes", text: $notes, lines: 5).disabled(!canEdit).opacity(canEdit ? 1 : 0.8)
+                CareField(title: "Notes", text: $notes, lines: 5, voice: true).disabled(!canEdit).opacity(canEdit ? 1 : 0.8)
             }
             if page == .meals { CareField(title: "Food preferences (separate with commas)", text: $list, lines: 2).disabled(!canEdit) }
-            if page == .learning { CareField(title: "Learning goals (separate with commas)", text: $list, lines: 2).disabled(!canEdit) }
+            if page == .learning {
+                CareField(title: "Learning goals (separate with commas)", text: $list, lines: 2).disabled(!canEdit)
+                // Item 18: the family's learning styles (the 8 of
+                // record) and the family's language standing as a
+                // learning subject. These picks steer the day's
+                // activities; where the family also stands in
+                // Caresitters the picks carry over (item 17).
+                BodyText(text: "How \(child.name) learns best — tap all that fit:", muted: true)
+                ForEach(Catalogue.stylesOfRecord, id: \.self) { st in
+                    PillButton(title: st, on: styles.contains(st)) {
+                        if styles.contains(st) { styles.removeAll { $0 == st } } else { styles.append(st) }
+                    }
+                }
+                .disabled(!canEdit)
+                BodyText(text: "Learning in the family's language:", muted: true)
+                ForEach(LanguageOptions.all, id: \.code) { opt in
+                    PillButton(title: opt.label, on: learnLang == opt.code) { learnLang = opt.code }
+                }
+                .disabled(!canEdit)
+            }
             if page == .sleep {
                 HStack { CareField(title: "Wake up (HH:MM)", text: $wake).disabled(!canEdit); CareField(title: "Bedtime (HH:MM)", text: $bed).disabled(!canEdit) }
                 ForEach(naps.indices, id: \.self) { i in
@@ -171,7 +192,7 @@ struct ChildSectionPage: View {
             if let sec = page.section { notes = child.notes[sec] ?? "" }
             switch page {
             case .meals: list = child.foodPreferences.joined(separator: ", ")
-            case .learning: list = child.learningGoals.joined(separator: ", ")
+            case .learning: list = child.learningGoals.joined(separator: ", "); styles = child.learningStyles; learnLang = child.learningLanguage
             case .memories: list = child.memories.joined(separator: "\n")
             case .sleep: wake = child.wake; bed = child.bed; naps = child.naps
             default: break
@@ -191,7 +212,7 @@ struct ChildSectionPage: View {
             if let sec = page.section { c.notes[sec] = notes }
             switch page {
             case .meals: c.foodPreferences = CareText.list(list, maxItems: 30, maxLength: 60)
-            case .learning: c.learningGoals = CareText.list(list, maxItems: 30, maxLength: 60)
+            case .learning: c.learningGoals = CareText.list(list, maxItems: 30, maxLength: 60); c.learningStyles = styles; c.learningLanguage = learnLang
             case .memories:
                 c.memories = list.split(separator: "\n").map { String($0).trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }.prefix(50).map { String($0.prefix(300)) }
                 if !milestone.trimmingCharacters(in: .whitespaces).isEmpty { c.milestones.append(ChildMilestone(title: String(milestone.prefix(80)), at: Date(), note: "", photoKey: milestonePhoto)); milestone = ""; milestonePhoto = "" }
@@ -245,6 +266,9 @@ struct MedicalCardFrame<Content: View>: View {
 }
 
 struct AllergyCard: View {
+    /// Item 19: Caresitters' allergy list of record.
+    static let picksOfRecord = ["Peanuts", "Tree nuts", "Dairy", "Eggs", "Gluten", "Soy",
+                                "Sesame", "Fish", "Shellfish", "Lupin", "Other foods", "None"]
     let space: SpaceSummary
     let child: ChildProfile
     @EnvironmentObject var s: Session
@@ -265,7 +289,24 @@ struct AllergyCard: View {
                     VStack(alignment: .leading) { Text(items[i].name).font(Brand.body(18).weight(.semibold)); if !items[i].severity.isEmpty { BodyText(text: items[i].severity) }; if !items[i].notes.isEmpty { BodyText(text: items[i].notes, muted: true) } }
                 }
             }
-            if editing { Button("Add an allergy") { items.append(AllergyRecord()) }.font(Brand.body().weight(.semibold)).frame(minHeight: 44) }
+            if editing {
+                // Item 19: the pick-many list of record (the same
+                // list Caresitters uses, so a family's picks carry
+                // over word for word). Tapping a name adds it;
+                // "Other foods" stays a typed line below; "None"
+                // clears the list. This writes to the child's one
+                // allergy medical record — never a second home.
+                BodyText(text: "Tap the ones that apply:", muted: true)
+                ForEach(Self.picksOfRecord, id: \.self) { pick in
+                    let on = items.contains { $0.name.lowercased() == pick.lowercased() }
+                    PillButton(title: pick, on: on) {
+                        if pick == "None" { items.removeAll() }
+                        else if on { items.removeAll { $0.name.lowercased() == pick.lowercased() } }
+                        else { items.append(AllergyRecord(name: pick)) }
+                    }
+                }
+                Button("Add an allergy") { items.append(AllergyRecord()) }.font(Brand.body().weight(.semibold)).frame(minHeight: 44)
+            }
         }
         .task { if let l = await CareRepo.loadAllergies(spaceId: space.id, childId: child.id) { items = l; failedRead = false } else { failedRead = true } }
     }

@@ -36,16 +36,21 @@ struct CareField: View {
     @Binding var text: String
     var lines = 1
     var keyboard: UIKeyboardType = .default
+    /// Item 14: care notes and day updates can be spoken, not just typed.
+    var voice = false
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title).font(Brand.body(15)).foregroundStyle(th.theme.muted)
-            Group {
-                if lines > 1 { TextField("", text: $text, axis: .vertical).lineLimit(lines...(lines + 4)) }
-                else { TextField("", text: $text).keyboardType(keyboard) }
+            HStack(alignment: .top, spacing: 10) {
+                Group {
+                    if lines > 1 { TextField("", text: $text, axis: .vertical).lineLimit(lines...(lines + 4)) }
+                    else { TextField("", text: $text).keyboardType(keyboard) }
+                }
+                .font(Brand.body()).foregroundStyle(th.theme.text)
+                .padding(14).frame(minHeight: 50, alignment: .topLeading)
+                .background(th.theme.field).clipShape(RoundedRectangle(cornerRadius: 14))
+                if voice { VoiceMicButton(text: $text) }
             }
-            .font(Brand.body()).foregroundStyle(th.theme.text)
-            .padding(14).frame(minHeight: 50, alignment: .topLeading)
-            .background(th.theme.field).clipShape(RoundedRectangle(cornerRadius: 14))
         }
     }
 }
@@ -64,6 +69,18 @@ struct Pill: View {
         .background(on ? Brand.ink : th.theme.field)
         .foregroundStyle(on ? Color.white : th.theme.text)
         .clipShape(Capsule())
+    }
+}
+
+/// A tappable Pill (Pill itself is display only; the house pattern
+/// wraps it in a Button — this is that wrap, once).
+struct PillButton: View {
+    let title: String
+    var icon: String? = nil
+    var on: Bool
+    let action: () -> Void
+    var body: some View {
+        Button(action: action) { Pill(title: title, icon: icon, on: on) }.buttonStyle(.plain)
     }
 }
 
