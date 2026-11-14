@@ -485,7 +485,7 @@ struct ProfileReviewSheet: View {
                 HStack(spacing: 8) { ForEach(1...5, id: \.self) { n in Button { stars = n } label: { BrandIcon(kind: .star, size: 34, color: n <= stars ? Brand.bunny : Brand.muted, mono: n <= stars) } } }.accessibilityIdentifier("reviewStars")
                 TextField("Say something kind, if you like", text: $text, axis: .vertical).lineLimit(3...6).padding(12).background(Brand.field).clipShape(RoundedRectangle(cornerRadius: 12)).accessibilityIdentifier("reviewText")
                 if !err.isEmpty { Text(err).foregroundStyle(Brand.ink) }
-                BigButton("Put my review on their profile", busy: busy) { Task { await save() } }
+                BigButton(title: "Put my review on their profile", busy: busy) { Task { await save() } }
                 Text("Your first name stands beside your review.").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted)
             }.padding(20) }
             .background(Brand.cream.ignoresSafeArea())
