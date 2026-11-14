@@ -2,11 +2,11 @@ name: iOS native (SwiftUI) tests
 
 # Shape copied from Fit Hard's ios-native.yml (their run 68 green), adapted to
 # Caresitters: genproj.py generates the project, scheme Caresitters, UI target
-# CaresittersUITests. Push to native/** compiles and runs the full UI suite on
-# a cloud Mac. No ship step: TestFlight waits on the gates.
+# CaresittersUITests. No ship step: TestFlight waits on the gates.
+# PAUSED by Ilse's word 14 Nov 2026: for the care apps, do not test until the
+# build is fully built. Dispatch only — a push fires nothing. When build 181
+# stands fully built, restore the push trigger and fire the one full run.
 on:
-  push:
-    paths: ["native/**", ".github/workflows/ios-native.yml"]
   workflow_dispatch:
 
 jobs:
