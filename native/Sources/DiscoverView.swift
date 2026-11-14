@@ -271,6 +271,8 @@ struct PersonDetailView: View {
     @State private var verified: String?; @State private var resume: Resume?
     @State private var reviews: [(rating: Int, text: String)] = []
     @State private var showBook = false
+    @State private var photoIndex = 0
+    @State private var showSet = false
     @State private var contact: ContactMode?
     @State private var rating: (avg: Double, count: Int)?
     var role: Role { s.role }
@@ -278,7 +280,13 @@ struct PersonDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 14) {
-                PhotoView(key: person.photoKey, size: 150, fallback: person.role.icon).padding(.top, 10)
+                if person.allPhotos.isEmpty {
+                    PhotoView(key: "", size: 150, fallback: person.role.icon).padding(.top, 10)
+                } else {
+                    TabView(selection: $photoIndex) { ForEach(person.allPhotos.indices, id: \.self) { i in PhotoView(key: person.allPhotos[i], size: 300, round: false, fallback: person.role.icon, fill: true).tag(i).onTapGesture { showSet = true } } }
+                        .tabViewStyle(.page(indexDisplayMode: .automatic)).frame(height: 300).clipShape(RoundedRectangle(cornerRadius: 20)).padding(.top, 10).accessibilityIdentifier("profileGallery")
+                        .fullScreenCover(isPresented: $showSet) { PhotoSetView(keys: person.allPhotos, start: photoIndex) }
+                }
                 Text(person.name).font(Brand.title(30)).foregroundStyle(Brand.titleColor)
                 if person.side == "carer" {
                     if !person.headline.isEmpty { Text(person.headline).font(.title3).foregroundStyle(Brand.muted).multilineTextAlignment(.center) }
@@ -377,8 +385,9 @@ struct SwipeCard: View {
     var distance: Double? = nil
     var onMessage: () -> Void = {}; var onResume: (() -> Void)? = nil
     @State private var slide = 0
+    @State private var showSet = false
     /// Photo slides first (profile photo, then gallery), then one description slide.
-    var photos: [String] { var out: [String] = []; for k in [person.photoKey] + person.gallery where !k.isEmpty && !out.contains(k) { out.append(k) }; return out }
+    var photos: [String] { person.allPhotos }
     var slideCount: Int { max(1, photos.count) + 1 }
     var onInfo: Bool { slide >= max(1, photos.count) }
     var body: some View {
@@ -394,6 +403,10 @@ struct SwipeCard: View {
                     Color.clear.contentShape(Rectangle()).onTapGesture { slide = min(slideCount - 1, slide + 1) }.accessibilityIdentifier("nextSlide")
                 }.padding(.bottom, 130)
             }
+            if !onInfo && !photos.isEmpty && top {
+                Button { showSet = true } label: { IconLabel(icon: .camera, text: "Photos", size: 15, color: Color(hex: 0x2D2A35)).font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote).weight(.semibold)).padding(.horizontal, 12).padding(.vertical, 7).background(Brand.bunny).clipShape(Capsule()) }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing).padding(20).padding(.bottom, 118).accessibilityIdentifier("seePhotos")
+            }
             if !onInfo {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(person.firstName).font(Brand.title(32))
@@ -407,6 +420,7 @@ struct SwipeCard: View {
                 }.foregroundStyle(.white).padding(20)
             }
             HStack(spacing: 4) { ForEach(0..<slideCount, id: \.self) { i in Capsule().fill(i == slide ? Color.white : Color.white.opacity(0.4)).frame(height: 4) } }
+        .fullScreenCover(isPresented: $showSet) { PhotoSetView(keys: photos, start: min(slide, max(0, photos.count - 1))) }
                 .padding(.horizontal, 16).padding(.top, 12).frame(maxHeight: .infinity, alignment: .top).allowsHitTesting(false)
             if let mt = match { Text("\(mt.percent)%").font(.custom("Atkinson Hyperlegible", size: 17).weight(.heavy)).foregroundStyle(Brand.ink).padding(.horizontal, 12).padding(.vertical, 6).background(Brand.card).clipShape(Capsule()).accessibilityIdentifier("matchPercent").frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing).padding(.horizontal, 16).padding(.top, 28).opacity(top && abs(offset.width) > 60 ? 0 : 1).allowsHitTesting(false) }
             if top {

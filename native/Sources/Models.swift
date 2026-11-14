@@ -108,6 +108,8 @@ extension Person {
         guard let m = card["completion"] as? [String: Any], let b = (m["booked"] as? NSNumber)?.intValue, b > 0 else { return nil }
         return Completion(finished: (m["finished"] as? NSNumber)?.intValue ?? 0, booked: b)
     }
+    /// Every photo on the profile, in order: the main photo first, then the gallery, no repeats.
+    var allPhotos: [String] { var out: [String] = []; for k in [photoKey] + gallery where !k.isEmpty && !out.contains(k) { out.append(k) }; return out }
     /// The words shown on a carer's profile and deck card.
     var completionText: String { side == "carer" ? (completion?.text ?? "New here") : "" }
 }

@@ -69,6 +69,37 @@ struct PhotoView: View {
     }
 }
 
+/// One photo, whole: fitted inside the screen, nothing cropped away.
+struct FullPhoto: View {
+    let key: String
+    @State private var url: URL?
+    var body: some View {
+        Group {
+            if let url { AsyncImage(url: url) { p in p.resizable().scaledToFit() } placeholder: { ProgressView().tint(Brand.porcelain) } }
+            else { ProgressView().tint(Brand.porcelain) }
+        }.frame(maxWidth: .infinity, maxHeight: .infinity).task(id: key) { url = await Media.url(for: key) }
+    }
+}
+
+/// The whole set, full screen, in order (item 10: photos seen whole). Swipe through, count at the bottom, close at the top.
+struct PhotoSetView: View {
+    let keys: [String]
+    @State private var index: Int
+    @Environment(\.dismiss) var dismiss
+    init(keys: [String], start: Int = 0) { self.keys = keys; _index = State(initialValue: min(start, max(0, keys.count - 1))) }
+    var body: some View {
+        ZStack {
+            Color(hex: 0x2D2A35).ignoresSafeArea()
+            TabView(selection: $index) { ForEach(keys.indices, id: \.self) { i in FullPhoto(key: keys[i]).tag(i) } }.tabViewStyle(.page(indexDisplayMode: .never))
+            VStack {
+                HStack { Spacer(); Button { dismiss() } label: { BrandIcon(kind: .cross, size: 20, color: Color(hex: 0x2D2A35), mono: true).frame(width: 40, height: 40).background(Brand.porcelain).clipShape(Circle()) } }
+                Spacer()
+                if keys.count > 1 { Text("\(index + 1) of \(keys.count)").foregroundStyle(Brand.porcelain).font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline)) }
+            }.padding(20)
+        }.accessibilityIdentifier("photoSet")
+    }
+}
+
 struct EmptyHint: View {
     let icon: BI; let text: String
     var body: some View { VStack(spacing: 8) { BrandIcon(kind: icon, size: 56, color: Brand.blush); Text(text).foregroundStyle(Brand.muted).multilineTextAlignment(.center) }.padding(40).frame(maxWidth: .infinity) }
