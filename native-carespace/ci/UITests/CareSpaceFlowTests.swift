@@ -55,6 +55,19 @@ final class CareSpaceFlowTests: XCTestCase {
         app.launchArguments = ["-carespace.theme", "light"]
         app.launch()
 
+        // State-normalising preamble (the drive tests share it): in a
+        // full-class run an earlier test may leave the app signed in —
+        // the keychain survives, so sign out first and let the door stand.
+        if app.tabBars.buttons["Chats"].waitForExistence(timeout: 10) {
+            app.tabBars.buttons["Profile"].tap()
+            let out = app.buttons["Sign out"]
+            XCTAssertTrue(out.waitForExistence(timeout: 15), "Signed-in start: Sign out missing")
+            out.tap()
+            let confirm = app.sheets.buttons["Sign out"]
+            XCTAssertTrue(confirm.waitForExistence(timeout: 10))
+            confirm.tap()
+        }
+
         let stamp = Int(Date().timeIntervalSince1970)
         let email = "projects.reports.ilse+cs29t\(stamp)@gmail.com"
         let password = "TraceTest29!"
