@@ -236,4 +236,214 @@ final class CareSpaceFlowTests: XCTestCase {
         print("THEME-SAVE-STANDS: \(stands) value=\(themeHead2.value as? String ?? "nil")")
         XCTAssertTrue(stands, "Item 8 fault: theme save did not stand across relaunch")
     }
+
+    // MARK: QA plan drive, batch 2: the day journey — greeting by name
+    // on Chats, make a space, add a child (item 18), the child's six
+    // sections stand, a tracker entry is written on Today and reads
+    // back (item 21), and the day-place rows stand (items 25–30, 32,
+    // 34 surfaces). CareField titles are separate static texts above
+    // unlabelled fields, so fields are taken in form order.
+    func testDriveJourney() throws {
+        let app = XCUIApplication()
+        app.launch()
+        if app.tabBars.buttons["Chats"].waitForExistence(timeout: 10) {
+            app.tabBars.buttons["Profile"].tap()
+            let out = app.buttons["Sign out"]
+            XCTAssertTrue(out.waitForExistence(timeout: 15), "Signed-in start: Sign out missing")
+            out.tap()
+            let confirm = app.sheets.buttons["Sign out"]
+            XCTAssertTrue(confirm.waitForExistence(timeout: 10))
+            confirm.tap()
+        }
+        let doorLink = app.buttons["Use email instead"]
+        XCTAssertTrue(doorLink.waitForExistence(timeout: 60), "Door did not stand")
+        doorLink.tap()
+        let familyPick = app.buttons["Family"]
+        XCTAssertTrue(familyPick.waitForExistence(timeout: 30), "Who-are-you pick did not stand")
+        familyPick.tap()
+        let nameField = app.textFields["Your name"]
+        XCTAssertTrue(nameField.waitForExistence(timeout: 15))
+        nameField.tap(); nameField.typeText("Journey Tester")
+        let stamp = Int(Date().timeIntervalSince1970)
+        let emailField = app.textFields["Email"]
+        emailField.tap(); emailField.typeText("projects.reports.ilse+cs29j\(stamp)@gmail.com")
+        let pwField = app.secureTextFields["Password"]
+        pwField.tap(); pwField.typeText("TraceTest29!")
+        app.buttons["Create my account"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Chats"].waitForExistence(timeout: 60), "Journey sign-up did not land inside")
+
+        func row(_ title: String) -> XCUIElement {
+            app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", title)).firstMatch
+        }
+
+        // Item 1's greeting, on the home surface, by the user's name.
+        XCTAssertTrue(app.staticTexts["Hello, Journey Tester"].waitForExistence(timeout: 15), "Greeting by name missing on Chats")
+        print("DRIVE-GREETING-OK: true")
+
+        // Make a space.
+        row("New care space").tap()
+        XCTAssertTrue(app.staticTexts["Space name"].waitForExistence(timeout: 15), "New space form did not stand")
+        let spaceField = app.textFields.element(boundBy: 0)
+        spaceField.tap(); spaceField.typeText("Drive Family")
+        app.buttons["Make space"].tap()
+        XCTAssertTrue(app.staticTexts["Drive Family"].waitForExistence(timeout: 30), "Space card did not stand on Chats")
+        print("DRIVE-SPACE-OK: true")
+
+        // Into the space: Today stands with its report and empty day.
+        row("Drive Family").tap()
+        XCTAssertTrue(app.buttons["Daily report"].waitForExistence(timeout: 20), "Daily report pill missing on Today")
+        XCTAssertTrue(app.staticTexts["Nothing logged yet today"].exists, "Today empty state missing")
+        print("DRIVE-TODAY-OK: true")
+
+        // Add a child from the Care tab.
+        app.tabBars.buttons["Care"].tap()
+        XCTAssertTrue(row("Add a child").waitForExistence(timeout: 20), "Add a child missing in Care")
+        row("Add a child").tap()
+        XCTAssertTrue(app.staticTexts["Add a child"].waitForExistence(timeout: 15), "Add child form did not stand")
+        let f0 = app.textFields.element(boundBy: 0); f0.tap(); f0.typeText("Mia")
+        let f1 = app.textFields.element(boundBy: 1); f1.tap(); f1.typeText("4")
+        let f2 = app.textFields.element(boundBy: 2); f2.tap(); f2.typeText("drawing, stories")
+        app.buttons["Save child"].tap()
+        XCTAssertTrue(row("Mia").waitForExistence(timeout: 30), "Child row did not stand in Care")
+        print("DRIVE-CHILD-ADDED: true")
+
+        // The child's page: six sections + the emergency sheet.
+        row("Mia").tap()
+        for section in ["Health and safety", "Meals", "Sleep and routine", "Mood", "Learning", "Memories", "Emergency sheet"] {
+            XCTAssertTrue(row(section).waitForExistence(timeout: 10), "Child section missing: \(section)")
+        }
+        print("DRIVE-CHILD-OK: true")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+
+        // Write a tracker entry on Today; it must read back.
+        app.tabBars.buttons["Chats"].tap()
+        if !row("Drive Family").waitForExistence(timeout: 45) {
+            app.tabBars.buttons["Chats"].tap()
+        }
+        XCTAssertTrue(row("Drive Family").waitForExistence(timeout: 45), "Space card missing on return")
+        row("Drive Family").tap()
+        let moodPill = app.buttons["Mood"]
+        XCTAssertTrue(moodPill.waitForExistence(timeout: 20), "Mood kind pill missing on Today")
+        moodPill.tap()
+        let composer = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
+        composer.tap(); composer.typeText("Played happily all morning")
+        app.buttons["Add to today"].tap()
+        let entry = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Played happily")).firstMatch
+        XCTAssertTrue(entry.waitForExistence(timeout: 30), "Tracker entry did not read back on Today")
+        print("DRIVE-TRACKER-OK: true")
+
+        // The day-place rows stand on Today.
+        for place in ["Roster", "Timesheet", "Shopping", "Reminders", "Emergency", "Checks", "Recently deleted"] {
+            if !row(place).exists { app.swipeUp() }
+            XCTAssertTrue(row(place).waitForExistence(timeout: 10), "Day-place row missing: \(place)")
+        }
+        print("DRIVE-DAYPLACE-ROWS-OK: true")
+    }
+
+    // MARK: QA plan drive, batch 2b (split remainder, on QA's word):
+    // the legs that do NOT depend on a child — a tracker entry written
+    // on Today reads back, and the day-place rows stand. Runs while
+    // F-CS29-1 (the child write) is fixed on its own line.
+    func testDriveToday() throws {
+        let app = XCUIApplication()
+        app.launch()
+        if app.tabBars.buttons["Chats"].waitForExistence(timeout: 10) {
+            app.tabBars.buttons["Profile"].tap()
+            let out = app.buttons["Sign out"]
+            XCTAssertTrue(out.waitForExistence(timeout: 15), "Signed-in start: Sign out missing")
+            out.tap()
+            let confirm = app.sheets.buttons["Sign out"]
+            XCTAssertTrue(confirm.waitForExistence(timeout: 10))
+            confirm.tap()
+        }
+        let doorLink = app.buttons["Use email instead"]
+        XCTAssertTrue(doorLink.waitForExistence(timeout: 60), "Door did not stand")
+        doorLink.tap()
+        let familyPick = app.buttons["Family"]
+        XCTAssertTrue(familyPick.waitForExistence(timeout: 30), "Who-are-you pick did not stand")
+        familyPick.tap()
+        let nameField = app.textFields["Your name"]
+        XCTAssertTrue(nameField.waitForExistence(timeout: 15))
+        nameField.tap(); nameField.typeText("Today Tester")
+        let stamp = Int(Date().timeIntervalSince1970)
+        let emailField = app.textFields["Email"]
+        emailField.tap(); emailField.typeText("projects.reports.ilse+cs29d\(stamp)@gmail.com")
+        let pwField = app.secureTextFields["Password"]
+        pwField.tap(); pwField.typeText("TraceTest29!")
+        app.buttons["Create my account"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Chats"].waitForExistence(timeout: 60), "Today sign-up did not land inside")
+
+        func row(_ title: String) -> XCUIElement {
+            app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", title)).firstMatch
+        }
+        row("New care space").tap()
+        if !app.staticTexts["Space name"].waitForExistence(timeout: 45), row("New care space").exists {
+            row("New care space").tap()
+        }
+        XCTAssertTrue(app.staticTexts["Space name"].waitForExistence(timeout: 45), "New space form did not stand")
+        let spaceField = app.textFields.element(boundBy: 0)
+        spaceField.tap(); spaceField.typeText("Today Family")
+        app.buttons["Make space"].tap()
+        XCTAssertTrue(app.staticTexts["Today Family"].waitForExistence(timeout: 45), "Space card did not stand")
+        row("Today Family").tap()
+        let notePill = app.buttons["Note"]
+        XCTAssertTrue(notePill.waitForExistence(timeout: 20), "Note kind pill missing on Today")
+        notePill.tap()
+        let composer = app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch
+        composer.tap(); composer.typeText("Morning entry from the drive")
+        app.buttons["Add to today"].tap()
+        let entry = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Morning entry")).firstMatch
+        XCTAssertTrue(entry.waitForExistence(timeout: 30), "Tracker entry did not read back on Today")
+        print("DRIVE-TRACKER-OK: true")
+        for place in ["Roster", "Timesheet", "Shopping", "Reminders", "Emergency", "Checks", "Recently deleted"] {
+            if !row(place).exists { app.swipeUp() }
+            XCTAssertTrue(row(place).waitForExistence(timeout: 10), "Day-place row missing: \(place)")
+        }
+        print("DRIVE-DAYPLACE-ROWS-OK: true")
+    }
+
+    // MARK: Diagnostic (temporary): what stands in Care right now, and
+    // what the Add-child form says after Save. Prints, never asserts
+    // beyond the app standing.
+    func testProbeCareState() throws {
+        let app = XCUIApplication()
+        app.launch()
+        XCTAssertTrue(app.tabBars.buttons["Chats"].waitForExistence(timeout: 60), "App did not land inside")
+        app.tabBars.buttons["Care"].tap()
+        Thread.sleep(forTimeInterval: 4)
+        let mia = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Mia")).firstMatch
+        print("PROBE-MIA-ROW: \(mia.exists)")
+        let noKids = app.staticTexts["No children in this space yet."].exists
+        print("PROBE-NO-KIDS: \(noKids)")
+        if !mia.exists {
+            let add = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Add a child")).firstMatch
+            print("PROBE-ADD-ROW: \(add.exists)")
+            if add.exists {
+                add.tap()
+                let f0 = app.textFields.element(boundBy: 0)
+                XCTAssertTrue(f0.waitForExistence(timeout: 15))
+                f0.tap(); f0.typeText("Probe")
+                let f1 = app.textFields.element(boundBy: 1); f1.tap(); f1.typeText("3")
+                app.buttons["Save child"].tap()
+                Thread.sleep(forTimeInterval: 6)
+                let texts = app.staticTexts.allElementsBoundByIndex.map { $0.label }
+                print("PROBE-FORM-TEXTS: \(texts)")
+                let back = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Probe")).firstMatch
+                print("PROBE-PROBE-ROW-AFTER-SAVE: \(back.exists)")
+            }
+        }
+    }
+
+    // MARK: Diagnostic (temporary): after a cache-clearing reinstall,
+    // does the space read back from the server?
+    func testProbeSpaceServer() throws {
+        let app = XCUIApplication()
+        app.launch()
+        let chats = app.tabBars.buttons["Chats"]
+        XCTAssertTrue(chats.waitForExistence(timeout: 60), "App did not land inside")
+        Thread.sleep(forTimeInterval: 5)
+        let card = app.staticTexts["Drive Family"].exists
+        let empty = app.staticTexts["No care spaces yet"].exists
+        print("PROBE-SPACE-STANDS: \(card) EMPTY: \(empty)")
+    }
 }
