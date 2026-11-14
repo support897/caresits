@@ -137,7 +137,7 @@ struct ShoppingView: View {
                 Card {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(it.name).font(Brand.body(17).weight(.semibold))
-                        if !it.source.isEmpty { BodyText(text: "For: \(it.source)", muted: true) }
+                        if !it.source.isEmpty { BodyText(text: "For: \(["meal": "From a meal", "activity": "From an activity", "manual": "Added by hand"][it.source] ?? it.source)", muted: true) }
                         if let cid = it.childId, let c = model.children.first(where: { $0.id == cid }) {
                             BodyText(text: "Child: \(c.name)", muted: true)
                         }
@@ -162,7 +162,7 @@ struct ShoppingView: View {
                 guard !n.isEmpty else { return }
                 Task {
                     _ = await CareRepo.addShopping(spaceId: model.space.id,
-                                                   item: ShoppingItem(name: n, childId: nil, source: "Added by hand",
+                                                   item: ShoppingItem(name: n, childId: nil, source: "manual",
                                                                       buyByName: "", due: "", bought: false, reimbursed: false))
                     name = ""; await reload()
                 }

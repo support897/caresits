@@ -192,7 +192,7 @@ extension CareRepo {
             guard let key = m["key"] as? String, let at = date(m["at"]) else { return nil }
             let child = (m["childId"] as? String).flatMap { $0.isEmpty ? nil : $0 }
             return GalleryItem(id: d.documentID, key: key, kind: m["kind"] as? String ?? "photo", by: m["by"] as? String ?? "", at: at,
-                               childId: child, sharedByParent: m["sharedByParent"] as? Bool ?? false)
+                               childId: child, sharedByParent: (m["sharedByParent"] as? Bool) ?? (child == nil))
         }
         return items.filter { role == .admin || $0.childId == nil || $0.sharedByParent }.sorted { $0.at > $1.at }
     }
@@ -200,17 +200,25 @@ extension CareRepo {
     static func addGalleryPhoto(spaceId: String, key: String, childId: String?, by uid: String) async throws -> GalleryItem {
         guard SpaceMedia.isKey(key, forSpace: spaceId) else { throw CareError(message: "This file does not belong to this care space.") }
         let ref = space(spaceId).collection("gallery").document()
-        var data: [String: Any] = ["key": key, "kind": "photo", "by": uid, "at": FieldValue.serverTimestamp(),
-                                   "sharedByParent": childId == nil]
+        // The deployed gallery check fixes the keys to key/kind/by/at/
+        // childId and reads a photo with no childId as shared with the
+        // whole space — there is no sharedByParent field to write.
+        var data: [String: Any] = ["key": key, "kind": "photo", "by": uid, "at": FieldValue.serverTimestamp()]
         if let c = childId, !c.isEmpty { data["childId"] = c }
         _ = try await commit { done in ref.setData(data, completion: done) }
         return GalleryItem(id: ref.documentID, key: key, kind: "photo", by: uid, at: Date(), childId: childId, sharedByParent: childId == nil)
     }
 
-    static func setGalleryShared(spaceId: String, itemId: String, shared: Bool, role: CareRole) async throws {
+    static func setGalleryShared(spaceId: String, item: GalleryItem, shared: Bool, role: CareRole) async throws {
         guard CareAccess.canShareGallery(role) else { throw CareError(message: "Only a parent can change photo sharing.") }
-        let ref = space(spaceId).collection("gallery").document(itemId)
-        _ = try await commit(wait: 8) { done in ref.updateData(["sharedByParent": shared], completion: done) }
+        // The deployed gallery rules allow no update: sharing is the
+        // presence of childId, so a change is a delete + a fresh copy
+        // written without it (share) or with it back (unshare).
+        guard shared != item.sharedByParent else { return }
+        guard !shared || item.childId != nil else { return }
+        let old = space(spaceId).collection("gallery").document(item.id)
+        _ = try await commit(wait: 8) { done in old.delete(completion: done) }
+        _ = try await addGalleryPhoto(spaceId: spaceId, key: item.key, childId: shared ? nil : item.childId, by: item.by)
     }
 }
 
@@ -286,7 +294,7 @@ struct GalleryView: View {
     func toggle(_ item: GalleryItem) {
         busyId = item.id; error = ""; note = ""
         Task {
-            do { try await CareRepo.setGalleryShared(spaceId: space.id, itemId: item.id, shared: !item.sharedByParent, role: space.role)
+            do { try await CareRepo.setGalleryShared(spaceId: space.id, item: item, shared: !item.sharedByParent, role: space.role)
                 if let i = items.firstIndex(where: { $0.id == item.id }) { items[i].sharedByParent.toggle() }
                 note = item.sharedByParent ? "Photo is private again." : "Photo shared with the family." }
             catch { self.error = "Could not change sharing. Ask a parent admin to try again." }

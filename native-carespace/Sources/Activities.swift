@@ -169,20 +169,20 @@ struct DayPlanView: View {
         .task(id: child.id + CareTime.dayKey()) { await listen() }
     }
     func listen() async {
-        plan = await CareRepo.dayPlan(spaceId: space.id, dayKey: CareTime.dayKey(), childId: child.id)
+        plan = await CareRepo.dayPlan(spaceId: space.id, dayKey: CareTime.dayKey(), childId: child.id, uid: ctx.uid)
     }
     func compose() async {
         let picks = ActivityEngine.compose(child: child, allergyNames: ctx.allergyNames[child.id] ?? [], recentIds: [])
         var why: [String: String] = [:]
         for p in picks { why[p.activity.id] = p.why }
         let ok = await CareRepo.saveDayPlan(spaceId: space.id, dayKey: CareTime.dayKey(),
-                                            childId: child.id, activityIds: picks.map(\.activity.id), why: why)
+                                            childId: child.id, activityIds: picks.map(\.activity.id), why: why, uid: ctx.uid)
         note = SaveText.result(ok)
         // Buy-flagged materials roll into the shopping list (item 30).
         for p in picks {
             for m in p.activity.materials where m.buy {
                 _ = await CareRepo.addShopping(spaceId: space.id, item: ShoppingItem(
-                    name: m.name, childId: child.id, source: p.activity.title,
+                    name: m.name, childId: child.id, source: "activity",
                     buyByName: "", due: "", bought: false, reimbursed: false))
             }
         }

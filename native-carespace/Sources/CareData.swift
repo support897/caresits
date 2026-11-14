@@ -108,7 +108,13 @@ enum CareRepo {
         for s in ChildSection.allCases { c.notes[s] = (sec[s.rawValue] as? [String: Any])?["notes"] as? String ?? "" }
         c.memories = strings(sec["memories"])
         c.foodPreferences = strings(m["foodPreferences"]); c.learningGoals = strings(m["learningGoals"])
-        c.learningStyles = strings(m["learningStyles"]); c.learningLanguage = m["learningLanguage"] as? String ?? ""
+        // The deployed rules keep the child document to a fixed key set
+        // (validCareChild): the learning picks ride inside the learning
+        // section, whose inner shape the rules leave open. Legacy
+        // top-level keys still parse for older documents.
+        let learnSec = sec["learning"] as? [String: Any] ?? [:]
+        c.learningStyles = strings(learnSec["styles"] ?? m["learningStyles"])
+        c.learningLanguage = (learnSec["language"] as? String) ?? (m["learningLanguage"] as? String) ?? ""
         c.milestones = (m["milestones"] as? [[String: Any]] ?? []).compactMap { x in
             guard let t = x["title"] as? String else { return nil }
             return ChildMilestone(title: t, at: date(x["at"]) ?? Date(), note: x["note"] as? String ?? "", photoKey: x["photoKey"] as? String ?? "")
@@ -127,19 +133,32 @@ enum CareRepo {
     static func childData(_ c: ChildProfile) -> [String: Any] {
         var sections: [String: Any] = [:]
         for s in ChildSection.allCases { sections[s.rawValue] = ["notes": String((c.notes[s] ?? "").prefix(2000))] }
+        // Learning picks ride inside the learning section (see parseChild).
+        var learn = sections["learning"] as? [String: Any] ?? [:]
+        learn["styles"] = c.learningStyles; learn["language"] = c.learningLanguage
+        sections["learning"] = learn
         sections["memories"] = c.memories
+        // The deployed routine check (validChildRoutine) accepts wake/bed
+        // only as HH:MM; an unset time is an absent key, never "".
+        var routine: [String: Any] = ["naps": c.naps.map { ["from": $0.from, "to": $0.to] }]
+        let hhmm = try! NSRegularExpression(pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$")
+        if hhmm.firstMatch(in: c.wake, range: NSRange(c.wake.startIndex..., in: c.wake)) != nil { routine["wake"] = c.wake }
+        if hhmm.firstMatch(in: c.bed, range: NSRange(c.bed.startIndex..., in: c.bed)) != nil { routine["bed"] = c.bed }
         return [
             "name": c.name, "ageYears": c.ageYears, "interests": c.interests, "sections": sections,
-            "foodPreferences": c.foodPreferences, "learningGoals": c.learningGoals, "learningStyles": c.learningStyles, "learningLanguage": c.learningLanguage,
+            "foodPreferences": c.foodPreferences, "learningGoals": c.learningGoals,
             "milestones": c.milestones.map { m -> [String: Any] in var x: [String: Any] = ["title": m.title, "at": CareTime.iso(m.at), "note": m.note]; if !m.photoKey.isEmpty { x["photoKey"] = m.photoKey }; return x },
-            "routine": ["wake": c.wake, "bed": c.bed, "naps": c.naps.map { ["from": $0.from, "to": $0.to] }]
+            "routine": routine
         ]
     }
 
     @discardableResult
     static func saveChild(spaceId: String, child: ChildProfile, by uid: String) async throws -> Bool {
+        // The deployed child check (validCareChild) allows createdAt /
+        // updatedAt only as real timestamps and has no updatedBy key.
         var data = childData(child)
-        data["updatedBy"] = uid; data["updatedAt"] = CareTime.iso(Date())
+        data["updatedAt"] = FieldValue.serverTimestamp()
+        if child.id.isEmpty { data["createdAt"] = FieldValue.serverTimestamp() }
         let ref = space(spaceId).collection("children").document(child.id.isEmpty ? UUID().uuidString : child.id)
         return try await commit { done in ref.setData(data, merge: true, completion: done) }
     }
@@ -167,10 +186,12 @@ enum CareRepo {
     /// Saves ONE medical section and its team alert together. Waits for the server. False = could not confirm yet.
     static func saveMedical(spaceId: String, child: ChildProfile, section: MedicalSection, payload: [String: Any], by uid: String) async throws -> Bool {
         let alertRef = space(spaceId).collection("alerts").document()
-        let now = CareTime.iso(Date())
+        // The deployed medical check pairs the record with its alert and
+        // demands both stamps equal request.time: real server timestamps,
+        // never ISO strings.
         var data = payload
-        data["updatedBy"] = uid; data["updatedAt"] = now; data["alertId"] = alertRef.documentID
-        let alert: [String: Any] = ["kind": "medical-change", "by": uid, "at": now,
+        data["updatedBy"] = uid; data["updatedAt"] = FieldValue.serverTimestamp(); data["alertId"] = alertRef.documentID
+        let alert: [String: Any] = ["kind": "medical-change", "by": uid, "at": FieldValue.serverTimestamp(),
                                     "summary": "Updated \(section.alertWord) details for \(child.name).",
                                     "childId": child.id, "section": section.rawValue, "recordId": "main"]
         let batch = db.batch()
@@ -207,7 +228,7 @@ enum CareRepo {
                         answeredAt: $0["answeredAt"] as? String, answerText: $0["answerText"] as? String)
         }
         return TimelineItem(id: d.documentID, day: m["day"] as? String ?? "", kind: kind, at: at, text: m["text"] as? String ?? "",
-                            childId: m["childId"] as? String, by: m["by"] as? String, mood: m["mood"] as? String, asks: asks, photoKey: m["photoKey"] as? String ?? "")
+                            childId: (m["childId"] as? String).flatMap { $0.isEmpty ? nil : $0 }, by: m["by"] as? String, mood: m["mood"] as? String, asks: asks, photoKey: m["photoKey"] as? String ?? "")
     }
 
     static func listenDay(spaceId: String, day: String, onChange: @escaping ([TimelineItem]) -> Void) -> ListenerRegistration {
@@ -219,7 +240,9 @@ enum CareRepo {
 
     @discardableResult
     static func addItem(spaceId: String, kind: TimelineKind, text: String, childId: String?, by uid: String, mood: String? = nil, photoKey: String? = nil) async throws -> Bool {
-        var data: [String: Any] = ["day": CareTime.dayKey(), "kind": kind.rawValue, "at": CareTime.iso(Date()), "text": String(text.prefix(500)), "by": uid, "asks": []]
+        // The deployed day check (validDayStory) requires childId on
+        // every entry: a space-wide entry carries it as "".
+        var data: [String: Any] = ["day": CareTime.dayKey(), "kind": kind.rawValue, "at": CareTime.iso(Date()), "text": String(text.prefix(500)), "by": uid, "asks": [], "childId": childId ?? ""]
         if let c = childId, !c.isEmpty { data["childId"] = c }
         if let m = mood { data["mood"] = m }
         if let p = photoKey, !p.isEmpty { data["photoKey"] = p }
@@ -256,7 +279,8 @@ enum CareRepo {
         let clean = String(text.trimmingCharacters(in: .whitespacesAndNewlines).prefix(1000))
         guard !clean.isEmpty else { return true }
         let ref = space(spaceId).collection("messages").document()
-        return try await commit { done in ref.setData(["from": uid, "text": clean, "at": CareTime.iso(Date()), "kind": "text"], completion: done) }
+        // The deployed message check demands at == request.time.
+        return try await commit { done in ref.setData(["from": uid, "text": clean, "at": FieldValue.serverTimestamp(), "kind": "text"], completion: done) }
     }
 
     // Unread is kept on this phone, per user and per space.
@@ -294,8 +318,10 @@ enum CareRepo {
     @discardableResult
     static func addEvent(spaceId: String, title: String, kind: CalendarKind, start: Date, end: Date, childId: String?, by uid: String, role: CareRole, recurring: CalendarRecurrence? = nil) async throws -> Bool {
         guard end > start else { throw CareError(message: "The end must be after the start.") }
+        // The deployed calendar check holds time off at "requested"
+        // until it is decided, whoever writes it (item 22's shape).
         var data: [String: Any] = ["title": String(title.prefix(120)), "kind": kind.rawValue, "start": CareTime.iso(start), "end": CareTime.iso(end), "ownerUid": uid,
-                                   "state": kind == .timeoff && role != .admin ? "requested" : "active"]
+                                   "state": kind == .timeoff ? "requested" : "active"]
         if let c = childId, !c.isEmpty { data["childId"] = c }
         if let r = recurring {
             guard kind == .shift else { throw CareError(message: "Only shifts can repeat.") }
@@ -330,6 +356,7 @@ enum CareRepo {
 
 @MainActor
 final class CareContext: ObservableObject {
+    var uid: String = ""
     @Published var spaces: [SpaceSummary] = []
     @Published var loaded = false
     @Published var events: [CalendarEvent] = []
@@ -338,6 +365,7 @@ final class CareContext: ObservableObject {
     @Published var allergyNames: [String: [String]] = [:]
 
     func load(uid: String) async {
+        self.uid = uid
         let list = await CareRepo.loadSpaces(uid: uid)
         spaces = list
         var ev: [CalendarEvent] = []; var ch: [String: [ChildProfile]] = [:]; var lm: [String: SpaceMessage] = [:]; var al: [String: [String]] = [:]
@@ -443,8 +471,15 @@ struct ShoppingItem: Identifiable, Equatable {
 }
 
 extension CareRepo {
-    static func dayPlan(spaceId: String, dayKey: String, childId: String) async -> DayPlan? {
-        guard let snap = try? await space(spaceId).collection("dayPlans").document(dayKey).getDocument(),
+    // Day plans live in the composer's own prefs: the deployed rules
+    // carry no dayPlans collection under a space, and the engine's plan
+    // is composed by one account ahead of the day (item 18).
+    static func dayPlanRef(uid: String, spaceId: String, dayKey: String) -> DocumentReference {
+        db.collection("users").document(uid).collection("prefs").document("dayplan-\(spaceId)-\(dayKey)")
+    }
+
+    static func dayPlan(spaceId: String, dayKey: String, childId: String, uid: String) async -> DayPlan? {
+        guard !uid.isEmpty, let snap = try? await dayPlanRef(uid: uid, spaceId: spaceId, dayKey: dayKey).getDocument(),
               let m = snap.data() else { return nil }
         let byChild = m["byChild"] as? [String: Any] ?? [:]
         guard let mine = byChild[childId] as? [String: Any] else { return nil }
@@ -454,31 +489,38 @@ extension CareRepo {
     }
 
     @discardableResult
-    static func saveDayPlan(spaceId: String, dayKey: String, childId: String, activityIds: [String], why: [String: String]) async -> Bool {
-        let ref = space(spaceId).collection("dayPlans").document(dayKey)
-        let data: [String: Any] = ["byChild": [childId: ["activityIds": activityIds, "why": why]],
-                                   "updatedAt": FieldValue.serverTimestamp()]
+    static func saveDayPlan(spaceId: String, dayKey: String, childId: String, activityIds: [String], why: [String: String], uid: String) async -> Bool {
+        guard !uid.isEmpty else { return false }
+        let ref = dayPlanRef(uid: uid, spaceId: spaceId, dayKey: dayKey)
+        // Read-modify-write: a merge would replace the whole byChild map
+        // and drop a sibling child's plan for the same day.
+        let existing = (try? await ref.getDocument())?.data()?["byChild"] as? [String: Any] ?? [:]
+        var byChild = existing
+        byChild[childId] = ["activityIds": activityIds, "why": why]
+        let data: [String: Any] = ["byChild": byChild, "updatedAt": FieldValue.serverTimestamp()]
         return (try? await commit { done in ref.setData(data, merge: true, completion: done) }) ?? false
     }
 
     static func shopping(spaceId: String) async -> [ShoppingItem] {
-        guard let snap = try? await space(spaceId).collection("shopping")
-            .order(by: "at", descending: false).getDocuments() else { return [] }
+        // The deployed shopping check fixes the document keys: the item
+        // text rides as "item", the buyer as "buyer", and there is no
+        // "at" key to order by — the list sorts here instead.
+        guard let snap = try? await space(spaceId).collection("shopping").getDocuments() else { return [] }
         return snap.documents.map { d in
             let m = d.data()
-            return ShoppingItem(id: d.documentID, name: m["name"] as? String ?? "",
+            return ShoppingItem(id: d.documentID, name: (m["item"] as? String) ?? (m["name"] as? String) ?? "",
                                 childId: m["childId"] as? String, source: m["source"] as? String ?? "",
-                                buyByName: m["buyByName"] as? String ?? "", due: m["due"] as? String ?? "",
+                                buyByName: (m["buyer"] as? String) ?? (m["buyByName"] as? String) ?? "", due: m["due"] as? String ?? "",
                                 bought: m["bought"] as? Bool ?? false, reimbursed: m["reimbursed"] as? Bool ?? false)
-        }
+        }.sorted { $0.name.lowercased() < $1.name.lowercased() }
     }
 
     @discardableResult
     static func addShopping(spaceId: String, item: ShoppingItem) async -> Bool {
         let ref = space(spaceId).collection("shopping").document()
-        var data: [String: Any] = ["name": item.name, "source": item.source,
-            "buyByName": item.buyByName, "due": item.due, "bought": item.bought,
-            "reimbursed": item.reimbursed, "at": FieldValue.serverTimestamp()]
+        var data: [String: Any] = ["item": item.name, "source": ["meal", "activity", "manual"].contains(item.source) ? item.source : "manual",
+            "buyer": item.buyByName, "due": item.due, "bought": item.bought,
+            "reimbursed": item.reimbursed]
         if let c = item.childId { data["childId"] = c }
         return (try? await commit { done in ref.setData(data, completion: done) }) ?? false
     }
@@ -505,6 +547,23 @@ struct DeletedEntry: Identifiable, Equatable {
 }
 
 extension CareRepo {
+    // The bin lives on this device: the deployed rules carry no
+    // deleted collection under a space. Deletion stays the family's
+    // alone and the 30-day window is kept here (item 29).
+    static func binKey(_ spaceId: String) -> String { "carespace.bin.\(spaceId)" }
+
+    static func binLoad(_ spaceId: String) -> [[String: Any]] {
+        guard let raw = UserDefaults.standard.data(forKey: binKey(spaceId)),
+              let list = try? JSONSerialization.jsonObject(with: raw) as? [[String: Any]] else { return [] }
+        return list
+    }
+
+    static func binSave(_ spaceId: String, _ list: [[String: Any]]) {
+        if let raw = try? JSONSerialization.data(withJSONObject: list) {
+            UserDefaults.standard.set(raw, forKey: binKey(spaceId))
+        }
+    }
+
     /// Move a day item into the bin, then remove it from the day.
     /// Nothing is lost: the whole record rides in the payload.
     @discardableResult
@@ -514,33 +573,41 @@ extension CareRepo {
         if let c = item.childId { payload["childId"] = c }
         if let b = item.by { payload["by"] = b }
         if let m = item.mood { payload["mood"] = m }
-        let bin = space(spaceId).collection("deleted").document(item.id)
-        let okBin = (try? await commit { done in bin.setData(["payload": payload, "deletedAt": FieldValue.serverTimestamp(),
-                                                              "kind": item.kind.rawValue, "text": item.text], completion: done) }) ?? false
-        guard okBin else { return false }
+        var list = binLoad(spaceId)
+        list.removeAll { ($0["id"] as? String) == item.id }
+        list.append(["id": item.id, "kind": item.kind.rawValue, "text": item.text,
+                     "deletedAtEpoch": Date().timeIntervalSince1970, "payload": payload])
+        binSave(spaceId, list)
         let ref = space(spaceId).collection("dayStory").document(item.id)
         return (try? await commit { done in ref.delete(completion: done) }) ?? false
     }
 
     static func deletedEntries(spaceId: String) async -> [DeletedEntry] {
-        guard let snap = try? await space(spaceId).collection("deleted")
-            .order(by: "deletedAt", descending: true).getDocuments() else { return [] }
         let cutoff = Date().addingTimeInterval(-30 * 24 * 3600)
-        return snap.documents.compactMap { d in
-            let m = d.data()
-            let at = (m["deletedAt"] as? Timestamp)?.dateValue() ?? Date.distantPast
-            guard at >= cutoff else { return nil }
+        var kept: [[String: Any]] = []
+        var out: [DeletedEntry] = []
+        for m in binLoad(spaceId) {
+            let at = Date(timeIntervalSince1970: (m["deletedAtEpoch"] as? NSNumber)?.doubleValue ?? 0)
+            guard at >= cutoff else { continue }
+            kept.append(m)
             let payload = m["payload"] as? [String: Any] ?? [:]
-            return DeletedEntry(id: d.documentID, kind: m["kind"] as? String ?? "",
-                                text: m["text"] as? String ?? "", day: payload["day"] as? String ?? "",
-                                childId: payload["childId"] as? String, deletedAt: at, payload: payload)
+            out.append(DeletedEntry(id: m["id"] as? String ?? "", kind: m["kind"] as? String ?? "",
+                                    text: m["text"] as? String ?? "", day: payload["day"] as? String ?? "",
+                                    childId: (payload["childId"] as? String).flatMap { $0.isEmpty ? nil : $0 },
+                                    deletedAt: at, payload: payload))
         }
+        binSave(spaceId, kept)
+        return out.sorted { $0.deletedAt > $1.deletedAt }
     }
 
     @discardableResult
     static func restoreDeleted(spaceId: String, entry: DeletedEntry) async -> Bool {
+        // The restored record must pass the same deployed day check as
+        // a fresh entry: childId always present, no extra keys.
         var data = entry.payload
-        data["restoredAt"] = FieldValue.serverTimestamp()
+        if (data["childId"] as? String) == nil { data["childId"] = "" }
+        guard data["by"] is String, data["day"] is String, data["at"] is String else { return false }
+        if data["asks"] == nil { data["asks"] = [] }
         let ref = space(spaceId).collection("dayStory").document(entry.id)
         let ok = (try? await commit { done in ref.setData(data, completion: done) }) ?? false
         if ok { _ = await purgeDeleted(spaceId: spaceId, entry: entry) }
@@ -549,8 +616,10 @@ extension CareRepo {
 
     @discardableResult
     static func purgeDeleted(spaceId: String, entry: DeletedEntry) async -> Bool {
-        let ref = space(spaceId).collection("deleted").document(entry.id)
-        return (try? await commit { done in ref.delete(completion: done) }) ?? false
+        var list = binLoad(spaceId)
+        list.removeAll { ($0["id"] as? String) == entry.id }
+        binSave(spaceId, list)
+        return true
     }
 }
 
