@@ -54,7 +54,16 @@ struct PhotoView: View {
     var body: some View {
         Group {
             if let url { if fill { Color.clear.overlay { AsyncImage(url: url) { p in p.resizable().scaledToFill() } placeholder: { ProgressView() } }.clipped() } else { AsyncImage(url: url) { p in p.resizable().scaledToFill() } placeholder: { ProgressView() } } }
-            else { ZStack { Brand.blush; BrandIcon(kind: fallback, size: size * 0.5, color: Brand.ink) } }
+            else {
+                // The placeholder of record (item 7): a designed medallion, never a bare icon on a flat fill.
+                // Blush Pink into Pale Pink Ground, a thin Bunny Pink ring (photo size and up), the role's own
+                // icon in Bunny Pink at the middle. Warm, clearly a placeholder, never a fake photo.
+                ZStack {
+                    LinearGradient(colors: [Brand.blush, Brand.paleGround], startPoint: .top, endPoint: .bottom)
+                    if size >= 64 { Circle().stroke(Brand.bunny, lineWidth: 1.5).frame(width: size * 0.62, height: size * 0.62) }
+                    BrandIcon(kind: fallback, size: size * 0.42, color: Brand.bunny)
+                }
+            }
         }.frame(width: fill ? nil : size, height: fill ? nil : size).frame(maxWidth: fill ? .infinity : nil, maxHeight: fill ? .infinity : nil).clipped().clipShape(RoundedRectangle(cornerRadius: round ? size / 2 : 16))
         .task(id: key) { url = await Media.url(for: key) }
     }
