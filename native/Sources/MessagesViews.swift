@@ -72,8 +72,10 @@ struct ChatView: View {
     @State private var older: [ChatMessage] = []; @State private var noMore = false; @State private var showBook = false
     @State private var listener: ListenerRegistration?
     @State private var pick: PhotosPickerItem?; @State private var sending = false
+    @State private var filledNote = false
     var body: some View {
         VStack(spacing: 0) {
+            if filledNote { Text("This one is filled").font(.footnote.weight(.semibold)).foregroundStyle(Color(hex: 0x3A2E33)).padding(.horizontal, 14).padding(.vertical, 7).background(Brand.bunny).clipShape(Capsule()).padding(.top, 8).accessibilityIdentifier("filledNote") }
             ScrollViewReader { proxy in
                 ScrollView { LazyVStack(spacing: 8) {
                     if msgs.isEmpty && older.isEmpty { EmptyHint(icon: .chat, text: "Say hello") }
@@ -100,6 +102,7 @@ struct ChatView: View {
         .background(Brand.cream.ignoresSafeArea()).navigationTitle(other?.firstName ?? "Chat").navigationBarTitleDisplayMode(.inline)
         .onChange(of: pick) { _, item in if let item { Task { await sendPhoto(item) } } }
         .onAppear { msgs = ChatCache.rows[rel.id] ?? msgs; listener = Backend.listenMessages(rel.id) { msgs = $0; ChatCache.rows[rel.id] = $0 } }.onDisappear { listener?.remove() }
+        .task { if s.me?.side == "carer" { filledNote = await Backend.filledElsewhere(familyUid: rel.familyUid, carerUid: s.uid ?? "") } }
         .toolbar { if s.me?.side == "family", let o = other, o.side == "carer" { ToolbarItem(placement: .topBarTrailing) { Button { showBook = true } label: { IconLabel(icon: .calendar, text: "Book \(o.firstName)", size: 16) }.accessibilityIdentifier("bookFromChat") } } }
         .sheet(isPresented: $showBook) { if let o = other { BookSheet(carer: o) } }
         .backSwipe { dismissChat() }

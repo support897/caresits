@@ -1,4 +1,13 @@
+Skill picks (first line, per the Skills Rule): round pick lean-build + reuse-first + small-steps + phased-delivery, the verification stack on every check, ralph on the whole task. Step on now: item 4, the urgent board — lean-build + reuse-first, drives under local-xcuitest, map ground under local-ios-mapkit. The verified set for this app stands in LOADOUT.md; the adoption record is next-phase/SKILLS-ADOPTION-181-2026-11-14.md.
+
 # Build 181 (branch build-181, base build-180 head 1bba116). Item 3 closing commit. From 14 Nov the build runs direct at the Caresitters desk (her word: no more Polar).
+
+## Skill picks for this build (the Skills Rule: the pick is named in the work; the Supervisor audit of 14 Nov found no pick named in this record — that fault is closed by this block)
+Round pick, the first line of the list of record: lean-build + reuse-first + small-steps + phased-delivery; the verification stack on every check (go-deep, like-for-like-verification, test-evidence-integrity, check-ruling-source, investigate-first, learn-from-corrections); ralph on the whole task.
+Per step:
+- Items 1 to 3 (the fired round): built under the round pick above, which the list of record names. This record carried no pick line until today; the gap stands named here, not backdated.
+- Item 1 fix (Settings completed: sign out and delete moved into Settings) and item 4 (the urgent board), built direct at this desk: lean-build + reuse-first (item 4 reuses the deck mechanics and the sealed jobs shape; nothing invented) + small-steps; the drives run under local-xcuitest with test-evidence-integrity; the item 1 verification reads back against her 22:13 words under like-for-like-verification.
+- The round's search record: next-phase/SKILLS-SEARCH-181.md (searches run at this desk, picks per job, non-picks with reasons, the item 10 absence named).
 
 ## What the tree holds now
 - Item 1, Settings law (f410c85, on GitHub): Sources/SettingsView.swift holds the Look pick and the bunny volume toggle. MeView keeps the person only and has a Settings row.
@@ -65,3 +74,12 @@ Full suite on the final tree: 17 of 20 passed first time. Failed in the full run
 - The carer-side label "Member" for a nameless profile (Models.swift:38) is unchanged and unproven. Body text plum #3A2E33 needs her eye.
 - Flaky on this Mac: DeckCarer, DeleteTimeout, BabysitterApp, SwipeDeck.
 - Nothing uploaded. Waiting for the upload word. TestFlight only.
+
+## CLOUD LANE AND THE CACHE FIX — 14 Nov 2026, later
+
+- This push (build-181) carries, on top of f85d3cc: the item 1 fix whole (Sign out and Delete my account live in Settings; Me carries none of it), item 4 whole as built above, the two singular year lines (MeView "1 year", PersonDetailView "1 yr"), and CURRENT_PROJECT_VERSION 181 in genproj.py.
+- THE CACHE FIX: testUrgentDistance round 3 crashed the app for real (EXC_BAD_ACCESS SIGSEGV, crash report Caresitters-2026-11-14-175326.ips, faulting in Backend.loadProfile via loadProfiles). The shared profileCache Dictionary was written from parallel tasks with no guard. Backend.swift now holds an NSLock around every cache touch (cacheProfile and cachedProfile). The fix was applied on the Mac and replayed into this tree from the desk's own patch scripts, anchor by anchor; the Mac tree cross check waits on the bridge.
+- Test rounds replayed into UITests the same way: hardened Settings helpers (reveal plus asserts), tapUrgent (first tab first, then Urgent), the deck tab tap after Finish, and the board carer leg passing until this run's own post stands.
+- Round 4 on the Mac (deck, board, distance) has NO verdict in hand: the chain's result was lost in a runtime restart and the Mac bridge is down. Those legs stand Could not check until the Mac logs are read or the cloud lane judges them. testUrgentExpiry round 3 PASS stands.
+- Firebase config: native/GoogleService-Info.plist is gitignored by design and never committed. The cloud lane writes it from the repo secret GOOGLE_SERVICE_INFO_PLIST_B64, sourced from the shipped build 177 store build's plist, matched on project caresits-812a0, bundle com.ilse.caresits and sender 908064912971. The Mac tree's own copy cross checks when the bridge returns.
+- On the dead Mac only, named plainly: the Mac working tree as it stood, the round 4 test logs, and the item pictures. Nothing else is Mac only; every code change is in this push.

@@ -8,8 +8,7 @@ struct MeView: View {
     @State private var pick: PhotosPickerItem?; @State private var galleryPick: [PhotosPickerItem] = []
     @State private var busy = false; @State private var err = ""; @State private var ok = ""
     @State private var showFamily = false
-    @State private var deleting = false; @State private var deleteSlow = false
-    @State private var showResume = false; @State private var showEdit = false; @State private var confirmDelete = false; @State private var showReauth = false
+    @State private var showResume = false; @State private var showEdit = false
     @State private var rating: (avg: Double, count: Int)?; @State private var reviews: [(rating: Int, text: String)] = []
     var role: Role { s.role }
     var me: Person { s.me ?? Person(id: "", data: [:]) }
@@ -49,7 +48,7 @@ struct MeView: View {
                         IconLabel(icon: role.icon, text: "My \(role.name.lowercased()) profile", size: 20).font(.headline)
                         Text(me.headline.isEmpty ? "Add a headline" : me.headline)
                         IconLabel(icon: .check, text: me.completionText, size: 16, color: Brand.muted).font(.subheadline).foregroundStyle(Brand.muted)
-                        HStack(spacing: 12) { if me.rate > 0 { IconLabel(icon: .rate, text: "\(Int(me.rate))/h", size: 16, color: Brand.muted) }; if me.years > 0 { IconLabel(icon: .star, text: "\(me.years) years", size: 16, color: Brand.muted) } }.font(.subheadline).foregroundStyle(Brand.muted)
+                        HStack(spacing: 12) { if me.rate > 0 { IconLabel(icon: .rate, text: "\(Int(me.rate))/h", size: 16, color: Brand.muted) }; if me.years > 0 { IconLabel(icon: .star, text: me.years == 1 ? "1 year" : "\(me.years) years", size: 16, color: Brand.muted) } }.font(.subheadline).foregroundStyle(Brand.muted)
                         if let r = rating { IconLabel(icon: .star, text: "\(String(format: "%.1f", r.avg)) from \(r.count) review\(r.count == 1 ? "" : "s")", size: 16, color: Brand.bunny).foregroundStyle(Brand.ink) }
                         else { Text("No reviews yet").font(.footnote).foregroundStyle(Brand.muted) }
                         Button { showEdit = true } label: { IconLabel(icon: .pencil, text: "Edit") }
@@ -71,61 +70,20 @@ struct MeView: View {
                     IconLabel(icon: .lock, text: "Photos stay private until you connect", size: 14, color: Brand.muted).font(.footnote).foregroundStyle(Brand.muted)
                     if s.role == .family { Text("Children's details are private.").font(.footnote).foregroundStyle(Brand.muted) }
                 } }.padding(.horizontal, 20)
-                Button("Sign out") { s.signOut() }.font(.headline).padding(.top, 8)
-                Button("Delete my account", role: .destructive) { confirmDelete = true }.font(.footnote)
             }.padding(.bottom, 100) }
             .background(Brand.cream.ignoresSafeArea())
-            .overlay {
-                if deleting {
-                    VStack(spacing: 14) {
-                        BunnyView(size: 96, mood: .rest)
-                        HStack(spacing: 10) { ProgressView(); Text("Deleting your account").font(.system(size: 20, weight: .semibold)).foregroundStyle(Brand.ink) }
-                        if deleteSlow { Text("This is taking longer than usual. Please keep the app open.").multilineTextAlignment(.center).foregroundStyle(Brand.muted).padding(.horizontal, 40).accessibilityIdentifier("deleteSlow") }
-                    }.frame(maxWidth: .infinity, maxHeight: .infinity).background(Brand.cream.opacity(0.96).ignoresSafeArea()).accessibilityIdentifier("deleteBusy")
-                }
-            }
             .onChange(of: pick) { _, i in Task { await setAvatar(i) } }
             .onChange(of: galleryPick) { _, items in Task { await addGallery(items) } }
-            .sheet(isPresented: $showReauth) { ReauthSheet { Task { await doDelete() } } }
             .sheet(isPresented: $showResume) { ResumeEditor() }
             .sheet(isPresented: $showEdit) { ProfileEditor() }
             .sheet(isPresented: $showFamily) { FamilyEditor() }
             .onAppear { if s.goMyFamily { s.goMyFamily = false; showFamily = true } }
             .onChange(of: s.goMyFamily) { _, go in if go { s.goMyFamily = false; showFamily = true } }
-            .confirmationDialog("Delete your account and profile? This cannot be undone.", isPresented: $confirmDelete, titleVisibility: .visible) {
-                Button("Delete everything", role: .destructive) { if s.needsReauth { showReauth = true } else { Task { await doDelete() } } }
-            }
             .task { if me.side == "carer" { rating = await Backend.reviewSummary(me.id); reviews = await Backend.reviewsFor(carer: me.id) } }
         }
     }
     func row(_ e: BI, _ t: String, _ sub: String) -> some View { Card { HStack { BrandIcon(kind: e, size: 34); VStack(alignment: .leading) { Text(t).font(.headline).foregroundStyle(Brand.ink); Text(sub).font(.footnote).foregroundStyle(Brand.muted) }; Spacer(); BrandIcon(kind: .chevron, size: 18, color: Brand.muted) } } }
 
-    /// Delete shows a busy screen while it works, a calm line if it runs past 10 seconds, and stops with a plain
-    /// message after 60 seconds so the person is never left staring at a spinner.
-    func doDelete() async {
-        deleting = true; deleteSlow = false; err = ""
-        let uid = s.uid ?? ""
-        var limit: UInt64 = 60; var lag: UInt64 = 0
-        #if DEBUG
-        // Test only: simulate a slow network in the debug build.
-        let env = ProcessInfo.processInfo.environment
-        if let v = env["CS_DELETE_TIMEOUT"], let n = UInt64(v) { limit = n }
-        if let v = env["CS_DELETE_DELAY"], let n = UInt64(v) { lag = n }
-        #endif
-        let slowTimer = Task { try? await Task.sleep(nanoseconds: 10_000_000_000); if !Task.isCancelled { deleteSlow = true } }
-        defer { slowTimer.cancel() }
-        do {
-            try await withThrowingTaskGroup(of: Void.self) { g in
-                g.addTask { if lag > 0 { try await Task.sleep(nanoseconds: lag * 1_000_000_000) }; try await Backend.deleteAccount(uid) }
-                g.addTask { try await Task.sleep(nanoseconds: limit * 1_000_000_000); throw AppError.msg("timeout") }
-                _ = try await g.next(); g.cancelAll()
-            }
-            deleting = false; s.signOut()
-        } catch {
-            deleting = false; deleteSlow = false
-            err = error.localizedDescription.contains("timeout") ? "Still not done. Check your connection and try again. Your profile may already be gone, and trying again is safe." : "Could not delete: " + error.localizedDescription
-        }
-    }
     func setAvatar(_ item: PhotosPickerItem?) async {
         guard let item else { return }
         busy = true; err = ""; ok = ""; defer { busy = false; pick = nil }

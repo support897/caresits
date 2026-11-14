@@ -13,6 +13,7 @@ struct DiscoverView: View {
     @State private var myCoord: CLLocationCoordinate2D?
     @State private var coords: [String: CLLocationCoordinate2D] = [:]
     @State private var showMap = false
+    @State private var urgent = false
     @State private var mapPick: String?
     @State private var pinSel: String?
     @State private var camTick = 0
@@ -79,7 +80,14 @@ struct DiscoverView: View {
                         Spacer()
                     }.padding(.horizontal, 20)
                 }
-                if role == .family && services.count > 1 && !showMap {
+                if !showMap {
+                    HStack(spacing: 8) {
+                        Button { urgent = false } label: { Chip(text: "Browse", on: !urgent, tint: Brand.bunny) }.accessibilityIdentifier("browseTab")
+                        Button { urgent = true } label: { Chip(text: "Urgent", on: urgent, tint: Brand.bunny, icon: .clock) }.accessibilityIdentifier("urgentTab")
+                        Spacer()
+                    }.padding(.horizontal, 20)
+                }
+                if role == .family && services.count > 1 && !showMap && !urgent {
                     ScrollView(.horizontal, showsIndicators: false) { HStack {
                         Button { filter = "all"; skipped = [] } label: { Chip(text: "All", on: filter == "all", tint: role.tint) }
                         ForEach(services, id: \.self) { sv in Button { filter = sv; skipped = [] } label: { Chip(text: (serviceLabels[sv] ?? sv) + "s", on: filter == sv, tint: role.tint) } }
@@ -93,8 +101,8 @@ struct DiscoverView: View {
                         Button("Message") { deckContact = (b, .message); banner = nil }.font(.system(size: 16, weight: .semibold)).foregroundStyle(role.tint)
                     }.padding(14).background(Brand.card).clipShape(RoundedRectangle(cornerRadius: 16)).overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.black.opacity(0.1), lineWidth: 1)).padding(.horizontal, 20).padding(.top, 00).transition(.move(edge: .top).combined(with: .opacity)).accessibilityIdentifier("matchBanner")
                 }
-                if showMap { mapView.padding(.horizontal, 20).frame(maxHeight: .infinity) } else { deckStack }
-                if !showMap {
+                if showMap { mapView.padding(.horizontal, 20).frame(maxHeight: .infinity) } else if urgent { UrgentBoardView().frame(maxHeight: .infinity) } else { deckStack }
+                if !showMap && !urgent {
                     HStack(spacing: 18) {
                         roundBtn(.cross, Brand.muted, "Pass") { if let p = deck.first { fling(p, like: false) } }
                         roundBtn(.info, Brand.ink, "Details") { detail = deck.first }
@@ -271,7 +279,7 @@ struct PersonDetailView: View {
                 Text(person.name).font(Brand.title(30)).foregroundStyle(Brand.titleColor)
                 if person.side == "carer" {
                     if !person.headline.isEmpty { Text(person.headline).font(.title3).foregroundStyle(Brand.muted).multilineTextAlignment(.center) }
-                    HStack { Chip(text: person.role.name, on: true, tint: person.role.sign, icon: person.role.icon); if person.rate > 0 { Chip(text: "\(Int(person.rate))/h", icon: .rate) }; if person.years > 0 { Chip(text: "\(person.years) yrs", icon: .star) } }
+                    HStack { Chip(text: person.role.name, on: true, tint: person.role.sign, icon: person.role.icon); if person.rate > 0 { Chip(text: "\(Int(person.rate))/h", icon: .rate) }; if person.years > 0 { Chip(text: person.years == 1 ? "1 yr" : "\(person.years) yrs", icon: .star) } }
                     Text(person.completionText).font(.subheadline).foregroundStyle(Brand.muted).accessibilityIdentifier("completionRate")
                 }
                 Card { VStack(alignment: .leading, spacing: 8) {

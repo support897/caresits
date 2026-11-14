@@ -20,14 +20,20 @@ enum Backend {
     // MARK: Profiles
     static func loadProfile(_ uid: String) async -> Person? {
         guard let s = try? await db.collection("profiles").document(uid).getDocument(), s.exists, let d = s.data() else { return nil }
-        let p = Person(id: uid, data: d); profileCache[uid] = p; return p
+        let p = Person(id: uid, data: d); cacheProfile(p); return p
     }
     /// Profiles already read in this run. Lists paint from these first.
+    /// Every touch holds the lock: loadProfiles reads and writes this cache from parallel tasks,
+    /// and an unguarded Dictionary write from two tasks at once corrupts the heap
+    /// (crash of record 14 Nov 2026, Caresitters-2026-11-14-175326.ips, faulting in loadProfile).
     static var profileCache: [String: Person] = [:]
+    private static let profileCacheLock = NSLock()
+    static func cacheProfile(_ p: Person) { profileCacheLock.lock(); profileCache[p.id] = p; profileCacheLock.unlock() }
+    static func cachedProfile(_ uid: String) -> Person? { profileCacheLock.lock(); defer { profileCacheLock.unlock() }; return profileCache[uid] }
     /// Many profiles at once (one trip each, all in parallel), so a list never waits on a chain.
     static func loadProfiles(_ ids: [String]) async -> [String: Person] {
         await withTaskGroup(of: (String, Person?).self) { g in
-            for id in Set(ids) { g.addTask { (id, profileCache[id] != nil ? profileCache[id] : await loadProfile(id)) } }
+            for id in Set(ids) { g.addTask { if let c = cachedProfile(id) { return (id, c) }; return (id, await loadProfile(id)) } }
             var out: [String: Person] = [:]
             for await (id, p) in g { if let p { out[id] = p } }
             return out
@@ -232,6 +238,54 @@ enum Backend {
             if rel.data()?["state"] as? String == "pending" { batch.updateData(["state": "contact", "contactBy": actorUid], forDocument: relRef) }
         }
         try await batch.commit()
+    }
+
+    // MARK: Urgent board (jobs; the sealed v6 shape, no rules change)
+    static func job(_ d: QueryDocumentSnapshot) -> UrgentJob {
+        let x = d.data()
+        let e2: (String) -> Double? = { k in (x[k] as? NSNumber).map { $0.doubleValue / 100 } }
+        return UrgentJob(id: d.documentID, familyUid: x["familyUid"] as? String ?? "", when: (x["when"] as? Timestamp)?.dateValue() ?? .distantPast,
+                         dayParts: x["dayParts"] as? [String] ?? [], postcode: x["postcode"] as? String ?? "", bands: x["bands"] as? [String] ?? [],
+                         note: x["note"] as? String ?? "", state: x["state"] as? String ?? "open", carerUid: x["carerUid"] as? String ?? "",
+                         lat: e2("latE2"), lng: e2("lngE2"))
+    }
+    static func createJob(familyUid: String, when: Date, dayParts: [String], postcode: String, bands: [String], note: String) async throws {
+        var data: [String: Any] = ["familyUid": familyUid, "when": Timestamp(date: when), "dayParts": dayParts, "postcode": postcode, "bands": bands, "note": String(note.prefix(1000)), "state": "open", "createdAt": FieldValue.serverTimestamp()]
+        if let c = await Geo.coord(postcode: postcode) { data["latE2"] = Int((c.latitude * 100).rounded()); data["lngE2"] = Int((c.longitude * 100).rounded()) }
+        _ = try await db.collection("jobs").addDocument(data: data)
+    }
+    /// Open posts, soonest first. Expiry is read time: a post whose start has passed never shows.
+    static func openJobs() async -> [UrgentJob] {
+        guard let snap = try? await db.collection("jobs").whereField("state", isEqualTo: "open").limit(to: 100).getDocuments() else { return [] }
+        return snap.documents.map { job($0) }.filter { $0.when > Date() }.sorted { $0.when < $1.when }
+    }
+    static func myJobs(_ familyUid: String) async -> [UrgentJob] {
+        guard let snap = try? await db.collection("jobs").whereField("familyUid", isEqualTo: familyUid).limit(to: 100).getDocuments() else { return [] }
+        return snap.documents.map { job($0) }.sorted { $0.when > $1.when }
+    }
+    /// The carers who said yes to one post (document ids are the carer uids).
+    static func jobYeses(_ jobId: String) async -> [String] {
+        guard let snap = try? await db.collection("jobs").document(jobId).collection("interest").getDocuments() else { return [] }
+        return snap.documents.map { $0.documentID }
+    }
+    /// A yes writes interest on the post; the chat opens at once through openChat (chat first, then book).
+    static func sayYes(job: UrgentJob, carerUid: String) async throws {
+        try await db.collection("jobs").document(job.id).collection("interest").document(carerUid).setData(["note": "", "createdAt": FieldValue.serverTimestamp()])
+    }
+    static func pickCarer(job: UrgentJob, carerUid: String) async throws {
+        try await db.collection("jobs").document(job.id).updateData(["state": "filled", "carerUid": carerUid])
+    }
+    static func closeJob(_ job: UrgentJob) async throws {
+        try await db.collection("jobs").document(job.id).updateData(["state": "closed"])
+    }
+    /// For the plain line in the other yes chats: a filled post of this family where this carer said yes and was not picked.
+    static func filledElsewhere(familyUid: String, carerUid: String) async -> Bool {
+        guard !carerUid.isEmpty, let snap = try? await db.collection("jobs").whereField("familyUid", isEqualTo: familyUid).whereField("state", isEqualTo: "filled").limit(to: 20).getDocuments() else { return false }
+        for d in snap.documents where (d.data()["carerUid"] as? String ?? "") != carerUid {
+            let mine = try? await db.collection("jobs").document(d.documentID).collection("interest").document(carerUid).getDocument()
+            if mine?.exists == true { return true }
+        }
+        return false
     }
 
     // MARK: Reviews

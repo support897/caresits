@@ -2,6 +2,10 @@ import Foundation
 import FirebaseFirestore
 
 let allDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+/// Age bands, stored as the sealed experience keys; labels carry no dashes.
+let ageBands: [(key: String, label: String)] = [("0-1", "0 to 1"), ("1-3", "1 to 3"), ("3-5", "3 to 5"), ("5-12", "5 to 12"), ("12+", "12 and up")]
+func bandKey(forAge age: Int) -> String { age < 1 ? "0-1" : age < 3 ? "1-3" : age < 5 ? "3-5" : age < 12 ? "5-12" : "12+" }
+func bandLabel(_ key: String) -> String { ageBands.first { $0.key == key }?.label ?? key }
 let serviceLabels: [String: String] = ["nanny": "Nanny", "babysitter": "Babysitter", "au_pair": "Au pair"]
 
 struct Person: Identifiable {
@@ -107,6 +111,22 @@ extension Person {
 }
 
 struct ChatMessage: Identifiable { let id: String; var from: String; var text: String; var at: Date; var kind = "text"; var mediaKey = "" }
+
+/// One urgent board post. The fields mirror the sealed jobs shape exactly (firestore.rules v6, the urgent board):
+/// familyUid, when, dayParts, postcode, bands, note, state, createdAt, latE2, lngE2, and carerUid once filled.
+struct UrgentJob: Identifiable {
+    let id: String
+    var familyUid: String
+    var when: Date
+    var dayParts: [String]
+    var postcode: String
+    var bands: [String]
+    var note: String
+    var state: String          // open, filled, closed
+    var carerUid: String       // the picked carer, once filled
+    var lat: Double?; var lng: Double?
+    var ended: Bool { state == "open" && when <= Date() }
+}
 
 struct Resume {
     var summary = ""; var jobs: [String] = []; var education: [String] = []; var skills: [String] = []; var certificates: [String] = []

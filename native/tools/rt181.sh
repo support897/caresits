@@ -7,4 +7,5 @@ xcodebuild build-for-testing -project Caresitters.xcodeproj -scheme Caresitters 
 echo "BUILD EXIT" >> $L/build-$1.log
 rm -rf $L/r-$1.xcresult
 xcodebuild test-without-building -project Caresitters.xcodeproj -scheme Caresitters -destination "platform=iOS Simulator,id=$D" -derivedDataPath ~/cs181/dd-ui -resultBundlePath $L/r-$1.xcresult -only-testing:CaresittersUITests/RoleFlowTests/$1 > $L/test-$1.log 2>&1
+echo "TEST EXIT $?" >> $L/test-$1.log
 echo "RT DONE" >> $L/test-$1.log

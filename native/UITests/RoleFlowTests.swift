@@ -23,12 +23,7 @@ final class RoleFlowTests: XCTestCase {
         app.launchArguments += ["-AppleLanguages", "(en)"]
         app.launch()
         // Leftover signed-in test user from an earlier run: sign out first.
-        if app.tabBars.buttons["Me"].waitForExistence(timeout: 5) {
-            app.tabBars.buttons["Me"].tap()
-            let so = app.buttons["Sign out"]
-            for _ in 0..<6 where !so.isHittable { app.swipeUp() }
-            so.tap(); sleep(2)
-        }
+        if app.tabBars.buttons["Me"].waitForExistence(timeout: 5) { signOutFromMe() }
         // A previous interrupted run can leave a signed-in test user at the profile step: carry on with it, then it is deleted at the end.
         if app.textFields["Your name"].waitForExistence(timeout: 6) || app.buttons["Next"].exists { return }
         if app.buttons["I need care"].waitForExistence(timeout: 2) && !app.buttons["Use email"].exists { tap(side == "family" ? "I need care" : "I give care"); return }
@@ -51,6 +46,34 @@ final class RoleFlowTests: XCTestCase {
         if !nameField.waitForExistence(timeout: 25) { shot("after-create-\(side)"); XCTFail("sign up did not reach onboarding: " + String(app.debugDescription.prefix(1800))) }
     }
     func dismissKb() { let t = app.staticTexts["onbTitle"]; if t.exists { t.tap() } }
+    /// Sign out and delete live inside Settings now (item 1, her 22:13 shape: the settings row on Me is the entry).
+    func openSettings() {
+        if app.descendants(matching: .any)["settingsScreen"].firstMatch.exists { return }
+        let st = app.descendants(matching: .any)["openSettings"].firstMatch
+        XCTAssertTrue(reveal(st, max: 10), "settings row missing on Me")
+        st.tap(); sleep(1)
+        XCTAssertTrue(app.descendants(matching: .any)["settingsScreen"].firstMatch.waitForExistence(timeout: 10), "Settings did not open")
+    }
+    func signOutFromMe() {
+        app.tabBars.buttons["Me"].tap()
+        openSettings()
+        let so = app.buttons["Sign out"]
+        XCTAssertTrue(reveal(so, max: 10), "sign out button missing in Settings")
+        so.tap(); sleep(2)
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 30), "sign out did not return to the door")
+    }
+    /// The tab pick rides the session object: after a sign out and a fresh sign in inside one launch,
+    /// the app can reopen on Me. Go to the first tab first, then open the urgent board.
+    func tapUrgent() {
+        if app.tabBars.buttons.count > 0 { app.tabBars.buttons.element(boundBy: 0).tap(); sleep(2) }
+        tap("Urgent")
+    }
+    func deleteFromSettings() {
+        openSettings()
+        let del = app.buttons["Delete my account"]
+        XCTAssertTrue(reveal(del, max: 10), "delete button missing in Settings")
+        del.tap(); tap("Delete everything")
+    }
     func next() { let t = app.staticTexts["onbTitle"]; let before = t.exists ? t.label : ""; tap("Next"); sleep(2); if t.exists && t.label == before { tap("Next"); sleep(2) } }
     func fillYou(_ name: String) {
         type(app.textFields["Your name"], name)
@@ -65,10 +88,7 @@ final class RoleFlowTests: XCTestCase {
         for t in tabs { app.tabBars.buttons[t].tap(); sleep(2); shot("\(role)-\(t)") }
         // Me tab: delete account (cleans up the live test user)
         app.tabBars.buttons["Me"].tap()
-        let del = app.buttons["Delete my account"]
-        for _ in 0..<6 where !del.isHittable { app.swipeUp() }
-        del.tap()
-        tap("Delete everything")
+        deleteFromSettings()
         let out = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 75)
         if !out { shot("FAIL-delete-\(role)") }
         XCTAssertTrue(out, "\(role): not signed out after delete " + app.staticTexts.allElementsBoundByIndex.map { $0.label }.joined(separator: " | "))
@@ -77,6 +97,7 @@ final class RoleFlowTests: XCTestCase {
     func testSwipeDeck() {
         signUp(side: "family"); fillYou("Test Swipe"); next(); next(); type(app.textFields["Name or nickname"], "Mia"); dismissKb(); next()
         tap("Finish", timeout: 20)
+        if app.tabBars.buttons.element(boundBy: 0).waitForExistence(timeout: 15) { app.tabBars.buttons.element(boundBy: 0).tap(); sleep(2) }
         let card = app.descendants(matching: .any)["topCard"].firstMatch
         if !card.waitForExistence(timeout: 75) { XCTFail("deck: no card. Texts: " + app.staticTexts.allElementsBoundByIndex.map { $0.label }.joined(separator: " | ") + " || Buttons: " + app.buttons.allElementsBoundByIndex.map { $0.label }.joined(separator: " | ")); return }
         shot("deck-before")
@@ -84,9 +105,7 @@ final class RoleFlowTests: XCTestCase {
         app.buttons["Pass"].tap(); sleep(2); shot("deck-after-skip")
         app.buttons["Matches"].tap(); sleep(2); shot("deck-saved")
         app.tabBars.buttons["Me"].tap()
-        let del = app.buttons["Delete my account"]
-        for _ in 0..<6 where !del.isHittable { app.swipeUp() }
-        del.tap(); tap("Delete everything")
+        deleteFromSettings()
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 120))
     }
     func pic(_ name: String) {
@@ -99,9 +118,7 @@ final class RoleFlowTests: XCTestCase {
     func testPictures() {
         app.launchArguments += ["-AppleLanguages", "(en)"]; app.launch()
         if app.tabBars.buttons["Me"].waitForExistence(timeout: 5) {
-            app.tabBars.buttons["Me"].tap(); let so = app.buttons["Sign out"]
-            for _ in 0..<6 where !so.isHittable { app.swipeUp() }
-            so.tap(); sleep(2)
+            signOutFromMe()
         }
         if !app.buttons["I need care"].waitForExistence(timeout: 4) {
             pic("01-sign-up-first")
@@ -125,9 +142,7 @@ final class RoleFlowTests: XCTestCase {
         app.tabBars.buttons["Calendar"].tap(); pic("05-calendar")
         app.tabBars.buttons["Messages"].tap(); pic("06-messages")
         app.tabBars.buttons["Me"].tap(); pic("07-menu-me")
-        let del = app.buttons["Delete my account"]
-        for _ in 0..<6 where !del.isHittable { app.swipeUp() }
-        del.tap(); tap("Delete everything"); sleep(3)
+        deleteFromSettings(); sleep(3)
     }
     func testFamilyApp() {
         signUp(side: "family"); fillYou("Test Family"); next()
@@ -164,15 +179,15 @@ final class RoleFlowTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Zelda Proofname"].waitForExistence(timeout: 10), "typed name not shown in Me"); shot("b179-me-light")
         XCTAssertFalse(app.staticTexts["Member"].exists, "Member placeholder leaked")
         XCTAssertFalse(app.buttons["Set up payments"].exists, "pay screens must be hidden when not live")
+        openSettings()
         for p in ["dark", "beige", "brand", "light"] {
+            openSettings()
             let b = app.buttons["theme-\(p)"]; for _ in 0..<4 where !b.exists { app.swipeUp() }
             if !b.exists { XCTFail("no theme button \(p)"); break }
             b.tap(); sleep(2); app.tabBars.buttons["Me"].tap(); shot("b179-me-\(p)")
             XCTAssertTrue(app.tabBars.buttons["Me"].exists, "tabs lost after theme \(p)")
         }
-        let del = app.buttons["Delete my account"]
-        for _ in 0..<8 where !del.isHittable { app.swipeUp() }
-        del.tap(); tap("Delete everything")
+        deleteFromSettings()
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 120), "not signed out after delete")
     }
     func carer(_ kind: String, tabs: [String]) {
@@ -236,9 +251,7 @@ final class RoleFlowTests: XCTestCase {
         try? "\(side) all picks stood after relaunch".write(toFile: "/Users/ilseplacencia/cs181/pics/result-\(side).txt", atomically: true, encoding: .utf8)
         for _ in 0..<60 { app.swipeDown(velocity: .fast) }
         app.navigationBars.buttons.firstMatch.tap(); sleep(1)
-        let del = app.buttons["Delete my account"]
-        for _ in 0..<8 where !del.isHittable { app.swipeUp() }
-        del.tap(); tap("Delete everything")
+        deleteFromSettings()
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 120))
     }
     func testAskingFamily() { asking(side: "family") }
@@ -263,9 +276,7 @@ final class RoleFlowTests: XCTestCase {
         }
         for _ in 0..<60 { app.swipeDown(velocity: .fast) }
         app.navigationBars.buttons.firstMatch.tap(); sleep(1)
-        let del = app.buttons["Delete my account"]
-        for _ in 0..<8 where !del.isHittable { app.swipeUp() }
-        del.tap(); tap("Delete everything")
+        deleteFromSettings()
         // After a long run the account asks to sign in once more before it deletes.
         if app.staticTexts["Is it really you?"].waitForExistence(timeout: 20) {
             type(app.secureTextFields["Your password"], testPw); dismissKb(); tap("Confirm and delete")
@@ -314,9 +325,7 @@ final class RoleFlowTests: XCTestCase {
         qshot("map-\(tag)-3-person-opened")
         app.navigationBars.buttons.firstMatch.tap(); sleep(2)
         app.tabBars.buttons["Me"].tap(); sleep(2)
-        let del = app.buttons["Delete my account"]
-        for _ in 0..<8 where !del.isHittable { app.swipeUp() }
-        del.tap(); tap("Delete everything")
+        deleteFromSettings()
         if app.staticTexts["Is it really you?"].waitForExistence(timeout: 20) { type(app.secureTextFields["Your password"], testPw); dismissKb(); tap("Confirm and delete") }
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 240), "account not deleted")
     }
@@ -337,9 +346,7 @@ final class RoleFlowTests: XCTestCase {
     }
     func deleteThisAccount() {
         app.tabBars.buttons["Me"].tap(); sleep(2)
-        let del = app.buttons["Delete my account"]
-        for _ in 0..<8 where !del.isHittable { app.swipeUp() }
-        del.tap(); tap("Delete everything")
+        deleteFromSettings()
         if app.staticTexts["Is it really you?"].waitForExistence(timeout: 20) { type(app.secureTextFields["Your password"], testPw); dismissKb(); tap("Confirm and delete") }
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 240), "account not deleted")
     }
@@ -355,8 +362,7 @@ final class RoleFlowTests: XCTestCase {
         app.terminate(); app.launch()
         openAsking(); pickCountry("My country", chip: "Colombian", open: true)
         qshot("country-2-aupair-after-relaunch-colombian-still-ticked")
-        leaveAsking(); app.tabBars.buttons["Me"].tap(); sleep(1)
-        let so = app.buttons["Sign out"]; XCTAssertTrue(reveal(so, max: 12), "no sign out"); so.tap(); sleep(3)
+        leaveAsking(); signOutFromMe(); sleep(1)
         // 2. the family picks Filipino: the Colombian au pair must not show on its map
         signUp(side: "family"); fillYou("Test CFam"); next(); tap("Au pair"); next()
         type(app.textFields["Name or nickname"], "Mia"); dismissKb(); sleep(1); next()
@@ -412,9 +418,7 @@ final class RoleFlowTests: XCTestCase {
         app.tabBars.buttons["Me"].tap(); sleep(2)
         XCTAssertTrue(app.staticTexts["Named Family"].waitForExistence(timeout: 15), "the name is not on the profile. Texts: " + app.staticTexts.allElementsBoundByIndex.map { $0.label }.joined(separator: " | "))
         shot("b180-me-name-stands")
-        let del = app.buttons["Delete my account"]
-        for _ in 0..<6 where !del.isHittable { app.swipeUp() }
-        del.tap(); tap("Delete everything")
+        deleteFromSettings()
         let door = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 120)
         shot("b180-after-delete"); XCTAssertTrue(door, "no door after delete. Texts: " + app.staticTexts.allElementsBoundByIndex.map { $0.label }.joined(separator: " | "))
     }
@@ -432,9 +436,7 @@ final class RoleFlowTests: XCTestCase {
         try? rep.write(toFile: "/Users/ilseplacencia/Apps/nativeproj/pics/photo-proof-ui.txt", atomically: true, encoding: .utf8)
         sleep(3); shot("b176-photo-proof-me")
         XCTAssertTrue(rep.contains("PROOF OK"), rep)
-        let del = app.buttons["Delete my account"]
-        for _ in 0..<8 where !del.isHittable { app.swipeUp() }
-        del.tap(); tap("Delete everything")
+        deleteFromSettings()
     }
     func testIconGallery() {
         app.launchEnvironment["CS_ICONS"] = "1"; app.launch(); sleep(3); shot("b176-icon-gallery")
@@ -512,9 +514,7 @@ final class RoleFlowTests: XCTestCase {
         tap("Finish", timeout: 20)
         XCTAssertTrue(app.tabBars.buttons["Me"].waitForExistence(timeout: 90))
         app.tabBars.buttons["Me"].tap()
-        let del = app.buttons["Delete my account"]
-        for _ in 0..<6 where !del.isHittable { app.swipeUp() }
-        del.tap(); tap("Delete everything")
+        deleteFromSettings()
     }
     func testDeleteSlow() {
         app.launchEnvironment["CS_DELETE_DELAY"] = "30"
@@ -531,9 +531,7 @@ final class RoleFlowTests: XCTestCase {
         app.terminate(); app.launchEnvironment["CS_DELETE_DELAY"] = "0"; app.launchEnvironment["CS_DELETE_TIMEOUT"] = "60"; app.launch()
         XCTAssertTrue(app.tabBars.buttons["Me"].waitForExistence(timeout: 90), "no tab bar after relaunch")
         app.tabBars.buttons["Me"].tap()
-        let del = app.buttons["Delete my account"]
-        for _ in 0..<6 where !del.isHittable { app.swipeUp() }
-        del.tap(); tap("Delete everything")
+        deleteFromSettings()
         let out = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 90)
         shot("b177-delete-5-normal-lands-on-sign-in"); XCTAssertTrue(out, "normal delete did not land on the sign in door")
     }
@@ -560,6 +558,153 @@ final class RoleFlowTests: XCTestCase {
             app.buttons["emailBack"].tap()
             XCTAssertTrue(app.buttons["Use email"].waitForExistence(timeout: 10), "Back did not return to the door (round \(round))")
         }
+    }
+    /// Sign back in with an account this test made earlier.
+    func signIn(email: String, pw: String) {
+        tap("Use email")
+        let toggle = app.buttons["I already have an account"]
+        if toggle.waitForExistence(timeout: 6) { toggle.tap() }
+        type(app.textFields["Email"], email)
+        type(app.secureTextFields["Password (6+ letters)"], pw)
+        tap("Sign in")
+        XCTAssertTrue(app.tabBars.buttons["Me"].waitForExistence(timeout: 60), "sign in did not land")
+    }
+    func ensureTicked(_ id: String) {
+        let b = app.buttons[id].firstMatch
+        XCTAssertTrue(reveal(b, max: 10), "chip missing: \(id)")
+        if (b.value as? String) != "ticked" { b.tap(); sleep(1) }
+        XCTAssertEqual(b.value as? String, "ticked", "chip did not tick: \(id)")
+    }
+    /// Item 4, the urgent board, walked whole: family posts, carer says yes and the chat opens at once,
+    /// family picks the carer, the post reads filled and names the carer. Both accounts delete at the end.
+    func testUrgentBoard() {
+        let note = "Urgent note WALK\(Int(Date().timeIntervalSince1970))"
+        signUp(side: "family"); fillYou("Test UFam"); next(); next()
+        type(app.textFields["Name or nickname"], "Mia"); dismissKb(); next()
+        tap("Finish", timeout: 20)
+        let famEmail = testEmail, famPw = testPw
+        tapUrgent()
+        tap("Post an urgent need")
+        tap("Tomorrow")
+        ensureTicked("part-Evening")
+        ensureTicked("band-3-5")
+        let nf = app.descendants(matching: .any)["jobNote"].firstMatch
+        XCTAssertTrue(nf.waitForExistence(timeout: 10), "note field missing"); nf.tap(); sleep(1); nf.typeText(note)
+        dismissKb()
+        XCTAssertTrue(reveal(app.buttons["postJob"], max: 6), "post button missing"); app.buttons["postJob"].tap(); sleep(3)
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Tomorrow")).firstMatch.waitForExistence(timeout: 30), "post not in the family list")
+        qshot("urgent-1-family-post-live")
+        signOutFromMe()
+        // carer: the post stands as a swipe card; a yes writes interest and opens the chat at once
+        signUp(side: "carer"); fillYou("Test UCarer"); next(); tap("Nanny"); next(); tap("Skip")
+        type(app.textFields["A few words about your care"], "Kind and calm care"); dismissKb(); next()
+        tap("Finish", timeout: 20)
+        let carEmail = testEmail, carPw = testPw
+        tapUrgent()
+        let card = app.descendants(matching: .any)["urgentCard"].firstMatch
+        if !card.waitForExistence(timeout: 90) { qshot("urgent-FAIL-no-card"); XCTFail("urgent card never showed. Texts: " + app.staticTexts.allElementsBoundByIndex.map { $0.label }.joined(separator: " | ")); return }
+        // Leftover posts from failed runs can stand ahead of this run's post in the deck: pass until this run's card stands.
+        var onMine = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", note)).firstMatch.exists
+        var passes = 0
+        while !onMine && passes < 6 {
+            let passBtn = app.descendants(matching: .any)["urgentPass"].firstMatch
+            if !passBtn.exists { break }
+            passBtn.tap(); sleep(3); passes += 1
+            onMine = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", note)).firstMatch.exists
+        }
+        XCTAssertTrue(onMine, "the carer deck never reached this run's post")
+        qshot("urgent-2-carer-card")
+        app.descendants(matching: .any)["urgentYes"].firstMatch.tap(); sleep(3)
+        XCTAssertTrue(app.textFields["Message"].waitForExistence(timeout: 30), "chat did not open on the yes")
+        qshot("urgent-3-chat-open")
+        tap("Close")
+        signOutFromMe()
+        // family again: the yes stands on the post; picking fills it and names the carer
+        signIn(email: famEmail, pw: famPw); testEmail = famEmail; testPw = famPw
+        tapUrgent()
+        let pick = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'pickCarer-'")).firstMatch
+        if !pick.waitForExistence(timeout: 60) { qshot("urgent-FAIL-no-yes"); XCTFail("yes list never showed the carer. Texts: " + app.staticTexts.allElementsBoundByIndex.map { $0.label }.joined(separator: " | ")); return }
+        qshot("urgent-4-family-yes-list")
+        pick.tap(); sleep(3)
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Filled by")).firstMatch.waitForExistence(timeout: 30), "post did not read filled with the carer name")
+        qshot("urgent-5-filled")
+        deleteThisAccount()
+        signIn(email: carEmail, pw: carPw); testEmail = carEmail; testPw = carPw
+        deleteThisAccount()
+    }
+    /// Item 4 expiry: a post whose start has passed reads Ended for the family and never shows to a carer.
+    func testUrgentExpiry() {
+        let note = "Urgent note PAST\(Int(Date().timeIntervalSince1970))"
+        signUp(side: "family"); fillYou("Test XPFam"); next(); next()
+        type(app.textFields["Name or nickname"], "Mia"); dismissKb(); next()
+        tap("Finish", timeout: 20)
+        tapUrgent()
+        tap("Post an urgent need")
+        tap("Today")
+        ensureTicked("part-Morning")
+        ensureTicked("band-3-5")
+        let nf = app.descendants(matching: .any)["jobNote"].firstMatch
+        XCTAssertTrue(nf.waitForExistence(timeout: 10), "note field missing"); nf.tap(); sleep(1); nf.typeText(note)
+        dismissKb()
+        XCTAssertTrue(reveal(app.buttons["postJob"], max: 6), "post button missing"); app.buttons["postJob"].tap(); sleep(3)
+        // the start time was "now" as the form opened: by the time the list reads it back, it has passed
+        XCTAssertTrue(app.staticTexts["Ended"].waitForExistence(timeout: 30), "past post did not read Ended. Texts: " + app.staticTexts.allElementsBoundByIndex.map { $0.label }.joined(separator: " | "))
+        qshot("urgentx-1-family-ended")
+        deleteThisAccount()
+        signUp(side: "carer"); fillYou("Test XPCarer"); next(); tap("Nanny"); next(); tap("Skip")
+        type(app.textFields["A few words about your care"], "Kind and calm care"); dismissKb(); next()
+        tap("Finish", timeout: 20)
+        tapUrgent(); sleep(8)
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", note)).firstMatch.exists, "a past post showed to a carer")
+        qshot("urgentx-2-carer-no-past-post")
+        deleteThisAccount()
+    }
+    /// Item 4 distance: a far post stays off a nearby carer's board until the distance opens to Any.
+    func testUrgentDistance() {
+        let note = "Urgent note FAR\(Int(Date().timeIntervalSince1970))"
+        signUp(side: "family"); fillYou("Test DFam"); next(); next()
+        type(app.textFields["Name or nickname"], "Mia"); dismissKb(); next()
+        tap("Finish", timeout: 20)
+        let famEmail = testEmail, famPw = testPw
+        tapUrgent()
+        tap("Post an urgent need")
+        tap("Tomorrow")
+        ensureTicked("part-Evening")
+        ensureTicked("band-3-5")
+        let pc = app.textFields["jobPostcode"]
+        XCTAssertTrue(pc.waitForExistence(timeout: 10), "postcode field missing"); pc.tap(); sleep(1)
+        for _ in 0..<6 { pc.typeText(XCUIKeyboardKey.delete.rawValue) }
+        pc.typeText("7250"); dismissKb()
+        let nf = app.descendants(matching: .any)["jobNote"].firstMatch
+        nf.tap(); sleep(1); nf.typeText(note); dismissKb()
+        XCTAssertTrue(reveal(app.buttons["postJob"], max: 6), "post button missing"); app.buttons["postJob"].tap(); sleep(3)
+        signOutFromMe()
+        signUp(side: "carer"); fillYou("Test DCarer"); next(); tap("Nanny"); next(); tap("Skip")
+        type(app.textFields["A few words about your care"], "Kind and calm care"); dismissKb(); next()
+        tap("Finish", timeout: 20)
+        let carEmail = testEmail, carPw = testPw
+        // the urgent distance rides the phone: make sure it stands at 25 km before judging the cut
+        app.tabBars.buttons["Me"].tap(); openSettings()
+        let anyMenu = app.buttons.matching(NSPredicate(format: "label == 'Any'")).firstMatch
+        if anyMenu.waitForExistence(timeout: 4) { anyMenu.tap(); sleep(1); tap("25 km") }
+        app.tabBars.buttons.element(boundBy: 0).tap()
+        tapUrgent(); sleep(10)
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", note)).firstMatch.exists, "a far post showed inside 25 km")
+        qshot("urgentd-1-far-post-hidden")
+        // open the urgent distance to Any in Settings: the far post now shows
+        app.tabBars.buttons["Me"].tap(); openSettings()
+        let menu = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "25 km")).firstMatch
+        XCTAssertTrue(reveal(menu, max: 10), "urgent distance menu missing"); menu.tap(); sleep(1)
+        tap("Any distance")
+        app.tabBars.buttons.element(boundBy: 0).tap(); tapUrgent(); sleep(8)
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", note)).firstMatch.waitForExistence(timeout: 60), "far post did not show at Any distance")
+        qshot("urgentd-2-far-post-shown")
+        deleteThisAccount()
+        signIn(email: famEmail, pw: famPw); testEmail = famEmail; testPw = famPw
+        tapUrgent()
+        let close = app.buttons["closePost"].firstMatch
+        if close.waitForExistence(timeout: 30) { close.tap(); sleep(2) }
+        deleteThisAccount()
     }
 }
 
