@@ -138,4 +138,102 @@ final class CareSpaceFlowTests: XCTestCase {
         print("SIGNIN-LANDED-INSIDE: \(landed2)")
         XCTAssertTrue(landed2, "Item 2 fault: sign-in did not land inside")
     }
+
+    // MARK: QA plan drive, batch 1 (this desk, plan order): the five
+    // tabs stand; Profile carries identity only (Settings Law — a
+    // setting row here is Not pass); Settings carries Theme, Language,
+    // Notifications, Permissions, Privacy + the two bunny rows; the
+    // item 8 theme save STANDS across a cold relaunch with no launch
+    // argument (the stored pick rules, nothing forces it).
+    func testDriveSurfaces() throws {
+        let app = XCUIApplication()
+        app.launch()
+
+        let stamp = Int(Date().timeIntervalSince1970)
+        let email = "projects.reports.ilse+cs29d\(stamp)@gmail.com"
+        // Normalise the start state: the simulator keychain survives
+        // uninstalls (proven at this desk 2026-11-15), so the app may
+        // launch already signed in. If it did, sign out first so the
+        // drive starts at the door like a fresh user.
+        if app.tabBars.buttons["Chats"].waitForExistence(timeout: 10) {
+            app.tabBars.buttons["Profile"].tap()
+            let out = app.buttons["Sign out"]
+            XCTAssertTrue(out.waitForExistence(timeout: 15), "Signed-in start: Sign out missing")
+            out.tap()
+            let confirm = app.sheets.buttons["Sign out"]
+            XCTAssertTrue(confirm.waitForExistence(timeout: 10))
+            confirm.tap()
+        }
+        let doorLink = app.buttons["Use email instead"]
+        XCTAssertTrue(doorLink.waitForExistence(timeout: 60), "Door did not stand")
+        doorLink.tap()
+        let familyPick = app.buttons["Family"]
+        XCTAssertTrue(familyPick.waitForExistence(timeout: 30), "Who-are-you pick did not stand")
+        familyPick.tap()
+        let nameField = app.textFields["Your name"]
+        XCTAssertTrue(nameField.waitForExistence(timeout: 15))
+        nameField.tap(); nameField.typeText("Drive Tester")
+        let emailField = app.textFields["Email"]
+        emailField.tap(); emailField.typeText(email)
+        let pwField = app.secureTextFields["Password"]
+        pwField.tap(); pwField.typeText("TraceTest29!")
+        app.buttons["Create my account"].tap()
+        let chatsTab = app.tabBars.buttons["Chats"]
+        XCTAssertTrue(chatsTab.waitForExistence(timeout: 60), "Drive sign-up did not land inside")
+
+        // The five tabs of record stand.
+        for tab in ["Chats", "Calendar", "Care", "Activities", "Profile"] {
+            XCTAssertTrue(app.tabBars.buttons[tab].exists, "Tab missing: \(tab)")
+        }
+        print("DRIVE-TABS-OK: true")
+
+        // Profile: identity only. RowLink is a NavigationLink whose
+        // accessibility label composes title + subtitle, so rows are
+        // matched by label prefix, never by exact title.
+        func row(_ title: String) -> XCUIElement {
+            app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", title)).firstMatch
+        }
+        app.tabBars.buttons["Profile"].tap()
+        XCTAssertTrue(row("Join the AI kindness revolution").waitForExistence(timeout: 15), "Kindness row missing (must stand FIRST)")
+        XCTAssertTrue(row("Your name").exists, "Your name row missing")
+        XCTAssertTrue(row("Care Team").exists, "Care Team row missing")
+        XCTAssertTrue(row("Settings").exists, "Settings row missing")
+        XCTAssertTrue(app.buttons["Sign out"].exists, "Sign out missing")
+        XCTAssertFalse(app.buttons["Theme"].exists, "SETTINGS LAW: Theme picker stands in Profile")
+        XCTAssertFalse(app.staticTexts["Calm bunny"].exists, "SETTINGS LAW: Calm bunny stands in Profile")
+        print("DRIVE-PROFILE-OK: true")
+
+        // Settings: the whole surface stands here, and only here.
+        row("Settings").tap()
+        let themeHead = app.buttons["Theme"]
+        XCTAssertTrue(themeHead.waitForExistence(timeout: 15), "Theme picker missing in Settings")
+        XCTAssertTrue(row("Language").exists, "Language row missing in Settings")
+        XCTAssertTrue(row("Notifications").exists, "Notifications row missing in Settings")
+        XCTAssertTrue(row("Permissions").exists, "Permissions row missing in Settings")
+        XCTAssertTrue(row("Privacy").exists, "Privacy row missing in Settings")
+        if !app.staticTexts["Calm bunny"].exists { app.swipeUp() }
+        XCTAssertTrue(app.staticTexts["Calm bunny"].waitForExistence(timeout: 10), "Calm bunny missing in Settings")
+        XCTAssertTrue(app.staticTexts["Less movement on screens with the bunny."].exists, "Less movement row missing in Settings")
+        print("DRIVE-SETTINGS-OK: true")
+
+        // Item 8: pick Dark, cold relaunch with NO launch argument —
+        // the stored pick must rule.
+        themeHead.tap()
+        let darkPick = app.buttons["Dark"]
+        XCTAssertTrue(darkPick.waitForExistence(timeout: 10), "Dark theme pick missing")
+        darkPick.tap()
+        Thread.sleep(forTimeInterval: 1.0)
+        print("THEME-VALUE-AFTER-PICK: \(themeHead.value as? String ?? "nil")")
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.tabBars.buttons["Chats"].waitForExistence(timeout: 60), "Relaunch did not land inside")
+        app.tabBars.buttons["Profile"].tap()
+        XCTAssertTrue(row("Settings").waitForExistence(timeout: 15))
+        row("Settings").tap()
+        let themeHead2 = app.buttons["Theme"]
+        XCTAssertTrue(themeHead2.waitForExistence(timeout: 15), "Theme picker missing after relaunch")
+        let stands = (themeHead2.value as? String) == "Dark"
+        print("THEME-SAVE-STANDS: \(stands) value=\(themeHead2.value as? String ?? "nil")")
+        XCTAssertTrue(stands, "Item 8 fault: theme save did not stand across relaunch")
+    }
 }
