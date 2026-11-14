@@ -169,7 +169,7 @@ struct KindnessView: View {
             Text("Touch the rainbow to see every name.").font(.custom("Atkinson Hyperlegible", size: 14, relativeTo: .subheadline)).foregroundStyle(Brand.muted)
             Text(store.donors.count >= 20 ? "\(store.donors.count) kind humans in this rainbow" : "Be one of the first in this rainbow")
                 .font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .body).weight(.semibold)).foregroundStyle(Brand.ink)
-            BigButton("Give to keep it free", icon: .gift) { openURL(KindnessStore.giveURL) }.padding(.top, 4)
+            BigButton(title: "Give to keep it free", icon: .gift) { openURL(KindnessStore.giveURL) }.padding(.top, 4)
             Text("Give only if you want. This app stays free for all.").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted)
         }.padding(.horizontal, 20).padding(.bottom, 24) }
             .background(Brand.cream.ignoresSafeArea())

@@ -133,6 +133,7 @@ Full suite on the final tree: 17 of 20 passed first time. Failed in the full run
 - Named for Security's queue: the sealed v6 rules carry no reviews match block at all (read at this desk 14 Nov 2026; the app's booking reviews already write this collection). The profile review rides the app's existing collection and fields; a reviews seal joins the one rules amendment queue with the au pair block, the education and CPR keys, and the notification kinds below.
 
 - RUN 2 CATCH (14 Nov 2026, cloud lane): the 6fd3592 head never compiled anywhere, and the run's compile step failed on one error — BookingsViews.swift:73 invalid redeclaration of ReviewSheet. The profile review sheet added by this item carried the same name as the booking review sheet. Fixed the same hour: the profile sheet is now ProfileReviewSheet (DiscoverView.swift:332 call site, :475 struct); the booking sheet stays ReviewSheet. One name, one sheet.
+- RUN 3 CATCH (14 Nov 2026, cloud lane): the fcfc9c8 head failed compile on one error — DiscoverView.swift:488 missing argument label title: (the profile sheet called BigButton without the title: label; every other call site carries it). The run 2 redeclaration had hidden it. Fixed the same hour, and the same sweep caught a second unlabeled call in KindnessViews.swift:172 (Give to keep it free) before it could fail a run: zero unlabeled BigButton calls remain in the tree (25 calls, all labelled). Pushed as 530e36d.
 
 ## ESSENTIAL NOTIFICATIONS (built 14 Nov 2026, direct; her word 13 Nov 22:29)
 
