@@ -58,7 +58,7 @@ tgt={'ASSETCATALOG_COMPILER_APPICON_NAME':'AppIcon','CODE_SIGN_ENTITLEMENTS':'Ap
 A('/* Begin XCBuildConfiguration section */')
 A(cfg('p-Debug',proj,{'ONLY_ACTIVE_ARCH':'YES','SWIFT_OPTIMIZATION_LEVEL':'"-Onone"','DEBUG_INFORMATION_FORMAT':'dwarf'}))
 A(cfg('p-Release',proj,{'SWIFT_COMPILATION_MODE':'wholemodule','DEBUG_INFORMATION_FORMAT':'"dwarf-with-dsym"','VALIDATE_PRODUCT':'YES'}))
-A(cfg('t-Debug',tgt,{}))
+A(cfg('t-Debug',tgt,{'SWIFT_ACTIVE_COMPILATION_CONDITIONS':'DEBUG'}))
 A(cfg('t-Release',tgt,{}))
 uitg={'TEST_TARGET_NAME':'CareSpace','PRODUCT_BUNDLE_IDENTIFIER':'com.ilse.carespace.uitests','PRODUCT_NAME':'"$(TARGET_NAME)"','GENERATE_INFOPLIST_FILE':'YES','SWIFT_VERSION':'5.0','IPHONEOS_DEPLOYMENT_TARGET':'17.0','TARGETED_DEVICE_FAMILY':'1','DEVELOPMENT_TEAM':'GZ9Z6BPTFR','CODE_SIGN_STYLE':'Automatic','LD_RUNPATH_SEARCH_PATHS':'"$(inherited) @executable_path/Frameworks @loader_path/Frameworks"'}
 A(cfg('u-Debug',uitg,{}))

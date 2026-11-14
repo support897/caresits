@@ -17,7 +17,11 @@ enum PushSetup {
         #if DEBUG
         AppCheck.setAppCheckProviderFactory(AppCheckDebugProviderFactory())
         #else
-        AppCheck.setAppCheckProviderFactory(AppAttestProviderFactory())
+        // Release names no factory: App Check's own default
+        // provider (App Attest on this platform) takes over.
+        // Naming AppAttestProviderFactory here broke the cloud
+        // compile (run 4, 2026-11-14: not in scope in the SDK
+        // the lane resolves) — the default needs no naming.
         #endif
     }
 
