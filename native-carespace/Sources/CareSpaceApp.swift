@@ -39,7 +39,7 @@ struct CareSpaceApp: App {
 enum OfflineSetup {
     static func install() {
         let settings = FirestoreSettings()
-        settings.cacheSettings = PersistentCacheSettings(sizeBytes: FirestoreCacheSizeUnlimited)
+        settings.cacheSettings = PersistentCacheSettings(sizeBytes: NSNumber(value: FirestoreCacheSizeUnlimited))
         Firestore.firestore().settings = settings
     }
 }
