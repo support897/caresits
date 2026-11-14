@@ -47,7 +47,7 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild test -project CareSpace.xcodeproj -scheme CareSpace -destination "id=$UDID" \
-            -only-testing:CareSpaceUITests CODE_SIGNING_ALLOWED=NO 2>&1 | tee ui.log | grep -E "Test Case|error:|Executed|TEST (SUCCEEDED|FAILED)" || true
+            -only-testing:CareSpaceUITests -resultBundlePath "$RUNNER_TEMP/cs-ui.xcresult" CODE_SIGNING_ALLOWED=NO 2>&1 | tee ui.log | grep -E "Test Case|error:|Executed|TEST (SUCCEEDED|FAILED)" || true
           grep -q "TEST SUCCEEDED" ui.log
 
       - name: UI test failures
@@ -61,4 +61,12 @@ jobs:
         with:
           name: carespace-ui-log
           path: cs-ci/ui.log
+          if-no-files-found: warn
+
+      - name: Keep the result bundle (evidence, win or lose)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: carespace-xcresult
+          path: ${{ runner.temp }}/cs-ui.xcresult
           if-no-files-found: warn
