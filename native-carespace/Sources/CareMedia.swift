@@ -158,7 +158,7 @@ struct PhotoAddButton: View {
             Pill(title: working ? "Sending the photo" : title, icon: "photo", on: false)
         }
         .disabled(working)
-        .onChange(of: pick) { item in
+        .onChange(of: pick) { _, item in
             guard let item = item else { return }
             pick = nil; working = true
             Task {

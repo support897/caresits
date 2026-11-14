@@ -167,7 +167,7 @@ struct AddEventView: View {
         }
         .navigationTitle("Add event").navigationBarTitleDisplayMode(.inline)
         .onAppear { date = day; until = day; days = [weekdayName(day)] }
-        .onChange(of: date) { d in if !daysTouched { days = [weekdayName(d)] }; if until < d { until = d } }
+        .onChange(of: date) { _, d in if !daysTouched { days = [weekdayName(d)] }; if until < d { until = d } }
     }
 
     var recurrence: CalendarRecurrence? {

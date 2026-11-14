@@ -169,7 +169,7 @@ struct ChatPanel: View {
                             }
                         }.padding(20)
                     }
-                    .onChange(of: model.messages.count) { _ in if let l = model.messages.last { proxy.scrollTo(l.id, anchor: .bottom) } }
+                    .onChange(of: model.messages.count) { if let l = model.messages.last { proxy.scrollTo(l.id, anchor: .bottom) } }
                 }
                 if !note.isEmpty { Notice(text: note).padding(.horizontal, 20) }
                 if CareAccess.canPost(model.space.role) {
@@ -190,7 +190,7 @@ struct ChatPanel: View {
                 }
             }
             .onAppear { if let u = s.uid { CareRepo.markRead(uid: u, spaceId: model.space.id) } }
-            .onChange(of: model.messages.count) { _ in if let u = s.uid { CareRepo.markRead(uid: u, spaceId: model.space.id) } }
+            .onChange(of: model.messages.count) { if let u = s.uid { CareRepo.markRead(uid: u, spaceId: model.space.id) } }
         }
     }
 }

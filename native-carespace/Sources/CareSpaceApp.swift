@@ -1,5 +1,6 @@
 import SwiftUI
 import FirebaseCore
+import FirebaseFirestore
 import GoogleSignIn
 
 @main
@@ -13,6 +14,9 @@ struct CareSpaceApp: App {
         // guarded calls (account delete, push) check it.
         PushSetup.installAppCheck()
         FirebaseApp.configure()
+        // Item 12 (offline queue) stands from the first moment,
+        // before any read or write can happen.
+        OfflineSetup.install()
         _session = StateObject(wrappedValue: Session())
     }
     var body: some Scene {
@@ -24,6 +28,19 @@ struct CareSpaceApp: App {
                 .tint(Brand.ink)
                 .onOpenURL { GIDSignIn.sharedInstance.handle($0) }
         }
+    }
+}
+
+/// Item 12 — OFFLINE QUEUE. Firestore's persistent cache is switched
+/// on EXPLICITLY here, at startup, before any read or write: writes
+/// made offline are kept on the phone in the order they were made and
+/// land on the server in that order when the connection returns,
+/// nothing dropped. It never rides on an SDK default nobody chose.
+enum OfflineSetup {
+    static func install() {
+        let settings = FirestoreSettings()
+        settings.cacheSettings = PersistentCacheSettings(sizeBytes: FirestoreCacheSizeUnlimited)
+        Firestore.firestore().settings = settings
     }
 }
 

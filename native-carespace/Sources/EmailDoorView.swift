@@ -25,7 +25,7 @@ struct EmailDoorView: View {
                     Text("Sign in").tag(Mode.signIn)
                 }
                 .pickerStyle(.segmented)
-                .onChange(of: mode) { _ in err = "" }
+                .onChange(of: mode) { err = "" }
 
                 if mode == .signUp {
                     Text("Who are you?").font(Brand.body(16)).foregroundStyle(Brand.ink)
