@@ -60,12 +60,20 @@ final class CareSpaceFlowTests: XCTestCase {
         let password = "TraceTest29!"
         let name = "Trace Tester"
 
-        // Door -> email page.
-        let emailLink = app.staticTexts["Use email instead"]
+        // Door -> email page. The email line is a NavigationLink, which
+        // the accessibility tree carries as a BUTTON, not a static text
+        // (run 6 diagnosis, 2026-11-14: the staticTexts query waited the
+        // full 60 s in vain while the door stood — the app's own trace
+        // read listener.done with uidSet=false, the door state).
+        let emailLink = app.buttons["Use email instead"]
         XCTAssertTrue(emailLink.waitForExistence(timeout: 60), "Door did not stand")
         emailLink.tap()
 
         // Sign up (the segmented control starts on Sign up).
+        // Item 16: sign-up asks who you are FIRST — no pick, no account.
+        let familyPick = app.buttons["Family"]
+        XCTAssertTrue(familyPick.waitForExistence(timeout: 15), "Who-are-you pick did not stand")
+        familyPick.tap()
         let nameField = app.textFields["Your name"]
         XCTAssertTrue(nameField.waitForExistence(timeout: 15))
         nameField.tap(); nameField.typeText(name)
@@ -102,7 +110,10 @@ final class CareSpaceFlowTests: XCTestCase {
         emailField2.tap(); emailField2.typeText(email)
         let pwField2 = app.secureTextFields["Password"]
         pwField2.tap(); pwField2.typeText(password)
-        app.buttons["Sign in"].tap()
+        // The segmented control's own "Sign in" segment is also a button
+        // with this label — the submit is the LAST match in tree order.
+        let signInMatches = app.buttons.matching(NSPredicate(format: "label == 'Sign in'"))
+        signInMatches.element(boundBy: signInMatches.count - 1).tap()
 
         // Item 2: sign-in lands inside on its own.
         let landed2 = chatsTab.waitForExistence(timeout: 60)
