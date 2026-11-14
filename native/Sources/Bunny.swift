@@ -103,5 +103,5 @@ struct BunnyView: View {
 
 /// Mood preview used by the pictures test.
 struct BunnyMoodsRow: View {
-    var body: some View { HStack(spacing: 4) { ForEach(BunnyMood.allCases, id: \.self) { m in VStack { BunnyView(size: 44, mood: m); Text(m.rawValue).font(.system(size: 9)) } } } }
+    var body: some View { HStack(spacing: 4) { ForEach(BunnyMood.allCases, id: \.self) { m in VStack { BunnyView(size: 44, mood: m); Text(m.rawValue).font(.custom("Atkinson Hyperlegible", size: 9)) } } } }
 }

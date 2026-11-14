@@ -26,12 +26,12 @@ struct BookingRow: View {
         Card { VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
                 PhotoView(key: other?.photoKey ?? "", size: 48, fallback: other?.role.icon ?? .bunny)
-                VStack(alignment: .leading) { Text(other?.firstName ?? "…").font(.headline); Text("\(pretty(b.dateValue)) · \(b.from)–\(b.to)").font(.subheadline).foregroundStyle(Brand.muted) }
-                Spacer(); IconLabel(icon: b.stateIcon, text: b.stateLabel, size: 15).font(.footnote.bold()).padding(.horizontal, 10).padding(.vertical, 5).background(b.state == "accepted" || b.state == "completed" ? Brand.signBooked : (b.state == "requested" ? Brand.honey : Color.clear)).clipShape(Capsule())
+                VStack(alignment: .leading) { Text(other?.firstName ?? "…").font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold)); Text("\(pretty(b.dateValue)) · \(b.from)–\(b.to)").font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline)).foregroundStyle(Brand.muted) }
+                Spacer(); IconLabel(icon: b.stateIcon, text: b.stateLabel, size: 15).font(.footnote.bold()).padding(.horizontal, 10).padding(.vertical, 5).background(b.state == "accepted" || b.state == "completed" ? Brand.signBooked : (b.state == "requested" ? Brand.rose : Color.clear)).clipShape(Capsule())
             }
-            if b.estimate > 0 { IconLabel(icon: .rate, text: "About $\(Int(b.estimate))", size: 15).font(.footnote) }
-            if !b.note.isEmpty { Text("“\(b.note)”").font(.footnote).italic().foregroundStyle(Brand.muted) }
-            if b.state == "cancelled" && !b.cancelledBy.isEmpty { Text(b.cancelledBy == me.id ? "You cancelled this booking." : "\(other?.firstName ?? "They") cancelled this booking.").font(.footnote).foregroundStyle(Brand.muted) }
+            if b.estimate > 0 { IconLabel(icon: .rate, text: "About $\(Int(b.estimate))", size: 15).font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)) }
+            if !b.note.isEmpty { Text("“\(b.note)”").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).italic().foregroundStyle(Brand.muted) }
+            if b.state == "cancelled" && !b.cancelledBy.isEmpty { Text(b.cancelledBy == me.id ? "You cancelled this booking." : "\(other?.firstName ?? "They") cancelled this booking.").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted) }
             if PayConfig.visible {
                 PayLines(b: b, isCarer: isCarer, otherName: other?.firstName ?? "them")
                 if !isCarer && b.pay?.state == "held" { PayActions(b: b, reload: reload) }
@@ -47,7 +47,7 @@ struct BookingRow: View {
                 if isCarer && b.state == "accepted" && !ended { act("Cancel", "cancelled", Brand.field, ink: true) }
                 if !isCarer && b.state == "completed" && !reviewed { Button { showReview = true } label: { Chip(text: "Leave a review", on: true, tint: s.role.tint, icon: .star) } }
             }
-            if !err.isEmpty { Text(err).font(.caption).foregroundStyle(Brand.ink) }
+            if !err.isEmpty { Text(err).font(.custom("Atkinson Hyperlegible", size: 12, relativeTo: .caption)).foregroundStyle(Brand.ink) }
         } }
         .confirmationDialog(cancelWords, isPresented: $askCancel, titleVisibility: .visible) {
             Button("Cancel this booking", role: .destructive) { Task { busy = true; err = ""; do { try await Backend.transition(b, to: "cancelled", actorUid: me.id, actorIsCarer: isCarer); await reload() } catch { err = "That did not work. Please try again." }; busy = false } }
@@ -63,7 +63,7 @@ struct BookingRow: View {
         return start.timeIntervalSinceNow > 24 * 3600 ? "More than a day ahead. Cancelling is free." : "Inside a day. \(other?.firstName ?? "The carer") is paid half and the rest comes back to you."
     }
     func act(_ title: String, _ to: String, _ tint: Color, icon: BI? = nil, ink: Bool = false) -> some View {
-        Button { Task { busy = true; err = ""; do { try await Backend.transition(b, to: to, actorUid: me.id, actorIsCarer: isCarer); await reload() } catch { err = "That did not work. Please try again." }; busy = false } } label: { HStack(spacing: 6) { if let icon { BrandIcon(kind: icon, size: 16, color: ink ? Brand.ink : Color(hex: 0x3A2E33), mono: true) }; Text(title) }.font(.subheadline.bold()).padding(.horizontal, 16).padding(.vertical, 10).background(tint).foregroundStyle(ink ? Brand.ink : Color(hex: 0x3A2E33)).clipShape(Capsule()) }.disabled(busy)
+        Button { Task { busy = true; err = ""; do { try await Backend.transition(b, to: to, actorUid: me.id, actorIsCarer: isCarer); await reload() } catch { err = "That did not work. Please try again." }; busy = false } } label: { HStack(spacing: 6) { if let icon { BrandIcon(kind: icon, size: 16, color: ink ? Brand.ink : Color(hex: 0x2D2A35), mono: true) }; Text(title) }.font(.subheadline.bold()).padding(.horizontal, 16).padding(.vertical, 10).background(tint).foregroundStyle(ink ? Brand.ink : Color(hex: 0x2D2A35)).clipShape(Capsule()) }.disabled(busy)
     }
     func pretty(_ d: Date) -> String { let f = DateFormatter(); f.dateFormat = "EEE d MMM"; return f.string(from: d) }
 }
@@ -78,7 +78,7 @@ struct ReviewSheet: View {
             Text("How was \(name)?").font(Brand.title(26)).foregroundStyle(Brand.titleColor)
             HStack { ForEach(1...5, id: \.self) { i in Button { stars = i } label: { BrandIcon(kind: .star, size: 34, color: Brand.bunny, solid: i <= stars) } } }
             TextField("Say something kind (optional)", text: $text, axis: .vertical).lineLimit(3...5).padding(14).background(Brand.field).clipShape(RoundedRectangle(cornerRadius: 12))
-            Text("Reviews can't be edited later.").font(.footnote).foregroundStyle(Brand.muted)
+            Text("Reviews can't be edited later.").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted)
             if !err.isEmpty { Text(err).foregroundStyle(Brand.ink) }
             BigButton(title: "Save review", busy: busy) { Task { busy = true; do { try await Backend.addReview(booking, rating: stars, text: text); done(); dismiss() } catch { err = "Could not save. Please try again." }; busy = false } }
             Button("Not now") { dismiss() }
@@ -107,7 +107,7 @@ struct BookingsCalendarView: View {
                 Card { VStack(spacing: 8) {
                     HStack {
                         Button { month = cal.date(byAdding: .month, value: -1, to: month)! } label: { BrandIcon(kind: .chevron, size: 20).rotationEffect(.degrees(180)) }
-                        Spacer(); Text(month, format: .dateTime.month(.wide).year()).font(.headline); Spacer()
+                        Spacer(); Text(month, format: .dateTime.month(.wide).year()).font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold)); Spacer()
                         Button { month = cal.date(byAdding: .month, value: 1, to: month)! } label: { BrandIcon(kind: .chevron, size: 20) }
                     }
                     HStack { ForEach(["M", "T", "W", "T", "F", "S", "S"], id: \.self) { Text($0).font(.caption.bold()).frame(maxWidth: .infinity).foregroundStyle(Brand.muted) } }
@@ -117,20 +117,20 @@ struct BookingsCalendarView: View {
                                 let n = list(on: d); let sel = cal.isDate(d, inSameDayAs: selected)
                                 Button { selected = d } label: {
                                     VStack(spacing: 2) {
-                                        Text("\(cal.component(.day, from: d))").font(.system(size: 16, weight: sel ? .bold : .regular))
-                                        Circle().fill(n.isEmpty ? .clear : (n.contains { $0.state == "requested" } ? Brand.honey : Brand.signBooked)).frame(width: 6, height: 6)
+                                        Text("\(cal.component(.day, from: d))").font(.custom("Atkinson Hyperlegible", size: 16).weight(sel ? .bold : .regular))
+                                        Circle().fill(n.isEmpty ? .clear : (n.contains { $0.state == "requested" } ? Brand.rose : Brand.signBooked)).frame(width: 6, height: 6)
                                     }.frame(maxWidth: .infinity, minHeight: 42).background(sel ? role.soft : .clear).clipShape(RoundedRectangle(cornerRadius: 10)).foregroundStyle(cal.isDateInToday(d) ? role.tint : Brand.ink)
                                 }
                             } else { Color.clear.frame(height: 42) }
                         }
                     }
-                    HStack(spacing: 14) { HStack(spacing: 5) { Circle().fill(Brand.honey).frame(width: 9, height: 9); Text("Waiting") }; HStack(spacing: 5) { Circle().fill(Brand.signBooked).frame(width: 9, height: 9); Text("Booked") } }.font(.caption)
+                    HStack(spacing: 14) { HStack(spacing: 5) { Circle().fill(Brand.rose).frame(width: 9, height: 9); Text("Waiting") }; HStack(spacing: 5) { Circle().fill(Brand.signBooked).frame(width: 9, height: 9); Text("Booked") } }.font(.custom("Atkinson Hyperlegible", size: 12, relativeTo: .caption))
                 } }.padding(.horizontal, 20)
                 if role == .family { BigButton(title: "New booking", tint: role.tint, icon: .plus) { showNew = true }.padding(.horizontal, 20) }
                 else { BigButton(title: "My free days and hours", tint: role.tint, icon: .clock) { showFree = true }.padding(.horizontal, 20) }
                 let todays = list(on: selected)
                 VStack(alignment: .leading, spacing: 10) {
-                    Text(selected, format: .dateTime.weekday(.wide).day().month(.wide)).font(.headline).padding(.horizontal, 20)
+                    Text(selected, format: .dateTime.weekday(.wide).day().month(.wide)).font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold)).padding(.horizontal, 20)
                     if !store.loaded { ProgressView().frame(maxWidth: .infinity) }
                     else if todays.isEmpty { EmptyHint(icon: .sun, text: role == .family ? "Nothing booked" : "Nothing booked") }
                     ForEach(todays) { b in BookingRow(b: b, other: store.other(b, me: s.meSafe)) { await store.load(s.meSafe) }.padding(.horizontal, 20) }
@@ -199,8 +199,8 @@ struct RequestsView: View {
                 let coming = store.items.filter { $0.state == "accepted" }
                 if !store.loaded { ProgressView().frame(maxWidth: .infinity).padding(30) }
                 else if waiting.isEmpty && coming.isEmpty { EmptyHint(icon: .tray, text: "No requests yet") }
-                if !waiting.isEmpty { IconLabel(icon: .clock, text: "Waiting for you", size: 18).font(.headline).padding(.horizontal, 20); ForEach(waiting) { b in BookingRow(b: b, other: store.other(b, me: s.meSafe)) { await store.load(s.meSafe) }.padding(.horizontal, 20) } }
-                if !coming.isEmpty { IconLabel(icon: .checkCircle, text: "Confirmed", size: 18).font(.headline).padding(.horizontal, 20); ForEach(coming) { b in BookingRow(b: b, other: store.other(b, me: s.meSafe)) { await store.load(s.meSafe) }.padding(.horizontal, 20) } }
+                if !waiting.isEmpty { IconLabel(icon: .clock, text: "Waiting for you", size: 18).font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold)).padding(.horizontal, 20); ForEach(waiting) { b in BookingRow(b: b, other: store.other(b, me: s.meSafe)) { await store.load(s.meSafe) }.padding(.horizontal, 20) } }
+                if !coming.isEmpty { IconLabel(icon: .checkCircle, text: "Confirmed", size: 18).font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold)).padding(.horizontal, 20); ForEach(coming) { b in BookingRow(b: b, other: store.other(b, me: s.meSafe)) { await store.load(s.meSafe) }.padding(.horizontal, 20) } }
             }.padding(.bottom, 100) }
             .background(Brand.cream.ignoresSafeArea()).refreshable { await store.load(s.meSafe) }.task { await store.load(s.meSafe) }
         }
@@ -223,16 +223,16 @@ struct TodayView: View {
                     stat(.calendar, "\(week.count)", "jobs this week")
                     stat(.rate, "$\(Int(week.reduce(0) { $0 + $1.estimate }))", "this week")
                 }.padding(.horizontal, 20)
-                IconLabel(icon: .sun, text: "Today", size: 18).font(.headline).padding(.horizontal, 20)
+                IconLabel(icon: .sun, text: "Today", size: 18).font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold)).padding(.horizontal, 20)
                 let today = mine.filter { cal.isDateInToday($0.dateValue) }
                 if !store.loaded { ProgressView().frame(maxWidth: .infinity) }
                 else if today.isEmpty { EmptyHint(icon: .nanny, text: "Nothing today") }
                 ForEach(today) { b in BookingRow(b: b, other: store.other(b, me: s.meSafe)) { await store.load(s.meSafe) }.padding(.horizontal, 20) }
                 let up = mine.filter { $0.dateValue > Date() && !cal.isDateInToday($0.dateValue) && $0.state == "accepted" }.prefix(4)
-                if !up.isEmpty { IconLabel(icon: .arrow, text: "Coming up", size: 18).font(.headline).padding(.horizontal, 20); ForEach(Array(up)) { b in BookingRow(b: b, other: store.other(b, me: s.meSafe)) { await store.load(s.meSafe) }.padding(.horizontal, 20) } }
+                if !up.isEmpty { IconLabel(icon: .arrow, text: "Coming up", size: 18).font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold)).padding(.horizontal, 20); ForEach(Array(up)) { b in BookingRow(b: b, other: store.other(b, me: s.meSafe)) { await store.load(s.meSafe) }.padding(.horizontal, 20) } }
             }.padding(.bottom, 100) }
             .background(Brand.cream.ignoresSafeArea()).refreshable { await store.load(s.meSafe) }.task { await store.load(s.meSafe) }
         }
     }
-    func stat(_ e: BI, _ v: String, _ l: String) -> some View { Card { VStack { BrandIcon(kind: e, size: 30); Text(v).font(.title2.bold()); Text(l).font(.caption).foregroundStyle(Brand.muted) }.frame(maxWidth: .infinity) } }
+    func stat(_ e: BI, _ v: String, _ l: String) -> some View { Card { VStack { BrandIcon(kind: e, size: 30); Text(v).font(.title2.bold()); Text(l).font(.custom("Atkinson Hyperlegible", size: 12, relativeTo: .caption)).foregroundStyle(Brand.muted) }.frame(maxWidth: .infinity) } }
 }

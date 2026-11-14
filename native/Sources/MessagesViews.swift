@@ -55,7 +55,7 @@ struct MessagesView: View {
                 else if store.rows.isEmpty { EmptyHint(icon: .chat, text: "Match with someone, then say hello") }
                 ForEach(store.rows) { r in
                     NavigationLink { ChatView(rel: r.rel, other: r.other) } label: {
-                        Card { HStack(spacing: 12) { PhotoView(key: r.other?.photoKey ?? "", size: 52, fallback: r.other?.role.icon ?? .bunny); VStack(alignment: .leading) { Text(r.other?.name ?? "…").font(.headline).foregroundStyle(Brand.ink); Text(r.other.map { $0.side == "carer" ? $0.role.name : "Family" } ?? "").font(.subheadline).foregroundStyle(Brand.muted) }; Spacer(); BrandIcon(kind: .chat, size: 16, color: Color(hex: 0x3A2E33), mono: true).frame(width: 30, height: 30).background(Brand.signMessage).clipShape(Circle()) } }
+                        Card { HStack(spacing: 12) { PhotoView(key: r.other?.photoKey ?? "", size: 52, fallback: r.other?.role.icon ?? .bunny); VStack(alignment: .leading) { Text(r.other?.name ?? "…").font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold)).foregroundStyle(Brand.ink); Text(r.other.map { $0.side == "carer" ? $0.role.name : "Family" } ?? "").font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline)).foregroundStyle(Brand.muted) }; Spacer(); BrandIcon(kind: .chat, size: 16, color: Color(hex: 0x2D2A35), mono: true).frame(width: 30, height: 30).background(Brand.signMessage).clipShape(Circle()) } }
                     }.buttonStyle(.plain).padding(.horizontal, 20)
                 }
             }.padding(.bottom, 100) }
@@ -75,7 +75,7 @@ struct ChatView: View {
     @State private var filledNote = false
     var body: some View {
         VStack(spacing: 0) {
-            if filledNote { Text("This one is filled").font(.footnote.weight(.semibold)).foregroundStyle(Color(hex: 0x3A2E33)).padding(.horizontal, 14).padding(.vertical, 7).background(Brand.bunny).clipShape(Capsule()).padding(.top, 8).accessibilityIdentifier("filledNote") }
+            if filledNote { Text("This one is filled").font(.footnote.weight(.semibold)).foregroundStyle(Color(hex: 0x2D2A35)).padding(.horizontal, 14).padding(.vertical, 7).background(Brand.bunny).clipShape(Capsule()).padding(.top, 8).accessibilityIdentifier("filledNote") }
             ScrollViewReader { proxy in
                 ScrollView { LazyVStack(spacing: 8) {
                     if msgs.isEmpty && older.isEmpty { EmptyHint(icon: .chat, text: "Say hello") }
@@ -84,19 +84,19 @@ struct ChatView: View {
                         let mine = m.from == s.uid
                         HStack { if mine { Spacer(minLength: 50) }
                             if m.kind == "photo" && !m.mediaKey.isEmpty { PhotoView(key: m.mediaKey, size: 220, round: false).accessibilityIdentifier("chatPhoto") }
-                            else { Text(m.text).padding(.horizontal, 14).padding(.vertical, 10).background(mine ? Brand.bunny : Brand.signMessage.opacity(0.75)).foregroundStyle(mine ? Color(hex: 0x3A2E33) : (ThemeStore.shared.pick == .dark ? Color(hex: 0x3A2E33) : Brand.ink)).clipShape(RoundedRectangle(cornerRadius: 18)) }
+                            else { Text(m.text).padding(.horizontal, 14).padding(.vertical, 10).background(mine ? Brand.bunny : Brand.signMessage.opacity(0.75)).foregroundStyle(mine ? Color(hex: 0x2D2A35) : (ThemeStore.shared.pick == .dark ? Color(hex: 0x2D2A35) : Brand.ink)).clipShape(RoundedRectangle(cornerRadius: 18)) }
                             if !mine { Spacer(minLength: 50) } }.id(m.id)
                     }
                 }.padding(14) }
                 .onChange(of: msgs.count) { _, _ in if let l = msgs.last { withAnimation { proxy.scrollTo(l.id, anchor: .bottom) } } }
             }
-            if !err.isEmpty { Text(err).font(.caption).foregroundStyle(Brand.ink) }
+            if !err.isEmpty { Text(err).font(.custom("Atkinson Hyperlegible", size: 12, relativeTo: .caption)).foregroundStyle(Brand.ink) }
             HStack(spacing: 10) {
                 PhotosPicker(selection: $pick, matching: .images) {
                     ZStack { if sending { ProgressView() } else { BrandIcon(kind: .camera, size: 24, color: s.role.tint) } }.frame(width: 44, height: 44).background(Brand.field).clipShape(Circle())
                 }.disabled(sending).accessibilityLabel("Share a photo")
                 TextField("Message", text: $text, axis: .vertical).lineLimit(1...4).padding(12).background(Brand.field).clipShape(RoundedRectangle(cornerRadius: 20))
-                Button { Task { await send() } } label: { BrandIcon(kind: .send, size: 22, color: Color(hex: 0x3A2E33), mono: true).padding(12).background(s.role.tint).clipShape(Circle()) }.disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
+                Button { Task { await send() } } label: { BrandIcon(kind: .send, size: 22, color: Color(hex: 0x2D2A35), mono: true).padding(12).background(s.role.tint).clipShape(Circle()) }.disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
             }.padding(12).background(.ultraThinMaterial)
         }
         .background(Brand.cream.ignoresSafeArea()).navigationTitle(other?.firstName ?? "Chat").navigationBarTitleDisplayMode(.inline)

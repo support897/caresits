@@ -13,7 +13,7 @@
 <key>LSRequiresIPhoneOS</key><true/>
 <key>ITSAppUsesNonExemptEncryption</key><false/>
 <key>UILaunchScreen</key><dict><key>UIColorName</key><string>LaunchPink</string></dict>
-<key>UIAppFonts</key><array><string>Fraunces-Black.ttf</string></array>
+<key>UIAppFonts</key><array><string>Fraunces-Black.ttf</string><string>Atkinson-Regular.ttf</string><string>Atkinson-Bold.ttf</string></array>
 <key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string></array>
 <key>UIApplicationSupportsIndirectInputEvents</key><true/>
 <key>NSCameraUsageDescription</key><string>Take a profile photo to share on your profile.</string>

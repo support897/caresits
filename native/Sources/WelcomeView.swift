@@ -23,12 +23,12 @@ struct WelcomeView: View {
                 SignInWithAppleButton(.continue) { s.prepareApple($0) } onCompletion: { r in Task { await runApple(r) } }
                     .signInWithAppleButtonStyle(.black).frame(height: 52).clipShape(RoundedRectangle(cornerRadius: 16))
                 Button { Task { await run { try await s.google() } } } label: {
-                    HStack { Text("G").font(.system(size: 20, weight: .bold)).foregroundStyle(Brand.ink); Text("Continue with Google").font(.system(size: 18, weight: .semibold)) }
+                    HStack { Text("G").font(.custom("Atkinson Hyperlegible", size: 20).weight(.bold)).foregroundStyle(Brand.ink); Text("Continue with Google").font(.custom("Atkinson Hyperlegible", size: 18).weight(.semibold)) }
                         .frame(maxWidth: .infinity, minHeight: 52).background(Brand.card).foregroundStyle(Brand.ink).overlay(RoundedRectangle(cornerRadius: 16).stroke(Brand.muted.opacity(0.4))).clipShape(RoundedRectangle(cornerRadius: 16))
                 }
-                Button { showEmail = true } label: { HStack(spacing: 6) { BrandIcon(kind: .mail, size: 16); Text("Use email") }.font(.system(size: 15, weight: .semibold)).padding(.horizontal, 16).padding(.vertical, 8).background(Brand.blush.opacity(0.6)).foregroundStyle(Brand.ink).clipShape(Capsule()) }.padding(.top, 4)
+                Button { showEmail = true } label: { HStack(spacing: 6) { BrandIcon(kind: .mail, size: 16); Text("Use email") }.font(.custom("Atkinson Hyperlegible", size: 15).weight(.semibold)).padding(.horizontal, 16).padding(.vertical, 8).background(Brand.blush.opacity(0.6)).foregroundStyle(Brand.ink).clipShape(Capsule()) }.padding(.top, 4)
             }
-            if !err.isEmpty { Text(err).foregroundStyle(Brand.ink).font(.callout).multilineTextAlignment(.center) }
+            if !err.isEmpty { Text(err).foregroundStyle(Brand.ink).font(.custom("Atkinson Hyperlegible", size: 16, relativeTo: .callout)).multilineTextAlignment(.center) }
         }.padding(20).padding(.bottom, 20).background(Brand.cream.ignoresSafeArea())
     }
     /// Apple: any dismissal (cancel, no Apple Account on the phone, any AuthenticationServices failure) leaves the door clean.
@@ -65,7 +65,7 @@ struct RolePickView: View {
     }
     func pick(_ e: BI, _ t: String, _ side: String) -> some View {
         Button { s.chooseSide(side); s.sideConfirmed = true } label: {
-            HStack(spacing: 14) { BrandIcon(kind: e, size: 44); Text(t).font(.system(size: 22, weight: .semibold)); Spacer(); BrandIcon(kind: .chevron, size: 22) }
+            HStack(spacing: 14) { BrandIcon(kind: e, size: 44); Text(t).font(.custom("Atkinson Hyperlegible", size: 22).weight(.semibold)); Spacer(); BrandIcon(kind: .chevron, size: 22) }
                 .padding(22).frame(maxWidth: .infinity).background(Brand.blush.opacity(0.5)).foregroundStyle(Brand.ink)
                 .clipShape(RoundedRectangle(cornerRadius: 22))
         }.accessibilityLabel(t)
@@ -86,8 +86,8 @@ struct EmailPage: View {
             TextField("Email", text: $email).textContentType(.emailAddress).keyboardType(.emailAddress).textInputAutocapitalization(.never).autocorrectionDisabled().padding(14).background(Brand.field).clipShape(RoundedRectangle(cornerRadius: 12))
             SecureField("Password (6+ letters)", text: $pw).padding(14).background(Brand.field).clipShape(RoundedRectangle(cornerRadius: 12))
             BigButton(title: creating ? "Create my account" : "Sign in", busy: busy) { Task { await go() } }
-            Button(creating ? "I already have an account" : "I am new here") { creating.toggle() }.font(.subheadline)
-            if !err.isEmpty { Text(err).foregroundStyle(Brand.ink).font(.callout).multilineTextAlignment(.center) }
+            Button(creating ? "I already have an account" : "I am new here") { creating.toggle() }.font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline))
+            if !err.isEmpty { Text(err).foregroundStyle(Brand.ink).font(.custom("Atkinson Hyperlegible", size: 16, relativeTo: .callout)).multilineTextAlignment(.center) }
         }.padding(20) }
         .background(Brand.cream.ignoresSafeArea()).backSwipe { dismiss() }
     }

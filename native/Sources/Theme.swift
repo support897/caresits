@@ -33,17 +33,18 @@ enum Brand {
     static let paleGround = Color(hex: 0xFBEFF2)  // Pale Pink Ground (opening screen)
     static let porcelain = Color(hex: 0xFDF8F0)   // Warm Porcelain
     static let rose = Color(hex: 0xF2B8B5)        // Soft Rose (errors, pastel)
-    static let honey = Color(hex: 0xF2D492)       // Honey Tint (stars, pastel)
-    // WAY B helpers, from the audited pastel palette. ONLY two jobs: fast signs and telling the roles apart. Never leads.
+    // WAY B helpers, named at the desk against the brand sheet (the sheet names only the four colours above;
+    // these helpers are named here in the open). ONLY two jobs: fast signs and telling the roles apart. Never leads, never fills.
     static let helperTeal = Color(hex: 0x9CC5B5)  // Morning Teal  : nanny
     static let helperApricot = Color(hex: 0xF2B880) // Apricot     : family
     static let helperLavender = Color(hex: 0xCFC3E8) // Lavender Haze : babysitter
     static let helperSky = Color(hex: 0xB9D6EC)   // Powder Blue   : au pair
     static let signBooked = Color(hex: 0xBFD8C0)  // Soft Sage     : booked
     static let signMessage = Color(hex: 0xF6D67C) // Butter Glow   : new message, chat
-    /// Text and line colour: warm plum grey, readable on every ground.
-    static var ink: Color { pick == .dark ? Color(hex: 0xF5EDEF) : Color(hex: 0x3A2E33) }
-    static var muted: Color { pick == .dark ? Color(hex: 0xBBA9B0) : Color(hex: 0x7A686F) }
+    /// Text colour: the brand sheet's own body text colour, measured off the sheet (#2D2A35).
+    /// Muted is derived from it on the same hue. The dark pair is the desk's named dark-ground match.
+    static var ink: Color { pick == .dark ? Color(hex: 0xF5EDEF) : Color(hex: 0x2D2A35) }
+    static var muted: Color { pick == .dark ? Color(hex: 0xBBA9B0) : Color(hex: 0x6E6978) }
     /// The ground of every screen.
     static var cream: Color { switch pick { case .light: return Color(hex: 0xFFFFFF); case .dark: return Color(hex: 0x1E1719); case .beige: return Color(hex: 0xF5EDE0); case .brand: return Color(hex: 0xFBEFF2) } }
     /// Cards and sheets that sit on the ground.
@@ -51,10 +52,11 @@ enum Brand {
     /// Input fields and quiet chips.
     static var field: Color { switch pick { case .light: return Color(hex: 0xF8F2F4); case .dark: return Color(hex: 0x3A2F34); case .beige: return Color(hex: 0xEBE0CE); case .brand: return Color(hex: 0xF6CBD3).opacity(0.45) } }
     static var line: Color { pick == .dark ? Color.white.opacity(0.14) : Color.black.opacity(0.08) }
-    /// Titles are Fraunces Black in Bunny Pink. Body text stays Atkinson-like system text.
+    /// Titles are Fraunces Black in Bunny Pink. Body text is Atkinson Hyperlegible.
     static var titleColor: Color { bunny }
     static func title(_ size: CGFloat) -> Font { .custom("Fraunces-Black", size: size) }
-    static let body = Font.system(size: 17, design: .default)
+    /// Body font of record: Atkinson Hyperlegible (the brand sheet), bundled in Resources.
+    static let body = Font.custom("Atkinson Hyperlegible", size: 17)
 }
 
 /// The four different apps inside one app. Everything role specific hangs off this.
@@ -85,8 +87,8 @@ struct BigButton: View {
     let title: String; var tint: Color = Brand.bunny; var busy = false; var icon: BI? = nil; let action: () -> Void
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 8) { if busy { ProgressView().tint(Color(hex: 0x3A2E33)) }; if let icon { BrandIcon(kind: icon, size: 20, color: Color(hex: 0x3A2E33), mono: true) }; Text(title).font(.system(size: 18, weight: .semibold)) }
-                .frame(maxWidth: .infinity, minHeight: 52).background(tint).foregroundStyle(Color(hex: 0x3A2E33)).clipShape(RoundedRectangle(cornerRadius: 16))
+            HStack(spacing: 8) { if busy { ProgressView().tint(Color(hex: 0x2D2A35)) }; if let icon { BrandIcon(kind: icon, size: 20, color: Color(hex: 0x2D2A35), mono: true) }; Text(title).font(.custom("Atkinson Hyperlegible", size: 18).weight(.semibold)) }
+                .frame(maxWidth: .infinity, minHeight: 52).background(tint).foregroundStyle(Color(hex: 0x2D2A35)).clipShape(RoundedRectangle(cornerRadius: 16))
         }.disabled(busy)
     }
 }
@@ -94,8 +96,8 @@ struct BigButton: View {
 struct Chip: View {
     let text: String; var on = false; var tint: Color = Brand.bunny; var icon: BI? = nil
     var body: some View {
-        HStack(spacing: 6) { if let icon { BrandIcon(kind: icon, size: 16, color: on ? Color(hex: 0x3A2E33) : Brand.ink, mono: on) }; Text(text) }.font(.system(size: 16, weight: .medium)).padding(.horizontal, 14).padding(.vertical, 9)
-            .background(on ? tint : Brand.card).foregroundStyle(on ? Color(hex: 0x3A2E33) : Brand.ink)
+        HStack(spacing: 6) { if let icon { BrandIcon(kind: icon, size: 16, color: on ? Color(hex: 0x2D2A35) : Brand.ink, mono: on) }; Text(text) }.font(.custom("Atkinson Hyperlegible", size: 16).weight(.medium)).padding(.horizontal, 14).padding(.vertical, 9)
+            .background(on ? tint : Brand.card).foregroundStyle(on ? Color(hex: 0x2D2A35) : Brand.ink)
             .overlay(Capsule().stroke(Brand.bunny.opacity(0.7), lineWidth: 1.5)).clipShape(Capsule())
     }
 }

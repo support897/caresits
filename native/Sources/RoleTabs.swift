@@ -41,8 +41,8 @@ struct Header: View {
     let role: Role; let title: String; var subtitle: String = ""
     var body: some View {
         HStack(spacing: 12) {
-            BrandIcon(kind: role.icon, size: 22, color: Color(hex: 0x3A2E33), mono: true).frame(width: 42, height: 42).background(role.sign).clipShape(Circle()).accessibilityLabel(role.name)
-            VStack(alignment: .leading, spacing: 2) { Text(title).font(Brand.title(26)).foregroundStyle(Brand.titleColor); if !subtitle.isEmpty { Text(subtitle).font(.subheadline).foregroundStyle(Brand.muted) } }
+            BrandIcon(kind: role.icon, size: 22, color: Color(hex: 0x2D2A35), mono: true).frame(width: 42, height: 42).background(role.sign).clipShape(Circle()).accessibilityLabel(role.name)
+            VStack(alignment: .leading, spacing: 2) { Text(title).font(Brand.title(26)).foregroundStyle(Brand.titleColor); if !subtitle.isEmpty { Text(subtitle).font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline)).foregroundStyle(Brand.muted) } }
             Spacer(); BunnyView(size: 36)
         }.padding(.horizontal, 20).padding(.top, 8)
     }

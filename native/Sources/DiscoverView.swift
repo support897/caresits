@@ -69,13 +69,13 @@ struct DiscoverView: View {
                     Spacer()
                     Menu {
                         ForEach([10, 25, 50, 0], id: \.self) { k in Button(k == 0 ? "Any distance" : "\(k) km") { radius = k; skipped = [] } }
-                    } label: { Text(radius == 0 ? "Any" : "\(radius) km").font(.system(size: 16, weight: .semibold)).foregroundStyle(Brand.ink).padding(.horizontal, 14).padding(.vertical, 10).background(Brand.field).clipShape(Capsule()) }.accessibilityIdentifier("radiusMenu")
+                    } label: { Text(radius == 0 ? "Any" : "\(radius) km").font(.custom("Atkinson Hyperlegible", size: 16).weight(.semibold)).foregroundStyle(Brand.ink).padding(.horizontal, 14).padding(.vertical, 10).background(Brand.field).clipShape(Capsule()) }.accessibilityIdentifier("radiusMenu")
                     Button { showMap.toggle() } label: { BrandIcon(kind: .pin, size: 24, color: Brand.ink, solid: showMap).padding(10).background(Brand.field).clipShape(Circle()) }.accessibilityLabel(showMap ? "Deck" : "Map").accessibilityIdentifier("mapToggle")
                     Button { onlySaved.toggle(); skipped = [] } label: { BrandIcon(kind: .heart, size: 24, color: Brand.bunny, solid: onlySaved).padding(10).background(Brand.field).clipShape(Circle()) }.accessibilityLabel("Matches")
                 }.padding(.horizontal, 20).padding(.top, 8)
                 if role == .family, let m = s.me, m.postcode.isEmpty && m.suburb.isEmpty {
                     HStack(spacing: 8) {
-                        Text("Family details missing.").font(.footnote).foregroundStyle(Brand.muted)
+                        Text("Family details missing.").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted)
                         Button { s.goMyFamily = true } label: { HStack(spacing: 4) { Text("Me → My family").font(.footnote.weight(.semibold)).underline(); BrandIcon(kind: .arrow, size: 14, color: role.tint) } }.accessibilityIdentifier("finishFamilyLink")
                         Spacer()
                     }.padding(.horizontal, 20)
@@ -96,9 +96,9 @@ struct DiscoverView: View {
                 if let b = banner {
                     HStack(spacing: 10) {
                         BrandIcon(kind: .heart, size: 20, color: Brand.bunny, solid: true)
-                        Text("Matched with \(b.firstName)").font(.system(size: 16, weight: .semibold)).foregroundStyle(Brand.ink)
+                        Text("Matched with \(b.firstName)").font(.custom("Atkinson Hyperlegible", size: 16).weight(.semibold)).foregroundStyle(Brand.ink)
                         Spacer()
-                        Button("Message") { deckContact = (b, .message); banner = nil }.font(.system(size: 16, weight: .semibold)).foregroundStyle(role.tint)
+                        Button("Message") { deckContact = (b, .message); banner = nil }.font(.custom("Atkinson Hyperlegible", size: 16).weight(.semibold)).foregroundStyle(role.tint)
                     }.padding(14).background(Brand.card).clipShape(RoundedRectangle(cornerRadius: 16)).overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.black.opacity(0.1), lineWidth: 1)).padding(.horizontal, 20).padding(.top, 00).transition(.move(edge: .top).combined(with: .opacity)).accessibilityIdentifier("matchBanner")
                 }
                 if showMap { mapView.padding(.horizontal, 20).frame(maxHeight: .infinity) } else if urgent { UrgentBoardView().frame(maxHeight: .infinity) } else { deckStack }
@@ -122,9 +122,9 @@ struct DiscoverView: View {
             else if deck.isEmpty {
                 VStack(spacing: 10) {
                     BunnyView(size: 80, mood: onlySaved ? .encourage : .rest)
-                    Text(onlySaved ? "No matches yet" : "You saw everyone").font(.headline).foregroundStyle(Brand.muted)
+                    Text(onlySaved ? "No matches yet" : "You saw everyone").font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold)).foregroundStyle(Brand.muted)
                     if !skipped.isEmpty { Button { skipped = [] } label: { IconLabel(icon: .undo, text: "See again") }.buttonStyle(.bordered) }
-                    if !onlySaved && radius != 0 && !people.isEmpty { Button("Any distance") { radius = 0 }.font(.subheadline) }
+                    if !onlySaved && radius != 0 && !people.isEmpty { Button("Any distance") { radius = 0 }.font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline)) }
                 }
             }
             ForEach(Array(deck.prefix(3).enumerated().reversed()), id: \.element.id) { i, p in
@@ -181,10 +181,10 @@ struct DiscoverView: View {
             HStack(alignment: .bottom, spacing: 6) {
                 Group {
                     if let c = picked {
-                        Button { mapPick = c.id } label: { HStack(spacing: 6) { Text("Meet \(c.firstName)").font(.system(size: 16, weight: .semibold)); BrandIcon(kind: .arrow, size: 16, color: BunnyPin.raspberry) } }
+                        Button { mapPick = c.id } label: { HStack(spacing: 6) { Text("Meet \(c.firstName)").font(.custom("Atkinson Hyperlegible", size: 16).weight(.semibold)); BrandIcon(kind: .arrow, size: 16, color: BunnyPin.raspberry) } }
                             .buttonStyle(.plain).accessibilityIdentifier("meetPinned")
                     } else {
-                        Text(pins.isEmpty ? "No one is on the map yet" : "Tap a pin to meet someone nearby.").font(.system(size: 16, weight: .medium))
+                        Text(pins.isEmpty ? "No one is on the map yet" : "Tap a pin to meet someone nearby.").font(.custom("Atkinson Hyperlegible", size: 16).weight(.medium))
                     }
                 }.foregroundStyle(Brand.ink).padding(.horizontal, 16).padding(.vertical, 12).background(Brand.card).clipShape(Capsule())
                 Spacer(minLength: 0)
@@ -246,16 +246,16 @@ struct PersonRow: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack { Text(person.firstName).font(.title3.bold()).foregroundStyle(Brand.ink); if verified != nil { IconLabel(icon: .shield, text: "Checked", size: 12, gap: 4).font(.caption.bold()).padding(.horizontal, 6).padding(.vertical, 2).background(Brand.blush.opacity(0.5)).clipShape(Capsule()) } ; Spacer(); if saved { BrandIcon(kind: .heart, size: 20, color: Brand.bunny, solid: true) } }
                     if person.side == "carer" {
-                        if !person.headline.isEmpty { Text(person.headline).font(.subheadline).foregroundStyle(Brand.muted).lineLimit(2) }
-                        HStack(spacing: 10) { IconLabel(icon: person.role.icon, text: person.role.name, size: 14).padding(.horizontal, 8).padding(.vertical, 3).background(person.role.sign.opacity(0.7)).clipShape(Capsule()); if person.rate > 0 { IconLabel(icon: .rate, text: "\(Int(person.rate))/h", size: 14) }; if person.years > 0 { IconLabel(icon: .star, text: "\(person.years)y", size: 14) } }.font(.footnote)
-                        if person.side == "carer" { Text(person.completionText).font(.caption).foregroundStyle(Brand.muted) }
-                        if let r = rating { IconLabel(icon: .star, text: "\(String(format: "%.1f", r.avg)) (\(r.count))", size: 13, color: Brand.bunny).font(.footnote).foregroundStyle(Brand.ink) }
+                        if !person.headline.isEmpty { Text(person.headline).font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline)).foregroundStyle(Brand.muted).lineLimit(2) }
+                        HStack(spacing: 10) { IconLabel(icon: person.role.icon, text: person.role.name, size: 14).padding(.horizontal, 8).padding(.vertical, 3).background(person.role.sign.opacity(0.7)).clipShape(Capsule()); if person.rate > 0 { IconLabel(icon: .rate, text: "\(Int(person.rate))/h", size: 14) }; if person.years > 0 { IconLabel(icon: .star, text: "\(person.years)y", size: 14) } }.font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote))
+                        if person.side == "carer" { Text(person.completionText).font(.custom("Atkinson Hyperlegible", size: 12, relativeTo: .caption)).foregroundStyle(Brand.muted) }
+                        if let r = rating { IconLabel(icon: .star, text: "\(String(format: "%.1f", r.avg)) (\(r.count))", size: 13, color: Brand.bunny).font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.ink) }
                     } else {
-                        Text(person.suburb.isEmpty ? "Family" : person.suburb).font(.subheadline).foregroundStyle(Brand.muted)
-                        HStack(spacing: 10) { Text(person.services.map { serviceLabels[$0] ?? $0 }.joined(separator: " · ")); if person.budgetMax > 0 { IconLabel(icon: .rate, text: "up to \(Int(person.budgetMax))/h", size: 14) } }.font(.footnote)
-                        if !person.kids.isEmpty { IconLabel(icon: .child, text: person.kids.map { "\($0.name.isEmpty ? "Child" : $0.name) \($0.age)" }.joined(separator: ", "), size: 14).font(.footnote) }
+                        Text(person.suburb.isEmpty ? "Family" : person.suburb).font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline)).foregroundStyle(Brand.muted)
+                        HStack(spacing: 10) { Text(person.services.map { serviceLabels[$0] ?? $0 }.joined(separator: " · ")); if person.budgetMax > 0 { IconLabel(icon: .rate, text: "up to \(Int(person.budgetMax))/h", size: 14) } }.font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote))
+                        if !person.kids.isEmpty { IconLabel(icon: .child, text: person.kids.map { "\($0.name.isEmpty ? "Child" : $0.name) \($0.age)" }.joined(separator: ", "), size: 14).font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)) }
                     }
-                    if !person.days.isEmpty { Text(person.days.joined(separator: " ")).font(.caption).foregroundStyle(tint) }
+                    if !person.days.isEmpty { Text(person.days.joined(separator: " ")).font(.custom("Atkinson Hyperlegible", size: 12, relativeTo: .caption)).foregroundStyle(tint) }
                 }
             }
         }.task { if person.side == "carer" { verified = await Backend.verifiedLevel(person.id); rating = await Backend.reviewSummary(person.id) } }
@@ -279,34 +279,34 @@ struct PersonDetailView: View {
                 Text(person.name).font(Brand.title(30)).foregroundStyle(Brand.titleColor)
                 if person.side == "carer" {
                     if !person.headline.isEmpty { Text(person.headline).font(.title3).foregroundStyle(Brand.muted).multilineTextAlignment(.center) }
-                    HStack { Chip(text: person.role.name, on: true, tint: person.role.sign, icon: person.role.icon); if person.rate > 0 { Chip(text: "\(Int(person.rate))/h", icon: .rate) }; if person.years > 0 { Chip(text: person.years == 1 ? "1 yr" : "\(person.years) yrs", icon: .star) } }
-                    Text(person.completionText).font(.subheadline).foregroundStyle(Brand.muted).accessibilityIdentifier("completionRate")
+                    HStack { Chip(text: person.role.name, on: true, tint: Brand.bunny, icon: person.role.icon); if person.rate > 0 { Chip(text: "\(Int(person.rate))/h", icon: .rate) }; if person.years > 0 { Chip(text: person.years == 1 ? "1 yr" : "\(person.years) yrs", icon: .star) } }
+                    Text(person.completionText).font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline)).foregroundStyle(Brand.muted).accessibilityIdentifier("completionRate")
                 }
                 Card { VStack(alignment: .leading, spacing: 8) {
-                    Text("Checks").font(.headline)
-                    if let v = verified { IconLabel(icon: .shield, text: "Checked: \(v.capitalized)", size: 18) } else { IconLabel(icon: .search, text: "Not checked yet", size: 18, color: Brand.muted).font(.subheadline).foregroundStyle(Brand.muted) }
+                    Text("Checks").font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold))
+                    if let v = verified { IconLabel(icon: .shield, text: "Checked: \(v.capitalized)", size: 18) } else { IconLabel(icon: .search, text: "Not checked yet", size: 18, color: Brand.muted).font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline)).foregroundStyle(Brand.muted) }
                 } }
-                if !person.about.isEmpty { Card { VStack(alignment: .leading) { Text("About").font(.headline); Text(person.about) } } }
-                if !person.languages.isEmpty { Card { VStack(alignment: .leading) { IconLabel(icon: .globe, text: "Languages", size: 18).font(.headline); Text(person.languages.joined(separator: ", ")) } } }
-                if !person.days.isEmpty { Card { VStack(alignment: .leading) { IconLabel(icon: .calendar, text: "Days", size: 18).font(.headline); Text(person.days.joined(separator: " · ")) } } }
+                if !person.about.isEmpty { Card { VStack(alignment: .leading) { Text("About").font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold)); Text(person.about) } } }
+                if !person.languages.isEmpty { Card { VStack(alignment: .leading) { IconLabel(icon: .globe, text: "Languages", size: 18).font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold)); Text(person.languages.joined(separator: ", ")) } } }
+                if !person.days.isEmpty { Card { VStack(alignment: .leading) { IconLabel(icon: .calendar, text: "Days", size: 18).font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold)); Text(person.days.joined(separator: " · ")) } } }
                 if let r = resume, !r.isEmpty { Card { VStack(alignment: .leading, spacing: 6) {
-                    IconLabel(icon: .doc, text: "Resume", size: 18).font(.headline)
-                    ForEach(r.jobs, id: \.self) { Text("• " + $0).font(.subheadline) }
-                    if !r.skills.isEmpty { Text("Skills: " + r.skills.joined(separator: ", ")).font(.subheadline) }
-                    if !r.certificates.isEmpty { Text("Certificates they list: " + r.certificates.joined(separator: "; ")).font(.subheadline) }
-                    Text("Their own words. Not checked.").font(.caption).foregroundStyle(Brand.muted)
+                    IconLabel(icon: .doc, text: "Resume", size: 18).font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold))
+                    ForEach(r.jobs, id: \.self) { Text("• " + $0).font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline)) }
+                    if !r.skills.isEmpty { Text("Skills: " + r.skills.joined(separator: ", ")).font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline)) }
+                    if !r.certificates.isEmpty { Text("Certificates they list: " + r.certificates.joined(separator: "; ")).font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline)) }
+                    Text("Their own words. Not checked.").font(.custom("Atkinson Hyperlegible", size: 12, relativeTo: .caption)).foregroundStyle(Brand.muted)
                 } } }
                 if person.side == "carer" { Card { VStack(alignment: .leading, spacing: 6) {
-                    IconLabel(icon: .star, text: "Reviews", size: 18).font(.headline)
+                    IconLabel(icon: .star, text: "Reviews", size: 18).font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold))
                     if let r = rating { Text("\(String(format: "%.1f", r.avg)) out of 5 from \(r.count)").foregroundStyle(Brand.ink) }
-                    if reviews.isEmpty { Text("No reviews yet").font(.subheadline).foregroundStyle(Brand.muted) }
-                    ForEach(reviews.indices, id: \.self) { i in HStack(spacing: 8) { Stars(count: reviews[i].rating); if !reviews[i].text.isEmpty { Text(reviews[i].text) } }.font(.subheadline) }
+                    if reviews.isEmpty { Text("No reviews yet").font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline)).foregroundStyle(Brand.muted) }
+                    ForEach(reviews.indices, id: \.self) { i in HStack(spacing: 8) { Stars(count: reviews[i].rating); if !reviews[i].text.isEmpty { Text(reviews[i].text) } }.font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline)) }
                 } } }
                 if role == .family && person.side == "carer" { BigButton(title: "Book \(person.firstName)", tint: role.tint, icon: .calendar) { showBook = true } }
                 else if person.side == "family" { EmptyView() }
                 HStack(spacing: 10) {
-                    Button { contact = .message } label: { IconLabel(icon: .chat, text: "Message", size: 20).font(.system(size: 17, weight: .semibold)).frame(maxWidth: .infinity, minHeight: 48).background(Brand.field).foregroundStyle(Brand.ink).clipShape(RoundedRectangle(cornerRadius: 14)) }
-                    if s.me?.side == "carer" && person.side == "family" { Button { contact = .resume } label: { IconLabel(icon: .doc, text: "Send resume", size: 20).font(.system(size: 17, weight: .semibold)).frame(maxWidth: .infinity, minHeight: 48).background(Brand.field).foregroundStyle(Brand.ink).clipShape(RoundedRectangle(cornerRadius: 14)) } }
+                    Button { contact = .message } label: { IconLabel(icon: .chat, text: "Message", size: 20).font(.custom("Atkinson Hyperlegible", size: 17).weight(.semibold)).frame(maxWidth: .infinity, minHeight: 48).background(Brand.field).foregroundStyle(Brand.ink).clipShape(RoundedRectangle(cornerRadius: 14)) }
+                    if s.me?.side == "carer" && person.side == "family" { Button { contact = .resume } label: { IconLabel(icon: .doc, text: "Send resume", size: 20).font(.custom("Atkinson Hyperlegible", size: 17).weight(.semibold)).frame(maxWidth: .infinity, minHeight: 48).background(Brand.field).foregroundStyle(Brand.ink).clipShape(RoundedRectangle(cornerRadius: 14)) } }
                 }
             }.padding(20).padding(.bottom, 100)
         }
@@ -346,9 +346,9 @@ struct BookSheet: View {
                         DatePicker("To", selection: $to, displayedComponents: .hourAndMinute)
                     } }
                     Card { VStack(alignment: .leading, spacing: 4) {
-                        IconLabel(icon: .rate, text: "\(Int(carer.rate)) per hour × \(String(format: "%.1f", hours)) h", size: 16).font(.subheadline)
+                        IconLabel(icon: .rate, text: "\(Int(carer.rate)) per hour × \(String(format: "%.1f", hours)) h", size: 16).font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline))
                         Text("About $\(Int(carer.rate * hours))").font(.title2.bold())
-                        if PayConfig.visible { PayPromise(name: carer.firstName, estimate: carer.rate * hours) } else { Text("Free to cancel up to 24 hours before.").font(.caption).foregroundStyle(Brand.muted) }
+                        if PayConfig.visible { PayPromise(name: carer.firstName, estimate: carer.rate * hours) } else { Text("Free to cancel up to 24 hours before.").font(.custom("Atkinson Hyperlegible", size: 12, relativeTo: .caption)).foregroundStyle(Brand.muted) }
                     } }
                     TextField("Note (optional)", text: $note, axis: .vertical).lineLimit(3...5).padding(14).background(Brand.field).clipShape(RoundedRectangle(cornerRadius: 12))
                     if !err.isEmpty { Text(err).foregroundStyle(Brand.ink) }
@@ -393,7 +393,7 @@ struct SwipeCard: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(person.firstName).font(Brand.title(32))
                     HStack(spacing: 12) {
-                        Text(person.role.name).foregroundStyle(Color(hex: 0x3A2E33)).padding(.horizontal, 10).padding(.vertical, 3).background(person.role.sign).clipShape(Capsule())
+                        Text(person.role.name).foregroundStyle(Color(hex: 0x2D2A35)).padding(.horizontal, 10).padding(.vertical, 3).background(person.role.sign).clipShape(Capsule())
                         if person.rate > 0 { Text("\(Int(person.rate))/h") } else if person.budgetMax > 0 { Text("\(Int(person.budgetMax))/h") }
                         if let d = distance { IconLabel(icon: .pin, text: Geo.label(d), size: 15, color: .white) } else if !person.suburb.isEmpty { IconLabel(icon: .pin, text: person.suburb, size: 15, color: .white) }
                     }.font(.subheadline.weight(.semibold)).lineLimit(1)
@@ -403,10 +403,10 @@ struct SwipeCard: View {
             }
             HStack(spacing: 4) { ForEach(0..<slideCount, id: \.self) { i in Capsule().fill(i == slide ? Color.white : Color.white.opacity(0.4)).frame(height: 4) } }
                 .padding(.horizontal, 16).padding(.top, 12).frame(maxHeight: .infinity, alignment: .top).allowsHitTesting(false)
-            if let mt = match { Text("\(mt.percent)%").font(.system(size: 17, weight: .heavy)).foregroundStyle(Brand.ink).padding(.horizontal, 12).padding(.vertical, 6).background(Brand.card).clipShape(Capsule()).accessibilityIdentifier("matchPercent").frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing).padding(.horizontal, 16).padding(.top, 28).opacity(top && abs(offset.width) > 60 ? 0 : 1).allowsHitTesting(false) }
+            if let mt = match { Text("\(mt.percent)%").font(.custom("Atkinson Hyperlegible", size: 17).weight(.heavy)).foregroundStyle(Brand.ink).padding(.horizontal, 12).padding(.vertical, 6).background(Brand.card).clipShape(Capsule()).accessibilityIdentifier("matchPercent").frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing).padding(.horizontal, 16).padding(.top, 28).opacity(top && abs(offset.width) > 60 ? 0 : 1).allowsHitTesting(false) }
             if top {
-                Text("MATCH").font(.system(size: 34, weight: .heavy)).foregroundStyle(Brand.bunny).padding(8).overlay(RoundedRectangle(cornerRadius: 10).stroke(Brand.bunny, lineWidth: 4)).rotationEffect(.degrees(-14)).opacity(max(0, min(1, Double(offset.width) / 100))).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading).padding(26).allowsHitTesting(false)
-                Text("PASS").font(.system(size: 34, weight: .heavy)).foregroundStyle(.white).padding(8).overlay(RoundedRectangle(cornerRadius: 10).stroke(Brand.bunnyBlush, lineWidth: 4)).rotationEffect(.degrees(14)).opacity(max(0, min(1, Double(-offset.width) / 100))).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing).padding(26).allowsHitTesting(false)
+                Text("MATCH").font(.custom("Atkinson Hyperlegible", size: 34).weight(.heavy)).foregroundStyle(Brand.bunny).padding(8).overlay(RoundedRectangle(cornerRadius: 10).stroke(Brand.bunny, lineWidth: 4)).rotationEffect(.degrees(-14)).opacity(max(0, min(1, Double(offset.width) / 100))).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading).padding(26).allowsHitTesting(false)
+                Text("PASS").font(.custom("Atkinson Hyperlegible", size: 34).weight(.heavy)).foregroundStyle(.white).padding(8).overlay(RoundedRectangle(cornerRadius: 10).stroke(Brand.bunnyBlush, lineWidth: 4)).rotationEffect(.degrees(14)).opacity(max(0, min(1, Double(-offset.width) / 100))).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing).padding(26).allowsHitTesting(false)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -425,22 +425,22 @@ struct SwipeCard: View {
         }
     }
     func pill(_ t: String, _ i: BI, _ f: @escaping () -> Void) -> some View {
-        Button(action: f) { IconLabel(icon: i, text: t, size: 18, color: Brand.ink).font(.system(size: 16, weight: .semibold)).foregroundStyle(Brand.ink).padding(.horizontal, 16).frame(minHeight: 44).background(Brand.card).clipShape(Capsule()) }.accessibilityLabel(t)
+        Button(action: f) { IconLabel(icon: i, text: t, size: 18, color: Brand.ink).font(.custom("Atkinson Hyperlegible", size: 16).weight(.semibold)).foregroundStyle(Brand.ink).padding(.horizontal, 16).frame(minHeight: 44).background(Brand.card).clipShape(Capsule()) }.accessibilityLabel(t)
     }
     /// The description slide: about, kids, days needed, and why it matches. Plain facts only.
     var infoSlide: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(person.firstName).font(.system(size: 28, weight: .bold, design: .serif)).foregroundStyle(Brand.ink).padding(.top, 22)
-            if !person.about.isEmpty { Text(person.about).font(.system(size: 17)).foregroundStyle(Brand.ink).lineLimit(5) }
-            else if !person.headline.isEmpty { Text(person.headline).font(.system(size: 17)).foregroundStyle(Brand.ink).lineLimit(3) }
+            Text(person.firstName).font(Brand.title(28)).foregroundStyle(Brand.ink).padding(.top, 22)
+            if !person.about.isEmpty { Text(person.about).font(.custom("Atkinson Hyperlegible", size: 17)).foregroundStyle(Brand.ink).lineLimit(5) }
+            else if !person.headline.isEmpty { Text(person.headline).font(.custom("Atkinson Hyperlegible", size: 17)).foregroundStyle(Brand.ink).lineLimit(3) }
             if !person.kids.isEmpty { IconLabel(icon: .child, text: person.kids.map { "\($0.name.isEmpty ? "Child" : $0.name), \($0.age)" }.joined(separator: "  "), size: 18) }
             if !person.days.isEmpty { IconLabel(icon: .calendar, text: person.side == "family" ? "Help needed: " + person.days.joined(separator: " ") : "Free: " + person.days.joined(separator: " "), size: 18) }
             if let mt = match, !mt.reasons.isEmpty {
-                Text("Why it matches").font(.system(size: 15, weight: .semibold)).foregroundStyle(Brand.muted).padding(.top, 4)
+                Text("Why it matches").font(.custom("Atkinson Hyperlegible", size: 15).weight(.semibold)).foregroundStyle(Brand.muted).padding(.top, 4)
                 ForEach(Array(mt.reasons.enumerated()), id: \.offset) { _, r in IconLabel(icon: r.icon, text: r.text, size: 18) }
             }
             Spacer(minLength: 0)
             actions
-        }.font(.system(size: 17)).padding(.horizontal, 20).padding(.bottom, 20).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }.font(.custom("Atkinson Hyperlegible", size: 17)).padding(.horizontal, 20).padding(.bottom, 20).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }

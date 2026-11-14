@@ -16,25 +16,25 @@ struct SettingsView: View {
         ScrollView { VStack(spacing: 14) {
             Header(role: role, title: "Settings", subtitle: "")
             Card { VStack(alignment: .leading, spacing: 8) {
-                Text("Look").font(.headline)
+                Text("Look").font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold))
                 HStack(spacing: 8) { ForEach(ThemePick.allCases, id: \.self) { p in
                     Button { ThemeStore.shared.pick = p; if let uid = s.uid { Task { try? await Backend.saveProfile(uid, card: ["theme": p.rawValue]) } } } label: {
                         Text(p.label).font(.footnote.weight(.semibold)).padding(.horizontal, 10).padding(.vertical, 8)
                             .background(themeStore.pick == p ? Brand.bunny : Brand.field)
-                            .foregroundStyle(themeStore.pick == p ? Color(hex: 0x3A2E33) : Brand.ink).clipShape(Capsule())
+                            .foregroundStyle(themeStore.pick == p ? Color(hex: 0x2D2A35) : Brand.ink).clipShape(Capsule())
                     }.accessibilityIdentifier("theme-\(p.rawValue)")
                 } }
             } }.padding(.horizontal, 20)
             Card { VStack(alignment: .leading, spacing: 8) {
-                Text("Bunny").font(.headline)
-                Toggle("Turn the bunny down", isOn: $bunnyDown).font(.subheadline).tint(role.tint)
+                Text("Bunny").font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold))
+                Toggle("Turn the bunny down", isOn: $bunnyDown).font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline)).tint(role.tint)
             } }.padding(.horizontal, 20)
             if s.me?.side == "carer" {
                 Card { VStack(alignment: .leading, spacing: 8) {
-                    Text("Urgent posts").font(.headline)
-                    Toggle("Show me urgent posts", isOn: $urgentOn).font(.subheadline).tint(role.tint).accessibilityIdentifier("urgentToggle")
+                    Text("Urgent posts").font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold))
+                    Toggle("Show me urgent posts", isOn: $urgentOn).font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline)).tint(role.tint).accessibilityIdentifier("urgentToggle")
                     HStack {
-                        Text("Distance for urgent posts").font(.subheadline)
+                        Text("Distance for urgent posts").font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline))
                         Spacer()
                         Menu {
                             ForEach([10, 25, 50, 0], id: \.self) { k in Button(k == 0 ? "Any distance" : "\(k) km") { urgentRadius = k } }
@@ -43,10 +43,10 @@ struct SettingsView: View {
                 } }.padding(.horizontal, 20)
             }
             Card { VStack(alignment: .leading, spacing: 10) {
-                Text("Account").font(.headline)
-                Button("Sign out") { s.signOut() }.font(.headline)
-                Button("Delete my account", role: .destructive) { confirmDelete = true }.font(.footnote)
-                if !err.isEmpty { Text(err).font(.callout) }
+                Text("Account").font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold))
+                Button("Sign out") { s.signOut() }.font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold))
+                Button("Delete my account", role: .destructive) { confirmDelete = true }.font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote))
+                if !err.isEmpty { Text(err).font(.custom("Atkinson Hyperlegible", size: 16, relativeTo: .callout)) }
             } }.padding(.horizontal, 20)
         }.padding(.bottom, 100) }
         .background(Brand.cream.ignoresSafeArea())
@@ -55,7 +55,7 @@ struct SettingsView: View {
             if deleting {
                 VStack(spacing: 14) {
                     BunnyView(size: 96, mood: .rest)
-                    HStack(spacing: 10) { ProgressView(); Text("Deleting your account").font(.system(size: 20, weight: .semibold)).foregroundStyle(Brand.ink) }
+                    HStack(spacing: 10) { ProgressView(); Text("Deleting your account").font(.custom("Atkinson Hyperlegible", size: 20).weight(.semibold)).foregroundStyle(Brand.ink) }
                     if deleteSlow { Text("This is taking longer than usual. Please keep the app open.").multilineTextAlignment(.center).foregroundStyle(Brand.muted).padding(.horizontal, 40).accessibilityIdentifier("deleteSlow") }
                 }.frame(maxWidth: .infinity, maxHeight: .infinity).background(Brand.cream.opacity(0.96).ignoresSafeArea()).accessibilityIdentifier("deleteBusy")
             }

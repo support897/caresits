@@ -6,7 +6,7 @@ struct LabeledField: View {
     var content: UITextContentType? = nil; var keyboard: UIKeyboardType = .default
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(label).font(.system(size: 16, weight: .semibold)).foregroundStyle(Brand.ink)
+            Text(label).font(.custom("Atkinson Hyperlegible", size: 16).weight(.semibold)).foregroundStyle(Brand.ink)
             TextField(placeholder, text: $text).textContentType(content).keyboardType(keyboard)
                 .padding(14).background(Brand.field).clipShape(RoundedRectangle(cornerRadius: 12))
                 .accessibilityLabel(label).accessibilityIdentifier(label)
@@ -43,11 +43,11 @@ struct FamilyEditor: View {
                     Stepper("\(kids[i].age) y", value: Binding(get: { kids[i].age }, set: { kids[i].age = $0 }), in: 0...17).fixedSize()
                 } }
             }
-            Button { if kids.count < 8 { kids.append(("", 3)) } } label: { IconLabel(icon: .plus, text: "Add a child") }.font(.headline)
-            Text("Your exact address is never shown. Children's details stay private.").font(.footnote).foregroundStyle(Brand.muted).multilineTextAlignment(.center)
-            if !err.isEmpty { Text(err).foregroundStyle(Brand.ink).font(.callout) }
+            Button { if kids.count < 8 { kids.append(("", 3)) } } label: { IconLabel(icon: .plus, text: "Add a child") }.font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold))
+            Text("Your exact address is never shown. Children's details stay private.").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted).multilineTextAlignment(.center)
+            if !err.isEmpty { Text(err).foregroundStyle(Brand.ink).font(.custom("Atkinson Hyperlegible", size: 16, relativeTo: .callout)) }
             BigButton(title: "Save", tint: s.role.tint, busy: busy) { Task { await save() } }
-            Button("Close") { dismiss() }.font(.headline)
+            Button("Close") { dismiss() }.font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold))
         }.padding(20) }
         .background(Brand.cream.ignoresSafeArea())
         .onAppear { let m = s.meSafe; name = m.name == "A family" ? "" : m.name; postcode = m.postcode; suburb = m.suburb; kids = m.kids }
@@ -68,7 +68,7 @@ struct FamilySkippedNotice: View {
     var open: () -> Void
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("You skipped your family details. Finish them later in").font(.footnote).foregroundStyle(Brand.muted)
+            Text("You skipped your family details. Finish them later in").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted)
             Button(action: open) { HStack(spacing: 4) { Text("Me → My family").font(.callout.weight(.semibold)).underline(); BrandIcon(kind: .arrow, size: 16) } }
                 .accessibilityIdentifier("finishFamilyLinkOnboarding")
         }.frame(maxWidth: .infinity, alignment: .leading).padding(12).background(Brand.blush.opacity(0.25)).clipShape(RoundedRectangle(cornerRadius: 14))

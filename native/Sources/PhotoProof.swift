@@ -96,7 +96,7 @@ struct ChatProofGate: View {
         if ready {
             ZStack(alignment: .topTrailing) {
                 RootGate()
-                Button("proofCleanup") { Task { await cleanup() } }.font(.system(size: 8)).opacity(0.02).accessibilityIdentifier("proofCleanup")
+                Button("proofCleanup") { Task { await cleanup() } }.font(.custom("Atkinson Hyperlegible", size: 8)).opacity(0.02).accessibilityIdentifier("proofCleanup")
             }
         } else {
             Text(status).font(.system(size: 11, design: .monospaced)).accessibilityIdentifier("chatProof").padding()
@@ -168,14 +168,14 @@ struct IconGallery: View {
         ScrollView { VStack(spacing: 14) {
             Text("Caresitters icons").font(Brand.title(24)).foregroundStyle(Brand.titleColor)
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 5), spacing: 12) {
-                ForEach(BI.allCases, id: \.self) { k in VStack(spacing: 4) { BrandIcon(kind: k, size: 36); Text(k.rawValue).font(.system(size: 9)) } }
+                ForEach(BI.allCases, id: \.self) { k in VStack(spacing: 4) { BrandIcon(kind: k, size: 36); Text(k.rawValue).font(.custom("Atkinson Hyperlegible", size: 9)) } }
             }
-            Text("Solid star and heart").font(.footnote)
+            Text("Solid star and heart").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote))
             HStack(spacing: 18) { BrandIcon(kind: .star, size: 30, color: Brand.bunny, solid: true); BrandIcon(kind: .heart, size: 30, color: Brand.bunny, solid: true); Stars(count: 4) }
-            Text("Bunny moods (tap, drag a finger, wait)").font(.footnote)
+            Text("Bunny moods (tap, drag a finger, wait)").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote))
             BunnyMoodsRow()
             HStack { BunnyView(size: 120, mood: .celebrate); BunnyView(size: 120, mood: .think) }
-            Text("Large celebrate bunny").font(.footnote)
+            Text("Large celebrate bunny").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote))
             BunnyView(size: 300, mood: .celebrate).padding(.bottom, 40)
         }.padding(16) }.background(Color.white)
     }

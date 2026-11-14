@@ -62,33 +62,33 @@ struct UrgentPostRow: View {
     var body: some View {
         Card { VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
-                ZStack { Circle().fill(Brand.bunny).frame(width: 34, height: 34); BrandIcon(kind: .clock, size: 19, color: Color(hex: 0x3A2E33), mono: true) }
+                ZStack { Circle().fill(Brand.bunny).frame(width: 34, height: 34); BrandIcon(kind: .clock, size: 19, color: Color(hex: 0x2D2A35), mono: true) }
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(UrgentFmt.whenText(job.when)).font(.headline).foregroundStyle(Brand.ink)
-                    Text(job.dayParts.joined(separator: " · ")).font(.footnote).foregroundStyle(Brand.muted)
+                    Text(UrgentFmt.whenText(job.when)).font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold)).foregroundStyle(Brand.ink)
+                    Text(job.dayParts.joined(separator: " · ")).font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted)
                 }
                 Spacer()
                 Text(stateLabel).font(.footnote.weight(.bold)).padding(.horizontal, 10).padding(.vertical, 4)
-                    .background(job.state == "open" && !job.ended ? Brand.bunny : Brand.field).foregroundStyle(Color(hex: 0x3A2E33)).clipShape(Capsule())
+                    .background(job.state == "open" && !job.ended ? Brand.bunny : Brand.field).foregroundStyle(Color(hex: 0x2D2A35)).clipShape(Capsule())
             }
-            if !job.note.isEmpty { Text(job.note).font(.subheadline) }
+            if !job.note.isEmpty { Text(job.note).font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline)) }
             if !job.bands.isEmpty { IconLabel(icon: .child, text: "Kids: " + job.bands.map(bandLabel).joined(separator: ", "), size: 15) }
             if job.state == "filled" {
                 HStack(spacing: 8) { BrandIcon(kind: .checkCircle, size: 18, color: Brand.ink); Text("Filled by \(pickedPerson?.firstName ?? "your pick")").font(.subheadline.weight(.semibold)) }
             } else if job.state == "open" && !job.ended {
-                if yeses.isEmpty { Text("No one has said yes yet").font(.footnote).foregroundStyle(Brand.muted) }
+                if yeses.isEmpty { Text("No one has said yes yet").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted) }
                 ForEach(yeses) { p in
                     HStack(spacing: 10) {
                         PhotoView(key: p.photoKey, size: 44, fallback: p.role.icon)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(p.firstName).font(.subheadline.weight(.semibold))
-                            Text(checks[p.id] ?? "").font(.caption).foregroundStyle(Brand.muted)
-                            if let d = dist[p.id] { Text(d).font(.caption).foregroundStyle(Brand.muted) }
+                            Text(checks[p.id] ?? "").font(.custom("Atkinson Hyperlegible", size: 12, relativeTo: .caption)).foregroundStyle(Brand.muted)
+                            if let d = dist[p.id] { Text(d).font(.custom("Atkinson Hyperlegible", size: 12, relativeTo: .caption)).foregroundStyle(Brand.muted) }
                         }
                         Spacer()
                         Button("Chat") { chatWith = p }.font(.subheadline.weight(.semibold)).foregroundStyle(Brand.ink)
                             .padding(.horizontal, 12).padding(.vertical, 8).background(Brand.field).clipShape(Capsule()).accessibilityIdentifier("yesChat-\(p.id)")
-                        Button("Pick this carer") { Task { await pick(p) } }.font(.subheadline.weight(.bold)).foregroundStyle(Color(hex: 0x3A2E33))
+                        Button("Pick this carer") { Task { await pick(p) } }.font(.subheadline.weight(.bold)).foregroundStyle(Color(hex: 0x2D2A35))
                             .padding(.horizontal, 12).padding(.vertical, 8).background(Brand.bunny).clipShape(Capsule()).accessibilityIdentifier("pickCarer-\(p.id)")
                     }
                 }
@@ -154,13 +154,13 @@ struct UrgentPostForm: View {
                     }
                 } }
                 Card { VStack(alignment: .leading, spacing: 8) {
-                    Text("How long").font(.headline)
+                    Text("How long").font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold))
                     HStack(spacing: 8) { ForEach(partNames, id: \.self) { p in
                         Button { if parts.contains(p) { parts.remove(p) } else { parts.insert(p) } } label: { Chip(text: p, on: parts.contains(p)) }.accessibilityIdentifier("part-\(p)").accessibilityValue(parts.contains(p) ? "ticked" : "not ticked")
                     } }
                 } }
                 Card { VStack(alignment: .leading, spacing: 8) {
-                    Text("Where").font(.headline)
+                    Text("Where").font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold))
                     TextField("Postcode", text: $postcode).keyboardType(.numberPad).padding(12).background(Brand.field).clipShape(RoundedRectangle(cornerRadius: 12)).accessibilityIdentifier("jobPostcode")
                     if let me = s.me, !me.kids.isEmpty {
                         IconLabel(icon: .child, text: me.kids.map { "\($0.name.isEmpty ? "Child" : $0.name) \($0.age)" }.joined(separator: ", "), size: 15)
@@ -171,7 +171,7 @@ struct UrgentPostForm: View {
                     } }
                 } }
                 TextField("Note, in your words (pay too, if you like)", text: $note, axis: .vertical).lineLimit(3...5).padding(14).background(Brand.field).clipShape(RoundedRectangle(cornerRadius: 12)).accessibilityIdentifier("jobNote")
-                if !err.isEmpty { Text(err).foregroundStyle(Brand.ink).font(.callout) }
+                if !err.isEmpty { Text(err).foregroundStyle(Brand.ink).font(.custom("Atkinson Hyperlegible", size: 16, relativeTo: .callout)) }
                 BigButton(title: "Post it", tint: Brand.bunny, busy: busy) { Task { await post() } }.accessibilityIdentifier("postJob")
             }.padding(20) }
             .background(Brand.cream.ignoresSafeArea())
@@ -229,7 +229,7 @@ struct UrgentCarerView: View {
             } else if deck.isEmpty {
                 VStack(spacing: 10) {
                     BunnyView(size: 80, mood: .rest)
-                    Text("No urgent posts near you").font(.headline).foregroundStyle(Brand.muted)
+                    Text("No urgent posts near you").font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold)).foregroundStyle(Brand.muted)
                 }.frame(maxHeight: .infinity)
             } else {
                 ZStack {
@@ -250,11 +250,11 @@ struct UrgentCarerView: View {
                 HStack(spacing: 18) {
                     Button { if let j = deck.first { fling(j, yes: false) } } label: { BrandIcon(kind: .cross, size: 26, color: Brand.muted).frame(width: 56, height: 56).background(Brand.card).clipShape(Circle()).overlay(Circle().stroke(Color.black.opacity(0.1), lineWidth: 1)) }
                         .accessibilityLabel("Pass").accessibilityIdentifier("urgentPass")
-                    Button { if let j = deck.first { fling(j, yes: true) } } label: { BrandIcon(kind: .check, size: 26, color: Color(hex: 0x3A2E33), solid: true).frame(width: 56, height: 56).background(Brand.bunny).clipShape(Circle()).overlay(Circle().stroke(Color.black.opacity(0.1), lineWidth: 1)) }
+                    Button { if let j = deck.first { fling(j, yes: true) } } label: { BrandIcon(kind: .check, size: 26, color: Color(hex: 0x2D2A35), solid: true).frame(width: 56, height: 56).background(Brand.bunny).clipShape(Circle()).overlay(Circle().stroke(Color.black.opacity(0.1), lineWidth: 1)) }
                         .accessibilityLabel("I can do this").accessibilityIdentifier("urgentYes")
                 }.padding(.bottom, 8)
             }
-            if !err.isEmpty { Text(err).font(.caption).foregroundStyle(Brand.ink).padding(.horizontal, 20) }
+            if !err.isEmpty { Text(err).font(.custom("Atkinson Hyperlegible", size: 12, relativeTo: .caption)).foregroundStyle(Brand.ink).padding(.horizontal, 20) }
         }
         .sheet(item: $chat) { c in
             NavigationStack { ChatView(rel: c.rel, other: c.other).toolbar { ToolbarItem(placement: .topBarLeading) { Button("Close") { chat = nil } } } }
@@ -306,8 +306,8 @@ struct UrgentJobCard: View {
             LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .center, endPoint: .bottom).clipShape(RoundedRectangle(cornerRadius: 28))
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {
-                    ZStack { Circle().fill(Brand.bunny).frame(width: 30, height: 30); BrandIcon(kind: .clock, size: 17, color: Color(hex: 0x3A2E33), mono: true) }
-                    Text(UrgentFmt.whenText(job.when)).font(.system(size: 16, weight: .bold))
+                    ZStack { Circle().fill(Brand.bunny).frame(width: 30, height: 30); BrandIcon(kind: .clock, size: 17, color: Color(hex: 0x2D2A35), mono: true) }
+                    Text(UrgentFmt.whenText(job.when)).font(.custom("Atkinson Hyperlegible", size: 16).weight(.bold))
                     Text(job.dayParts.joined(separator: " · ")).font(.subheadline.weight(.semibold))
                 }
                 Text(family?.firstName ?? "Family").font(Brand.title(30))
@@ -317,7 +317,7 @@ struct UrgentJobCard: View {
                     if let f = family, !f.kids.isEmpty { IconLabel(icon: .child, text: "\(f.kids.count) kid\(f.kids.count == 1 ? "" : "s")", size: 15, color: .white) }
                 }.font(.subheadline.weight(.semibold)).lineLimit(1)
                 if !job.bands.isEmpty { Text("Ages: " + job.bands.map(bandLabel).joined(separator: ", ")).font(.footnote.weight(.semibold)) }
-                if !job.note.isEmpty { Text(job.note).font(.subheadline).lineLimit(3) }
+                if !job.note.isEmpty { Text(job.note).font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline)).lineLimit(3) }
             }.foregroundStyle(.white).padding(20)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

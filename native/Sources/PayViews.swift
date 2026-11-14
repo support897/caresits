@@ -39,15 +39,15 @@ struct GetPaidCard: View {
     @State private var msg = ""; @State private var busy = false
     var body: some View {
         Card { VStack(alignment: .leading, spacing: 10) {
-            IconLabel(icon: .rate, text: "Get paid", size: 20).font(.headline)
-            IconLabel(icon: state.icon, text: state.label, size: 18).font(.subheadline)
+            IconLabel(icon: .rate, text: "Get paid", size: 20).font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold))
+            IconLabel(icon: state.icon, text: state.label, size: 18).font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline))
             if state != .ready {
                 BigButton(title: "Set up payments", tint: s.role.tint, busy: busy) { Task { busy = true; do { try await PayService.startCarerSetup() } catch { msg = error.localizedDescription }; busy = false } }
                     .accessibilityIdentifier("setUpPayments")
             }
-            if !msg.isEmpty { Text(msg).font(.footnote).foregroundStyle(Brand.muted) }
-            IconLabel(icon: .lock, text: "Your bank details are given to Stripe only. This app never sees them.", size: 14, color: Brand.muted).font(.footnote).foregroundStyle(Brand.muted)
-            if s.me?.role == .auPair { Text("Au pair pocket money is paid the same way. The terms do not change.").font(.footnote).foregroundStyle(Brand.muted) }
+            if !msg.isEmpty { Text(msg).font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted) }
+            IconLabel(icon: .lock, text: "Your bank details are given to Stripe only. This app never sees them.", size: 14, color: Brand.muted).font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted)
+            if s.me?.role == .auPair { Text("Au pair pocket money is paid the same way. The terms do not change.").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted) }
         } }
     }
 }
@@ -67,13 +67,13 @@ struct PayLines: View {
                 case "disputed": IconLabel(icon: .info, text: "Something went wrong was reported. The money stays held while our support looks at it.", size: 16)
                 default: EmptyView()
                 }
-                if p.state == "held", !p.autoReleaseAt.isEmpty { Text("It lets go by itself on \(p.autoReleaseAt) unless something went wrong is tapped first.").font(.footnote).foregroundStyle(Brand.muted) }
-                if let f = p.appFee { Text("App fee \(money(f))").font(.footnote) }
-                if let f = p.processingFee { Text("Payment partner fee \(money(f))").font(.footnote) }
+                if p.state == "held", !p.autoReleaseAt.isEmpty { Text("It lets go by itself on \(p.autoReleaseAt) unless something went wrong is tapped first.").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted) }
+                if let f = p.appFee { Text("App fee \(money(f))").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)) }
+                if let f = p.processingFee { Text("Payment partner fee \(money(f))").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)) }
             } else if !isCarer && b.state == "accepted" {
-                Text("Waiting for \(otherName) to set up payments.").font(.footnote).foregroundStyle(Brand.muted)
+                Text("Waiting for \(otherName) to set up payments.").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted)
             }
-        }.font(.subheadline)
+        }.font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline))
     }
 }
 
@@ -84,7 +84,7 @@ struct CancelLadderLines: View {
             Text("Cancel more than a day ahead: free.")
             Text("Cancel inside a day: the carer is paid half.")
             Text("No show: the carer is paid in full.")
-        }.font(.footnote).foregroundStyle(Brand.muted).accessibilityIdentifier("cancelLadder")
+        }.font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted).accessibilityIdentifier("cancelLadder")
     }
 }
 
@@ -93,8 +93,8 @@ struct PayPromise: View {
     let name: String; let estimate: Double
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("You pay the app, not \(name). Your money is held by our payment partner until the job is done.").font(.subheadline)
-            Text("Card details go to Stripe only. This app never sees them.").font(.footnote).foregroundStyle(Brand.muted)
+            Text("You pay the app, not \(name). Your money is held by our payment partner until the job is done.").font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline))
+            Text("Card details go to Stripe only. This app never sees them.").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted)
             CancelLadderLines()
         }
     }
@@ -107,10 +107,10 @@ struct PayActions: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
-                Button { run { try await PayService.markDone(b) } } label: { IconLabel(icon: .check, text: "Done", size: 16, color: Color(hex: 0x3A2E33)).font(.subheadline.bold()).padding(.horizontal, 16).padding(.vertical, 10).background(Brand.bunny).foregroundStyle(Color(hex: 0x3A2E33)).clipShape(Capsule()) }.accessibilityIdentifier("payDone")
+                Button { run { try await PayService.markDone(b) } } label: { IconLabel(icon: .check, text: "Done", size: 16, color: Color(hex: 0x2D2A35)).font(.subheadline.bold()).padding(.horizontal, 16).padding(.vertical, 10).background(Brand.bunny).foregroundStyle(Color(hex: 0x2D2A35)).clipShape(Capsule()) }.accessibilityIdentifier("payDone")
                 Button { run { try await PayService.reportProblem(b) } } label: { Text("Something went wrong").font(.subheadline.bold()).padding(.horizontal, 16).padding(.vertical, 10).background(Brand.field).foregroundStyle(Brand.ink).clipShape(Capsule()) }.accessibilityIdentifier("payProblem")
             }.disabled(busy)
-            if !msg.isEmpty { Text(msg).font(.footnote).foregroundStyle(Brand.muted) }
+            if !msg.isEmpty { Text(msg).font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted) }
         }
     }
     func run(_ f: @escaping () async throws -> Void) { Task { busy = true; msg = ""; do { try await f(); await reload() } catch { msg = error.localizedDescription }; busy = false } }
@@ -124,7 +124,7 @@ struct PaymentRecordSheet: View {
         ScrollView { VStack(alignment: .leading, spacing: 12) {
             Text("Payment record").font(Brand.title(26)).foregroundStyle(Brand.titleColor).padding(.top, 24)
             Card { VStack(alignment: .leading, spacing: 6) {
-                Text("\(otherName) · \(b.date) · \(b.from) to \(b.to)").font(.headline)
+                Text("\(otherName) · \(b.date) · \(b.from) to \(b.to)").font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold))
                 if let p = b.pay {
                     Text("State: \(p.state)"); if let a = p.amount { Text("Amount: \(money(a))") }
                     if let r = p.refunded { Text("Refunded: \(money(r))") }
@@ -133,7 +133,7 @@ struct PaymentRecordSheet: View {
                     if !p.releasedAt.isEmpty { Text("Released: \(p.releasedAt)") }
                 } else { Text("No payment yet.").foregroundStyle(Brand.muted) }
             } }
-            Text("Whether paying through the app changes anyone's tax or work position is not the app's call. The app carries the money and keeps this record.").font(.footnote).foregroundStyle(Brand.muted)
+            Text("Whether paying through the app changes anyone's tax or work position is not the app's call. The app carries the money and keeps this record.").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted)
             BigButton(title: "Done", tint: Brand.bunny) { dismiss() }
         }.padding(20) }.background(Brand.cream.ignoresSafeArea())
     }

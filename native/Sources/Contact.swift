@@ -62,8 +62,8 @@ struct ContactSheet: View {
                 Text("Add your resume in Me, then come back.").multilineTextAlignment(.center).foregroundStyle(Brand.muted)
             } else {
                 Text("Send your resume to \(person.firstName)?").font(Brand.title(24)).foregroundStyle(Brand.titleColor).multilineTextAlignment(.center)
-                Text("Your own words. Phone, email and address are never included.").font(.footnote).multilineTextAlignment(.center).foregroundStyle(Brand.muted)
-                if !err.isEmpty { Text(err).foregroundStyle(Brand.ink).font(.callout) }
+                Text("Your own words. Phone, email and address are never included.").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).multilineTextAlignment(.center).foregroundStyle(Brand.muted)
+                if !err.isEmpty { Text(err).foregroundStyle(Brand.ink).font(.custom("Atkinson Hyperlegible", size: 16, relativeTo: .callout)) }
                 BigButton(title: "Send resume", tint: s.role.tint, busy: busy, icon: .doc) { Task { await send(rel!) } }
             }
         }.padding(24)

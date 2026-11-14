@@ -35,12 +35,12 @@ struct OnboardingView: View {
                     Text(title).font(Brand.title(28)).foregroundStyle(Brand.titleColor).multilineTextAlignment(.center).accessibilityIdentifier("onbTitle").onTapGesture { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) }
                     if skippedFamily && current != "you" && (name.trimmingCharacters(in: .whitespaces).isEmpty || (postcode.isEmpty && suburb.isEmpty)) { FamilySkippedNotice { showFamilySheet = true } }
                     content
-                    if !err.isEmpty { Text(err).foregroundStyle(Brand.ink).font(.callout) }
+                    if !err.isEmpty { Text(err).foregroundStyle(Brand.ink).font(.custom("Atkinson Hyperlegible", size: 16, relativeTo: .callout)) }
                 }.padding(20)
             }.scrollDismissesKeyboard(.interactively)
             HStack(spacing: 12) {
-                if step > 0 { Button("Back") { step -= 1 }.font(.headline).frame(width: 90, height: 52) }
-                if current == "resume" { Button("Skip") { step += 1 }.font(.headline).frame(width: 100, height: 52) }
+                if step > 0 { Button("Back") { step -= 1 }.font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold)).frame(width: 90, height: 52) }
+                if current == "resume" { Button("Skip") { step += 1 }.font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold)).frame(width: 100, height: 52) }
                 BigButton(title: step == steps.count - 1 ? "Finish" : "Next", tint: role.tint, busy: busy, icon: step == steps.count - 1 ? .sparkle : nil) { Task { await next() } }
             }.padding(20).background(.ultraThinMaterial)
         }
@@ -80,12 +80,12 @@ struct OnboardingView: View {
                 ZStack {
                     Circle().fill(role.soft).frame(width: 130, height: 130)
                     if let p = photoPreview { Image(uiImage: p).resizable().scaledToFill().frame(width: 130, height: 130).clipShape(Circle()) }
-                    else { VStack(spacing: 4) { BrandIcon(kind: .camera, size: 38, color: role.tint); Text("Add photo").font(.footnote).foregroundStyle(Brand.ink) } }
+                    else { VStack(spacing: 4) { BrandIcon(kind: .camera, size: 38, color: role.tint); Text("Add photo").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.ink) } }
                     if busy && photoPreview != nil && photoKey.isEmpty { ProgressView() }
                 }
             }
             FamilyDetailsFields(name: $name, postcode: $postcode, suburb: $suburb)
-            Text("Your exact address is never shown.").font(.footnote).foregroundStyle(Brand.muted)
+            Text("Your exact address is never shown.").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted)
         case "care":
             ForEach(["nanny", "babysitter", "au_pair"], id: \.self) { svc in
                 Button { if wants.contains(svc) { if wants.count > 1 { wants.remove(svc) } } else { wants.insert(svc) } } label: {
@@ -100,24 +100,24 @@ struct OnboardingView: View {
                     Stepper("\(kids[i].age) y", value: Binding(get: { kids[i].age }, set: { kids[i].age = $0 }), in: 0...17).fixedSize()
                 } }
             }
-            Button { if kids.count < 8 { kids.append(("", 3)) } } label: { IconLabel(icon: .plus, text: "Add a child") }.font(.headline)
-            Text("Children's details stay private.").font(.footnote).foregroundStyle(Brand.muted)
+            Button { if kids.count < 8 { kids.append(("", 3)) } } label: { IconLabel(icon: .plus, text: "Add a child") }.font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold))
+            Text("Children's details stay private.").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted)
         case "kind":
             ForEach([Role.nanny, .babysitter, .auPair], id: \.self) { r in
                 Button { service = r.service ?? "nanny" } label: {
-                    HStack { BrandIcon(kind: r.icon, size: 36, color: r.tint); VStack(alignment: .leading) { Text(r.name).font(.title3.weight(.semibold)); Text(r.greeting).font(.footnote) }; Spacer(); BrandIcon(kind: service == r.service ? .checkCircle : .circle, size: 28, color: r.tint) }
-                        .padding(16).background(service == r.service ? r.sign.opacity(0.6) : Brand.card).foregroundStyle(r.tint).clipShape(RoundedRectangle(cornerRadius: 18))
+                    HStack { BrandIcon(kind: r.icon, size: 36, color: r.tint); VStack(alignment: .leading) { Text(r.name).font(.title3.weight(.semibold)); Text(r.greeting).font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)) }; Spacer(); BrandIcon(kind: service == r.service ? .checkCircle : .circle, size: 28, color: r.tint) }
+                        .padding(16).background(service == r.service ? Brand.blush : Brand.card).foregroundStyle(r.tint).clipShape(RoundedRectangle(cornerRadius: 18))
                 }
             }
-            Text("Your own app, made for you.").font(.footnote).foregroundStyle(Brand.muted).multilineTextAlignment(.center)
+            Text("Your own app, made for you.").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted).multilineTextAlignment(.center)
         case "resume":
             Text("We fill in your profile for you.").foregroundStyle(Brand.muted)
             BigButton(title: resume == nil ? "Add resume" : "Resume read", tint: role.tint, icon: resume == nil ? .doc : .checkCircle) { showFile = true }
-            if !resumeMsg.isEmpty { Text(resumeMsg).font(.callout).multilineTextAlignment(.center) }
-            IconLabel(icon: .lock, text: "Read on your phone only", size: 14, color: Brand.muted).font(.footnote).foregroundStyle(Brand.muted)
+            if !resumeMsg.isEmpty { Text(resumeMsg).font(.custom("Atkinson Hyperlegible", size: 16, relativeTo: .callout)).multilineTextAlignment(.center) }
+            IconLabel(icon: .lock, text: "Read on your phone only", size: 14, color: Brand.muted).font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted)
         case "about":
             field("A few words about your care", $headline)
-            VStack(alignment: .leading) { Text("About you").font(.subheadline); TextEditor(text: $intro).frame(height: 110).padding(8).background(Brand.field).clipShape(RoundedRectangle(cornerRadius: 12)); Text("\(intro.count)/300").font(.caption).foregroundStyle(Brand.muted) }
+            VStack(alignment: .leading) { Text("About you").font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline)); TextEditor(text: $intro).frame(height: 110).padding(8).background(Brand.field).clipShape(RoundedRectangle(cornerRadius: 12)); Text("\(intro.count)/300").font(.custom("Atkinson Hyperlegible", size: 12, relativeTo: .caption)).foregroundStyle(Brand.muted) }
             Card { Stepper("Years of experience: \(years)", value: $years, in: 0...40) }
             Card { VStack(alignment: .leading) { Text("Your rate: $\(Int(rate)) per hour"); Slider(value: $rate, in: 15...90, step: 1).tint(role.tint) } }
             FlowChips(items: ["English", "Spanish", "Mandarin", "Cantonese", "Vietnamese", "Hindi", "Arabic", "French", "German"], selected: $langs, tint: role.tint)

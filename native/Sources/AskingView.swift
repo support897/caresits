@@ -10,7 +10,7 @@ struct TickCard: View {
         Button(action: action) {
             VStack(spacing: 6) {
                 BrandIcon(kind: icon ?? (on ? .checkCircle : .circle), size: 26, color: Color(hex: 0xC2345B))
-                Text(label).font(.system(size: 14, weight: .bold)).multilineTextAlignment(.center).foregroundStyle(Brand.ink)
+                Text(label).font(.custom("Atkinson Hyperlegible", size: 14).weight(.bold)).multilineTextAlignment(.center).foregroundStyle(Brand.ink)
                     .lineLimit(3).minimumScaleFactor(0.8)
             }
             .frame(maxWidth: .infinity, minHeight: 84).padding(.horizontal, 6).padding(.vertical, 8)
@@ -115,12 +115,12 @@ struct AskingView: View {
     var body: some View {
         ScrollView { VStack(alignment: .leading, spacing: 18) {
             Text("Tick what you are asking for.").font(Brand.title(28)).foregroundStyle(Brand.titleColor).frame(maxWidth: .infinity, alignment: .center).accessibilityIdentifier("askingTitle")
-            Text("One tap ticks a pick. No typing.").font(.subheadline).foregroundStyle(Brand.muted).frame(maxWidth: .infinity, alignment: .center)
-            if !saveErr.isEmpty { Text(saveErr).font(.footnote).foregroundStyle(Brand.ink).padding(.horizontal, 20) }
+            Text("One tap ticks a pick. No typing.").font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline)).foregroundStyle(Brand.muted).frame(maxWidth: .infinity, alignment: .center)
+            if !saveErr.isEmpty { Text(saveErr).font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.ink).padding(.horizontal, 20) }
             ForEach(Asking.sections(side)) { sec in
                 VStack(alignment: .leading, spacing: 10) {
                     Text(sec.title).font(Brand.title(20)).foregroundStyle(Brand.titleColor).padding(.horizontal, 20)
-                    Text(sec.note).font(.footnote).foregroundStyle(Brand.muted).padding(.horizontal, 20)
+                    Text(sec.note).font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted).padding(.horizontal, 20)
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
                         ForEach(sec.picks) { p in TickCard(label: p.label, icon: p.icon, on: isOn(p)) { tap(p) } }
                     }.padding(.horizontal, 20)
