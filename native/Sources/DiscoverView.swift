@@ -329,7 +329,7 @@ struct PersonDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { saved.toggle(); onSave(saved); if let u = s.uid { Task { await Backend.setSaved(u, person.id, saved) } } } label: { BrandIcon(kind: .heart, size: 24, color: Brand.bunny, solid: saved) } } }
         .sheet(isPresented: $showBook) { BookSheet(carer: person) }
-        .sheet(isPresented: $showReview) { ReviewSheet(person: person) { Task { profileReviews = await Backend.profileReviews(about: person.id) } } }
+        .sheet(isPresented: $showReview) { ProfileReviewSheet(person: person) { Task { profileReviews = await Backend.profileReviews(about: person.id) } } }
         .sheet(item: $contact) { ContactSheet(person: person, mode: $0) }
         .task {
             if person.side == "carer" { verified = await Backend.verifiedLevel(person.id); reviews = await Backend.reviewsFor(carer: person.id); rating = await Backend.reviewSummary(person.id); resume = await Backend.loadResume(person.id) }
@@ -472,7 +472,7 @@ struct SwipeCard: View {
 
 
 /// Leave a review straight on a profile: stars plus optional words. Real reviews only, none invented.
-struct ReviewSheet: View {
+struct ProfileReviewSheet: View {
     @EnvironmentObject var s: Session
     @Environment(\.dismiss) var dismiss
     let person: Person
