@@ -47,6 +47,15 @@ final class RoleFlowTests: XCTestCase {
         testPw = "Nat-\(Int(Date().timeIntervalSince1970))-Zq9"; testEmail = email
         try? (email + "\n").appendLine(to: "/Users/ilseplacencia/cs181/test-accounts-made.txt")
         type(app.secureTextFields["Password (6+ letters)"], testPw)
+        // Sim typing under a loaded Mac can drop characters: the account is then created with a
+        // truncated password and the delete re-auth fails on the full one. Verify it landed whole.
+        let pwField = app.secureTextFields["Password (6+ letters)"]
+        if let landed = pwField.value as? String, landed != testPw {
+            pwField.tap()
+            pwField.typeText(String(repeating: "\u{7F}", count: landed.count))
+            pwField.typeText(testPw)
+            XCTAssertEqual(pwField.value as? String, testPw, "password did not land whole at sign up")
+        }
         shot("welcome-\(side)")
         tap("Create my account")
         let sb = XCUIApplication(bundleIdentifier: "com.apple.springboard")
@@ -98,6 +107,12 @@ final class RoleFlowTests: XCTestCase {
         // After a long run the account asks to sign in once more before it deletes.
         if app.staticTexts["Is it really you?"].waitForExistence(timeout: 8) {
             type(app.secureTextFields["Your password"], testPw); dismissKb(); tap("Confirm and delete")
+            // Name the re-auth outcome here: if the sheet stays, the delete never starts and the
+            // test would fail downstream at "no busy state" with no cause named.
+            if !app.staticTexts["Is it really you?"].waitForNonExistence(timeout: 20) {
+                let errText = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "That did not work")).firstMatch
+                XCTFail("re-auth did not finish: " + (errText.exists ? errText.label : "sheet still up, no error shown"))
+            }
         }
     }
     func next() { let t = app.staticTexts["onbTitle"]; let before = t.exists ? t.label : ""; tap("Next"); sleep(2); if t.exists && t.label == before { tap("Next"); sleep(2) } }
