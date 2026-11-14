@@ -15,6 +15,8 @@ struct DiscoverView: View {
     @State private var showMap = false
     @State private var mapPick: String?
     @State private var pinSel: String?
+    @State private var camTick = 0
+    @State private var countries: [String] = []
     @State private var banner: Person?
     @State private var mapRegion: MKCoordinateRegion?
 
@@ -100,7 +102,7 @@ struct DiscoverView: View {
                     }.padding(.bottom, 8)
                 }
             }
-            .background(Brand.cream.ignoresSafeArea()).refreshable { await load() }.task { await load() }
+            .background(Brand.cream.ignoresSafeArea()).refreshable { await load() }.task { await load() }.onChange(of: showMap) { _, on in if on { Task { await refreshCountries() } } }
             .sheet(isPresented: Binding(get: { deckContact != nil }, set: { if !$0 { deckContact = nil } })) { if let d = deckContact { ContactSheet(person: d.person, mode: d.mode) } }
             .navigationDestination(item: $detail) { p in PersonDetailView(person: p, saved: saved.contains(p.id)) { on in if on { saved.insert(p.id) } else { saved.remove(p.id) } } }
             .onChange(of: mapPick) { _, id in if let id, let p = people.first(where: { $0.id == id }) { detail = p; mapPick = nil } }
@@ -133,21 +135,33 @@ struct DiscoverView: View {
     }
     /// The map shows everyone (not limited by the deck distance), still only the other side of the match.
     var mapView: some View {
-        let pins = people.filter { coords[$0.postcode.trimmingCharacters(in: .whitespaces)] != nil }
+        let _ = camTick
+        // Family chosen countries: au pairs show only when their own country (card nationality) is one the family picked.
+        let chosen = (role == .family ? countries : [])
+        let pins = people.filter { coords[$0.postcode.trimmingCharacters(in: .whitespaces)] != nil && (chosen.isEmpty || $0.role != .auPair || chosen.contains($0.nationality)) }
         let picked = pins.first { $0.id == pinSel }
-        return Map(position: $camera, selection: $pinSel) {
-            ForEach(pins) { p in
-                Annotation("", coordinate: coords[p.postcode.trimmingCharacters(in: .whitespaces)]!, anchor: BunnyPin.tipAnchor) {
-                    BunnyPin(selected: pinSel == p.id)
-                        .accessibilityElement(children: .ignore).accessibilityAddTraits(.isButton)
-                        .accessibilityLabel(p.firstName).accessibilityIdentifier("mapPin").accessibilityValue(pinSel == p.id ? "selected" : "not selected")
-                }.tag(p.id)
-            }
+        return MapReader { proxy in
+            Map(position: $camera).accessibilityIdentifier("peopleMap")
+                .mapStyle(.standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll, showsTraffic: false))
+                .onMapCameraChange(frequency: .continuous) { ctx in mapRegion = ctx.region; camTick &+= 1 }
+                .onAppear { frame(pins) }.onChange(of: pins.count) { _, _ in frame(pins) }
+                // The wash: pale pink land and pale blue sea as near as MapKit allows. The pins sit above it so they stay raspberry.
+                .overlay { Color.white.opacity(0.8).allowsHitTesting(false) }
+                .overlay { Color(hex: 0xFFE3EC).opacity(0.25).blendMode(.multiply).allowsHitTesting(false) }
+                .overlay {
+                    ZStack(alignment: .topLeading) {
+                        ForEach(pins) { p in
+                            if let c = coords[p.postcode.trimmingCharacters(in: .whitespaces)], let pt = proxy.convert(c, to: .local) {
+                                Button { pinSel = (pinSel == p.id) ? nil : p.id } label: { BunnyPin(selected: pinSel == p.id) }
+                                    .buttonStyle(.plain).frame(width: 50, height: BunnyPin.height)
+                                    .offset(x: pt.x - 25, y: pt.y - BunnyPin.height * 62.0 / 86.0)
+                                    .zIndex(pinSel == p.id ? 1 : 0)
+                                    .accessibilityLabel(p.firstName).accessibilityIdentifier("mapPin").accessibilityValue(pinSel == p.id ? "selected" : "not selected")
+                            }
+                        }
+                    }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                }
         }
-        .mapStyle(.standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll, showsTraffic: false))
-        .onMapCameraChange { ctx in mapRegion = ctx.region }
-        .onAppear { frame(pins) }.onChange(of: pins.count) { _, _ in frame(pins) }
-        .overlay { Brand.paleGround.opacity(0.8).blendMode(.multiply).allowsHitTesting(false) }
         .overlay(alignment: .topTrailing) {
             VStack(spacing: 12) {
                 mapBtn(.plus, "Zoom in") { zoom(0.5) }
@@ -170,7 +184,6 @@ struct DiscoverView: View {
             }.padding(.horizontal, 10).padding(.bottom, 8)
         }
         .clipShape(RoundedRectangle(cornerRadius: 24)).overlay(RoundedRectangle(cornerRadius: 24).stroke(Brand.bunnyBlush, lineWidth: 1.5))
-        .accessibilityIdentifier("peopleMap").accessibilityValue("\(pins.count) on the map")
     }
     func mapBtn(_ icon: BI, _ label: String, _ f: @escaping () -> Void) -> some View {
         Button(action: f) { BrandIcon(kind: icon, size: 22, color: BunnyPin.raspberry).frame(width: 46, height: 46).background(Brand.card).clipShape(Circle()).shadow(color: .black.opacity(0.08), radius: 3, y: 1) }
@@ -192,8 +205,15 @@ struct DiscoverView: View {
             drag = .zero
         }
     }
+    /// The family's chosen countries (looking musts or prefs nationality), read fresh so a change in the asking shows on the map.
+    func refreshCountries() async {
+        guard let uid = s.uid, let me = await Backend.loadProfile(uid) else { return }
+        let mu = me.looking["musts"] as? [String: Any], pr = me.looking["prefs"] as? [String: Any]
+        countries = (mu?["nationality"] as? [String]) ?? (pr?["nationality"] as? [String]) ?? []
+    }
     func load() async {
         guard let me = s.me else { return }
+        await refreshCountries()
         async let list = Backend.discover(me: me, services: me.services)
         async let sv = Backend.savedIds(me.id)
         people = await list; saved = await sv; loaded = true

@@ -295,14 +295,15 @@ final class RoleFlowTests: XCTestCase {
         let mapBtn = app.buttons["Map"]
         if !mapBtn.waitForExistence(timeout: 60) { qshot("map-\(tag)-FAIL-no-map-button") }
         XCTAssertTrue(mapBtn.exists, "no Map button"); sleep(6); qshot("map-\(tag)-0-before-tap")
-        for _ in 0..<4 {
+        for _ in 0..<3 {
             let tg = app.descendants(matching: .any).matching(identifier: "mapToggle").firstMatch
             if tg.exists && tg.label == "Deck" { break }
-            if tg.exists { if n % 2 == 0 { app.coordinate(withNormalizedOffset: CGVector(dx: 0.761, dy: 0.105)).tap() } else { tg.tap() } }; sleep(5)
+            if tg.exists { tg.tap() }; sleep(5)
         }
         if !(app.otherElements["peopleMap"].waitForExistence(timeout: 30) || app.maps.firstMatch.waitForExistence(timeout: 5)) { qshot("map-\(tag)-FAIL-map-did-not-open") }
         let pin = app.descendants(matching: .any).matching(identifier: "mapPin").firstMatch
-        XCTAssertTrue(pin.waitForExistence(timeout: 90), "MAP WITH NO PINS (a fail)")
+        if !pin.waitForExistence(timeout: 90) { qshot("map-\(tag)-FAIL-no-pins"); try? app.debugDescription.write(toFile: "/Users/ilseplacencia/cs181/logs/dbg-nopins.txt", atomically: true, encoding: .utf8) }
+        XCTAssertTrue(pin.exists, "MAP WITH NO PINS (a fail)")
         qshot("map-\(tag)-1-standing-with-pins")
         pin.tap(); sleep(2)
         let meet = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Meet ")).firstMatch
@@ -318,6 +319,73 @@ final class RoleFlowTests: XCTestCase {
         del.tap(); tap("Delete everything")
         if app.staticTexts["Is it really you?"].waitForExistence(timeout: 20) { type(app.secureTextFields["Your password"], testPw); dismissKb(); tap("Confirm and delete") }
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 240), "account not deleted")
+    }
+    // Build 181 item 3: country picking. The au pair picks her own country (card nationality); the family picks countries (looking prefs nationality)
+    // and the family's map shows au pairs only from those countries.
+    func pickCountry(_ pick: String, chip: String, expect: String = "ticked", open: Bool = true) {
+        let card = app.buttons["tick-" + pick]; XCTAssertTrue(reveal(card, max: 40), "no country pick card " + pick)
+        if open { card.tap(); sleep(1) }
+        let c = app.buttons["chip-country-" + chip]; XCTAssertTrue(reveal(c, max: 12), "no country chip " + chip)
+        if c.value as? String != expect { c.tap(); sleep(3) }
+        XCTAssertEqual(c.value as? String, expect, "chip " + chip)
+    }
+    func leaveAsking() { app.navigationBars.buttons.firstMatch.tap(); sleep(2) }
+    func setMap(_ on: Bool) {
+        let tg = app.descendants(matching: .any).matching(identifier: "mapToggle").firstMatch
+        XCTAssertTrue(tg.waitForExistence(timeout: 60), "no map toggle")
+        for _ in 0..<3 { if (tg.label == "Deck") == on { return }; tg.tap(); sleep(5) }
+    }
+    func deleteThisAccount() {
+        app.tabBars.buttons["Me"].tap(); sleep(2)
+        let del = app.buttons["Delete my account"]
+        for _ in 0..<8 where !del.isHittable { app.swipeUp() }
+        del.tap(); tap("Delete everything")
+        if app.staticTexts["Is it really you?"].waitForExistence(timeout: 20) { type(app.secureTextFields["Your password"], testPw); dismissKb(); tap("Confirm and delete") }
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 240), "account not deleted")
+    }
+    func testCountryMap() {
+        // 1. the au pair picks her country, relaunch reads it back
+        signUp(side: "carer"); fillYou("Test CAuPair"); next(); tap("Au pair"); next()
+        if app.buttons["Skip"].waitForExistence(timeout: 4) { tap("Skip") }
+        let about = app.textFields["A few words about your care"]
+        if about.waitForExistence(timeout: 4) { type(about, "Kind and calm care"); dismissKb() }
+        next(); tap("Finish", timeout: 20)
+        let apEmail = testEmail, apPw = testPw
+        openAsking(); pickCountry("My country", chip: "Colombian"); qshot("country-1-aupair-picks-colombian")
+        app.terminate(); app.launch()
+        openAsking(); pickCountry("My country", chip: "Colombian", open: true)
+        qshot("country-2-aupair-after-relaunch-colombian-still-ticked")
+        leaveAsking(); app.tabBars.buttons["Me"].tap(); sleep(1)
+        let so = app.buttons["Sign out"]; XCTAssertTrue(reveal(so, max: 12), "no sign out"); so.tap(); sleep(3)
+        // 2. the family picks Filipino: the Colombian au pair must not show on its map
+        signUp(side: "family"); fillYou("Test CFam"); next(); tap("Au pair"); next()
+        type(app.textFields["Name or nickname"], "Mia"); dismissKb(); sleep(1); next()
+        if !app.buttons["Finish"].waitForExistence(timeout: 6) { next() }
+        tap("Finish", timeout: 20)
+        openAsking(); pickCountry("Countries you welcome", chip: "Filipino"); qshot("country-3-family-picks-filipino")
+        leaveAsking(); app.tabBars.buttons.element(boundBy: 0).tap(); sleep(2)
+        setMap(true); sleep(10)
+        let pin = app.descendants(matching: .any).matching(identifier: "mapPin").firstMatch
+        XCTAssertFalse(pin.waitForExistence(timeout: 30), "an au pair pin showed although the family chose Filipino")
+        qshot("country-4-filipino-chosen-no-colombian-au-pair-pin")
+        setMap(false)
+        // 3. the family switches to Colombian: her pin appears
+        openAsking(); pickCountry("Countries you welcome", chip: "Filipino", expect: "not ticked", open: false)
+        pickCountry("Countries you welcome", chip: "Colombian", open: false); qshot("country-5-family-switches-to-colombian")
+        leaveAsking(); app.tabBars.buttons.element(boundBy: 0).tap(); sleep(2)
+        setMap(true)
+        XCTAssertTrue(pin.waitForExistence(timeout: 90), "no au pair pin although the family chose Colombian")
+        qshot("country-6-colombian-chosen-au-pair-pin-shows")
+        pin.tap(); sleep(2)
+        let meet = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Meet ")).firstMatch
+        XCTAssertTrue(meet.waitForExistence(timeout: 15), "no Meet"); qshot("country-7-au-pair-pin-selected"); meet.tap(); sleep(3)
+        qshot("country-8-au-pair-opened")
+        app.navigationBars.buttons.firstMatch.tap(); sleep(2)
+        // 4. clean up both accounts
+        deleteThisAccount()
+        tap("Use email"); tap("I already have an account")
+        type(app.textFields["Email"], apEmail); type(app.secureTextFields["Password (6+ letters)"], apPw); dismissKb(); tap("Sign in")
+        testPw = apPw; XCTAssertTrue(app.tabBars.buttons["Me"].waitForExistence(timeout: 90), "au pair did not sign in"); deleteThisAccount()
     }
     func testMapFamily() { mapProof("family", side: "family") }
     func testMapNanny() { mapProof("nanny", side: "carer", service: "Nanny") }

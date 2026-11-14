@@ -33,11 +33,14 @@ enum PickHome {
     case device                     // DEVICE ONLY (UserDefaults), no sealed home, EXCLUDED from scoring
     case chips([String], String?)   // one choice among chips; card key (a number) or nil for device only
     case langs                      // the which one picker, saved to card languages
+    case country                    // carer: own country on card.nationality. family: chosen countries on looking prefs or musts nationality
+    case countryOnly                // family: the chosen countries become a must (looking.musts.nationality) instead of a pref
 }
 struct Pick: Identifiable { let id: String; let label: String; let icon: BI; let home: PickHome }
 struct PickSection: Identifiable { let id: String; let title: String; let note: String; let picks: [Pick] }
 
 enum Asking {
+    static let nationalities = ["Australian", "Filipino", "Colombian", "Brazilian", "German", "French", "British", "Irish", "Spanish", "Italian", "Dutch", "Polish", "Japanese", "Korean", "Chinese", "Indian", "Indonesian", "Thai", "Vietnamese", "South African", "New Zealander", "Canadian", "American", "Another background"]
     static let languages = ["English", "Spanish", "Mandarin", "Cantonese", "Hindi", "Arabic", "Vietnamese", "Italian", "Greek", "French", "German", "Filipino"]
     static func sections(_ side: String) -> [PickSection] {
         let fam = side == "family"
@@ -65,7 +68,7 @@ enum Asking {
             Pick(id: "cpr", label: "CPR", icon: .cpr, home: .device),
             Pick(id: "education", label: "Education", icon: .cap, home: .device),
         ]
-        let aupair = [
+        let aupair = (fam ? [Pick(id: "country", label: "Countries you welcome", icon: .passport, home: .country), Pick(id: "countryonly", label: "Only these countries", icon: .shield, home: .countryOnly)] : [Pick(id: "country", label: "My country", icon: .passport, home: .country)]) + [
             Pick(id: "ownroom", label: "Own room", icon: .door, home: .device),
             Pick(id: "ownbath", label: "Own bathroom", icon: .bath, home: .device),
             Pick(id: "sharedbath", label: "Shared bathroom", icon: .shower, home: .device),
@@ -100,6 +103,9 @@ struct AskingView: View {
     @State private var flags: [String: Bool] = [:]
     @State private var nums: [String: Int] = [:]
     @State private var aid = false
+    @State private var natMine: String? = nil
+    @State private var natList: [String] = []
+    @State private var natOnly = false
     @State private var dev: [String: Any] = [:]       // DEVICE ONLY picks and chips
     @State private var open: Set<String> = []
     @State private var saveErr = ""
@@ -127,10 +133,10 @@ struct AskingView: View {
     }
 
     // MARK: chips (languages: which one; amounts and lengths as picks)
-    func options(_ p: Pick) -> [String] { if case .chips(let o, _) = p.home { return o }; return Asking.languages }
+    func options(_ p: Pick) -> [String] { if case .chips(let o, _) = p.home { return o }; if case .country = p.home { return Asking.nationalities }; return Asking.languages }
     @ViewBuilder func chipRow(_ p: Pick) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(p.home.isLangs ? "Which one" : p.label).font(.footnote.weight(.semibold)).foregroundStyle(Brand.muted)
+            Text(p.home.isLangs ? "Which one" : (p.home.isCountry ? "Which country" : p.label)).font(.footnote.weight(.semibold)).foregroundStyle(Brand.muted)
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: 8)], alignment: .leading, spacing: 8) {
                 ForEach(options(p), id: \.self) { o in
                     let on = chipOn(p, o)
@@ -146,6 +152,7 @@ struct AskingView: View {
     func chipOn(_ p: Pick, _ o: String) -> Bool {
         switch p.home {
         case .langs: return (lists["languages"] ?? []).contains(o)
+        case .country: return side == "family" ? natList.contains(o) : natMine == o
         case .chips(_, let key): if let key { return nums[key].map { String($0) == o.filter(\.isNumber) } ?? false }; return (dev[p.id] as? String) == o
         default: return false
         }
@@ -155,6 +162,9 @@ struct AskingView: View {
         case .langs:
             var l = lists["languages"] ?? []; if let i = l.firstIndex(of: o) { l.remove(at: i) } else { l.append(o) }
             lists["languages"] = l; persist("languages", l.isEmpty ? nil : l)
+        case .country:
+            if side == "family" { if let i = natList.firstIndex(of: o) { natList.remove(at: i) } else { natList.append(o) }; writeLooking() }
+            else { natMine = natMine == o ? nil : o; persist("nationality", natMine) }
         case .chips(_, let key):
             if let key {
                 if chipOn(p, o) { nums[key] = nil; persist(key, nil) } else if let n = Int(o.filter(\.isNumber)) { nums[key] = n; persist(key, n) }
@@ -172,6 +182,8 @@ struct AskingView: View {
         case .device: return (dev[p.id] as? Bool) ?? false
         case .chips(_, let key): if let key { return nums[key] != nil }; return dev[p.id] is String
         case .langs: return !(lists["languages"] ?? []).isEmpty
+        case .country: return side == "family" ? !natList.isEmpty : natMine != nil
+        case .countryOnly: return natOnly
         }
     }
     func tap(_ p: Pick) {
@@ -185,7 +197,9 @@ struct AskingView: View {
             aid.toggle(); writeAid(aid)
         case .device:
             dev[p.id] = (dev[p.id] as? Bool) == true ? nil : true; saveDevice()
-        case .chips, .langs:
+        case .countryOnly:
+            natOnly.toggle(); writeLooking()
+        case .chips, .langs, .country:
             if open.contains(p.id) { open.remove(p.id) } else { open.insert(p.id) }
         }
     }
@@ -198,6 +212,18 @@ struct AskingView: View {
         chain = Task {
             await prev?.value
             do { try await Backend.saveProfile(uid, card: [key: v ?? FieldValue.delete()]); saveErr = "" } catch { saveErr = "Could not save that pick. Try again." }
+        }
+    }
+    /// Family chosen countries: looking.prefs.nationality, or looking.musts.nationality when "Only these countries" is ticked. Sealed keys, no new key.
+    func writeLooking() {
+        guard let uid = s.uid else { return }
+        let v: Any = natList.isEmpty ? FieldValue.delete() : natList
+        let gone: Any = FieldValue.delete()
+        let patch: [String: [String: Any]] = natOnly ? ["musts": ["nationality": v], "prefs": ["nationality": gone]] : ["prefs": ["nationality": v], "musts": ["nationality": gone]]
+        let prev = chain
+        chain = Task {
+            await prev?.value
+            do { try await Backend.saveProfile(uid, looking: patch); saveErr = "" } catch { saveErr = "Could not save that pick. Try again." }
         }
     }
     /// First aid rides its coded pair at profiles/{uid}/answers/{code}: F21 family, C22 carer. Keys only bucket, v, s, feed.
@@ -222,8 +248,15 @@ struct AskingView: View {
         for k in ["personality", "routineStyle", "activities", "languages", "tasks"] { if let l = card[k] as? [String] { lists[k] = l } }
         for k in ["drives", "ownCar", "cooking", "pets", "petsOk"] { if let b = card[k] as? Bool { flags[k] = b } }
         for k in ["payOffered", "payFloor"] { if let n = card[k] as? Int { nums[k] = n } else if let n = card[k] as? NSNumber { nums[k] = n.intValue } }
+        let me = await Backend.loadProfile(uid)
+        natMine = me?.nationality.isEmpty == false ? me?.nationality : nil
+        let mu = me?.looking["musts"] as? [String: Any], pr = me?.looking["prefs"] as? [String: Any]
+        if let l = mu?["nationality"] as? [String], !l.isEmpty { natList = l; natOnly = true } else if let l = pr?["nationality"] as? [String] { natList = l; natOnly = false }
         let remote = await AnswerStore.loadAll(uid)
         aid = remote[Asking.codedAid(side)] != nil
     }
 }
-extension PickHome { var isLangs: Bool { if case .langs = self { return true }; return false } }
+extension PickHome {
+    var isLangs: Bool { if case .langs = self { return true }; return false }
+    var isCountry: Bool { if case .country = self { return true }; return false }
+}

@@ -12,6 +12,8 @@ struct Person: Identifiable {
     var photoKey: String
     var about: String
     var card: [String: Any]
+    var looking: [String: Any] = [:]
+    var nationality: String { (card["nationality"] as? String) ?? "" }
     var firstName: String { name.split(separator: " ").first.map(String.init) ?? name }
     var services: [String] { (card["careTypes"] as? [String]) ?? [] }
     var headline: String { (card["headline"] as? String) ?? "" }
@@ -40,6 +42,7 @@ struct Person: Identifiable {
         photoKey = (data["photoUrl"] as? String) ?? ""
         about = (data["about"] as? String) ?? ""
         card = (data["card"] as? [String: Any]) ?? [:]
+        looking = (data["looking"] as? [String: Any]) ?? [:]
     }
 }
 

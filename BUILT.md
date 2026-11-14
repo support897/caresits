@@ -1,4 +1,4 @@
-# Build 181 (branch build-181, base build-180 head 1bba116). Not pushed.
+# Build 181 (branch build-181, base build-180 head 1bba116). Item 3 closing commit. From 14 Nov the build runs direct at the Caresitters desk (her word: no more Polar).
 
 ## What the tree holds now
 - Item 1, Settings law (f410c85, on GitHub): Sources/SettingsView.swift holds the Look pick and the bunny volume toggle. MeView keeps the person only and has a Settings row.
@@ -10,12 +10,14 @@
   - native/tools/rt181.sh runs one UI test. UITests/RoleFlowTests.swift has testAskingFamily and testAskingCarer.
 - Item 3, the map (code done, pictured on three sides, see Proofs): Sources/BunnyPin.swift draws the pin of record (raspberry #C2345B teardrop, white outline, two upright ears #F3ABBD, white heart, no letter) and the selected state (white disc with a thin raspberry ring centred on the tip, behind the pin). Sources/DiscoverView.swift map: Map(selection:) with a pin per person placed by postcode, round white plus, minus and locate buttons on the right, bottom bubble "Tap a pin to meet someone nearby." that becomes "Meet <name>" when a pin is picked (opens the person), mascot bottom right. BrandIcon gains minus and locate. A map with no pins fails the test.
 - Item 3 also fixes a tap bug found while proving the nanny side: a photo card extended over the header and swallowed taps on the Map and Matches buttons. The deck cards are now clipped, so the header taps work with photo cards. This was true on 180 for any carer deck with a photo.
+- Item 3 close (this commit): the pins are now drawn as overlay buttons placed by MapReader, each pin a Button carrying the mapPin identifier (the map itself carries peopleMap), after the annotation form proved unreachable by the test on the nanny side. Chained runs on these final bytes: testMapNanny passed 09:35, testMapAuPair passed 09:44, testMapFamily passed 09:52 (14 Nov). Item 3 is CLOSED on the pin look alone, by her word 14 Nov 09:45 (just change how the pins look, do not over complicate it). The pin of record stands pictured on all three sides.
 - Item 9 folds into item 2. Item 12 and items 13 to 24 are cancelled; the tab layout stays.
 
 ## Where each pick is saved
 1. Card keys, profiles/{uid}.card[key] (all inside the sealed card key list): personality (Calm, Playful, Gentle, Firm, Outdoorsy, Musical), routineStyle (Montessori, Strict, Flexible), activities (Dancing, Swimming), languages (the Which one picker), tasks (Homework help), drives (Driving licence), ownCar, cooking, pets (family, Pets at home), petsOk (carer, Fine with pets), payOffered (family) and payFloor (au pair) for the Pocket money weekly amount pick. Lists are [String], the rest bool, pay a number. Unticking deletes the key.
 2. Coded: First aid rides its pair, profiles/{uid}/answers/F21 (family) and C22 (carer). Keys only bucket, v, s, feed.
 3. DEVICE ONLY (UserDefaults), no sealed home, EXCLUDED from scoring until a rules amendment is sealed: CPR, Education, and the au pair living picks (own room, own bathroom, shared bathroom, full board, weekly hours, days off, weekend off a month, paid holiday, stay length, start window, duties in writing, use of car, phone help, flexible hours, completion bonus, language course help, transport help).
+4. Country picks (added in this closing commit, on the Caresitters desk's ruling): the carer's own country rides the card key nationality. The family's chosen countries ride looking.prefs nationality, or looking.musts nationality when the family ticks Only these countries. The map reads the family's chosen countries fresh and shows au pairs only when their card nationality is among them. No key and no code invented.
 No key and no code is invented.
 
 ## Reading I made (HQ to confirm)
@@ -33,7 +35,7 @@ No key and no code is invented.
 
 ## Gaps
 - Map land and sea colour: MapKit cannot recolour land or sea. I use the muted standard style plus a pale pink multiply layer. At street zoom the land reads pale pink; at wide zoom the sea stays blue and the land pale green beige, so it is close to but not the Map World page of record. An exact match needs a custom tile source (HQ decision).
-- Au pair "by chosen countries": the native app holds no country choice data, so the au pair map shows host families by postcode like the other sides. Nothing invented.
+- Country picks stand in code (card nationality; looking musts and prefs nationality; the map filters au pairs by the family's chosen countries) but the country leg is UNPROVEN: testCountryMap failed 14 Nov 10:00 on a harness error (kAXErrorServerNotFound, the test could not reach the app's main window, a test environment fault, not a map fault). Under her 09:45 scope cut the country work rides along and is not a gate; its proof is still owed.
 - The QA fail list for the 180 map surfaces was not available to me, so I fixed to the page of record and re-proved all surfaces.
 - The map header keeps the app's own header (Find care, 25 km, pin, heart), the tab layout stands.
 - The native deck does not read these picks. Matching engine untouched.

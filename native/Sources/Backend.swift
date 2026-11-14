@@ -35,13 +35,20 @@ enum Backend {
     }
 
     /// Merge a patch into the profile document. The card is merged one level deep.
-    static func saveProfile(_ uid: String, side: String? = nil, name: String? = nil, postcode: String? = nil, photoKey: String? = nil, about: String? = nil, card: [String: Any] = [:]) async throws {
+    static func saveProfile(_ uid: String, side: String? = nil, name: String? = nil, postcode: String? = nil, photoKey: String? = nil, about: String? = nil, card: [String: Any] = [:], looking: [String: [String: Any]] = [:]) async throws {
         let ref = db.collection("profiles").document(uid)
         let cur = (try? await ref.getDocument().data()) ?? [:]
         var next: [String: Any] = [:]
         for k in ["side", "displayName", "postcode", "photoUrl", "about", "looking", "level", "learningPlan"] { if let v = cur[k] { next[k] = v } }
         // The rules need a looking map with musts and prefs on every profile write.
         if next["looking"] == nil { next["looking"] = ["musts": [String: Any](), "prefs": [String: Any]()] }
+        if !looking.isEmpty {
+            let cl = (next["looking"] as? [String: Any]) ?? [:]
+            var m = (cl["musts"] as? [String: Any]) ?? [:], pr = (cl["prefs"] as? [String: Any]) ?? [:]
+            for (k, v) in looking["musts"] ?? [:] { if v is FieldValue { m.removeValue(forKey: k) } else { m[k] = v } }
+            for (k, v) in looking["prefs"] ?? [:] { if v is FieldValue { pr.removeValue(forKey: k) } else { pr[k] = v } }
+            next["looking"] = ["musts": m, "prefs": pr]
+        }
         if let side { next["side"] = side }
         if let name { next["displayName"] = name }
         if let postcode { next["postcode"] = postcode }
