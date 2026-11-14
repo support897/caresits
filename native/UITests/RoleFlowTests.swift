@@ -50,11 +50,13 @@ final class RoleFlowTests: XCTestCase {
         // Sim typing under a loaded Mac can drop characters: the account is then created with a
         // truncated password and the delete re-auth fails on the full one. Verify it landed whole.
         let pwField = app.secureTextFields["Password (6+ letters)"]
-        if let landed = pwField.value as? String, landed != testPw {
+        if let landed = pwField.value as? String, landed.count != testPw.count {
             pwField.tap()
             pwField.typeText(String(repeating: "\u{7F}", count: landed.count))
             pwField.typeText(testPw)
-            XCTAssertEqual(pwField.value as? String, testPw, "password did not land whole at sign up")
+        }
+        if let landed = pwField.value as? String {
+            XCTAssertEqual(landed.count, testPw.count, "password did not land whole at sign up: got \(landed.count) chars, expected \(testPw.count)")
         }
         shot("welcome-\(side)")
         tap("Create my account")
