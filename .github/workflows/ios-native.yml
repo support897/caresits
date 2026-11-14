@@ -1,0 +1,70 @@
+name: iOS native (SwiftUI) tests
+
+# Shape copied from Fit Hard's ios-native.yml (their run 68 green), adapted to
+# Caresitters: genproj.py generates the project, scheme Caresitters, UI target
+# CaresittersUITests. No ship step: TestFlight waits on the gates.
+# PAUSED by Ilse's word 14 Nov 2026: for the care apps, do not test until the
+# build is fully built. Dispatch only — a push fires nothing. When build 181
+# stands fully built, restore the push trigger and fire the one full run.
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: macos-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write Firebase config from secret
+        env:
+          GOOGLE_SERVICE_INFO_PLIST_B64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_B64 }}
+        run: |
+          if [ -z "$GOOGLE_SERVICE_INFO_PLIST_B64" ]; then echo "GOOGLE_SERVICE_INFO_PLIST_B64 secret is not set"; exit 1; fi
+          echo "$GOOGLE_SERVICE_INFO_PLIST_B64" | base64 -d > native/GoogleService-Info.plist
+          ls -l native/GoogleService-Info.plist
+
+      - name: Generate the project
+        working-directory: native
+        run: |
+          python3 genproj.py
+          xcodebuild -version
+
+      - name: Compile for the simulator (no signing)
+        working-directory: native
+        run: |
+          set -o pipefail
+          xcodebuild build -project Caresitters.xcodeproj -scheme Caresitters \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tee build.log | grep -E "error:|BUILD (SUCCEEDED|FAILED)" || true
+          grep -q "BUILD SUCCEEDED" build.log
+
+      - name: Print errors on failure
+        if: failure()
+        working-directory: native
+        run: grep -n "error:" build.log | head -60 || true
+
+      - name: Full UI test suite
+        working-directory: native
+        run: |
+          set -o pipefail
+          UDID=$(xcrun simctl list devices available | grep -E "iPhone" | head -1 | grep -oE "[0-9A-F]{8}-([0-9A-F]{4}-){3}[0-9A-F]{12}")
+          echo "UDID=$UDID" >> $GITHUB_ENV
+          xcrun simctl boot "$UDID" || true
+          xcodebuild test -project Caresitters.xcodeproj -scheme Caresitters -destination "id=$UDID" \
+            -only-testing:CaresittersUITests -resultBundlePath "$RUNNER_TEMP/ui.xcresult" \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tee ui.log | grep -E "Test Case|error:|Executed|TEST (SUCCEEDED|FAILED)" || true
+          grep -q "TEST SUCCEEDED" ui.log
+
+      - name: Upload test bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-xcresult
+          path: ${{ runner.temp }}/ui.xcresult
+          if-no-files-found: warn
+
+      - name: UI test failures
+        if: failure()
+        working-directory: native
+        run: grep -nE "error:|failed" ui.log | head -80 || true
