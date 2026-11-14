@@ -82,15 +82,21 @@ final class Session: ObservableObject {
         Trace.log("signUp.call", "nameLen=\(clean.count)")
         let r = try await Auth.auth().createUser(withEmail: email, password: password)
         Trace.log("signUp.created", "uid=\(r.user.uid.prefix(6))")
-        let change = r.user.createProfileChangeRequest()
-        change.displayName = clean
-        try await change.commitChanges()
-        try await Backend.saveMyName(r.user.uid, name: clean)
+        // ITEM 1 FIX (the list's own words): the session owns the
+        // name locally from the moment createUser returns — set
+        // BEFORE any save that can throw or stall, so a denied or
+        // slow profile write can never send a brand-new user to
+        // the name ask with an empty field. Item 16's side is
+        // owned the same moment. The profile saves ride after,
+        // best-effort: the name still lands on the profile when
+        // the write is allowed, and the landing never waits on it.
         myName = clean
         nameUid = r.user.uid
-        // Item 16: the who-are-you answer is this session's own the
-        // moment the account exists; the profile save rides after.
         mySide = side
+        let change = r.user.createProfileChangeRequest()
+        change.displayName = clean
+        try? await change.commitChanges()
+        try? await Backend.saveMyName(r.user.uid, name: clean)
         try? await Backend.saveMySide(r.user.uid, side: side)
         Trace.log("signUp.return", "myNameLen=\(myName.count)")
     }
@@ -140,12 +146,15 @@ final class Session: ObservableObject {
     func saveMyName(_ name: String) async throws {
         let clean = name.trimmingCharacters(in: .whitespaces)
         guard !clean.isEmpty, let u = Auth.auth().currentUser else { throw AppError.msg("Please add your name.") }
-        let change = u.createProfileChangeRequest()
-        change.displayName = clean
-        try await change.commitChanges()
-        try await Backend.saveMyName(u.uid, name: clean)
+        // ITEM 1 FIX (same shape as sign-up): the session owns the
+        // name locally first; the saves ride after, best-effort, so
+        // the ask can never come back empty inside the session.
         myName = clean
         nameUid = u.uid
+        let change = u.createProfileChangeRequest()
+        change.displayName = clean
+        try? await change.commitChanges()
+        try? await Backend.saveMyName(u.uid, name: clean)
     }
 
     // Sign in with Apple
