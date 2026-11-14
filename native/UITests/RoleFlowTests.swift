@@ -62,15 +62,16 @@ final class RoleFlowTests: XCTestCase {
         tap("Create my account")
         let sb = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         for _ in 0..<8 { if sb.buttons["Not Now"].waitForExistence(timeout: 2) { sb.buttons["Not Now"].tap(); break }; if app.buttons["Not Now"].exists { app.buttons["Not Now"].tap(); break } }
-        // The role pick can arrive mid-animation: the button exists before it is hittable,
-        // and XCTest then computes hit point (-1,-1) and the tap lands nowhere (gate 2, twice).
-        // Poll until the name field stands, tapping the role button only while it is hittable.
+        // The role pick can arrive mid-animation: a single tap can land nowhere (gate 2, twice
+        // at hit point (-1,-1)). Poll until the name field stands, tapping whenever the button
+        // exists. Do NOT gate on isHittable: this button is never hittable per XCTest even while
+        // plain taps land on it (gate 6 looped 45 s without one tap; gate 4's plain tap worked).
         let roleLabel = side == "family" ? "I need care" : "I give care"
         let nameField = app.textFields["Your name"]
         let roleButton = app.buttons.matching(NSPredicate(format: "label == %@", roleLabel)).firstMatch
         let roleEnd = Date().addingTimeInterval(45)
         while !nameField.exists && Date() < roleEnd {
-            if roleButton.waitForExistence(timeout: 2) && roleButton.isHittable { roleButton.tap() }
+            if roleButton.waitForExistence(timeout: 2) { roleButton.tap() }
             sleep(2)
         }
         if !nameField.waitForExistence(timeout: 5) { shot("after-create-\(side)"); XCTFail("sign up did not reach onboarding: " + String(app.debugDescription.prefix(1800))) }

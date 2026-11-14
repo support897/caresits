@@ -188,3 +188,8 @@ Full suite on the final tree: 17 of 20 passed first time. Failed in the full run
 
 - Build passed on b2eac47. testDeleteSlow FAILED (TEST EXIT 65): RoleFlowTests.swift:57, my new password verify assert — "got 18 bullets, expected Nat-...-Zq9". The SecureField's .value is BULLETS, not the typed text, so the string compare could never pass — and the password IS 18 chars, so it had landed whole; my check was the fault, not the typing. (The assert also printed the password into the log — never again: counts only.) The delete leg never ran on this gate, so the re-auth outcome is still open.
 - Fix: the verify now compares LENGTHS only (bullets count == typed chars). Clear + re-type only when the count is short; assert counts, never content.
+
+## RUN 6 GATE 6: testDeleteSlow FAILED AT SIGN-UP AGAIN (15 Nov 2026, ~08:2x)
+
+- Build passed on 121f900; the length-based password verify PASSED (no verify failure). testDeleteSlow FAILED (TEST EXIT 65, 139.651 s): RoleFlowTests.swift:76 "sign up did not reach onboarding". Timeline: the role poll loop ran its full 45 s (t=89-132 s) and NEVER tapped once — "Find the 'I need care' Button" repeats with no Tap line. The button EXISTS the whole time but is never isHittable, so my loop's hittability gate blocked every tap. The plain tap() (no hittability check) landed fine in gate 4. The button's hittability read is broken for this view; the gate is the fault, not the app.
+- Fix: the loop now taps whenever the button exists and lets the poll retry do the work; the comment records why isHittable is never used here.
