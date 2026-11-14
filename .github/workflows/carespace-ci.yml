@@ -7,9 +7,10 @@ name: CareSpace build 29 (cloud test lane)
 # TestFlight still waits on the gates on the final build.
 
 on:
-  push:
-    branches: ["carespace-29"]
-    paths: ["native-carespace/**", ".github/workflows/carespace-ci.yml"]
+  # Her word 2026-11-14 21:14: for care apps, don't test until
+  # ALL fully built. The push trigger is OFF until build 29
+  # stands fully built; then the lane fires ONCE, manually,
+  # end to end, the GitHub way.
   workflow_dispatch:
 
 jobs:
