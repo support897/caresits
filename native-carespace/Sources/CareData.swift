@@ -81,8 +81,21 @@ enum CareRepo {
         guard let snap = try? await space(spaceId).collection("members").getDocuments() else { return [] }
         return snap.documents.map { d in
             let m = d.data()
-            return TeamMember(id: d.documentID, role: CareRole.from(m["role"]), active: (m["status"] as? String ?? "active") == "active",
-                              name: (m["displayName"] as? String) ?? "")
+            let role = CareRole.from(m["role"])
+            return TeamMember(id: d.documentID, role: role, active: (m["status"] as? String ?? "active") == "active",
+                              name: (m["displayName"] as? String) ?? "", perms: CarePerms.from(m["perms"], role: role))
+        }
+    }
+
+    /// Item 9: a parent admin sets a member's role and permissions in
+    /// the app. An invite can never make an admin, and neither can
+    /// this — admins are made by the space owner only, outside here.
+    @discardableResult
+    static func setMemberAccess(spaceId: String, memberUid: String, role: CareRole, perms: CarePerms) async throws -> Bool {
+        guard role != .admin else { throw CareError(message: "Access changes cannot make someone an admin.") }
+        let ref = space(spaceId).collection("members").document(memberUid)
+        return try await commit { done in
+            ref.setData(["role": role.rawValue, "perms": CareInvite.permsData(CareInvite.effective(role, perms))], merge: true, completion: done)
         }
     }
 
@@ -95,6 +108,7 @@ enum CareRepo {
         for s in ChildSection.allCases { c.notes[s] = (sec[s.rawValue] as? [String: Any])?["notes"] as? String ?? "" }
         c.memories = strings(sec["memories"])
         c.foodPreferences = strings(m["foodPreferences"]); c.learningGoals = strings(m["learningGoals"])
+        c.learningStyles = strings(m["learningStyles"]); c.learningLanguage = m["learningLanguage"] as? String ?? ""
         c.milestones = (m["milestones"] as? [[String: Any]] ?? []).compactMap { x in
             guard let t = x["title"] as? String else { return nil }
             return ChildMilestone(title: t, at: date(x["at"]) ?? Date(), note: x["note"] as? String ?? "", photoKey: x["photoKey"] as? String ?? "")
@@ -116,7 +130,7 @@ enum CareRepo {
         sections["memories"] = c.memories
         return [
             "name": c.name, "ageYears": c.ageYears, "interests": c.interests, "sections": sections,
-            "foodPreferences": c.foodPreferences, "learningGoals": c.learningGoals,
+            "foodPreferences": c.foodPreferences, "learningGoals": c.learningGoals, "learningStyles": c.learningStyles, "learningLanguage": c.learningLanguage,
             "milestones": c.milestones.map { m -> [String: Any] in var x: [String: Any] = ["title": m.title, "at": CareTime.iso(m.at), "note": m.note]; if !m.photoKey.isEmpty { x["photoKey"] = m.photoKey }; return x },
             "routine": ["wake": c.wake, "bed": c.bed, "naps": c.naps.map { ["from": $0.from, "to": $0.to] }]
         ]
@@ -404,5 +418,157 @@ final class SpaceModel: ObservableObject {
         guard let uid = uid, !uid.isEmpty else { return "" }
         if uid == self.uid { return me }
         return members.first { $0.id == uid }?.shownName ?? CareRole.regular.label
+    }
+}
+
+
+// MARK: - Item 18: the day's plan (composed once, stored, same on
+// every phone) and item 30: shopping (the brief's own fields).
+
+struct DayPlan: Equatable {
+    var childId: String
+    var activityIds: [String]
+    var why: [String: String]
+}
+
+struct ShoppingItem: Identifiable, Equatable {
+    var id: String = ""
+    var name: String
+    var childId: String?
+    var source: String
+    var buyByName: String
+    var due: String
+    var bought: Bool
+    var reimbursed: Bool
+}
+
+extension CareRepo {
+    static func dayPlan(spaceId: String, dayKey: String, childId: String) async -> DayPlan? {
+        guard let snap = try? await space(spaceId).collection("dayPlans").document(dayKey).getDocument(),
+              let m = snap.data() else { return nil }
+        let byChild = m["byChild"] as? [String: Any] ?? [:]
+        guard let mine = byChild[childId] as? [String: Any] else { return nil }
+        return DayPlan(childId: childId,
+                       activityIds: mine["activityIds"] as? [String] ?? [],
+                       why: mine["why"] as? [String: String] ?? [:])
+    }
+
+    @discardableResult
+    static func saveDayPlan(spaceId: String, dayKey: String, childId: String, activityIds: [String], why: [String: String]) async -> Bool {
+        let ref = space(spaceId).collection("dayPlans").document(dayKey)
+        let data: [String: Any] = ["byChild": [childId: ["activityIds": activityIds, "why": why]],
+                                   "updatedAt": FieldValue.serverTimestamp()]
+        return (try? await commit { done in ref.setData(data, merge: true, completion: done) }) ?? false
+    }
+
+    static func shopping(spaceId: String) async -> [ShoppingItem] {
+        guard let snap = try? await space(spaceId).collection("shopping")
+            .order(by: "at", descending: false).getDocuments() else { return [] }
+        return snap.documents.map { d in
+            let m = d.data()
+            return ShoppingItem(id: d.documentID, name: m["name"] as? String ?? "",
+                                childId: m["childId"] as? String, source: m["source"] as? String ?? "",
+                                buyByName: m["buyByName"] as? String ?? "", due: m["due"] as? String ?? "",
+                                bought: m["bought"] as? Bool ?? false, reimbursed: m["reimbursed"] as? Bool ?? false)
+        }
+    }
+
+    @discardableResult
+    static func addShopping(spaceId: String, item: ShoppingItem) async -> Bool {
+        let ref = space(spaceId).collection("shopping").document()
+        var data: [String: Any] = ["name": item.name, "source": item.source,
+            "buyByName": item.buyByName, "due": item.due, "bought": item.bought,
+            "reimbursed": item.reimbursed, "at": FieldValue.serverTimestamp()]
+        if let c = item.childId { data["childId"] = c }
+        return (try? await commit { done in ref.setData(data, completion: done) }) ?? false
+    }
+
+    @discardableResult
+    static func updateShopping(spaceId: String, item: ShoppingItem) async -> Bool {
+        let ref = space(spaceId).collection("shopping").document(item.id)
+        return (try? await commit { done in ref.setData(["bought": item.bought, "reimbursed": item.reimbursed], merge: true, completion: done) }) ?? false
+    }
+}
+
+
+// MARK: - Item 29: the recently-deleted bin (day items).
+
+struct DeletedEntry: Identifiable, Equatable {
+    var id: String
+    var kind: String
+    var text: String
+    var day: String
+    var childId: String?
+    var deletedAt: Date
+    var payload: [String: Any]
+    static func == (a: DeletedEntry, b: DeletedEntry) -> Bool { a.id == b.id }
+}
+
+extension CareRepo {
+    /// Move a day item into the bin, then remove it from the day.
+    /// Nothing is lost: the whole record rides in the payload.
+    @discardableResult
+    static func deleteItemToBin(spaceId: String, item: TimelineItem) async -> Bool {
+        var payload: [String: Any] = ["kind": item.kind.rawValue, "text": item.text, "day": item.day,
+                                      "at": CareTime.iso(item.at), "photoKey": item.photoKey]
+        if let c = item.childId { payload["childId"] = c }
+        if let b = item.by { payload["by"] = b }
+        if let m = item.mood { payload["mood"] = m }
+        let bin = space(spaceId).collection("deleted").document(item.id)
+        let okBin = (try? await commit { done in bin.setData(["payload": payload, "deletedAt": FieldValue.serverTimestamp(),
+                                                              "kind": item.kind.rawValue, "text": item.text], completion: done) }) ?? false
+        guard okBin else { return false }
+        let ref = space(spaceId).collection("dayStory").document(item.id)
+        return (try? await commit { done in ref.delete(completion: done) }) ?? false
+    }
+
+    static func deletedEntries(spaceId: String) async -> [DeletedEntry] {
+        guard let snap = try? await space(spaceId).collection("deleted")
+            .order(by: "deletedAt", descending: true).getDocuments() else { return [] }
+        let cutoff = Date().addingTimeInterval(-30 * 24 * 3600)
+        return snap.documents.compactMap { d in
+            let m = d.data()
+            let at = (m["deletedAt"] as? Timestamp)?.dateValue() ?? Date.distantPast
+            guard at >= cutoff else { return nil }
+            let payload = m["payload"] as? [String: Any] ?? [:]
+            return DeletedEntry(id: d.documentID, kind: m["kind"] as? String ?? "",
+                                text: m["text"] as? String ?? "", day: payload["day"] as? String ?? "",
+                                childId: payload["childId"] as? String, deletedAt: at, payload: payload)
+        }
+    }
+
+    @discardableResult
+    static func restoreDeleted(spaceId: String, entry: DeletedEntry) async -> Bool {
+        var data = entry.payload
+        data["restoredAt"] = FieldValue.serverTimestamp()
+        let ref = space(spaceId).collection("dayStory").document(entry.id)
+        let ok = (try? await commit { done in ref.setData(data, completion: done) }) ?? false
+        if ok { _ = await purgeDeleted(spaceId: spaceId, entry: entry) }
+        return ok
+    }
+
+    @discardableResult
+    static func purgeDeleted(spaceId: String, entry: DeletedEntry) async -> Bool {
+        let ref = space(spaceId).collection("deleted").document(entry.id)
+        return (try? await commit { done in ref.delete(completion: done) }) ?? false
+    }
+}
+
+
+// MARK: - Item 20: a photo ask answered with the photo itself.
+
+extension CareRepo {
+    @discardableResult
+    static func answerPhotoAsk(spaceId: String, item: TimelineItem, photoKey: String) async -> Bool {
+        var asks = item.asks
+        for i in asks.indices where !asks[i].answered {
+            asks[i].answeredAt = CareTime.iso(Date())
+            asks[i].answerText = "Photo sent"
+        }
+        let data: [String: Any] = ["photoKey": photoKey,
+                                   "asks": asks.map { ["by": $0.by, "text": $0.text, "at": $0.at,
+                                                       "answeredAt": $0.answeredAt as Any, "answerText": $0.answerText as Any] }]
+        let ref = space(spaceId).collection("dayStory").document(item.id)
+        return (try? await commit { done in ref.setData(data, merge: true, completion: done) }) ?? false
     }
 }

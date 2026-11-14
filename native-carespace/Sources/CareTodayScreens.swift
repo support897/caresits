@@ -46,6 +46,26 @@ struct TodayView: View {
             if shownItems.isEmpty { EmptyState(title: "Nothing logged yet today", detail: "Add the first update below.") }
             ForEach(shownItems) { item in TimelineRow(model: model, item: item) }
             if CareAccess.canPost(model.space.role) { composer } else { BodyText(text: "You can read the day and ask questions. Posting is for carers and admins.", muted: true) }
+            // Item 20: the photo ask lives here, on the day page —
+            // one home. The carer answers it with the photo itself.
+            if let c = child {
+                BigButton(title: "Ask for a photo of \(c.name)") {
+                    guard let uid = s.uid else { return }
+                    Task {
+                        if let ok = try? await CareRepo.addItem(spaceId: model.space.id, kind: .photo, text: "A photo of \(c.name), please", childId: c.id, by: uid), ok {
+                            note = "Asked. \(c.name)'s carer gets a ping."
+                        }
+                    }
+                }
+            }
+            Heading(text: "This care space")
+            RowLink(icon: "cal", title: "Roster", subtitle: "The team's week") { RosterView(model: model) }
+            RowLink(icon: "clock", title: "Timesheet", subtitle: "Worked hours this week") { TimesheetView(model: model) }
+            RowLink(icon: "meal", title: "Shopping", subtitle: "What to buy, who buys, what is done") { ShoppingView(model: model) }
+            RowLink(icon: "bell", title: "Reminders", subtitle: "Coming up and waiting") { RemindersView(model: model) }
+            RowLink(icon: "phone", title: "Emergency", subtitle: "Contacts and allergy alerts, big") { EmergencyView(model: model) }
+            RowLink(icon: "shield", title: "Checks", subtitle: "Each team member's checks") { ChecksView(model: model) }
+            RowLink(icon: "trash", title: "Recently deleted", subtitle: "Deleted day entries rest 30 days") { DeletedView(model: model) }
         }
         .task(id: model.children.count) { if childId == nil, model.children.count == 1 { childId = model.children.first?.id } }
     }
@@ -65,7 +85,7 @@ struct TodayView: View {
                 HStack { ForEach(Self.quickKinds, id: \.self) { k in Button { kind = k } label: { Pill(title: k.label, icon: k.icon, on: kind == k) }.buttonStyle(.plain) } }
             }
             BodyText(text: "Meals go in the daily report, so the allergy check runs first.", muted: true)
-            CareField(title: childId == nil ? "What happened (for everyone)" : "What happened for \(child?.name ?? "this child")", text: $text, lines: 2)
+            CareField(title: childId == nil ? "What happened (for everyone)" : "What happened for \(child?.name ?? "this child")", text: $text, lines: 2, voice: true)
             if !note.isEmpty { Notice(text: note) }
             BigButton(title: "Add to today") {
                 guard let uid = s.uid, !text.trimmingCharacters(in: .whitespaces).isEmpty else { return }
@@ -112,6 +132,19 @@ struct TimelineRow: View {
                                 BigButton(title: "Send answer") { sendAnswer(i) }
                             } else { Button("Answer") { answerIndex = i; draft = "" }.font(Brand.body(16).weight(.semibold)).frame(minHeight: 44) }
                         } else { Text("Waiting for an answer").font(Brand.body(14)).foregroundStyle(th.theme.muted) }
+                    }
+                }
+                // Item 20: a photo ask is answered with the photo.
+                if item.kind == .photo, item.asks.contains(where: { !$0.answered }), CareAccess.canPost(model.space.role), CareAccess.canSeePhotos(model.space.role, model.space.perms) {
+                    PhotoAddButton(spaceId: model.space.id, title: "Send the photo", onKey: { key in
+                        Task { _ = await CareRepo.answerPhotoAsk(spaceId: model.space.id, item: item, photoKey: key) }
+                    }, onError: { _ in })
+                }
+                HStack(spacing: 16) {
+                    if asking {
+                    } else if item.by == s.uid || model.space.role == .admin {
+                        Button("Delete") { Task { _ = await CareRepo.deleteItemToBin(spaceId: model.space.id, item: item) } }
+                            .font(Brand.body(15)).foregroundStyle(th.theme.muted).frame(minHeight: 44)
                     }
                 }
                 if asking {

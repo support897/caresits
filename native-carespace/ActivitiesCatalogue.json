@@ -1,0 +1,4087 @@
+{
+ "count": 141,
+ "activities": [
+  {
+   "id": "act-001",
+   "title": "Chat-Back Babble",
+   "bandLo": 0,
+   "bandHi": 1,
+   "goal": "First Words & Sounds",
+   "styles": [
+    "Play-Based",
+    "HighScope"
+   ],
+   "materials": [
+    {
+     "name": "Just you and baby",
+     "buy": false
+    }
+   ],
+   "steps": "Copy baby's sounds back. Wait. Smile. Say the real word too: \"ba-ba — ball!\"",
+   "minutes": 5,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "stories",
+    "music"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-002",
+   "title": "Name Everything Walk",
+   "bandLo": 0,
+   "bandHi": 1,
+   "goal": "First Words & Sounds",
+   "styles": [
+    "Montessori",
+    "Nature"
+   ],
+   "materials": [
+    {
+     "name": "Soft carrier or pram",
+     "buy": false
+    }
+   ],
+   "steps": "Walk slowly. Point and name: \"tree… leaf… dog.\" Pause often. Baby listens to real words about real things.",
+   "minutes": 10,
+   "free": true,
+   "place": "Outdoor",
+   "loves": [
+    "nature",
+    "animals"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-003",
+   "title": "Sound Shakers",
+   "bandLo": 0,
+   "bandHi": 1,
+   "goal": "First Words & Sounds",
+   "styles": [
+    "Simple Fun",
+    "Montessori"
+   ],
+   "materials": [
+    {
+     "name": "2 sealed containers",
+     "buy": false
+    },
+    {
+     "name": "dry rice",
+     "buy": true
+    },
+    {
+     "name": "dry pasta",
+     "buy": true
+    }
+   ],
+   "steps": "Put rice in one, pasta in the other, seal tight. Shake yours, pause, let baby shake. Different sounds, same game.",
+   "minutes": 10,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "music"
+   ],
+   "warning": "Seal lids firmly; check before each use"
+  },
+  {
+   "id": "act-004",
+   "title": "Board Book Basket",
+   "bandLo": 0,
+   "bandHi": 1,
+   "goal": "Books, Rhymes & Songs",
+   "styles": [
+    "Montessori",
+    "Play-Based"
+   ],
+   "materials": [
+    {
+     "name": "4–6 chunky board books",
+     "buy": false
+    },
+    {
+     "name": "low basket",
+     "buy": false
+    }
+   ],
+   "steps": "Put books in a basket on the floor. Baby chooses and mouths/explores. Read the chosen one slowly, pointing at pictures.",
+   "minutes": 10,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "stories"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-005",
+   "title": "Action Song Time",
+   "bandLo": 0,
+   "bandHi": 1,
+   "goal": "Books, Rhymes & Songs",
+   "styles": [
+    "Waldorf",
+    "Play-Based"
+   ],
+   "materials": [
+    {
+     "name": "Just your voice",
+     "buy": false
+    }
+   ],
+   "steps": "Sing \"Heads and Shoulders\" / \"Incy Wincy\" with actions. Do baby's hands/feet gently with the words. Same songs daily — rhythm is the lesson.",
+   "minutes": 5,
+   "free": true,
+   "place": "Anywhere",
+   "loves": [
+    "music",
+    "dancing"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-006",
+   "title": "Songs in Another Language",
+   "bandLo": 0,
+   "bandHi": 1,
+   "goal": "Books, Rhymes & Songs",
+   "styles": [
+    "Waldorf",
+    "Reggio"
+   ],
+   "materials": [
+    {
+     "name": "A carer who knows the language",
+     "buy": false
+    }
+   ],
+   "steps": "If the carer speaks another language, sing one lullaby or counting song in it every day. Babies soak up sounds long before words.",
+   "minutes": 5,
+   "free": true,
+   "place": "Anywhere",
+   "loves": [
+    "music"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-007",
+   "title": "Treasure Basket",
+   "bandLo": 0,
+   "bandHi": 1,
+   "goal": "Senses — See, Hear, Touch",
+   "styles": [
+    "Montessori",
+    "Reggio"
+   ],
+   "materials": [
+    {
+     "name": "Basket",
+     "buy": false
+    },
+    {
+     "name": "wooden spoon, silk scarf, pine cone, metal cup, soft brush",
+     "buy": false
+    }
+   ],
+   "steps": "Sit baby with the basket. Let them pick up, mouth and drop each treasure. You just watch, name things softly, stay close.",
+   "minutes": 15,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "nature"
+   ],
+   "warning": "All items big, clean, nothing breakable"
+  },
+  {
+   "id": "act-008",
+   "title": "Crinkle & Jingle Play Mat",
+   "bandLo": 0,
+   "bandHi": 1,
+   "goal": "Senses — See, Hear, Touch",
+   "styles": [
+    "Simple Fun"
+   ],
+   "materials": [
+    {
+     "name": "Crinkle toy or clean baking paper",
+     "buy": false
+    },
+    {
+     "name": "bell bracelet (sewn bells)",
+     "buy": false
+    }
+   ],
+   "steps": "Lay baby on the mat. Crinkle paper near their feet to kick at. Jingle softly left, then right — baby turns toward sound.",
+   "minutes": 10,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "music"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-009",
+   "title": "Kitchen Drum Band",
+   "bandLo": 0,
+   "bandHi": 1,
+   "goal": "Senses — See, Hear, Touch",
+   "styles": [
+    "Play-Based",
+    "Simple Fun"
+   ],
+   "materials": [
+    {
+     "name": "Pots, lids, wooden spoons",
+     "buy": false
+    }
+   ],
+   "steps": "Bang a slow beat. Stop. Wait for baby. Copy any sound baby makes. Call and answer, like a tiny conversation.",
+   "minutes": 10,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "music",
+    "baking"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-010",
+   "title": "Reach & Grab Mobile",
+   "bandLo": 0,
+   "bandHi": 1,
+   "goal": "Little Hands",
+   "styles": [
+    "Montessori"
+   ],
+   "materials": [
+    {
+     "name": "Play gym or ribbon + soft toy",
+     "buy": false
+    }
+   ],
+   "steps": "Hang one soft toy just within reach. Move it a little each day. Celebrate every grab.",
+   "minutes": 10,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "sport"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-011",
+   "title": "Drop It In the Pot",
+   "bandLo": 0,
+   "bandHi": 1,
+   "goal": "Little Hands",
+   "styles": [
+    "Montessori",
+    "HighScope"
+   ],
+   "materials": [
+    {
+     "name": "Pot with lid",
+     "buy": false
+    },
+    {
+     "name": "3 big soft balls",
+     "buy": false
+    }
+   ],
+   "steps": "Show: ball in pot, lid on, shake! Tip out, repeat. Older babies will do the dropping themselves — endlessly.",
+   "minutes": 10,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "puzzles"
+   ],
+   "warning": "Balls too big to fit in a mouth"
+  },
+  {
+   "id": "act-012",
+   "title": "Sticky Tape Rescue",
+   "bandLo": 0,
+   "bandHi": 1,
+   "goal": "Little Hands",
+   "styles": [
+    "Simple Fun"
+   ],
+   "materials": [
+    {
+     "name": "Painter's tape",
+     "buy": false
+    },
+    {
+     "name": "small toys",
+     "buy": false
+    },
+    {
+     "name": "tray",
+     "buy": false
+    }
+   ],
+   "steps": "Tape toys lightly to a tray. Baby peels and rescues them. Peeling = strong little fingers.",
+   "minutes": 10,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "puzzles"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-013",
+   "title": "Tummy Time Trail",
+   "bandLo": 0,
+   "bandHi": 1,
+   "goal": "Big Body Moves",
+   "styles": [
+    "Play-Based",
+    "Montessori"
+   ],
+   "materials": [
+    {
+     "name": "Mat",
+     "buy": false
+    },
+    {
+     "name": "mirror (baby-safe)",
+     "buy": false
+    },
+    {
+     "name": "favourite toy",
+     "buy": false
+    }
+   ],
+   "steps": "Short, often, always supervised. Put the mirror/toy just ahead. Get down at baby's level and cheer.",
+   "minutes": 5,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "sport"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-014",
+   "title": "Cushion Mountain",
+   "bandLo": 0,
+   "bandHi": 1,
+   "goal": "Big Body Moves",
+   "styles": [
+    "Nature",
+    "Play-Based"
+   ],
+   "materials": [
+    {
+     "name": "Cushions and pillows",
+     "buy": false
+    }
+   ],
+   "steps": "Build a soft low mountain for crawlers. Stay right beside. Climbing over = legs, arms and problem-solving.",
+   "minutes": 15,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "sport",
+    "building"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-015",
+   "title": "Tunnel Crawl",
+   "bandLo": 0,
+   "bandHi": 1,
+   "goal": "Big Body Moves",
+   "styles": [
+    "Simple Fun"
+   ],
+   "materials": [
+    {
+     "name": "Play tunnel or big cardboard box",
+     "buy": false
+    }
+   ],
+   "steps": "Peek from the other end. Roll a ball through. Crawling through again and again builds strength and courage.",
+   "minutes": 10,
+   "free": false,
+   "place": "Anywhere",
+   "loves": [
+    "sport",
+    "pretend"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-016",
+   "title": "Black & White Cards",
+   "bandLo": 0,
+   "bandHi": 1,
+   "goal": "Colours & Patterns",
+   "styles": [
+    "Montessori"
+   ],
+   "materials": [
+    {
+     "name": "High-contrast cards (print or buy)",
+     "buy": false
+    }
+   ],
+   "steps": "Prop a card 20–30 cm from baby's face at tummy time. Swap patterns every few days. Watch those eyes track.",
+   "minutes": 5,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "drawing"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-017",
+   "title": "Colour Kite Watching",
+   "bandLo": 0,
+   "bandHi": 1,
+   "goal": "Colours & Patterns",
+   "styles": [
+    "Waldorf",
+    "Nature"
+   ],
+   "materials": [
+    {
+     "name": "Bright silk scarf or ribbon wand",
+     "buy": false
+    }
+   ],
+   "steps": "Float the scarf slowly above baby, like a kite. Name the colour as it drifts. Gentle, slow, calm.",
+   "minutes": 5,
+   "free": false,
+   "place": "Anywhere",
+   "loves": [
+    "dancing",
+    "nature"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-018",
+   "title": "One Colour Day — Red",
+   "bandLo": 0,
+   "bandHi": 1,
+   "goal": "Colours & Patterns",
+   "styles": [
+    "Reggio",
+    "Play-Based"
+   ],
+   "materials": [
+    {
+     "name": "Red things from home: cup, ball, cloth, apple",
+     "buy": false
+    }
+   ],
+   "steps": "Gather safe red things in one spot. Explore them together all day. \"Red\" said often, in real life — no drilling.",
+   "minutes": 0,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "drawing"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-019",
+   "title": "Splash Bowl",
+   "bandLo": 0,
+   "bandHi": 1,
+   "goal": "Water & Texture Play",
+   "styles": [
+    "Nature",
+    "Play-Based"
+   ],
+   "materials": [
+    {
+     "name": "Shallow bowl of water",
+     "buy": false
+    },
+    {
+     "name": "towel",
+     "buy": false
+    }
+   ],
+   "steps": "On the floor or in the bath. Hands in, splash together. Add a sponge to squeeze. Never leave baby alone near water — not for a second.",
+   "minutes": 10,
+   "free": true,
+   "place": "Anywhere",
+   "loves": [
+    "water"
+   ],
+   "warning": "Constant arm's-reach supervision"
+  },
+  {
+   "id": "act-020",
+   "title": "Texture Squares",
+   "bandLo": 0,
+   "bandHi": 1,
+   "goal": "Water & Texture Play",
+   "styles": [
+    "Montessori",
+    "Simple Fun"
+   ],
+   "materials": [
+    {
+     "name": "Squares of safe fabrics: corduroy, silk, felt, towelling",
+     "buy": false
+    }
+   ],
+   "steps": "Lay squares out. Rub baby's hand gently over each. Name the feeling: \"soft… bumpy… smooth.\"",
+   "minutes": 10,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "drawing"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-021",
+   "title": "Frozen Flower Tray",
+   "bandLo": 0,
+   "bandHi": 1,
+   "goal": "Water & Texture Play",
+   "styles": [
+    "Reggio",
+    "Nature"
+   ],
+   "materials": [
+    {
+     "name": "Flowers/petals",
+     "buy": false
+    },
+    {
+     "name": "water",
+     "buy": false
+    },
+    {
+     "name": "container",
+     "buy": true
+    }
+   ],
+   "steps": "Freeze petals in a shallow tray of water. Baby touches the cold, watches it melt, finds the flowers again.",
+   "minutes": 15,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "nature",
+    "water"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-022",
+   "title": "Peekaboo — Every Way",
+   "bandLo": 0,
+   "bandHi": 1,
+   "goal": "Feelings, Faces & Calm",
+   "styles": [
+    "Play-Based",
+    "HighScope"
+   ],
+   "materials": [
+    {
+     "name": "Scarf or just hands",
+     "buy": false
+    }
+   ],
+   "steps": "Hide, pop out, big smile. Baby learns: you go, and you always come back. That trust is the lesson.",
+   "minutes": 5,
+   "free": true,
+   "place": "Anywhere",
+   "loves": [
+    "pretend"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-023",
+   "title": "Mirror Faces",
+   "bandLo": 0,
+   "bandHi": 1,
+   "goal": "Feelings, Faces & Calm",
+   "styles": [
+    "Reggio",
+    "Montessori"
+   ],
+   "materials": [
+    {
+     "name": "Baby-safe mirror",
+     "buy": false
+    }
+   ],
+   "steps": "Faces together in the mirror: happy, surprised, sleepy. Name them. Baby copies — that's empathy starting.",
+   "minutes": 5,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "pretend"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-024",
+   "title": "Calm-Down Cuddle Corner",
+   "bandLo": 0,
+   "bandHi": 1,
+   "goal": "Feelings, Faces & Calm",
+   "styles": [
+    "Waldorf"
+   ],
+   "materials": [
+    {
+     "name": "Soft blanket, one loved toy",
+     "buy": false
+    }
+   ],
+   "steps": "Same cosy spot, same soft song when baby is overwhelmed. Rock, hum, breathe slow. Rhythm = safety at this age.",
+   "minutes": 0,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "music",
+    "stories"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-025",
+   "title": "Tell Me the Story Back",
+   "bandLo": 2,
+   "bandHi": 3,
+   "goal": "Talking in Sentences",
+   "styles": [
+    "Play-Based",
+    "Charlotte Mason"
+   ],
+   "materials": [
+    {
+     "name": "Favourite picture book",
+     "buy": false
+    }
+   ],
+   "steps": "Read a loved book. Next read, pause before the fun word — let them fill it. Then \"what happened next?\" Their version counts.",
+   "minutes": 10,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "stories"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-026",
+   "title": "Puppet Chats",
+   "bandLo": 2,
+   "bandHi": 3,
+   "goal": "Talking in Sentences",
+   "styles": [
+    "Waldorf",
+    "Reggio"
+   ],
+   "materials": [
+    {
+     "name": "2 hand puppets or socks + marker",
+     "buy": false
+    }
+   ],
+   "steps": "Your puppet asks theirs questions: name, favourite food, who is at home. Shy talkers often chat freely through a puppet.",
+   "minutes": 10,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "pretend",
+    "stories"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-027",
+   "title": "Shopkeeper Talk",
+   "bandLo": 2,
+   "bandHi": 3,
+   "goal": "Talking in Sentences",
+   "styles": [
+    "Play-Based",
+    "HighScope"
+   ],
+   "materials": [
+    {
+     "name": "Play food or real tins",
+     "buy": true
+    },
+    {
+     "name": "basket",
+     "buy": false
+    }
+   ],
+   "steps": "Set up a shop. \"Hello! I would like apples, please.\" Swap roles. Real sentences grow inside real games.",
+   "minutes": 15,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "pretend",
+    "baking"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-028",
+   "title": "Sand Tray Letters",
+   "bandLo": 2,
+   "bandHi": 3,
+   "goal": "First Letters & My Name",
+   "styles": [
+    "Montessori"
+   ],
+   "materials": [
+    {
+     "name": "Tray",
+     "buy": false
+    },
+    {
+     "name": "fine sand or salt",
+     "buy": true
+    },
+    {
+     "name": "letter cards",
+     "buy": false
+    }
+   ],
+   "steps": "Spread sand thin. Trace the first letter of their name. Say the sound: \"sss — Sam.\" Shake to erase, go again.",
+   "minutes": 10,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "drawing",
+    "puzzles"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-029",
+   "title": "Letter Hunt in the House",
+   "bandLo": 2,
+   "bandHi": 3,
+   "goal": "First Letters & My Name",
+   "styles": [
+    "Play-Based",
+    "Reggio"
+   ],
+   "materials": [
+    {
+     "name": "Sticky notes",
+     "buy": false
+    },
+    {
+     "name": "marker",
+     "buy": false
+    }
+   ],
+   "steps": "Stick 4–5 letters around the room (start with their name letter). \"Can you find B?\" Every find gets a happy dance.",
+   "minutes": 10,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "sport",
+    "puzzles"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-030",
+   "title": "My Name in Playdough",
+   "bandLo": 2,
+   "bandHi": 3,
+   "goal": "First Letters & My Name",
+   "styles": [
+    "Simple Fun",
+    "Montessori"
+   ],
+   "materials": [
+    {
+     "name": "Playdough",
+     "buy": false
+    },
+    {
+     "name": "name card",
+     "buy": false
+    }
+   ],
+   "steps": "Roll dough sausages, bend them into the letters of their name on the card. Squash, roll, repeat — fingers get writing-strong.",
+   "minutes": 15,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "drawing"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-031",
+   "title": "Counting the Snack",
+   "bandLo": 2,
+   "bandHi": 3,
+   "goal": "Counting 1–10 & Sorting",
+   "styles": [
+    "Montessori",
+    "Play-Based"
+   ],
+   "materials": [
+    {
+     "name": "Grapes, crackers or berries",
+     "buy": true
+    },
+    {
+     "name": "small plate",
+     "buy": false
+    }
+   ],
+   "steps": "Count pieces onto the plate together, touching each one: \"1… 2… 3!\" Then eat the maths. Works at every snack.",
+   "minutes": 5,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "baking"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-032",
+   "title": "Sort It! Socks & Lids",
+   "bandLo": 2,
+   "bandHi": 3,
+   "goal": "Counting 1–10 & Sorting",
+   "styles": [
+    "Montessori",
+    "HighScope"
+   ],
+   "materials": [
+    {
+     "name": "Mixed socks, jar lids, big buttons",
+     "buy": false
+    }
+   ],
+   "steps": "Tip them out. Sort by colour, then by size. Ask \"where does this one live?\" Sorting is early maths in disguise.",
+   "minutes": 10,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "puzzles"
+   ],
+   "warning": "No small parts for mouthers"
+  },
+  {
+   "id": "act-033",
+   "title": "Stair Counting & Teddy Steps",
+   "bandLo": 2,
+   "bandHi": 3,
+   "goal": "Counting 1–10 & Sorting",
+   "styles": [
+    "Nature",
+    "Simple Fun"
+   ],
+   "materials": [
+    {
+     "name": "Stairs or chalk steps",
+     "buy": false
+    },
+    {
+     "name": "a teddy",
+     "buy": false
+    }
+   ],
+   "steps": "Count every step out loud, up and down. Teddy \"jumps\" the number you call. Numbers + bodies learn together.",
+   "minutes": 10,
+   "free": true,
+   "place": "Anywhere",
+   "loves": [
+    "sport"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-034",
+   "title": "Sort the Rainbow Pom-Poms",
+   "bandLo": 2,
+   "bandHi": 3,
+   "goal": "Colours & Shapes",
+   "styles": [
+    "Montessori",
+    "Play-Based"
+   ],
+   "materials": [
+    {
+     "name": "Pom-poms, mixed colours",
+     "buy": false
+    },
+    {
+     "name": "muffin tin",
+     "buy": false
+    },
+    {
+     "name": "toddler tongs",
+     "buy": false
+    }
+   ],
+   "steps": "Put one pom-pom in each colour spot, saying the colour. Then tip out and let them sort. Tongs make little hands strong.",
+   "minutes": 15,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "drawing",
+    "puzzles"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-035",
+   "title": "Colour Walk",
+   "bandLo": 2,
+   "bandHi": 3,
+   "goal": "Colours & Shapes",
+   "styles": [
+    "Nature",
+    "Reggio"
+   ],
+   "materials": [
+    {
+     "name": "Colour card or swatch book",
+     "buy": false
+    }
+   ],
+   "steps": "Pick ONE colour card. Walk and hunt for matches: \"a GREEN leaf! GREEN grass!\" One colour per walk keeps it winnable.",
+   "minutes": 15,
+   "free": false,
+   "place": "Outdoor",
+   "loves": [
+    "nature",
+    "drawing"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-036",
+   "title": "Shape Sandwiches",
+   "bandLo": 2,
+   "bandHi": 3,
+   "goal": "Colours & Shapes",
+   "styles": [
+    "Simple Fun",
+    "Play-Based"
+   ],
+   "materials": [
+    {
+     "name": "Bread, cheese",
+     "buy": true
+    },
+    {
+     "name": "safe cutter or knife (carer)",
+     "buy": false
+    }
+   ],
+   "steps": "Carer cuts triangle, square, circle sandwiches. Child names, matches to a shape card, then eats the shapes.",
+   "minutes": 15,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "baking",
+    "puzzles"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-037",
+   "title": "Hello Song in Two Languages",
+   "bandLo": 2,
+   "bandHi": 3,
+   "goal": "Words in Another Language",
+   "styles": [
+    "Waldorf",
+    "Play-Based"
+   ],
+   "materials": [
+    {
+     "name": "A carer who knows the language",
+     "buy": false
+    }
+   ],
+   "steps": "Start each day with hello in both languages, same tune, with a wave. Add goodbye. Routine makes it effortless.",
+   "minutes": 5,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "music"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-038",
+   "title": "Counting Hopscotch — in Spanish (or carer's language)",
+   "bandLo": 2,
+   "bandHi": 3,
+   "goal": "Words in Another Language",
+   "styles": [
+    "Nature",
+    "Simple Fun"
+   ],
+   "materials": [
+    {
+     "name": "Chalk",
+     "buy": false
+    }
+   ],
+   "steps": "Chalk 1–5 squares. Jump and count in the other language: \"¡uno, dos, tres!\" Bodies remember words.",
+   "minutes": 10,
+   "free": false,
+   "place": "Outdoor",
+   "loves": [
+    "sport",
+    "dancing"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-039",
+   "title": "Picture Word Cards — Two Words Each",
+   "bandLo": 2,
+   "bandHi": 3,
+   "goal": "Words in Another Language",
+   "styles": [
+    "Montessori",
+    "Reggio"
+   ],
+   "materials": [
+    {
+     "name": "Picture cards (dog, apple, sun)",
+     "buy": false
+    }
+   ],
+   "steps": "Show a card. Say both words: \"dog — perro.\" Child repeats the one they like. Five cards max per game.",
+   "minutes": 10,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "stories",
+    "animals"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-040",
+   "title": "Sink or Float?",
+   "bandLo": 2,
+   "bandHi": 3,
+   "goal": "Little Scientist — Why & How",
+   "styles": [
+    "Reggio",
+    "Play-Based"
+   ],
+   "materials": [
+    {
+     "name": "Tub of water",
+     "buy": false
+    },
+    {
+     "name": "leaf, stone, cork, spoon, ball",
+     "buy": false
+    }
+   ],
+   "steps": "Guess first: \"float or sink?\" Drop it in. Cheer either way. Guessing + testing = the scientific method, toddler edition.",
+   "minutes": 15,
+   "free": true,
+   "place": "Anywhere",
+   "loves": [
+    "water",
+    "nature"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-041",
+   "title": "Ice Rescue Mission",
+   "bandLo": 2,
+   "bandHi": 3,
+   "goal": "Little Scientist — Why & How",
+   "styles": [
+    "Simple Fun",
+    "Nature"
+   ],
+   "materials": [
+    {
+     "name": "Toy animals frozen in a tub of ice",
+     "buy": true
+    },
+    {
+     "name": "warm water, spoons",
+     "buy": false
+    }
+   ],
+   "steps": "Freeze small toys in water overnight. Child rescues them with warm water and spoons. Melting, patience, hero feelings.",
+   "minutes": 15,
+   "free": true,
+   "place": "Anywhere",
+   "loves": [
+    "animals",
+    "water"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-042",
+   "title": "Grow a Bean in a Cup",
+   "bandLo": 2,
+   "bandHi": 3,
+   "goal": "Little Scientist — Why & How",
+   "styles": [
+    "Nature",
+    "Waldorf"
+   ],
+   "materials": [
+    {
+     "name": "Bean seeds",
+     "buy": true
+    },
+    {
+     "name": "clear cup",
+     "buy": false
+    },
+    {
+     "name": "cotton balls",
+     "buy": true
+    }
+   ],
+   "steps": "Wet cotton in the cup, tuck the bean by the side so roots show. Water daily together. Watch, wonder, wait.",
+   "minutes": 5,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "nature",
+    "baking"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-043",
+   "title": "Finger Paint Garden",
+   "bandLo": 2,
+   "bandHi": 3,
+   "goal": "Arts, Crafts & Pretend",
+   "styles": [
+    "Simple Fun",
+    "Reggio"
+   ],
+   "materials": [
+    {
+     "name": "Finger paints",
+     "buy": false
+    },
+    {
+     "name": "big paper",
+     "buy": false
+    },
+    {
+     "name": "apron",
+     "buy": false
+    }
+   ],
+   "steps": "Paint with fingers and whole hands. Stems first (you model), then they add \"flowers\" with fist prints. Process over pretty.",
+   "minutes": 15,
+   "free": false,
+   "place": "Anywhere",
+   "loves": [
+    "drawing",
+    "nature"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-044",
+   "title": "Sticker Story",
+   "bandLo": 2,
+   "bandHi": 3,
+   "goal": "Arts, Crafts & Pretend",
+   "styles": [
+    "Simple Fun",
+    "Montessori"
+   ],
+   "materials": [
+    {
+     "name": "Stickers",
+     "buy": false
+    },
+    {
+     "name": "paper",
+     "buy": false
+    }
+   ],
+   "steps": "Child sticks a scene, then tells you the story of it. You write their exact words under it. First \"published\" book!",
+   "minutes": 15,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "drawing",
+    "stories"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-045",
+   "title": "Dress-Up Day — Who Am I?",
+   "bandLo": 2,
+   "bandHi": 3,
+   "goal": "Arts, Crafts & Pretend",
+   "styles": [
+    "Play-Based",
+    "Waldorf"
+   ],
+   "materials": [
+    {
+     "name": "Dress-up box: hats, scarves, old clothes",
+     "buy": false
+    }
+   ],
+   "steps": "Both dress up. Stay in character: doctors, bakers, firefighters. Pretend play is vocabulary + empathy training.",
+   "minutes": 20,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "pretend"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-046",
+   "title": "Freeze Dance",
+   "bandLo": 2,
+   "bandHi": 3,
+   "goal": "Music, Rhymes & Dancing",
+   "styles": [
+    "Play-Based",
+    "Simple Fun"
+   ],
+   "materials": [
+    {
+     "name": "Music player",
+     "buy": false
+    }
+   ],
+   "steps": "Dance while music plays. Freeze when it stops! Listening, body control and giggles in one game.",
+   "minutes": 10,
+   "free": true,
+   "place": "Anywhere",
+   "loves": [
+    "dancing",
+    "music"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-047",
+   "title": "Rhyme Time Basket",
+   "bandLo": 2,
+   "bandHi": 3,
+   "goal": "Music, Rhymes & Dancing",
+   "styles": [
+    "Waldorf",
+    "Charlotte Mason"
+   ],
+   "materials": [
+    {
+     "name": "Nursery rhyme book",
+     "buy": false
+    }
+   ],
+   "steps": "Same 3 rhymes all week, with actions. By Friday, pause before the rhyming word — they will shout it.",
+   "minutes": 10,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "music",
+    "stories"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-048",
+   "title": "Make a Shaker Band",
+   "bandLo": 2,
+   "bandHi": 3,
+   "goal": "Music, Rhymes & Dancing",
+   "styles": [
+    "Simple Fun",
+    "Reggio"
+   ],
+   "materials": [
+    {
+     "name": "Bottles with lids",
+     "buy": false
+    },
+    {
+     "name": "rice, lentils",
+     "buy": true
+    },
+    {
+     "name": "stickers",
+     "buy": false
+    }
+   ],
+   "steps": "Fill bottles with different things, seal, decorate. Then: band practice! Loud, soft, fast, slow — first music words.",
+   "minutes": 20,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "music"
+   ],
+   "warning": "Lids sealed tight + tape"
+  },
+  {
+   "id": "act-049",
+   "title": "Pouring Station",
+   "bandLo": 2,
+   "bandHi": 3,
+   "goal": "Body Skills & Doing It Myself",
+   "styles": [
+    "Montessori"
+   ],
+   "materials": [
+    {
+     "name": "2 small jugs",
+     "buy": false
+    },
+    {
+     "name": "water or rice",
+     "buy": true
+    },
+    {
+     "name": "tray",
+     "buy": false
+    }
+   ],
+   "steps": "Show slow, two hands. Pour jug to jug on the tray. Spills? Sponge is part of the activity — wiping is learning too.",
+   "minutes": 15,
+   "free": true,
+   "place": "Anywhere",
+   "loves": [
+    "baking",
+    "water"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-050",
+   "title": "Big Buttons & Zips Board",
+   "bandLo": 2,
+   "bandHi": 3,
+   "goal": "Body Skills & Doing It Myself",
+   "styles": [
+    "Montessori",
+    "Simple Fun"
+   ],
+   "materials": [
+    {
+     "name": "Dressing frame or old shirt with big buttons",
+     "buy": false
+    },
+    {
+     "name": "jacket with zip",
+     "buy": false
+    }
+   ],
+   "steps": "Practise on the clothes, not in the morning rush. Start the zip/button, let them finish. Cheer the last bit loudest.",
+   "minutes": 10,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "puzzles"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-051",
+   "title": "Obstacle Course — Backyard GP",
+   "bandLo": 2,
+   "bandHi": 3,
+   "goal": "Body Skills & Doing It Myself",
+   "styles": [
+    "Nature",
+    "Play-Based"
+   ],
+   "materials": [
+    {
+     "name": "Cushions, chalk line, tunnel, ball",
+     "buy": false
+    }
+   ],
+   "steps": "Build: crawl under, balance on the line, throw the ball in the bucket. Time it with cheers, never pressure.",
+   "minutes": 15,
+   "free": true,
+   "place": "Outdoor",
+   "loves": [
+    "sport"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-052",
+   "title": "What Happens Next?",
+   "bandLo": 4,
+   "bandHi": 5,
+   "goal": "Stories & Big Chats",
+   "styles": [
+    "Charlotte Mason",
+    "Reggio"
+   ],
+   "materials": [
+    {
+     "name": "Picture book",
+     "buy": false
+    }
+   ],
+   "steps": "Stop before a page turn: \"what do you think happens next?\" Predicting is comprehension — the heart of reading.",
+   "minutes": 10,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "stories"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-053",
+   "title": "Story Stones",
+   "bandLo": 4,
+   "bandHi": 5,
+   "goal": "Stories & Big Chats",
+   "styles": [
+    "Waldorf",
+    "Reggio"
+   ],
+   "materials": [
+    {
+     "name": "Smooth stones",
+     "buy": false
+    },
+    {
+     "name": "paint pens",
+     "buy": false
+    }
+   ],
+   "steps": "Paint a simple picture on each stone (sun, house, dog, star). Child pulls 3 stones and invents the story. You write it down.",
+   "minutes": 20,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "stories",
+    "drawing",
+    "nature"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-054",
+   "title": "Interview a Grown-Up",
+   "bandLo": 4,
+   "bandHi": 5,
+   "goal": "Stories & Big Chats",
+   "styles": [
+    "HighScope",
+    "Play-Based"
+   ],
+   "materials": [
+    {
+     "name": "Toy microphone or wooden spoon",
+     "buy": false
+    }
+   ],
+   "steps": "Child interviews you (or a grandparent on a call): 3 questions they choose. Big talking, listening and memory.",
+   "minutes": 10,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "pretend"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-055",
+   "title": "Sandpaper Letter Tracing",
+   "bandLo": 4,
+   "bandHi": 5,
+   "goal": "Letters, Sounds & Writing",
+   "styles": [
+    "Montessori"
+   ],
+   "materials": [
+    {
+     "name": "Sandpaper letters (buy or DIY: card + fine sandpaper )",
+     "buy": false
+    }
+   ],
+   "steps": "Trace the letter with two fingers, saying the SOUND (\"buh\"), not the name. 3 letters at a time. Their fingers remember.",
+   "minutes": 10,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "puzzles",
+    "drawing"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-056",
+   "title": "Name Writing — Everywhere",
+   "bandLo": 4,
+   "bandHi": 5,
+   "goal": "Letters, Sounds & Writing",
+   "styles": [
+    "Montessori",
+    "Simple Fun"
+   ],
+   "materials": [
+    {
+     "name": "Name card",
+     "buy": false
+    },
+    {
+     "name": "crayons, chalk, sticks",
+     "buy": false
+    }
+   ],
+   "steps": "Name on their artwork, in chalk outside, with sticks at the park. Same name, many ways — writing becomes theirs.",
+   "minutes": 10,
+   "free": true,
+   "place": "Anywhere",
+   "loves": [
+    "drawing"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-057",
+   "title": "Sound Scavenger Hunt",
+   "bandLo": 4,
+   "bandHi": 5,
+   "goal": "Letters, Sounds & Writing",
+   "styles": [
+    "Play-Based",
+    "Reggio"
+   ],
+   "materials": [
+    {
+     "name": "Basket",
+     "buy": false
+    },
+    {
+     "name": "house objects",
+     "buy": false
+    }
+   ],
+   "steps": "\"Find me things that start with sss…\" Snake-sound hunting makes letter sounds a game, not a lesson.",
+   "minutes": 15,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "puzzles",
+    "sport"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-058",
+   "title": "Write the Shopping List (Together)",
+   "bandLo": 4,
+   "bandHi": 5,
+   "goal": "Letters, Sounds & Writing",
+   "styles": [
+    "Play-Based",
+    "Charlotte Mason"
+   ],
+   "materials": [
+    {
+     "name": "Paper + thick crayon",
+     "buy": false
+    }
+   ],
+   "steps": "You write the real list; they \"write\" theirs beside you — scribbles and first letters welcome. Writing with a real job to do.",
+   "minutes": 10,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "baking",
+    "pretend"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-059",
+   "title": "Baking Maths",
+   "bandLo": 4,
+   "bandHi": 5,
+   "goal": "Numbers to 20, Patterns & Measuring",
+   "styles": [
+    "Play-Based",
+    "Waldorf"
+   ],
+   "materials": [
+    {
+     "name": "Simple recipe",
+     "buy": true
+    },
+    {
+     "name": "measuring cups",
+     "buy": false
+    },
+    {
+     "name": "ingredients",
+     "buy": true
+    }
+   ],
+   "steps": "Count spoonfuls together, measure the flour, set the timer. Real maths you can eat. (Raising Children lists cooking as a top counting activity.)",
+   "minutes": 30,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "baking"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-060",
+   "title": "Pattern Beading",
+   "bandLo": 4,
+   "bandHi": 5,
+   "goal": "Numbers to 20, Patterns & Measuring",
+   "styles": [
+    "Montessori",
+    "Simple Fun"
+   ],
+   "materials": [
+    {
+     "name": "Big beads 2–3 colours",
+     "buy": false
+    },
+    {
+     "name": "lace or pipe cleaner",
+     "buy": false
+    }
+   ],
+   "steps": "Start a pattern: red-red-blue… child continues it. Patterns are the roots of maths AND music.",
+   "minutes": 15,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "puzzles",
+    "drawing"
+   ],
+   "warning": "Big beads only"
+  },
+  {
+   "id": "act-061",
+   "title": "Snakes & Ladders / Go Fish",
+   "bandLo": 4,
+   "bandHi": 5,
+   "goal": "Numbers to 20, Patterns & Measuring",
+   "styles": [
+    "Play-Based",
+    "HighScope"
+   ],
+   "materials": [
+    {
+     "name": "Board game or cards",
+     "buy": false
+    }
+   ],
+   "steps": "Count spaces aloud, read the dice, match numbers in Go Fish. Losing gracefully is part of the curriculum at 5.",
+   "minutes": 15,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "puzzles"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-062",
+   "title": "Count & Colour in Two Languages",
+   "bandLo": 4,
+   "bandHi": 5,
+   "goal": "Another Language — Songs & Phrases",
+   "styles": [
+    "Play-Based",
+    "Montessori"
+   ],
+   "materials": [
+    {
+     "name": "Coloured blocks",
+     "buy": false
+    }
+   ],
+   "steps": "Count blocks 1–10 in English, then in the carer's language. Name each block's colour in both. Two games in one.",
+   "minutes": 10,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "music",
+    "building"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-063",
+   "title": "Song of the Week (Other Language)",
+   "bandLo": 4,
+   "bandHi": 5,
+   "goal": "Another Language — Songs & Phrases",
+   "styles": [
+    "Waldorf"
+   ],
+   "materials": [
+    {
+     "name": "A carer who knows the song",
+     "buy": false
+    }
+   ],
+   "steps": "One song, sung daily for a week — \"Frère Jacques\" style. By Friday they're singing it in the bath.",
+   "minutes": 5,
+   "free": true,
+   "place": "Anywhere",
+   "loves": [
+    "music",
+    "dancing"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-064",
+   "title": "Please & Thank You — Role Play",
+   "bandLo": 4,
+   "bandHi": 5,
+   "goal": "Another Language — Songs & Phrases",
+   "styles": [
+    "Play-Based",
+    "Reggio"
+   ],
+   "materials": [
+    {
+     "name": "Play café set-up",
+     "buy": false
+    }
+   ],
+   "steps": "Run a pretend café where orders happen in the other language: hello, please, thank you, one juice. Manners in two tongues.",
+   "minutes": 15,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "pretend",
+    "baking"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-065",
+   "title": "Volcano in the Sandpit",
+   "bandLo": 4,
+   "bandHi": 5,
+   "goal": "Science & Nature Detective",
+   "styles": [
+    "Simple Fun",
+    "Reggio"
+   ],
+   "materials": [
+    {
+     "name": "Bicarb soda",
+     "buy": true
+    },
+    {
+     "name": "vinegar",
+     "buy": true
+    },
+    {
+     "name": "food colouring",
+     "buy": true
+    },
+    {
+     "name": "cup",
+     "buy": false
+    }
+   ],
+   "steps": "Bury a cup in sand, add bicarb + colour, pour vinegar — ERUPTION. Ask first: \"what do you think will happen?\"",
+   "minutes": 15,
+   "free": false,
+   "place": "Outdoor",
+   "loves": [
+    "nature",
+    "water"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-066",
+   "title": "Nature Treasure Hunt",
+   "bandLo": 4,
+   "bandHi": 5,
+   "goal": "Science & Nature Detective",
+   "styles": [
+    "Nature",
+    "Reggio"
+   ],
+   "materials": [
+    {
+     "name": "Picture list (leaf, feather, smooth stone, seed)",
+     "buy": false
+    },
+    {
+     "name": "bag",
+     "buy": false
+    }
+   ],
+   "steps": "Hunt with the picture list in a park or garden. Tick each find. Sort treasures at home: rough/smooth, big/small.",
+   "minutes": 20,
+   "free": true,
+   "place": "Outdoor",
+   "loves": [
+    "nature",
+    "animals"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-067",
+   "title": "Magnets — Magic or Science?",
+   "bandLo": 4,
+   "bandHi": 5,
+   "goal": "Science & Nature Detective",
+   "styles": [
+    "Montessori",
+    "Reggio"
+   ],
+   "materials": [
+    {
+     "name": "Strong magnet",
+     "buy": false
+    },
+    {
+     "name": "tray of mixed objects",
+     "buy": false
+    }
+   ],
+   "steps": "Predict each object, then test. Sort into \"sticks / doesn't stick\". A first real experiment with a chart.",
+   "minutes": 15,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "puzzles"
+   ],
+   "warning": "Keep magnets away from mouths"
+  },
+  {
+   "id": "act-068",
+   "title": "Weather Watcher",
+   "bandLo": 4,
+   "bandHi": 5,
+   "goal": "Science & Nature Detective",
+   "styles": [
+    "Nature",
+    "Charlotte Mason"
+   ],
+   "materials": [
+    {
+     "name": "Wall chart",
+     "buy": false
+    },
+    {
+     "name": "stickers",
+     "buy": false
+    }
+   ],
+   "steps": "Every morning: look outside, draw/stick today's weather. After a month, count the sunny days together.",
+   "minutes": 5,
+   "free": false,
+   "place": "Anywhere",
+   "loves": [
+    "nature",
+    "drawing"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-069",
+   "title": "Colour Mixing Lab",
+   "bandLo": 4,
+   "bandHi": 5,
+   "goal": "Arts & Crafts Projects",
+   "styles": [
+    "Reggio",
+    "Simple Fun"
+   ],
+   "materials": [
+    {
+     "name": "Red, blue, yellow paint",
+     "buy": false
+    },
+    {
+     "name": "jars of water",
+     "buy": false
+    },
+    {
+     "name": "paper",
+     "buy": false
+    }
+   ],
+   "steps": "Mix two colours in water, guess first. Paint with the new colour. Science wearing an art smock — colours learned for real.",
+   "minutes": 20,
+   "free": false,
+   "place": "Anywhere",
+   "loves": [
+    "drawing",
+    "water"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-070",
+   "title": "Collage — My Family",
+   "bandLo": 4,
+   "bandHi": 5,
+   "goal": "Arts & Crafts Projects",
+   "styles": [
+    "Simple Fun",
+    "Waldorf"
+   ],
+   "materials": [
+    {
+     "name": "Old magazines/catalogues",
+     "buy": true
+    },
+    {
+     "name": "safety scissors",
+     "buy": false
+    },
+    {
+     "name": "glue",
+     "buy": false
+    },
+    {
+     "name": "card",
+     "buy": false
+    }
+   ],
+   "steps": "Cut and glue a picture of their family (pets too). Scissors + glue = fine motor gold. They narrate who's who.",
+   "minutes": 20,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "drawing",
+    "stories"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-071",
+   "title": "Cardboard City",
+   "bandLo": 4,
+   "bandHi": 5,
+   "goal": "Arts & Crafts Projects",
+   "styles": [
+    "Reggio",
+    "Play-Based"
+   ],
+   "materials": [
+    {
+     "name": "Boxes, tubes, tape",
+     "buy": false
+    },
+    {
+     "name": "paint",
+     "buy": false
+    },
+    {
+     "name": "toy cars/people",
+     "buy": false
+    }
+   ],
+   "steps": "Build a city over 2–3 days: houses, roads, a shop. Projects that grow teach planning like nothing else.",
+   "minutes": 30,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "building",
+    "pretend"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-072",
+   "title": "Leaf Rubbing Gallery",
+   "bandLo": 4,
+   "bandHi": 5,
+   "goal": "Arts & Crafts Projects",
+   "styles": [
+    "Nature",
+    "Charlotte Mason"
+   ],
+   "materials": [
+    {
+     "name": "Leaves",
+     "buy": false
+    },
+    {
+     "name": "paper",
+     "buy": false
+    },
+    {
+     "name": "crayons (paper removed)",
+     "buy": false
+    }
+   ],
+   "steps": "Leaf under paper, rub crayon sideways — the veins appear like magic. Name the trees if you can. Frame the best one.",
+   "minutes": 15,
+   "free": true,
+   "place": "Anywhere",
+   "loves": [
+    "nature",
+    "drawing"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-073",
+   "title": "Copy My Rhythm",
+   "bandLo": 4,
+   "bandHi": 5,
+   "goal": "Music, Dance & Movement Games",
+   "styles": [
+    "Montessori",
+    "Play-Based"
+   ],
+   "materials": [
+    {
+     "name": "Hands, or sticks/pots",
+     "buy": false
+    }
+   ],
+   "steps": "Clap a pattern: clap-clap-STOMP. They copy. Then they lead. Rhythm patterns = maths patterns in the body.",
+   "minutes": 10,
+   "free": true,
+   "place": "Anywhere",
+   "loves": [
+    "music",
+    "dancing"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-074",
+   "title": "Animal Moves Dance",
+   "bandLo": 4,
+   "bandHi": 5,
+   "goal": "Music, Dance & Movement Games",
+   "styles": [
+    "Waldorf",
+    "Simple Fun"
+   ],
+   "materials": [
+    {
+     "name": "Music",
+     "buy": false
+    },
+    {
+     "name": "animal cards",
+     "buy": false
+    }
+   ],
+   "steps": "Pull a card, dance like that animal to the music. Kangaroo hops, snake slides. Silly is the point.",
+   "minutes": 10,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "dancing",
+    "animals"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-075",
+   "title": "Make a Real Instrument — Rainstick",
+   "bandLo": 4,
+   "bandHi": 5,
+   "goal": "Music, Dance & Movement Games",
+   "styles": [
+    "Reggio",
+    "Simple Fun"
+   ],
+   "materials": [
+    {
+     "name": "Cardboard tube",
+     "buy": false
+    },
+    {
+     "name": "rice",
+     "buy": true
+    },
+    {
+     "name": "tape, stickers",
+     "buy": false
+    }
+   ],
+   "steps": "Seal one end, add rice, seal, decorate. Tip it slow — rain! Play along with a song together.",
+   "minutes": 20,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "music",
+    "nature"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-076",
+   "title": "Little Chef — Real Job",
+   "bandLo": 4,
+   "bandHi": 5,
+   "goal": "Body & Life Skills",
+   "styles": [
+    "Montessori",
+    "Waldorf"
+   ],
+   "materials": [
+    {
+     "name": "Banana or eggs",
+     "buy": true
+    },
+    {
+     "name": "child-safe knife",
+     "buy": false
+    },
+    {
+     "name": "bowl",
+     "buy": false
+    }
+   ],
+   "steps": "Give a REAL job: peel, slice the banana, stir. Real tools, real trust, real pride. Cook together weekly if the family loves it.",
+   "minutes": 20,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "baking"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-077",
+   "title": "Scissor Skills Path",
+   "bandLo": 4,
+   "bandHi": 5,
+   "goal": "Body & Life Skills",
+   "styles": [
+    "Montessori",
+    "Simple Fun"
+   ],
+   "materials": [
+    {
+     "name": "Safety scissors",
+     "buy": false
+    },
+    {
+     "name": "paper strips, junk mail",
+     "buy": false
+    }
+   ],
+   "steps": "Snip strips first, then lines, then shapes. Thumbs up, elbows in. A skill path they can see themselves climbing.",
+   "minutes": 10,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "drawing",
+    "puzzles"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-078",
+   "title": "Balance & Jump Circuit",
+   "bandLo": 4,
+   "bandHi": 5,
+   "goal": "Body & Life Skills",
+   "styles": [
+    "Nature",
+    "Play-Based"
+   ],
+   "materials": [
+    {
+     "name": "Tape line or beam",
+     "buy": false
+    },
+    {
+     "name": "cushions",
+     "buy": false
+    },
+    {
+     "name": "hoop",
+     "buy": false
+    }
+   ],
+   "steps": "Walk the line, jump the cushions, hop in the hoop. Add one harder bit each week. Strong, brave, coordinated.",
+   "minutes": 15,
+   "free": false,
+   "place": "Anywhere",
+   "loves": [
+    "sport"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-079",
+   "title": "Feelings Faces Game",
+   "bandLo": 4,
+   "bandHi": 5,
+   "goal": "Feelings, Friends & Turn-Taking",
+   "styles": [
+    "Play-Based",
+    "Reggio"
+   ],
+   "materials": [
+    {
+     "name": "Feelings cards or mirror",
+     "buy": false
+    }
+   ],
+   "steps": "Pull a card, make the face, guess it. Then: \"when did YOU feel like that?\" Naming feelings tames them.",
+   "minutes": 10,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "pretend",
+    "stories"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-080",
+   "title": "Puppet Problem Solvers",
+   "bandLo": 4,
+   "bandHi": 5,
+   "goal": "Feelings, Friends & Turn-Taking",
+   "styles": [
+    "Waldorf",
+    "Play-Based"
+   ],
+   "materials": [
+    {
+     "name": "2 puppets",
+     "buy": false
+    }
+   ],
+   "steps": "Act a small problem: both puppets want the same truck. Pause. \"What could they do?\" The child directs the fix.",
+   "minutes": 10,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "pretend"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-081",
+   "title": "Helping Hands Job Chart",
+   "bandLo": 4,
+   "bandHi": 5,
+   "goal": "Feelings, Friends & Turn-Taking",
+   "styles": [
+    "HighScope",
+    "Montessori"
+   ],
+   "materials": [
+    {
+     "name": "Chart + stickers",
+     "buy": false
+    }
+   ],
+   "steps": "Pick one real helping job a day: water plants, feed the pet, set the table. Sticker when done. Contributing feels good (EYLF Outcome 2).",
+   "minutes": 5,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "animals",
+    "nature"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-082",
+   "title": "Narrate It Back",
+   "bandLo": 6,
+   "bandHi": 8,
+   "goal": "Reading & Storytelling",
+   "styles": [
+    "Charlotte Mason"
+   ],
+   "materials": [
+    {
+     "name": "A \"living book\" — a real story book",
+     "buy": false
+    }
+   ],
+   "steps": "Read one short chapter aloud. Child tells it back in their own words — all of it. Narration builds memory and comprehension better than quizzes.",
+   "minutes": 15,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "stories"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-083",
+   "title": "Reading Fort + Book Picnic",
+   "bandLo": 6,
+   "bandHi": 8,
+   "goal": "Reading & Storytelling",
+   "styles": [
+    "Play-Based",
+    "Simple Fun"
+   ],
+   "materials": [
+    {
+     "name": "Blankets, cushions, torch",
+     "buy": false
+    },
+    {
+     "name": "books",
+     "buy": false
+    },
+    {
+     "name": "snack",
+     "buy": true
+    }
+   ],
+   "steps": "Build the fort together, picnic inside, read side by side. Cozy places make reading a treat, not a task.",
+   "minutes": 20,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "stories",
+    "building"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-084",
+   "title": "Comic Strip a Story",
+   "bandLo": 6,
+   "bandHi": 8,
+   "goal": "Reading & Storytelling",
+   "styles": [
+    "Reggio",
+    "Simple Fun"
+   ],
+   "materials": [
+    {
+     "name": "Paper folded in 6 boxes",
+     "buy": false
+    },
+    {
+     "name": "pencils",
+     "buy": false
+    }
+   ],
+   "steps": "Retell a known story as a comic: beginning, middle, end ×2. Drawing the sequence IS comprehension practice.",
+   "minutes": 20,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "drawing",
+    "stories"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-085",
+   "title": "Word Detective",
+   "bandLo": 6,
+   "bandHi": 8,
+   "goal": "Reading & Storytelling",
+   "styles": [
+    "Play-Based",
+    "Charlotte Mason"
+   ],
+   "materials": [
+    {
+     "name": "Any book",
+     "buy": false
+    },
+    {
+     "name": "sticky notes",
+     "buy": false
+    }
+   ],
+   "steps": "Hunt for this week's spelling words or \"wow words\" in real books. Stick a note on each find. Words live in books, not lists.",
+   "minutes": 10,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "puzzles",
+    "stories"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-086",
+   "title": "Copywork — One Beautiful Sentence",
+   "bandLo": 6,
+   "bandHi": 8,
+   "goal": "Writing & Spelling",
+   "styles": [
+    "Charlotte Mason"
+   ],
+   "materials": [
+    {
+     "name": "A favourite book",
+     "buy": false
+    },
+    {
+     "name": "nice notebook",
+     "buy": false
+    },
+    {
+     "name": "pencil",
+     "buy": false
+    }
+   ],
+   "steps": "Child picks one great sentence and copies it slowly, best writing. Spelling, punctuation and handwriting in 5 honest minutes.",
+   "minutes": 5,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "stories",
+    "drawing"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-087",
+   "title": "Post a Real Letter",
+   "bandLo": 6,
+   "bandHi": 8,
+   "goal": "Writing & Spelling",
+   "styles": [
+    "Play-Based",
+    "HighScope"
+   ],
+   "materials": [
+    {
+     "name": "Paper, envelope, stamp",
+     "buy": true
+    }
+   ],
+   "steps": "Write to grandma/cousin/friend, address it, walk to the post box. Writing with a destination beats any worksheet.",
+   "minutes": 20,
+   "free": false,
+   "place": "Anywhere",
+   "loves": [
+    "stories",
+    "pretend"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-088",
+   "title": "Story Dice Writing",
+   "bandLo": 6,
+   "bandHi": 8,
+   "goal": "Writing & Spelling",
+   "styles": [
+    "Reggio",
+    "Simple Fun"
+   ],
+   "materials": [
+    {
+     "name": "Story dice or 3 dice + picture list",
+     "buy": false
+    }
+   ],
+   "steps": "Roll a hero, a place, a problem. Write (or dictate) the story. Silly combinations unlock reluctant writers.",
+   "minutes": 15,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "stories",
+    "puzzles"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-089",
+   "title": "Real Money Shop",
+   "bandLo": 6,
+   "bandHi": 8,
+   "goal": "Maths in Real Life",
+   "styles": [
+    "Montessori",
+    "Play-Based"
+   ],
+   "materials": [
+    {
+     "name": "Play money or real coins",
+     "buy": true
+    },
+    {
+     "name": "priced items",
+     "buy": false
+    }
+   ],
+   "steps": "You shop, they run the till: add prices, give change. Swap roles. Money maths with real stakes (pretend ones).",
+   "minutes": 20,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "pretend",
+    "puzzles"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-090",
+   "title": "Kitchen Measuring Challenge",
+   "bandLo": 6,
+   "bandHi": 8,
+   "goal": "Maths in Real Life",
+   "styles": [
+    "Play-Based",
+    "Montessori"
+   ],
+   "materials": [
+    {
+     "name": "Recipe",
+     "buy": true
+    },
+    {
+     "name": "scales, jugs",
+     "buy": false
+    },
+    {
+     "name": "ingredients",
+     "buy": true
+    }
+   ],
+   "steps": "They measure everything: grams, cups, halves. Double the recipe for a real challenge. Then eat the results.",
+   "minutes": 30,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "baking"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-091",
+   "title": "Time Bingo",
+   "bandLo": 6,
+   "bandHi": 8,
+   "goal": "Maths in Real Life",
+   "styles": [
+    "Simple Fun",
+    "Play-Based"
+   ],
+   "materials": [
+    {
+     "name": "Toy clock or drawn clocks",
+     "buy": false
+    },
+    {
+     "name": "bingo cards",
+     "buy": false
+    }
+   ],
+   "steps": "Call a time (\"half past three!\"), they set the clock or find it on their card. Telling time becomes a game with a winner.",
+   "minutes": 15,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "puzzles"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-092",
+   "title": "Card Game Maths — Make 10 / War",
+   "bandLo": 6,
+   "bandHi": 8,
+   "goal": "Maths in Real Life",
+   "styles": [
+    "Play-Based",
+    "HighScope"
+   ],
+   "materials": [
+    {
+     "name": "Deck of cards",
+     "buy": false
+    }
+   ],
+   "steps": "\"Make 10\": flip pairs that add to 10. \"War\": bigger card wins, say the numbers. Fast, fun, endless number practice.",
+   "minutes": 10,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "puzzles"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-093",
+   "title": "Simon Says — in the Other Language",
+   "bandLo": 6,
+   "bandHi": 8,
+   "goal": "Another Language — Real Phrases",
+   "styles": [
+    "Play-Based",
+    "Simple Fun"
+   ],
+   "materials": [
+    {
+     "name": "A carer who knows the language",
+     "buy": false
+    }
+   ],
+   "steps": "Body-part and action commands in the other language only. Listening comprehension disguised as the best game ever.",
+   "minutes": 10,
+   "free": true,
+   "place": "Anywhere",
+   "loves": [
+    "sport",
+    "dancing"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-094",
+   "title": "Label the House",
+   "bandLo": 6,
+   "bandHi": 8,
+   "goal": "Another Language — Real Phrases",
+   "styles": [
+    "Montessori",
+    "Reggio"
+   ],
+   "materials": [
+    {
+     "name": "Sticky notes",
+     "buy": false
+    },
+    {
+     "name": "marker",
+     "buy": false
+    }
+   ],
+   "steps": "Label 10 things at home in the other language (door, table, dog…). Words in context, seen daily — they just absorb them.",
+   "minutes": 15,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "drawing"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-095",
+   "title": "Café Role Play — Full Phrases",
+   "bandLo": 6,
+   "bandHi": 8,
+   "goal": "Another Language — Real Phrases",
+   "styles": [
+    "Play-Based",
+    "Waldorf"
+   ],
+   "materials": [
+    {
+     "name": "Play café",
+     "buy": false
+    },
+    {
+     "name": "menu card",
+     "buy": false
+    }
+   ],
+   "steps": "Whole café conversation in the other language: greeting, order, please/thank you, goodbye. Real phrases they'll keep for life.",
+   "minutes": 15,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "pretend",
+    "baking"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-096",
+   "title": "Nature Journal",
+   "bandLo": 6,
+   "bandHi": 8,
+   "goal": "Science Experiments & Nature Study",
+   "styles": [
+    "Charlotte Mason",
+    "Nature"
+   ],
+   "materials": [
+    {
+     "name": "Notebook",
+     "buy": false
+    },
+    {
+     "name": "pencils",
+     "buy": false
+    }
+   ],
+   "steps": "Same tree/bird/plant each week. Draw it, date it, one sentence. A year of seasons in one book — treasure forever.",
+   "minutes": 15,
+   "free": false,
+   "place": "Outdoor",
+   "loves": [
+    "nature",
+    "drawing",
+    "animals"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-097",
+   "title": "Ramp Racers — Speed Science",
+   "bandLo": 6,
+   "bandHi": 8,
+   "goal": "Science Experiments & Nature Study",
+   "styles": [
+    "Reggio",
+    "Play-Based"
+   ],
+   "materials": [
+    {
+     "name": "Board/plank",
+     "buy": false
+    },
+    {
+     "name": "toy cars",
+     "buy": false
+    },
+    {
+     "name": "blocks",
+     "buy": false
+    },
+    {
+     "name": "tape measure",
+     "buy": false
+    }
+   ],
+   "steps": "Build ramps of different heights. Predict, race, measure. Change one thing at a time — that's real experiment design.",
+   "minutes": 25,
+   "free": true,
+   "place": "Anywhere",
+   "loves": [
+    "building",
+    "sport"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-098",
+   "title": "Grow & Graph a Plant",
+   "bandLo": 6,
+   "bandHi": 8,
+   "goal": "Science Experiments & Nature Study",
+   "styles": [
+    "Nature",
+    "Montessori"
+   ],
+   "materials": [
+    {
+     "name": "Sunflower or bean seeds",
+     "buy": true
+    },
+    {
+     "name": "pot + soil",
+     "buy": true
+    },
+    {
+     "name": "ruler",
+     "buy": false
+    },
+    {
+     "name": "chart",
+     "buy": false
+    }
+   ],
+   "steps": "Plant, water, measure weekly, draw the growth on a chart. Science + maths + patience in one pot.",
+   "minutes": 10,
+   "free": false,
+   "place": "Anywhere",
+   "loves": [
+    "nature"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-099",
+   "title": "Bug Hotel Build",
+   "bandLo": 6,
+   "bandHi": 8,
+   "goal": "Science Experiments & Nature Study",
+   "styles": [
+    "Nature",
+    "Reggio"
+   ],
+   "materials": [
+    {
+     "name": "Box or crate",
+     "buy": false
+    },
+    {
+     "name": "sticks, bark, pinecones, straw",
+     "buy": false
+    }
+   ],
+   "steps": "Build a layered bug hotel for the garden. Check weekly for guests. Caring for tiny creatures = EYLF Outcome 2 in action.",
+   "minutes": 30,
+   "free": true,
+   "place": "Outdoor",
+   "loves": [
+    "animals",
+    "nature",
+    "building"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-100",
+   "title": "First Sewing — Felt Friend",
+   "bandLo": 6,
+   "bandHi": 8,
+   "goal": "Art, Craft & Making",
+   "styles": [
+    "Waldorf",
+    "Montessori"
+   ],
+   "materials": [
+    {
+     "name": "Felt sheets",
+     "buy": false
+    },
+    {
+     "name": "big needle + thread",
+     "buy": false
+    },
+    {
+     "name": "stuffing",
+     "buy": true
+    },
+    {
+     "name": "buttons",
+     "buy": false
+    }
+   ],
+   "steps": "Draw a simple shape, cut two, stitch around, stuff, close. A made-by-me toy they'll keep. Handwork trains the will (Waldorf's words).",
+   "minutes": 40,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "drawing",
+    "pretend"
+   ],
+   "warning": "Needle supervision"
+  },
+  {
+   "id": "act-101",
+   "title": "Picture Study — Look Like an Artist",
+   "bandLo": 6,
+   "bandHi": 8,
+   "goal": "Art, Craft & Making",
+   "styles": [
+    "Charlotte Mason",
+    "Reggio"
+   ],
+   "materials": [
+    {
+     "name": "One great artwork print",
+     "buy": false
+    },
+    {
+     "name": "paper + paints",
+     "buy": false
+    }
+   ],
+   "steps": "Look at the picture for 2 full minutes. Hide it — describe it. Look again. Then paint their own version of it.",
+   "minutes": 20,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "drawing"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-102",
+   "title": "Build It Real — Birdhouse / Toolbox Project",
+   "bandLo": 6,
+   "bandHi": 8,
+   "goal": "Art, Craft & Making",
+   "styles": [
+    "Nature",
+    "HighScope"
+   ],
+   "materials": [
+    {
+     "name": "Timber offcuts or kit",
+     "buy": true
+    },
+    {
+     "name": "hammer, nails, sandpaper",
+     "buy": false
+    }
+   ],
+   "steps": "Plan it (HighScope: plan first!), measure, build, sand, paint. Real tools with a close eye. Weeks of pride at the end.",
+   "minutes": 45,
+   "free": false,
+   "place": "Outdoor",
+   "loves": [
+    "building",
+    "animals"
+   ],
+   "warning": "Tools: carer hands-on supervision"
+  },
+  {
+   "id": "act-103",
+   "title": "Composer of the Week",
+   "bandLo": 6,
+   "bandHi": 8,
+   "goal": "Music & Performance",
+   "styles": [
+    "Charlotte Mason",
+    "Reggio"
+   ],
+   "materials": [
+    {
+     "name": "Music player",
+     "buy": false
+    },
+    {
+     "name": "paper",
+     "buy": false
+    }
+   ],
+   "steps": "One composer/artist per week. Listen while drawing what the music \"looks like\". Music appreciation without a single test.",
+   "minutes": 15,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "music",
+    "drawing"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-104",
+   "title": "Kitchen Band Recording",
+   "bandLo": 6,
+   "bandHi": 8,
+   "goal": "Music & Performance",
+   "styles": [
+    "Simple Fun",
+    "Play-Based"
+   ],
+   "materials": [
+    {
+     "name": "Pots, shakers, wooden spoons",
+     "buy": false
+    },
+    {
+     "name": "phone to record",
+     "buy": false
+    }
+   ],
+   "steps": "Practise a \"song\" together, record it, play it back like stars. Performing + listening back = real musicianship.",
+   "minutes": 20,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "music"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-105",
+   "title": "Put On a Play",
+   "bandLo": 6,
+   "bandHi": 8,
+   "goal": "Music & Performance",
+   "styles": [
+    "Waldorf",
+    "Play-Based"
+   ],
+   "materials": [
+    {
+     "name": "Dress-ups",
+     "buy": false
+    },
+    {
+     "name": "blanket stage",
+     "buy": false
+    }
+   ],
+   "steps": "Retell a favourite story as a play for the family. Lines, costumes, a beginning and an end. Courage included free.",
+   "minutes": 30,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "pretend",
+    "stories"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-106",
+   "title": "Backyard Skills Ladder",
+   "bandLo": 6,
+   "bandHi": 8,
+   "goal": "Sport, Body & Health",
+   "styles": [
+    "Play-Based",
+    "HighScope"
+   ],
+   "materials": [
+    {
+     "name": "Ball",
+     "buy": false
+    },
+    {
+     "name": "chalk",
+     "buy": false
+    },
+    {
+     "name": "chart",
+     "buy": false
+    }
+   ],
+   "steps": "Pick 3 skills (bounce-catch, hopscotch, skipping). Chart practice each week. Beating your own record beats beating others.",
+   "minutes": 20,
+   "free": true,
+   "place": "Outdoor",
+   "loves": [
+    "sport"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-107",
+   "title": "Cook a Rainbow Dinner Helper",
+   "bandLo": 6,
+   "bandHi": 8,
+   "goal": "Sport, Body & Health",
+   "styles": [
+    "Waldorf",
+    "Montessori"
+   ],
+   "materials": [
+    {
+     "name": "Veg in 5 colours",
+     "buy": true
+    },
+    {
+     "name": "child-safe knife",
+     "buy": false
+    }
+   ],
+   "steps": "Plan a plate with 5 colours, wash, chop (soft veg), arrange. Eating the rainbow is health learning you can taste.",
+   "minutes": 30,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "baking",
+    "nature"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-108",
+   "title": "Nature Scavenger Relay",
+   "bandLo": 6,
+   "bandHi": 8,
+   "goal": "Sport, Body & Health",
+   "styles": [
+    "Nature",
+    "Simple Fun"
+   ],
+   "materials": [
+    {
+     "name": "List + bag",
+     "buy": false
+    }
+   ],
+   "steps": "Timed hunts in the park: something round, something rough, something that smells nice. Fast legs, sharp eyes.",
+   "minutes": 20,
+   "free": true,
+   "place": "Outdoor",
+   "loves": [
+    "nature",
+    "sport"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-109",
+   "title": "Team Build Challenge",
+   "bandLo": 6,
+   "bandHi": 8,
+   "goal": "Feelings, Friendship & Teamwork",
+   "styles": [
+    "HighScope",
+    "Reggio"
+   ],
+   "materials": [
+    {
+     "name": "Blocks/LEGO",
+     "buy": false
+    },
+    {
+     "name": "challenge card",
+     "buy": false
+    }
+   ],
+   "steps": "With a sibling/friend (or carer): build \"a bridge that holds the toy car\" — together. Plan, jobs, negotiate. Review at the end: what worked?",
+   "minutes": 25,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "building",
+    "puzzles"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-110",
+   "title": "Feelings Weather Report",
+   "bandLo": 6,
+   "bandHi": 8,
+   "goal": "Feelings, Friendship & Teamwork",
+   "styles": [
+    "Play-Based",
+    "Reggio"
+   ],
+   "materials": [
+    {
+     "name": "Paper",
+     "buy": false
+    },
+    {
+     "name": "crayons",
+     "buy": false
+    }
+   ],
+   "steps": "\"What's your weather inside today — sunny, stormy, foggy?\" Draw it. A daily 2-minute check-in that prevents big blow-ups.",
+   "minutes": 5,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "drawing"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-111",
+   "title": "Kindness Mission",
+   "bandLo": 6,
+   "bandHi": 8,
+   "goal": "Feelings, Friendship & Teamwork",
+   "styles": [
+    "Waldorf",
+    "Montessori"
+   ],
+   "materials": [
+    {
+     "name": "Card-making bits or baking",
+     "buy": true
+    }
+   ],
+   "steps": "Make something for someone else: a card for a neighbour, biscuits for a friend. Giving is a skill — practise it.",
+   "minutes": 20,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "baking",
+    "drawing"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-112",
+   "title": "Deep Narration + One Question",
+   "bandLo": 9,
+   "bandHi": 12,
+   "goal": "Reading, Research & Big Questions",
+   "styles": [
+    "Charlotte Mason"
+   ],
+   "materials": [
+    {
+     "name": "A real chapter book (their pick)",
+     "buy": false
+    }
+   ],
+   "steps": "Read a chapter. They retell it fully, then ask ONE question it raised. You wonder together — no googling for 5 minutes first.",
+   "minutes": 20,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "stories"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-113",
+   "title": "Two-Source Detective",
+   "bandLo": 9,
+   "bandHi": 12,
+   "goal": "Reading, Research & Big Questions",
+   "styles": [
+    "Reggio",
+    "HighScope"
+   ],
+   "materials": [
+    {
+     "name": "2 books or safe web sources",
+     "buy": false
+    },
+    {
+     "name": "notebook",
+     "buy": false
+    }
+   ],
+   "steps": "Pick their question (why do volcanoes erupt?). Find two sources. Do they agree? Write what BOTH say. First media-literacy lesson.",
+   "minutes": 30,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "puzzles",
+    "nature"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-114",
+   "title": "Book Club for Two",
+   "bandLo": 9,
+   "bandHi": 12,
+   "goal": "Reading, Research & Big Questions",
+   "styles": [
+    "Play-Based",
+    "Charlotte Mason"
+   ],
+   "materials": [
+    {
+     "name": "Same book ×2 (library)",
+     "buy": false
+    },
+    {
+     "name": "hot chocolate",
+     "buy": true
+    }
+   ],
+   "steps": "Read the same chapters during the week, then book-club: best scene, worst character decision, rating out of 10.",
+   "minutes": 20,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "stories"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-115",
+   "title": "Dictation Day",
+   "bandLo": 9,
+   "bandHi": 12,
+   "goal": "Writing & Creating",
+   "styles": [
+    "Charlotte Mason"
+   ],
+   "materials": [
+    {
+     "name": "A passage from a great book",
+     "buy": false
+    },
+    {
+     "name": "notebook",
+     "buy": false
+    }
+   ],
+   "steps": "Read a short passage slowly; they write it exactly. Spelling, punctuation and grammar absorbed from real writing — the classic Mason way.",
+   "minutes": 10,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "stories"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-116",
+   "title": "Comic Novel — Ongoing Series",
+   "bandLo": 9,
+   "bandHi": 12,
+   "goal": "Writing & Creating",
+   "styles": [
+    "Simple Fun",
+    "Reggio"
+   ],
+   "materials": [
+    {
+     "name": "Sketchbook",
+     "buy": false
+    },
+    {
+     "name": "fine liners",
+     "buy": false
+    }
+   ],
+   "steps": "One page per session of their own comic series: hero, world, cliffhanger. Story structure learned by living in it.",
+   "minutes": 30,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "drawing",
+    "stories"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-117",
+   "title": "Persuade Me — Speech in 3 Parts",
+   "bandLo": 9,
+   "bandHi": 12,
+   "goal": "Writing & Creating",
+   "styles": [
+    "Play-Based",
+    "Reggio"
+   ],
+   "materials": [
+    {
+     "name": "Cards for notes",
+     "buy": false
+    }
+   ],
+   "steps": "Pick a cause (later bedtime? a pet?). Build: my point, 3 reasons, strong ending. Deliver it standing up. You may be persuaded.",
+   "minutes": 20,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "pretend",
+    "animals"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-118",
+   "title": "Family Newsletter Editor",
+   "bandLo": 9,
+   "bandHi": 12,
+   "goal": "Writing & Creating",
+   "styles": [
+    "HighScope",
+    "Simple Fun"
+   ],
+   "materials": [
+    {
+     "name": "Paper or family tablet",
+     "buy": false
+    },
+    {
+     "name": "photos",
+     "buy": false
+    }
+   ],
+   "steps": "They edit a weekly one-pager: news, a joke, a review, weather. Plan it, make it, send it to family. Real audience, real pride.",
+   "minutes": 30,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "stories",
+    "drawing"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-119",
+   "title": "Plan a Real Meal on a Budget",
+   "bandLo": 9,
+   "bandHi": 12,
+   "goal": "Maths, Logic & Money Smarts",
+   "styles": [
+    "Montessori",
+    "Play-Based"
+   ],
+   "materials": [
+    {
+     "name": "Supermarket catalogue or app",
+     "buy": true
+    },
+    {
+     "name": "calculator",
+     "buy": false
+    },
+    {
+     "name": "list",
+     "buy": false
+    }
+   ],
+   "steps": "Budget: $30. They plan a family meal, price every item, stay under. Then cook it together. Fractions, totals, trade-offs — delicious.",
+   "minutes": 45,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "baking",
+    "puzzles"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-120",
+   "title": "Fraction Kitchen",
+   "bandLo": 9,
+   "bandHi": 12,
+   "goal": "Maths, Logic & Money Smarts",
+   "styles": [
+    "Montessori",
+    "Play-Based"
+   ],
+   "materials": [
+    {
+     "name": "Pizza/flatbread",
+     "buy": true
+    },
+    {
+     "name": "measuring cups",
+     "buy": false
+    }
+   ],
+   "steps": "Halve it, quarter it, eighth it — then eat the fractions. Double a half-recipe. The tastiest fractions lesson there is.",
+   "minutes": 30,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "baking"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-121",
+   "title": "Strategy Games — Chess / Mastermind / Sudoku",
+   "bandLo": 9,
+   "bandHi": 12,
+   "goal": "Maths, Logic & Money Smarts",
+   "styles": [
+    "Play-Based",
+    "HighScope"
+   ],
+   "materials": [
+    {
+     "name": "Chess set or logic games",
+     "buy": false
+    }
+   ],
+   "steps": "Learn one strategy game properly. Play weekly, keep a score of best moves, not just wins. Logic is a muscle.",
+   "minutes": 20,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "puzzles"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-122",
+   "title": "Estimate Everything",
+   "bandLo": 9,
+   "bandHi": 12,
+   "goal": "Maths, Logic & Money Smarts",
+   "styles": [
+    "Reggio",
+    "Nature"
+   ],
+   "materials": [
+    {
+     "name": "Jar of beans",
+     "buy": true
+    },
+    {
+     "name": "tape measure",
+     "buy": false
+    }
+   ],
+   "steps": "Guess first, then measure/count: beans in the jar, steps to the park, pages in the book. Good estimators are good mathematicians.",
+   "minutes": 15,
+   "free": true,
+   "place": "Anywhere",
+   "loves": [
+    "puzzles",
+    "nature"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-123",
+   "title": "Conversation Café",
+   "bandLo": 9,
+   "bandHi": 12,
+   "goal": "Another Language — Conversation & Culture",
+   "styles": [
+    "Play-Based",
+    "Reggio"
+   ],
+   "materials": [
+    {
+     "name": "Snacks",
+     "buy": true
+    },
+    {
+     "name": "phrase cards",
+     "buy": false
+    }
+   ],
+   "steps": "15 minutes, only the other language: order food, talk about the weekend, plan something. Mistakes welcome — bravery is the goal.",
+   "minutes": 15,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "baking",
+    "pretend"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-124",
+   "title": "Cook a Dish from That Country",
+   "bandLo": 9,
+   "bandHi": 12,
+   "goal": "Another Language — Conversation & Culture",
+   "styles": [
+    "Waldorf",
+    "Nature"
+   ],
+   "materials": [
+    {
+     "name": "Recipe + ingredients",
+     "buy": true
+    }
+   ],
+   "steps": "Cook a real dish from the language's country. Learn the food words while your hands work. Culture you can eat.",
+   "minutes": 45,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "baking"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-125",
+   "title": "Song Translation Project",
+   "bandLo": 9,
+   "bandHi": 12,
+   "goal": "Another Language — Conversation & Culture",
+   "styles": [
+    "Simple Fun",
+    "Charlotte Mason"
+   ],
+   "materials": [
+    {
+     "name": "A song they love in the other language",
+     "buy": false
+    },
+    {
+     "name": "notebook",
+     "buy": false
+    }
+   ],
+   "steps": "Translate one verse together, line by line. Sing it. Music makes vocabulary unforgettable.",
+   "minutes": 20,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "music"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-126",
+   "title": "Fair Test Fridays",
+   "bandLo": 9,
+   "bandHi": 12,
+   "goal": "Science, Tech & Experiments",
+   "styles": [
+    "Reggio",
+    "HighScope"
+   ],
+   "materials": [
+    {
+     "name": "Varies — paper planes, ice, plants",
+     "buy": false
+    },
+    {
+     "name": "lab notebook",
+     "buy": false
+    }
+   ],
+   "steps": "One question, written hypothesis, change ONE thing, record results in the lab book. A scientist's habits, built weekly.",
+   "minutes": 30,
+   "free": false,
+   "place": "Anywhere",
+   "loves": [
+    "puzzles",
+    "nature",
+    "building"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-127",
+   "title": "Citizen Science — Bird & Bug Counts",
+   "bandLo": 9,
+   "bandHi": 12,
+   "goal": "Science, Tech & Experiments",
+   "styles": [
+    "Nature",
+    "Charlotte Mason"
+   ],
+   "materials": [
+    {
+     "name": "Notebook",
+     "buy": false
+    },
+    {
+     "name": "binoculars (optional)",
+     "buy": false
+    }
+   ],
+   "steps": "20 minutes watching one spot. Count and draw every bird/bug. Real data, same place each week — seasons appear.",
+   "minutes": 20,
+   "free": true,
+   "place": "Outdoor",
+   "loves": [
+    "animals",
+    "nature"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-128",
+   "title": "Build a Circuit",
+   "bandLo": 9,
+   "bandHi": 12,
+   "goal": "Science, Tech & Experiments",
+   "styles": [
+    "Montessori",
+    "Reggio"
+   ],
+   "materials": [
+    {
+     "name": "Snap-circuit kit or battery + LED + wires",
+     "buy": false
+    }
+   ],
+   "steps": "Make a light turn on. Then a switch. Then a buzzer alarm for their bedroom door. Electricity understood by hand.",
+   "minutes": 30,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "building",
+    "puzzles"
+   ],
+   "warning": "Batteries only — never mains power"
+  },
+  {
+   "id": "act-129",
+   "title": "Code a Tiny Game (Scratch)",
+   "bandLo": 9,
+   "bandHi": 12,
+   "goal": "Science, Tech & Experiments",
+   "styles": [
+    "Play-Based",
+    "HighScope"
+   ],
+   "materials": [
+    {
+     "name": "Family computer/tablet + Scratch (free)",
+     "buy": false
+    }
+   ],
+   "steps": "Plan the game (HighScope plan-do-review), drag blocks, test, fix. Logic, patience and a game THEY made at the end.",
+   "minutes": 40,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "puzzles",
+    "drawing"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-130",
+   "title": "Sew Something Real — Cushion or Tote",
+   "bandLo": 9,
+   "bandHi": 12,
+   "goal": "Art, Design & Making",
+   "styles": [
+    "Waldorf",
+    "Montessori"
+   ],
+   "materials": [
+    {
+     "name": "Fabric",
+     "buy": false
+    },
+    {
+     "name": "needle, thread, pins",
+     "buy": false
+    },
+    {
+     "name": "stuffing or old T-shirt",
+     "buy": true
+    }
+   ],
+   "steps": "Measure, cut, pin, stitch, finish. A useful thing they made themselves beats any decoration. Skills for life.",
+   "minutes": 45,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "drawing"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-131",
+   "title": "Design & Build a Game",
+   "bandLo": 9,
+   "bandHi": 12,
+   "goal": "Art, Design & Making",
+   "styles": [
+    "Reggio",
+    "Simple Fun"
+   ],
+   "materials": [
+    {
+     "name": "Cardboard, cards, dice",
+     "buy": false
+    },
+    {
+     "name": "markers",
+     "buy": false
+    }
+   ],
+   "steps": "Invent a board/card game: rules, board, pieces. Playtest with the family, fix the unfair bits. Design = thinking.",
+   "minutes": 40,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "puzzles",
+    "drawing"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-132",
+   "title": "Artist Study — Copy the Master",
+   "bandLo": 9,
+   "bandHi": 12,
+   "goal": "Art, Design & Making",
+   "styles": [
+    "Charlotte Mason",
+    "Reggio"
+   ],
+   "materials": [
+    {
+     "name": "Art print/book",
+     "buy": false
+    },
+    {
+     "name": "paints",
+     "buy": false
+    }
+   ],
+   "steps": "Study one artist for a fortnight: look long, read their story, copy a work, then paint \"in their style\". Deep beats broad.",
+   "minutes": 30,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "drawing",
+    "stories"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-133",
+   "title": "Make a Stop-Motion Film",
+   "bandLo": 9,
+   "bandHi": 12,
+   "goal": "Music, Drama & Media",
+   "styles": [
+    "Reggio",
+    "Simple Fun"
+   ],
+   "materials": [
+    {
+     "name": "Phone/tablet + free stop-motion app",
+     "buy": false
+    },
+    {
+     "name": "LEGO or clay",
+     "buy": false
+    }
+   ],
+   "steps": "Storyboard 6 frames, shoot, edit, premiere for the family with popcorn. Planning + patience + storytelling in one project.",
+   "minutes": 45,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "building",
+    "stories",
+    "drawing"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-134",
+   "title": "Learn an Instrument — Practice Partner",
+   "bandLo": 9,
+   "bandHi": 12,
+   "goal": "Music, Drama & Media",
+   "styles": [
+    "Waldorf",
+    "HighScope"
+   ],
+   "materials": [
+    {
+     "name": "Their instrument",
+     "buy": false
+    },
+    {
+     "name": "practice chart",
+     "buy": false
+    }
+   ],
+   "steps": "You don't teach — you sit, listen, and keep the daily 15 minutes sacred. Sticker the chart. Audience = motivation.",
+   "minutes": 15,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "music"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-135",
+   "title": "Ad-Busters — Read the Trick",
+   "bandLo": 9,
+   "bandHi": 12,
+   "goal": "Music, Drama & Media",
+   "styles": [
+    "Play-Based",
+    "Reggio"
+   ],
+   "materials": [
+    {
+     "name": "Catalogues/screens with ads",
+     "buy": true
+    }
+   ],
+   "steps": "Hunt ads together: what does it want you to feel? Who is it for? Then design an HONEST ad for something real at home.",
+   "minutes": 20,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "drawing",
+    "puzzles"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-136",
+   "title": "Plan the Adventure — Map a Hike",
+   "bandLo": 9,
+   "bandHi": 12,
+   "goal": "Sport, Leadership & Outdoors",
+   "styles": [
+    "Nature",
+    "HighScope"
+   ],
+   "materials": [
+    {
+     "name": "Map (paper or app)",
+     "buy": false
+    },
+    {
+     "name": "backpack, water, snacks",
+     "buy": true
+    }
+   ],
+   "steps": "They plan the route, pack the list, lead the walk. You follow (with veto power on safety). Navigation + responsibility, live.",
+   "minutes": 0,
+   "free": false,
+   "place": "Outdoor",
+   "loves": [
+    "nature",
+    "sport"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-137",
+   "title": "Teach a Little Kid a Skill",
+   "bandLo": 9,
+   "bandHi": 12,
+   "goal": "Sport, Leadership & Outdoors",
+   "styles": [
+    "Montessori",
+    "Play-Based"
+   ],
+   "materials": [
+    {
+     "name": "Depends on the skill",
+     "buy": false
+    }
+   ],
+   "steps": "They teach a younger sibling/neighbour one thing: tie laces, throw a ball, a card trick. Teaching is the deepest learning (and pure Montessori).",
+   "minutes": 20,
+   "free": true,
+   "place": "Anywhere",
+   "loves": [
+    "sport",
+    "puzzles"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-138",
+   "title": "Personal Best Training Plan",
+   "bandLo": 9,
+   "bandHi": 12,
+   "goal": "Sport, Leadership & Outdoors",
+   "styles": [
+    "HighScope",
+    "Play-Based"
+   ],
+   "materials": [
+    {
+     "name": "Chart",
+     "buy": false
+    },
+    {
+     "name": "stopwatch",
+     "buy": false
+    }
+   ],
+   "steps": "Pick a goal (run 1 km, 20 push-ups, skip 100). Plan 3 sessions a week, chart progress. Goal-setting they'll use forever.",
+   "minutes": 20,
+   "free": true,
+   "place": "Outdoor",
+   "loves": [
+    "sport"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-139",
+   "title": "My Manifesto Poster",
+   "bandLo": 9,
+   "bandHi": 12,
+   "goal": "Identity, Feelings & Community",
+   "styles": [
+    "Reggio",
+    "Charlotte Mason"
+   ],
+   "materials": [
+    {
+     "name": "Big paper",
+     "buy": false
+    },
+    {
+     "name": "markers, magazines",
+     "buy": false
+    }
+   ],
+   "steps": "\"Things I believe / things I'm good at / things I want to learn.\" Words + pictures, on the wall. Identity, made visible.",
+   "minutes": 30,
+   "free": false,
+   "place": "Indoor",
+   "loves": [
+    "drawing"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-140",
+   "title": "Community Helper Project",
+   "bandLo": 9,
+   "bandHi": 12,
+   "goal": "Identity, Feelings & Community",
+   "styles": [
+    "Nature",
+    "Waldorf"
+   ],
+   "materials": [
+    {
+     "name": "Gloves, bag (clean-up) or baking (for a neighbour)",
+     "buy": true
+    }
+   ],
+   "steps": "Choose one real contribution: park clean-up, bake for a neighbour, help at the library. Plan it, do it, reflect after.",
+   "minutes": 0,
+   "free": false,
+   "place": "Outdoor",
+   "loves": [
+    "animals",
+    "nature",
+    "baking"
+   ],
+   "warning": ""
+  },
+  {
+   "id": "act-141",
+   "title": "Gratitude + Worry — Two Jars",
+   "bandLo": 9,
+   "bandHi": 12,
+   "goal": "Identity, Feelings & Community",
+   "styles": [
+    "Play-Based",
+    "Waldorf"
+   ],
+   "materials": [
+    {
+     "name": "2 jars",
+     "buy": false
+    },
+    {
+     "name": "paper slips",
+     "buy": false
+    }
+   ],
+   "steps": "One jar: one good thing daily. Other jar: worries go in, lid on, talked about Friday. Feelings managed with rituals, not lectures.",
+   "minutes": 5,
+   "free": true,
+   "place": "Indoor",
+   "loves": [
+    "stories"
+   ],
+   "warning": ""
+  }
+ ]
+}

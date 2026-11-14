@@ -4,10 +4,14 @@ import GoogleSignIn
 
 @main
 struct CareSpaceApp: App {
+    @UIApplicationDelegateAdaptor(PushDelegate.self) private var pushDelegate
     @StateObject private var session: Session
     @StateObject private var themeStore = ThemeStore()
     @StateObject private var careContext = CareContext()
     init() {
+        // App Check stands before configure (item 11): the backend's
+        // guarded calls (account delete, push) check it.
+        PushSetup.installAppCheck()
         FirebaseApp.configure()
         _session = StateObject(wrappedValue: Session())
     }
@@ -29,11 +33,20 @@ struct RootGate: View {
     var body: some View {
         Group {
             if s.loading {
-                ZStack { themeStore.theme.bg.ignoresSafeArea(); BunnyView(size: 120) }
+                // Item 3: the launch frame carries the CareSpaceMark
+                // centred on the brand ground from the first frame —
+                // the same mark the system launch screen shows
+                // (UILaunchScreen: LaunchBackground + CareSpaceMark),
+                // so no frame is ever a blank white window.
+                ZStack { themeStore.theme.bg.ignoresSafeArea(); LogoMark(size: 120) }
             } else if s.uid == nil {
                 DoorView()
             } else if s.myName.isEmpty {
                 NameAskView()
+            } else if s.mySide.isEmpty {
+                // Item 16: an account that never answered who you
+                // are is asked once — never defaulted to family.
+                WhoAreYouView()
             } else {
                 MainTabs()
             }
@@ -44,6 +57,9 @@ struct RootGate: View {
                let t = AppTheme(rawValue: saved), t != themeStore.theme {
                 themeStore.theme = t
             }
+            // Item 11: if notifications already stand allowed, keep
+            // this phone's push token fresh on the profile.
+            if s.uid != nil { await PushSetup.refreshIfAllowed() }
         }
     }
 }
@@ -85,8 +101,8 @@ struct TabShell<Content: View>: View {
     }
 }
 
-// Chats, Calendar, Care and Profile are real screens now (Care*Screens.swift). Activities arrives in Phase 3.
-struct ActivitiesHome: View { var body: some View { Placeholder(text: "Activities, recipes and shopping live here.") } }
+// Chats, Calendar, Care and Profile are real screens (Care*Screens.swift).
+// Activities is real in Activities.swift (items 10 + 18).
 
 struct Placeholder: View {
     let text: String
