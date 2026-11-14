@@ -65,7 +65,10 @@ final class RoleFlowTests: XCTestCase {
     /// The tab pick rides the session object: after a sign out and a fresh sign in inside one launch,
     /// the app can reopen on Me. Go to the first tab first, then open the urgent board.
     func tapUrgent() {
-        if app.tabBars.buttons.count > 0 { app.tabBars.buttons.element(boundBy: 0).tap(); sleep(2) }
+        // The tab bar can lag the Finish tap: wait for the first tab before touching it.
+        // A blind count check skips the tap silently and the Urgent tap then fails on Me.
+        XCTAssertTrue(app.tabBars.buttons.element(boundBy: 0).waitForExistence(timeout: 15), "first tab missing before Urgent")
+        app.tabBars.buttons.element(boundBy: 0).tap(); sleep(2)
         tap("Urgent")
     }
     func deleteFromSettings() {
@@ -604,13 +607,14 @@ final class RoleFlowTests: XCTestCase {
         let card = app.descendants(matching: .any)["urgentCard"].firstMatch
         if !card.waitForExistence(timeout: 90) { qshot("urgent-FAIL-no-card"); XCTFail("urgent card never showed. Texts: " + app.staticTexts.allElementsBoundByIndex.map { $0.label }.joined(separator: " | ")); return }
         // Leftover posts from failed runs can stand ahead of this run's post in the deck: pass until this run's card stands.
-        var onMine = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", note)).firstMatch.exists
+        func topCardHasNote() -> Bool { app.descendants(matching: .any)["urgentCard"].firstMatch.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", note)).firstMatch.exists }
+        var onMine = topCardHasNote()
         var passes = 0
         while !onMine && passes < 6 {
             let passBtn = app.descendants(matching: .any)["urgentPass"].firstMatch
             if !passBtn.exists { break }
             passBtn.tap(); sleep(3); passes += 1
-            onMine = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", note)).firstMatch.exists
+            onMine = topCardHasNote()
         }
         XCTAssertTrue(onMine, "the carer deck never reached this run's post")
         qshot("urgent-2-carer-card")
