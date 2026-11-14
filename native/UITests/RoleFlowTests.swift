@@ -29,6 +29,37 @@ final class RoleFlowTests: XCTestCase {
         app.tabBars.buttons.matching(NSPredicate(format: "label == %@", name)).firstMatch.waitForExistence(timeout: timeout)
     }
     func type(_ field: XCUIElement, _ text: String) { if !field.waitForExistence(timeout: 30) { XCTFail("field missing: " + String(app.debugDescription.prefix(1500))); return }; field.tap(); sleep(1); if !(field.value(forKey: "hasKeyboardFocus") as? Bool ?? true) { field.tap(); sleep(1) }; field.typeText(text) }
+    /// Credential typing that survives a loaded Mac: type 4 chars at a time, because one burst
+    /// garbles long strings (gate 7: a wrong letter in the password; gate 9: a sign-in that
+    /// never landed after a landed tap). Then verify what can be verified: a plain field reads
+    /// back exactly, a SecureField reads back as bullets so only its length is verifiable.
+    /// One clear + retype on mismatch, then the cause is named.
+    func typeCredential(_ field: XCUIElement, _ text: String, secure: Bool) {
+        if !field.waitForExistence(timeout: 30) { XCTFail("field missing: " + String(app.debugDescription.prefix(1500))); return }
+        field.tap(); sleep(1); typeSlow(field, text); sleep(1)
+        if secure {
+            if let landed = field.value as? String, landed.count != text.count {
+                field.tap(); field.typeText(String(repeating: "\u{7F}", count: landed.count)); typeSlow(field, text); sleep(1)
+            }
+            if let landed = field.value as? String {
+                XCTAssertEqual(landed.count, text.count, "credential did not land whole: got \(landed.count) chars, expected \(text.count)")
+            }
+        } else {
+            if let landed = field.value as? String, landed != text {
+                field.tap(); field.typeText(String(repeating: "\u{7F}", count: landed.count)); typeSlow(field, text); sleep(1)
+            }
+            if let landed = field.value as? String {
+                XCTAssertEqual(landed, text, "credential did not land whole: got \(landed), expected \(text)")
+            }
+        }
+    }
+    func typeSlow(_ field: XCUIElement, _ text: String) {
+        var i = text.startIndex
+        while i < text.endIndex {
+            let j = text.index(i, offsetBy: 4, limitedBy: text.endIndex) ?? text.endIndex
+            field.typeText(String(text[i..<j])); i = j; usleep(150_000)
+        }
+    }
 
 
     var testPw = ""; var testEmail = ""
@@ -43,21 +74,10 @@ final class RoleFlowTests: XCTestCase {
         if app.buttons["I need care"].waitForExistence(timeout: 2) && !app.buttons["Use email"].exists { tap(side == "family" ? "I need care" : "I give care"); return }
         tap("Use email")
         let email = "projects.reports.ilse+nat\(side)\(Int(Date().timeIntervalSince1970))@gmail.com"
-        type(app.textFields["Email"], email)
+        typeCredential(app.textFields["Email"], email, secure: false)
         testPw = "Nat-\(Int(Date().timeIntervalSince1970))-Zq9"; testEmail = email
         try? (email + "\n").appendLine(to: "/Users/ilseplacencia/cs181/test-accounts-made.txt")
-        type(app.secureTextFields["Password (6+ letters)"], testPw)
-        // Sim typing under a loaded Mac can drop characters: the account is then created with a
-        // truncated password and the delete re-auth fails on the full one. Verify it landed whole.
-        let pwField = app.secureTextFields["Password (6+ letters)"]
-        if let landed = pwField.value as? String, landed.count != testPw.count {
-            pwField.tap()
-            pwField.typeText(String(repeating: "\u{7F}", count: landed.count))
-            pwField.typeText(testPw)
-        }
-        if let landed = pwField.value as? String {
-            XCTAssertEqual(landed.count, testPw.count, "password did not land whole at sign up: got \(landed.count) chars, expected \(testPw.count)")
-        }
+        typeCredential(app.secureTextFields["Password (6+ letters)"], testPw, secure: true)
         shot("welcome-\(side)")
         tap("Create my account")
         let sb = XCUIApplication(bundleIdentifier: "com.apple.springboard")
@@ -110,7 +130,7 @@ final class RoleFlowTests: XCTestCase {
         del.tap(); tap("Delete everything")
         // After a long run the account asks to sign in once more before it deletes.
         if app.staticTexts["Is it really you?"].waitForExistence(timeout: 8) {
-            type(app.secureTextFields["Your password"], testPw); dismissKb(); tap("Confirm and delete")
+            typeCredential(app.secureTextFields["Your password"], testPw, secure: true); dismissKb(); tap("Confirm and delete")
             // Name the re-auth outcome here: if the sheet stays, the delete never starts and the
             // test would fail downstream at "no busy state" with no cause named.
             if !app.staticTexts["Is it really you?"].waitForNonExistence(timeout: 20) {
@@ -619,8 +639,8 @@ final class RoleFlowTests: XCTestCase {
         tap("Use email")
         let toggle = app.buttons["I already have an account"]
         if toggle.waitForExistence(timeout: 6) { toggle.tap() }
-        type(app.textFields["Email"], email)
-        type(app.secureTextFields["Password (6+ letters)"], pw)
+        typeCredential(app.textFields["Email"], email, secure: false)
+        typeCredential(app.secureTextFields["Password (6+ letters)"], pw, secure: true)
         tap("Sign in")
         XCTAssertTrue(tabExists("Me", timeout: 60), "sign in did not land")
     }
