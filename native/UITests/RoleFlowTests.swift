@@ -559,6 +559,12 @@ final class RoleFlowTests: XCTestCase {
         signUp(side: "family"); fillYou(name); next(); next(); type(app.textFields["Name or nickname"], "Mia"); dismissKb(); next()
         tap("Finish", timeout: 20)
         XCTAssertTrue(app.tabBars.buttons["Me"].waitForExistence(timeout: 90))
+        // Prove the just-created password and refresh the sign-in clock: sign out, sign in with
+        // the same credentials. A garbled creation password (right length, wrong letters) fails
+        // here with the cause named, instead of later at the delete re-auth; a good one lands a
+        // fresh sign-in, so the delete skips the re-auth sheet and proves the overlay, not the typing.
+        signOutFromMe()
+        signIn(email: testEmail, pw: testPw)
         tapTab("Me")
         deleteFromSettings()
     }
