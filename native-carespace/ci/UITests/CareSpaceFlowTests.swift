@@ -402,48 +402,4 @@ final class CareSpaceFlowTests: XCTestCase {
         print("DRIVE-DAYPLACE-ROWS-OK: true")
     }
 
-    // MARK: Diagnostic (temporary): what stands in Care right now, and
-    // what the Add-child form says after Save. Prints, never asserts
-    // beyond the app standing.
-    func testProbeCareState() throws {
-        let app = XCUIApplication()
-        app.launch()
-        XCTAssertTrue(app.tabBars.buttons["Chats"].waitForExistence(timeout: 60), "App did not land inside")
-        app.tabBars.buttons["Care"].tap()
-        Thread.sleep(forTimeInterval: 4)
-        let mia = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Mia")).firstMatch
-        print("PROBE-MIA-ROW: \(mia.exists)")
-        let noKids = app.staticTexts["No children in this space yet."].exists
-        print("PROBE-NO-KIDS: \(noKids)")
-        if !mia.exists {
-            let add = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Add a child")).firstMatch
-            print("PROBE-ADD-ROW: \(add.exists)")
-            if add.exists {
-                add.tap()
-                let f0 = app.textFields.element(boundBy: 0)
-                XCTAssertTrue(f0.waitForExistence(timeout: 15))
-                f0.tap(); f0.typeText("Probe")
-                let f1 = app.textFields.element(boundBy: 1); f1.tap(); f1.typeText("3")
-                app.buttons["Save child"].tap()
-                Thread.sleep(forTimeInterval: 6)
-                let texts = app.staticTexts.allElementsBoundByIndex.map { $0.label }
-                print("PROBE-FORM-TEXTS: \(texts)")
-                let back = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Probe")).firstMatch
-                print("PROBE-PROBE-ROW-AFTER-SAVE: \(back.exists)")
-            }
-        }
-    }
-
-    // MARK: Diagnostic (temporary): after a cache-clearing reinstall,
-    // does the space read back from the server?
-    func testProbeSpaceServer() throws {
-        let app = XCUIApplication()
-        app.launch()
-        let chats = app.tabBars.buttons["Chats"]
-        XCTAssertTrue(chats.waitForExistence(timeout: 60), "App did not land inside")
-        Thread.sleep(forTimeInterval: 5)
-        let card = app.staticTexts["Drive Family"].exists
-        let empty = app.staticTexts["No care spaces yet"].exists
-        print("PROBE-SPACE-STANDS: \(card) EMPTY: \(empty)")
-    }
 }
