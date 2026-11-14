@@ -5,7 +5,7 @@ swift = sorted(f for f in os.listdir(os.path.join(root,'Sources')) if f.endswith
 out=[]
 A=out.append
 files=[('Sources/'+f, 'sourcecode.swift') for f in swift]
-res=[('Assets.xcassets','folder.assetcatalog'),('GoogleService-Info.plist','text.plist.xml'),('Fonts/Fraunces.ttf','file'),('Fonts/Atkinson-Regular.ttf','file'),('Fonts/Atkinson-Bold.ttf','file'),('ActivitiesCatalogue.json','file')]
+res=[('Assets.xcassets','folder.assetcatalog'),('GoogleService-Info.plist','text.plist.xml'),('Fonts/Fraunces.ttf','file'),('Fonts/Atkinson-Regular.ttf','file'),('Fonts/Atkinson-Bold.ttf','file'),('ActivitiesCatalogue.json','file'),('LaunchScreen.storyboard','file.storyboard')]
 other=[('Info.plist','text.plist.xml'),('App.entitlements','text.plist.entitlements')]
 A('// !$*UTF8*$!\n{\n\tarchiveVersion = 1;\n\tclasses = {\n\t};\n\tobjectVersion = 60;\n\tobjects = {\n')
 A('/* Begin PBXBuildFile section */')

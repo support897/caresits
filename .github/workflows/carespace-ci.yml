@@ -25,7 +25,7 @@ jobs:
           cp -R native-carespace/Sources cs-ci/Sources
           cp -R native-carespace/Assets.xcassets cs-ci/Assets.xcassets
           cp -R native-carespace/Fonts cs-ci/Fonts
-          cp native-carespace/Info.plist native-carespace/App.entitlements native-carespace/ActivitiesCatalogue.json cs-ci/
+          cp native-carespace/Info.plist native-carespace/App.entitlements native-carespace/ActivitiesCatalogue.json native-carespace/LaunchScreen.storyboard cs-ci/
           cp store-build/carespace-GoogleService-Info.plist cs-ci/GoogleService-Info.plist
           cp native-carespace/ci/UITests/CareSpaceFlowTests.swift cs-ci/UITests/
           cp native-carespace/ci/genproj_test.py cs-ci/
