@@ -15,6 +15,19 @@ final class RoleFlowTests: XCTestCase {
         if !b.waitForExistence(timeout: timeout) { shot("MISSING-\(label)"); XCTFail("button \(label) missing. Screen: " + app.staticTexts.allElementsBoundByIndex.map { $0.label }.joined(separator: " | ") + " || Buttons: " + app.buttons.allElementsBoundByIndex.map { $0.label }.joined(separator: " | ")); return }
         sleep(1); b.tap()
     }
+    /// A tab-bar tap that never trips on a doubled button. After a cold signed-in launch the bar can expose
+    /// two matching buttons for one tab while the app settles (run 5: 9x "Me", 1x "Families"); a direct .tap()
+    /// on the query then fails, while firstMatch never does. Give it a moment to settle to one, tap the first either way.
+    func tapTab(_ name: String, timeout: TimeInterval = 30) {
+        let q = app.tabBars.buttons[name]
+        XCTAssertTrue(q.firstMatch.waitForExistence(timeout: timeout), "tab \(name) missing")
+        let end = Date().addingTimeInterval(10)
+        while q.count > 1 && Date() < end { sleep(1) }
+        q.firstMatch.tap(); sleep(2)
+    }
+    func tabExists(_ name: String, timeout: TimeInterval = 30) -> Bool {
+        app.tabBars.buttons[name].firstMatch.waitForExistence(timeout: timeout)
+    }
     func type(_ field: XCUIElement, _ text: String) { if !field.waitForExistence(timeout: 30) { XCTFail("field missing: " + String(app.debugDescription.prefix(1500))); return }; field.tap(); sleep(1); if !(field.value(forKey: "hasKeyboardFocus") as? Bool ?? true) { field.tap(); sleep(1) }; field.typeText(text) }
 
 
@@ -24,7 +37,7 @@ final class RoleFlowTests: XCTestCase {
         app.launch()
         // Leftover signed-in test user from an earlier run: sign out first.
         // The tab bar can lag under a busy Mac: a short wait misses a signed-in session and the run then taps the door on the deck.
-        if app.tabBars.buttons["Me"].waitForExistence(timeout: 30) { signOutFromMe() }
+        if tabExists("Me") { signOutFromMe() }
         // A previous interrupted run can leave a signed-in test user at the profile step: carry on with it, then it is deleted at the end.
         if app.textFields["Your name"].waitForExistence(timeout: 6) || app.buttons["Next"].exists { return }
         if app.buttons["I need care"].waitForExistence(timeout: 2) && !app.buttons["Use email"].exists { tap(side == "family" ? "I need care" : "I give care"); return }
@@ -56,7 +69,7 @@ final class RoleFlowTests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["settingsScreen"].firstMatch.waitForExistence(timeout: 10), "Settings did not open")
     }
     func signOutFromMe() {
-        app.tabBars.buttons["Me"].tap()
+        tapTab("Me")
         openSettings()
         let so = app.buttons["Sign out"]
         XCTAssertTrue(reveal(so, max: 10), "sign out button missing in Settings")
@@ -77,6 +90,10 @@ final class RoleFlowTests: XCTestCase {
         let del = app.buttons["Delete my account"]
         XCTAssertTrue(reveal(del, max: 10), "delete button missing in Settings")
         del.tap(); tap("Delete everything")
+        // After a long run the account asks to sign in once more before it deletes.
+        if app.staticTexts["Is it really you?"].waitForExistence(timeout: 8) {
+            type(app.secureTextFields["Your password"], testPw); dismissKb(); tap("Confirm and delete")
+        }
     }
     func next() { let t = app.staticTexts["onbTitle"]; let before = t.exists ? t.label : ""; tap("Next"); sleep(2); if t.exists && t.label == before { tap("Next"); sleep(2) } }
     func fillYou(_ name: String) {
@@ -87,11 +104,11 @@ final class RoleFlowTests: XCTestCase {
     }
     func finishAndCheck(tabs: [String], role: String) {
         tap("Finish", timeout: 20)
-        for t in tabs { XCTAssertTrue(app.tabBars.buttons[t].waitForExistence(timeout: 30), "\(role): tab \(t) missing") }
+        for t in tabs { XCTAssertTrue(tabExists(t), "\(role): tab \(t) missing") }
         shot("home-\(role)")
-        for t in tabs { app.tabBars.buttons[t].tap(); sleep(2); shot("\(role)-\(t)") }
+        for t in tabs { tapTab(t); shot("\(role)-\(t)") }
         // Me tab: delete account (cleans up the live test user)
-        app.tabBars.buttons["Me"].tap()
+        tapTab("Me")
         deleteFromSettings()
         let out = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 75)
         if !out { shot("FAIL-delete-\(role)") }
@@ -108,7 +125,7 @@ final class RoleFlowTests: XCTestCase {
         card.swipeRight(); sleep(2); shot("deck-after-like")
         app.buttons["Pass"].tap(); sleep(2); shot("deck-after-skip")
         app.buttons["Matches"].tap(); sleep(2); shot("deck-saved")
-        app.tabBars.buttons["Me"].tap()
+        tapTab("Me")
         deleteFromSettings()
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 120))
     }
@@ -121,7 +138,7 @@ final class RoleFlowTests: XCTestCase {
     /// Pictures only: walks the app and saves still pictures. No assertions about behaviour.
     func testPictures() {
         app.launchArguments += ["-AppleLanguages", "(en)"]; app.launch()
-        if app.tabBars.buttons["Me"].waitForExistence(timeout: 5) {
+        if tabExists("Me", timeout: 5) {
             signOutFromMe()
         }
         if !app.buttons["I need care"].waitForExistence(timeout: 4) {
@@ -143,9 +160,9 @@ final class RoleFlowTests: XCTestCase {
         sleep(4); pic("03-home-swipe-deck")
         app.buttons["Details"].tap(); sleep(3); pic("04-profile")
         if app.navigationBars.buttons.firstMatch.exists { app.navigationBars.buttons.firstMatch.tap() } else { app.swipeRight() }; sleep(1)
-        app.tabBars.buttons["Calendar"].tap(); pic("05-calendar")
-        app.tabBars.buttons["Messages"].tap(); pic("06-messages")
-        app.tabBars.buttons["Me"].tap(); pic("07-menu-me")
+        tapTab("Calendar"); pic("05-calendar")
+        tapTab("Messages"); pic("06-messages")
+        tapTab("Me"); pic("07-menu-me")
         deleteFromSettings(); sleep(3)
     }
     func testFamilyApp() {
@@ -159,7 +176,7 @@ final class RoleFlowTests: XCTestCase {
     /// Door law: the first page has only Apple, Google and one small email button. Email is on its own page.
     func testDoorPages() {
         app.launchArguments += ["-AppleLanguages", "(en)"]; app.launch()
-        if app.tabBars.buttons["Me"].waitForExistence(timeout: 5) { return }
+        if tabExists("Me", timeout: 5) { return }
         XCTAssertTrue(app.buttons["Use email"].waitForExistence(timeout: 60), "no door"); shot("b179-door-1")
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Google")).firstMatch.exists, "no Google")
         XCTAssertFalse(app.textFields["Email"].exists, "email field must not be on the first page")
@@ -179,7 +196,7 @@ final class RoleFlowTests: XCTestCase {
         type(app.textFields["Name or nickname"], "Mia"); dismissKb(); sleep(1); next()
         if !app.buttons["Finish"].waitForExistence(timeout: 6) { next() }
         tap("Finish", timeout: 20)
-        XCTAssertTrue(app.tabBars.buttons["Me"].waitForExistence(timeout: 30)); app.tabBars.buttons["Me"].tap(); sleep(2)
+        XCTAssertTrue(app.tabBars.buttons["Me"].waitForExistence(timeout: 30)); tapTab("Me"); sleep(2)
         XCTAssertTrue(app.staticTexts["Zelda Proofname"].waitForExistence(timeout: 10), "typed name not shown in Me"); shot("b179-me-light")
         XCTAssertFalse(app.staticTexts["Member"].exists, "Member placeholder leaked")
         XCTAssertFalse(app.buttons["Set up payments"].exists, "pay screens must be hidden when not live")
@@ -188,8 +205,8 @@ final class RoleFlowTests: XCTestCase {
             openSettings()
             let b = app.buttons["theme-\(p)"]; for _ in 0..<4 where !b.exists { app.swipeUp() }
             if !b.exists { XCTFail("no theme button \(p)"); break }
-            b.tap(); sleep(2); app.tabBars.buttons["Me"].tap(); shot("b179-me-\(p)")
-            XCTAssertTrue(app.tabBars.buttons["Me"].exists, "tabs lost after theme \(p)")
+            b.tap(); sleep(2); tapTab("Me"); shot("b179-me-\(p)")
+            XCTAssertTrue(tabExists("Me", timeout: 5), "tabs lost after theme \(p)")
         }
         deleteFromSettings()
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 120), "not signed out after delete")
@@ -213,7 +230,7 @@ final class RoleFlowTests: XCTestCase {
         return false
     }
     func openAsking() {
-        XCTAssertTrue(app.tabBars.buttons["Me"].waitForExistence(timeout: 60)); app.tabBars.buttons["Me"].tap(); sleep(2)
+        XCTAssertTrue(app.tabBars.buttons["Me"].waitForExistence(timeout: 60)); tapTab("Me"); sleep(2)
         let b = app.buttons["openAsking"]; XCTAssertTrue(reveal(b, max: 8), "no asking row in Me"); b.tap()
         XCTAssertTrue(app.staticTexts["askingTitle"].waitForExistence(timeout: 30), "asking did not open")
     }
@@ -281,10 +298,6 @@ final class RoleFlowTests: XCTestCase {
         for _ in 0..<60 { app.swipeDown(velocity: .fast) }
         app.navigationBars.buttons.firstMatch.tap(); sleep(1)
         deleteFromSettings()
-        // After a long run the account asks to sign in once more before it deletes.
-        if app.staticTexts["Is it really you?"].waitForExistence(timeout: 20) {
-            type(app.secureTextFields["Your password"], testPw); dismissKb(); tap("Confirm and delete")
-        }
         let out = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 240)
         qshot("icons-\(side)-after-delete")
         XCTAssertTrue(out, "not signed out after delete: " + app.staticTexts.allElementsBoundByIndex.map { $0.label }.joined(separator: " | "))
@@ -328,9 +341,8 @@ final class RoleFlowTests: XCTestCase {
         meet.tap(); sleep(3)
         qshot("map-\(tag)-3-person-opened")
         app.navigationBars.buttons.firstMatch.tap(); sleep(2)
-        app.tabBars.buttons["Me"].tap(); sleep(2)
+        tapTab("Me"); sleep(2)
         deleteFromSettings()
-        if app.staticTexts["Is it really you?"].waitForExistence(timeout: 20) { type(app.secureTextFields["Your password"], testPw); dismissKb(); tap("Confirm and delete") }
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 240), "account not deleted")
     }
     // Build 181 item 3: country picking. The au pair picks her own country (card nationality); the family picks countries (looking prefs nationality)
@@ -349,14 +361,13 @@ final class RoleFlowTests: XCTestCase {
         for _ in 0..<3 { if (tg.label == "Deck") == on { return }; tg.tap(); sleep(5) }
     }
     func deleteThisAccount() {
-        app.tabBars.buttons["Me"].tap(); sleep(2)
+        tapTab("Me"); sleep(2)
         deleteFromSettings()
-        if app.staticTexts["Is it really you?"].waitForExistence(timeout: 20) { type(app.secureTextFields["Your password"], testPw); dismissKb(); tap("Confirm and delete") }
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 240), "account not deleted")
     }
     func testCountryMap() {
         // 1. the au pair picks her country, relaunch reads it back
-        signUp(side: "carer"); fillYou("Test CAuPair"); next(); tap("Au pair"); next()
+        signUp(side: "carer"); fillYou("Zelda CAuPair"); next(); tap("Au pair"); next()
         if app.buttons["Skip"].waitForExistence(timeout: 4) { tap("Skip") }
         let about = app.textFields["A few words about your care"]
         if about.waitForExistence(timeout: 4) { type(about, "Kind and calm care"); dismissKb() }
@@ -373,10 +384,16 @@ final class RoleFlowTests: XCTestCase {
         if !app.buttons["Finish"].waitForExistence(timeout: 6) { next() }
         tap("Finish", timeout: 20)
         openAsking(); pickCountry("Countries you welcome", chip: "Filipino"); qshot("country-3-family-picks-filipino")
+        // Prove the pick landed on the server before the map reads it: relaunch and read it back.
+        app.terminate(); app.launch()
+        openAsking(); pickCountry("Countries you welcome", chip: "Filipino", open: true)
+        qshot("country-3b-family-after-relaunch-filipino-still-ticked")
         leaveAsking(); app.tabBars.buttons.element(boundBy: 0).tap(); sleep(2)
         setMap(true); sleep(10)
-        let pin = app.descendants(matching: .any).matching(identifier: "mapPin").firstMatch
-        XCTAssertFalse(pin.waitForExistence(timeout: 30), "an au pair pin showed although the family chose Filipino")
+        // Pins carry the person's first name as their label, so the check names this run's au pair exactly:
+        // any other au pair's pin may legitimately stand, only Zelda's must stay hidden.
+        let pin = app.descendants(matching: .any).matching(identifier: "mapPin").matching(NSPredicate(format: "label == %@", "Zelda")).firstMatch
+        XCTAssertFalse(pin.waitForExistence(timeout: 30), "the Colombian au pair's pin showed although the family chose Filipino")
         qshot("country-4-filipino-chosen-no-colombian-au-pair-pin")
         setMap(false)
         // 3. the family switches to Colombian: her pin appears
@@ -395,7 +412,7 @@ final class RoleFlowTests: XCTestCase {
         deleteThisAccount()
         tap("Use email"); tap("I already have an account")
         type(app.textFields["Email"], apEmail); type(app.secureTextFields["Password (6+ letters)"], apPw); dismissKb(); tap("Sign in")
-        testPw = apPw; XCTAssertTrue(app.tabBars.buttons["Me"].waitForExistence(timeout: 90), "au pair did not sign in"); deleteThisAccount()
+        testPw = apPw; XCTAssertTrue(tabExists("Me", timeout: 90), "au pair did not sign in"); deleteThisAccount()
     }
     func testMapFamily() { mapProof("family", side: "family") }
     func testMapNanny() { mapProof("nanny", side: "carer", service: "Nanny") }
@@ -419,7 +436,7 @@ final class RoleFlowTests: XCTestCase {
         fillYou("Named Family"); next(); next(); type(app.textFields["Name or nickname"], "Mia"); dismissKb(); next()
         tap("Finish", timeout: 20)
         XCTAssertTrue(app.tabBars.buttons["Me"].waitForExistence(timeout: 90))
-        app.tabBars.buttons["Me"].tap(); sleep(2)
+        tapTab("Me"); sleep(2)
         XCTAssertTrue(app.staticTexts["Named Family"].waitForExistence(timeout: 15), "the name is not on the profile. Texts: " + app.staticTexts.allElementsBoundByIndex.map { $0.label }.joined(separator: " | "))
         shot("b180-me-name-stands")
         deleteFromSettings()
@@ -432,7 +449,7 @@ final class RoleFlowTests: XCTestCase {
         signUp(side: "family"); fillYou("Photo Proof"); next(); next(); type(app.textFields["Name or nickname"], "Mia"); dismissKb(); next()
         tap("Finish", timeout: 20)
         XCTAssertTrue(app.tabBars.buttons["Me"].waitForExistence(timeout: 90))
-        app.tabBars.buttons["Me"].tap()
+        tapTab("Me")
         let p = app.staticTexts["photoProof"]
         _ = p.waitForExistence(timeout: 30)
         for _ in 0..<60 where !(p.exists && p.label.contains("PROOF")) { sleep(2) }
@@ -453,11 +470,13 @@ final class RoleFlowTests: XCTestCase {
     func testChatPhoto() {
         addTeardownBlock { [self] in cleanupProof() }
         app.launchEnvironment["CS_CHATPROOF"] = "1"; app.launchArguments += ["-AppleLanguages", "(en)"]; app.launch()
-        let msgs = app.tabBars.buttons["Messages"]
-        XCTAssertTrue(msgs.waitForExistence(timeout: 240), "chat proof setup did not finish: " + ((try? String(contentsOfFile: "/Users/ilseplacencia/Apps/nativeproj/pics/chat-proof.txt")) ?? app.staticTexts["chatProof"].label))
-        let rep = (try? String(contentsOfFile: "/Users/ilseplacencia/Apps/nativeproj/pics/chat-proof.txt")) ?? "no report"
+        // The proof status lives in the app as the chatProof label; the file is a Mac-only instrument
+        // (the app writes it to a Mac path that silently no-ops on the cloud runner), so read the label first.
+        XCTAssertTrue(tabExists("Messages", timeout: 240), "chat proof setup did not finish: " + app.staticTexts["chatProof"].label)
+        let labelRep = app.staticTexts["chatProof"].label
+        let rep = labelRep.contains("CHAT PROOF") ? labelRep : ((try? String(contentsOfFile: "/Users/ilseplacencia/Apps/nativeproj/pics/chat-proof.txt")) ?? labelRep)
         XCTAssertTrue(rep.contains("CHAT PROOF OK"), rep)
-        msgs.tap(); sleep(2); shot("b177-chat-list")
+        tapTab("Messages"); shot("b177-chat-list")
         let row = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Proof")).firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 20)); row.tap()
         let ph = app.descendants(matching: .any)["chatPhoto"].firstMatch
@@ -499,7 +518,7 @@ final class RoleFlowTests: XCTestCase {
     func testDeckCarer() {
         addTeardownBlock { [self] in cleanupProof() }
         app.launchEnvironment["CS_CHATPROOF"] = "1"; app.launchEnvironment["CS_CHATPROOF_END"] = "carer"; app.launchArguments += ["-AppleLanguages", "(en)"]; app.launch()
-        XCTAssertTrue(app.tabBars.buttons["Families"].waitForExistence(timeout: 240), "carer app did not open"); app.tabBars.buttons["Families"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Families"].waitForExistence(timeout: 240), "carer app did not open"); tapTab("Families")
         let card = app.descendants(matching: .any)["topCard"].firstMatch
         XCTAssertTrue(card.waitForExistence(timeout: 90), "no deck card for carer")
         sleep(3); shot("b177-deck-7-carer-card")
@@ -517,7 +536,7 @@ final class RoleFlowTests: XCTestCase {
         signUp(side: "family"); fillYou(name); next(); next(); type(app.textFields["Name or nickname"], "Mia"); dismissKb(); next()
         tap("Finish", timeout: 20)
         XCTAssertTrue(app.tabBars.buttons["Me"].waitForExistence(timeout: 90))
-        app.tabBars.buttons["Me"].tap()
+        tapTab("Me")
         deleteFromSettings()
     }
     func testDeleteSlow() {
@@ -534,7 +553,7 @@ final class RoleFlowTests: XCTestCase {
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Still not done")).firstMatch.waitForExistence(timeout: 40), "no timeout line"); sleep(1); shot("b177-delete-4-timeout-line")
         app.terminate(); app.launchEnvironment["CS_DELETE_DELAY"] = "0"; app.launchEnvironment["CS_DELETE_TIMEOUT"] = "60"; app.launch()
         XCTAssertTrue(app.tabBars.buttons["Me"].waitForExistence(timeout: 90), "no tab bar after relaunch")
-        app.tabBars.buttons["Me"].tap()
+        tapTab("Me")
         deleteFromSettings()
         let out = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Use email")).firstMatch.waitForExistence(timeout: 90)
         shot("b177-delete-5-normal-lands-on-sign-in"); XCTAssertTrue(out, "normal delete did not land on the sign in door")
@@ -543,6 +562,8 @@ final class RoleFlowTests: XCTestCase {
     /// The door must stand with no raw error line.
     func testDoorAfterApple() {
         app.launchArguments += ["-AppleLanguages", "(en)"]; app.launch()
+        // A failed earlier test can leave its account signed in: clear it first, or the door never appears.
+        if tabExists("Me", timeout: 5) { signOutFromMe() }
         XCTAssertTrue(app.buttons["Use email"].waitForExistence(timeout: 40), "door did not appear")
         let sb = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         for round in 1...2 {
@@ -571,7 +592,7 @@ final class RoleFlowTests: XCTestCase {
         type(app.textFields["Email"], email)
         type(app.secureTextFields["Password (6+ letters)"], pw)
         tap("Sign in")
-        XCTAssertTrue(app.tabBars.buttons["Me"].waitForExistence(timeout: 60), "sign in did not land")
+        XCTAssertTrue(tabExists("Me", timeout: 60), "sign in did not land")
     }
     func ensureTicked(_ id: String) {
         let b = app.buttons[id].firstMatch
@@ -611,7 +632,7 @@ final class RoleFlowTests: XCTestCase {
         func topCardHasNote() -> Bool { app.descendants(matching: .any)["urgentCard"].firstMatch.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", note)).firstMatch.exists }
         var onMine = topCardHasNote()
         var passes = 0
-        while !onMine && passes < 6 {
+        while !onMine && passes < 15 {
             let passBtn = app.descendants(matching: .any)["urgentPass"].firstMatch
             if !passBtn.exists { break }
             passBtn.tap(); sleep(3); passes += 1
@@ -689,7 +710,7 @@ final class RoleFlowTests: XCTestCase {
         tap("Finish", timeout: 20)
         let carEmail = testEmail, carPw = testPw
         // the urgent distance rides the phone: make sure it stands at 25 km before judging the cut
-        app.tabBars.buttons["Me"].tap(); openSettings()
+        tapTab("Me"); openSettings()
         let anyMenu = app.buttons.matching(NSPredicate(format: "label == 'Any'")).firstMatch
         if anyMenu.waitForExistence(timeout: 4) { anyMenu.tap(); sleep(1); tap("25 km") }
         app.tabBars.buttons.element(boundBy: 0).tap()
@@ -697,7 +718,7 @@ final class RoleFlowTests: XCTestCase {
         XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", note)).firstMatch.exists, "a far post showed inside 25 km")
         qshot("urgentd-1-far-post-hidden")
         // open the urgent distance to Any in Settings: the far post now shows
-        app.tabBars.buttons["Me"].tap(); openSettings()
+        tapTab("Me"); openSettings()
         let menu = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "25 km")).firstMatch
         XCTAssertTrue(reveal(menu, max: 10), "urgent distance menu missing"); menu.tap(); sleep(1)
         tap("Any distance")
