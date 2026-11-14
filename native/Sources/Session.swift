@@ -22,7 +22,7 @@ final class Session: ObservableObject {
             Task { @MainActor in
                 guard let self else { return }
                 self.uid = user?.uid
-                if let u = user?.uid { self.me = await Backend.loadProfile(u) } else { self.me = nil }
+                if let u = user?.uid { self.me = await Backend.loadProfile(u); Push.registerIfSignedIn() } else { self.me = nil }
                 self.loading = false
             }
         }
@@ -59,6 +59,7 @@ final class Session: ObservableObject {
         try await Auth.auth().currentUser?.reauthenticate(with: OAuthProvider.appleCredential(withIDToken: s, rawNonce: nonce, fullName: c.fullName))
     }
     func signOut() {
+        Task { await Backend.deactivateDevice() }
         sideConfirmed = false; try? Auth.auth().signOut(); me = nil }
 
     func email(_ email: String, _ pw: String, create: Bool) async throws {

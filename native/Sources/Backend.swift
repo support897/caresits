@@ -302,6 +302,46 @@ enum Backend {
         return snap.documents.map { (($0.data()["rating"] as? NSNumber)?.intValue ?? 0, $0.data()["text"] as? String ?? "") }
     }
 
+    /// A review left straight on a profile (Build 181, her words 13 Nov 22:13), by another person.
+    /// Same reviews collection as the booking reviews; kind marks it apart. Real reviews only.
+    static func addProfileReview(about: String, by: String, rating: Int, text: String) async throws {
+        try await db.collection("reviews").document("\(by)_\(about)_profile").setData(["aboutUid": about, "byUid": by, "kind": "profile", "rating": rating, "text": String(text.prefix(600)), "at": FieldValue.serverTimestamp()])
+    }
+    static func profileReviews(about: String) async -> [(rating: Int, text: String, by: String)] {
+        guard let snap = try? await db.collection("reviews").whereField("aboutUid", isEqualTo: about).limit(to: 20).getDocuments() else { return [] }
+        var out: [(rating: Int, text: String, by: String)] = []
+        for d in snap.documents {
+            let byUid = d.data()["byUid"] as? String ?? ""
+            let name = (await loadProfile(byUid))?.firstName ?? "Someone"
+            out.append((_rating(d), d.data()["text"] as? String ?? "", name))
+        }
+        return out
+    }
+    static func _rating(_ d: QueryDocumentSnapshot) -> Int { (d.data()["rating"] as? NSNumber)?.intValue ?? 0 }
+
+    // MARK: Push devices (Security design of record 17 Oct 2026: owner only docs, sealed keys only)
+    static var deviceId: String {
+        if let d = UserDefaults.standard.string(forKey: "caresits.deviceId") { return d }
+        let d = UUID().uuidString; UserDefaults.standard.set(d, forKey: "caresits.deviceId"); return d
+    }
+    static func registerDevice(token: String) async {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        let ref = db.collection("profiles").document(uid).collection("devices").document(deviceId)
+        let kinds: [String: Bool] = ["message": NotifyKind.on(.message), "reminder": NotifyKind.on(.reminder)]
+        let exists = (try? await ref.getDocument().exists) ?? false
+        if exists { try? await ref.updateData(["token": token, "active": true, "kinds": kinds, "lastSeenAt": FieldValue.serverTimestamp(), "updatedAt": FieldValue.serverTimestamp()]) }
+        else { try? await ref.setData(["token": token, "platform": "ios", "active": true, "kinds": kinds, "createdAt": FieldValue.serverTimestamp(), "lastSeenAt": FieldValue.serverTimestamp(), "updatedAt": FieldValue.serverTimestamp()]) }
+    }
+    static func syncDeviceKinds() async {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        let kinds: [String: Bool] = ["message": NotifyKind.on(.message), "reminder": NotifyKind.on(.reminder)]
+        try? await db.collection("profiles").document(uid).collection("devices").document(deviceId).updateData(["kinds": kinds, "updatedAt": FieldValue.serverTimestamp()])
+    }
+    static func deactivateDevice() async {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        try? await db.collection("profiles").document(uid).collection("devices").document(deviceId).updateData(["active": false, "updatedAt": FieldValue.serverTimestamp()])
+    }
+
     // MARK: Resume
     static func loadResume(_ uid: String) async -> Resume? {
         guard let s = try? await db.collection("profiles").document(uid).collection("resume").document("main").getDocument(), let d = s.data() else { return nil }

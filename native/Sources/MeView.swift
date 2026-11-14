@@ -10,6 +10,7 @@ struct MeView: View {
     @State private var showFamily = false
     @State private var showResume = false; @State private var showEdit = false
     @State private var rating: (avg: Double, count: Int)?; @State private var reviews: [(rating: Int, text: String)] = []
+    @State private var myProfileReviews: [(rating: Int, text: String, by: String)] = []
     var role: Role { s.role }
     var me: Person { s.me ?? Person(id: "", data: [:]) }
 
@@ -36,6 +37,13 @@ struct MeView: View {
                 NavigationLink { AskingView() } label: { row(.check, "What I am asking for", "Tick your picks") }.buttonStyle(.plain).padding(.horizontal, 20).accessibilityIdentifier("openAsking")
                 NavigationLink { SettingsView() } label: { row(.settings, "Settings", "Look and bunny") }.buttonStyle(.plain).padding(.horizontal, 20).accessibilityIdentifier("openSettings")
                 if me.side == "carer" && PayConfig.visible { GetPaidCard().padding(.horizontal, 20) }
+                Card { VStack(alignment: .leading, spacing: 8) {
+                    IconLabel(icon: .star, text: "Reviews on your profile", size: 18).font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold))
+                    if myProfileReviews.isEmpty { Text("No reviews yet. Ask someone who knows your care.").font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline)).foregroundStyle(Brand.muted) }
+                    ForEach(myProfileReviews.indices, id: \.self) { i in VStack(alignment: .leading, spacing: 2) { HStack(spacing: 8) { Stars(count: myProfileReviews[i].rating); Text(myProfileReviews[i].by).font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline).weight(.semibold)) }; if !myProfileReviews[i].text.isEmpty { Text(myProfileReviews[i].text).font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline)) } } }
+                    ShareLink(item: "Please leave me a review on Caresitters: https://ilseplacencia.shop/r/\(me.id)") { IconLabel(icon: .send, text: "Request a review", size: 16, color: Brand.bunny) }.accessibilityIdentifier("requestReview")
+                    Text("Copy the link and paste it anywhere.").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted)
+                } }.padding(.horizontal, 20)
                 Card { VStack(alignment: .leading, spacing: 8) {
                     Text("My photos").font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold))
                     ScrollView(.horizontal, showsIndicators: false) { HStack {
@@ -81,7 +89,7 @@ struct MeView: View {
             .sheet(isPresented: $showFamily) { FamilyEditor() }
             .onAppear { if s.goMyFamily { s.goMyFamily = false; showFamily = true } }
             .onChange(of: s.goMyFamily) { _, go in if go { s.goMyFamily = false; showFamily = true } }
-            .task { if me.side == "carer" { rating = await Backend.reviewSummary(me.id); reviews = await Backend.reviewsFor(carer: me.id) } }
+            .task { if me.side == "carer" { rating = await Backend.reviewSummary(me.id); reviews = await Backend.reviewsFor(carer: me.id) }; myProfileReviews = await Backend.profileReviews(about: me.id) }
         }
     }
     func row(_ e: BI, _ t: String, _ sub: String) -> some View { Card { HStack { BrandIcon(kind: e, size: 34); VStack(alignment: .leading) { Text(t).font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold)).foregroundStyle(Brand.ink); Text(sub).font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted) }; Spacer(); BrandIcon(kind: .chevron, size: 18, color: Brand.muted) } } }

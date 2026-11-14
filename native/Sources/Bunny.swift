@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The seven moods. Ilse's drawing stays exactly as drawn, the same bunny on every screen, with NOTHING drawn on her.
+/// The seven moods. The drawing stays exactly as drawn, the same bunny on every screen, with NOTHING drawn on her.
 /// A mood only changes how she moves. No badge, no icon, no puff is ever laid over the artwork.
 enum BunnyMood: String, CaseIterable { case hello, point, celebrate, encourage, oops, rest, think }
 

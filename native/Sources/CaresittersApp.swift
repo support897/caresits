@@ -4,6 +4,7 @@ import GoogleSignIn
 
 @main
 struct CaresittersApp: App {
+    @UIApplicationDelegateAdaptor(PushDelegate.self) var pushDelegate
     @StateObject private var session: Session
     init() {
         FirebaseApp.configure()

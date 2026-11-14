@@ -270,6 +270,8 @@ struct PersonDetailView: View {
     let person: Person; @State var saved: Bool; var onSave: (Bool) -> Void
     @State private var verified: String?; @State private var resume: Resume?
     @State private var reviews: [(rating: Int, text: String)] = []
+    @State private var profileReviews: [(rating: Int, text: String, by: String)] = []
+    @State private var showReview = false
     @State private var showBook = false
     @State private var photoIndex = 0
     @State private var showSet = false
@@ -307,12 +309,14 @@ struct PersonDetailView: View {
                     if !r.certificates.isEmpty { Text("Certificates they list: " + r.certificates.joined(separator: "; ")).font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline)) }
                     Text("Their own words. Not checked.").font(.custom("Atkinson Hyperlegible", size: 12, relativeTo: .caption)).foregroundStyle(Brand.muted)
                 } } }
-                if person.side == "carer" { Card { VStack(alignment: .leading, spacing: 6) {
+                Card { VStack(alignment: .leading, spacing: 6) {
                     IconLabel(icon: .star, text: "Reviews", size: 18).font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold))
                     if let r = rating { Text("\(String(format: "%.1f", r.avg)) out of 5 from \(r.count)").foregroundStyle(Brand.ink) }
-                    if reviews.isEmpty { Text("No reviews yet").font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline)).foregroundStyle(Brand.muted) }
+                    if reviews.isEmpty && profileReviews.isEmpty { Text("No reviews yet").font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline)).foregroundStyle(Brand.muted) }
                     ForEach(reviews.indices, id: \.self) { i in HStack(spacing: 8) { Stars(count: reviews[i].rating); if !reviews[i].text.isEmpty { Text(reviews[i].text) } }.font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline)) }
-                } } }
+                    ForEach(profileReviews.indices, id: \.self) { i in VStack(alignment: .leading, spacing: 2) { HStack(spacing: 8) { Stars(count: profileReviews[i].rating); Text(profileReviews[i].by).font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline).weight(.semibold)) }; if !profileReviews[i].text.isEmpty { Text(profileReviews[i].text).font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline)) } } }
+                    if let me = s.me, me.id != person.id { Button { showReview = true } label: { IconLabel(icon: .pencil, text: "Leave a review", size: 16, color: Brand.bunny) }.padding(.top, 4).accessibilityIdentifier("leaveReview") }
+                } }
                 if role == .family && person.side == "carer" { BigButton(title: "Book \(person.firstName)", tint: role.tint, icon: .calendar) { showBook = true } }
                 else if person.side == "family" { EmptyView() }
                 HStack(spacing: 10) {
@@ -325,9 +329,11 @@ struct PersonDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { saved.toggle(); onSave(saved); if let u = s.uid { Task { await Backend.setSaved(u, person.id, saved) } } } label: { BrandIcon(kind: .heart, size: 24, color: Brand.bunny, solid: saved) } } }
         .sheet(isPresented: $showBook) { BookSheet(carer: person) }
+        .sheet(isPresented: $showReview) { ReviewSheet(person: person) { Task { profileReviews = await Backend.profileReviews(about: person.id) } } }
         .sheet(item: $contact) { ContactSheet(person: person, mode: $0) }
         .task {
             if person.side == "carer" { verified = await Backend.verifiedLevel(person.id); reviews = await Backend.reviewsFor(carer: person.id); rating = await Backend.reviewSummary(person.id); resume = await Backend.loadResume(person.id) }
+            profileReviews = await Backend.profileReviews(about: person.id)
         }
     }
 }
@@ -461,5 +467,36 @@ struct SwipeCard: View {
             Spacer(minLength: 0)
             actions
         }.font(.custom("Atkinson Hyperlegible", size: 17)).padding(.horizontal, 20).padding(.bottom, 20).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+}
+
+
+/// Leave a review straight on a profile: stars plus optional words. Real reviews only, none invented.
+struct ReviewSheet: View {
+    @EnvironmentObject var s: Session
+    @Environment(\.dismiss) var dismiss
+    let person: Person
+    var onDone: () -> Void = {}
+    @State private var stars = 5; @State private var text = ""; @State private var busy = false; @State private var err = ""
+    var body: some View {
+        NavigationStack {
+            ScrollView { VStack(alignment: .leading, spacing: 14) {
+                Text("Review \(person.firstName)").font(Brand.title(24)).foregroundStyle(Brand.titleColor)
+                HStack(spacing: 8) { ForEach(1...5, id: \.self) { n in Button { stars = n } label: { BrandIcon(kind: .star, size: 34, color: n <= stars ? Brand.bunny : Brand.muted, mono: n <= stars) } } }.accessibilityIdentifier("reviewStars")
+                TextField("Say something kind, if you like", text: $text, axis: .vertical).lineLimit(3...6).padding(12).background(Brand.field).clipShape(RoundedRectangle(cornerRadius: 12)).accessibilityIdentifier("reviewText")
+                if !err.isEmpty { Text(err).foregroundStyle(Brand.ink) }
+                BigButton("Put my review on their profile", busy: busy) { Task { await save() } }
+                Text("Your first name stands beside your review.").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted)
+            }.padding(20) }
+            .background(Brand.cream.ignoresSafeArea())
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Close") { dismiss() } } }
+        }
+    }
+    func save() async {
+        guard let me = s.me else { return }
+        busy = true; err = ""
+        do { try await Backend.addProfileReview(about: person.id, by: me.id, rating: stars, text: text); onDone(); dismiss() }
+        catch { err = "Your review did not save. Please try again." }
+        busy = false
     }
 }

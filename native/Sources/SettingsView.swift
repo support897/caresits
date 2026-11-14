@@ -8,6 +8,12 @@ struct SettingsView: View {
     @AppStorage("caresits.bunnyDown") private var bunnyDown = false
     @AppStorage("caresits.urgentOn") private var urgentOn = true
     @AppStorage("caresits.urgentRadiusKm") private var urgentRadius = 25
+    @AppStorage("caresits.notify.message") private var nMessage = true
+    @AppStorage("caresits.notify.reminder") private var nReminder = true
+    @AppStorage("caresits.notify.bookingRequest") private var nBookingRequest = true
+    @AppStorage("caresits.notify.bookingConfirmed") private var nBookingConfirmed = true
+    @AppStorage("caresits.notify.bookingCancelled") private var nBookingCancelled = true
+    @AppStorage("caresits.notify.urgentAnswer") private var nUrgentAnswer = true
     @ObservedObject private var themeStore = ThemeStore.shared
     @State private var confirmDelete = false; @State private var showReauth = false
     @State private var deleting = false; @State private var deleteSlow = false; @State private var err = ""
@@ -42,6 +48,16 @@ struct SettingsView: View {
                     }
                 } }.padding(.horizontal, 20)
             }
+            Card { VStack(alignment: .leading, spacing: 10) {
+                Text("Notifications").font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold))
+                Toggle("New message", isOn: $nMessage).onChange(of: nMessage) { _ in Task { await Backend.syncDeviceKinds() } }
+                Toggle("A message waiting a day", isOn: $nReminder).onChange(of: nReminder) { _ in Task { await Backend.syncDeviceKinds() } }
+                Toggle("New booking request", isOn: $nBookingRequest)
+                Toggle("Booking confirmed", isOn: $nBookingConfirmed)
+                Toggle("Booking cancelled", isOn: $nBookingCancelled)
+                Toggle("An answer on the urgent board", isOn: $nUrgentAnswer)
+                Text("Only the essentials. One gentle nudge when a message has waited a day, never a stream.").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted)
+            } }.padding(.horizontal, 20)
             Card { VStack(alignment: .leading, spacing: 10) {
                 Text("Account").font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold))
                 Button("Sign out") { s.signOut() }.font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold))
