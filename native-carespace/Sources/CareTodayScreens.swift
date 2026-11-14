@@ -63,7 +63,7 @@ struct TodayView: View {
             RowLink(icon: "clock", title: "Timesheet", subtitle: "Worked hours this week") { TimesheetView(model: model) }
             RowLink(icon: "meal", title: "Shopping", subtitle: "What to buy, who buys, what is done") { ShoppingView(model: model) }
             RowLink(icon: "bell", title: "Reminders", subtitle: "Coming up and waiting") { RemindersView(model: model) }
-            RowLink(icon: "phone", title: "Emergency", subtitle: "Contacts and allergy alerts, big") { EmergencyView(model: model) }
+            RowLink(icon: "phone", title: "Emergency", subtitle: "Contacts and allergy alerts, big") { EmergencyHubView(model: model) }
             RowLink(icon: "shield", title: "Checks", subtitle: "Each team member's checks") { ChecksView(model: model) }
             RowLink(icon: "trash", title: "Recently deleted", subtitle: "Deleted day entries rest 30 days") { DeletedView(model: model) }
         }

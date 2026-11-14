@@ -10,9 +10,8 @@ import SwiftUI
 // The pages below hang off Today: roster, timesheet, shopping,
 // reminders, emergency, checks, recently deleted.
 
-extension Date {
-    var shortDay: String { formatted(date: .abbreviated, time: .omitted) }
-}
+// Date.shortDay stands in CareUI.swift (the house helper) —
+// this file uses it, never redeclares it.
 
 // MARK: Item 26 — Roster: the team's week, from the calendar.
 
@@ -243,7 +242,7 @@ struct RemindersView: View {
 // Only the child's own team sees it (this page lives inside the
 // space, behind the same access gates as the medical pages).
 
-struct EmergencyView: View {
+struct EmergencyHubView: View {
     @ObservedObject var model: SpaceModel
     @State private var childId: String?
     var child: ChildProfile? { model.children.first(where: { $0.id == childId }) ?? model.children.first }
@@ -263,7 +262,7 @@ struct EmergencyView: View {
                         .padding(14).frame(maxWidth: .infinity, alignment: .leading)
                         .background(Brand.blush).clipShape(RoundedRectangle(cornerRadius: 14))
                 }
-                EmergencyCard(space: model.space, child: c)
+                EmergencyContactsCard(space: model.space, child: c)
                 BodyText(text: "Medication and full details stand on \(c.name)'s page, each as its own record.", muted: true)
             } else {
                 EmptyState(title: "No children yet", detail: "Emergency details stand here for each child.")
@@ -274,7 +273,7 @@ struct EmergencyView: View {
     }
 }
 
-struct EmergencyCard: View {
+struct EmergencyContactsCard: View {
     let space: SpaceSummary
     let child: ChildProfile
     @State private var contacts: [EmergencyContact] = []
