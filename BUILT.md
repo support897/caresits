@@ -171,3 +171,9 @@ Full suite on the final tree: 17 of 20 passed first time. Failed in the full run
 
 - The run-6 gate's build-for-testing on ff3a611 FAILED (exit 65): exactly one error — native/UITests/RoleFlowTests.swift:25:17: "value of type 'XCUIElement' has no member 'count'". The subscript app.tabBars.buttons[name] returns an XCUIElement, not a query, so tapTab's q.count did not compile. testDeleteSlow never ran.
 - Fix: both helpers now build the query with app.tabBars.buttons.matching(NSPredicate(format: "label == %@", name)) — a real XCUIElementQuery, so .count and .firstMatch both stand; the label predicate matches the same buttons the subscript matched (run 5 proved the label match). No other change.
+
+## RUN 6 GATE 2: BUILD PASSED, testDeleteSlow FAILED AT THE ROLE TAP (15 Nov 2026, ~06:1x)
+
+- Build-for-testing on e400e62: TEST BUILD SUCCEEDED, exit 0. The doubled-Me fix is PROVEN: zero "multiple matching elements" in the test log (run 5 failed on it 9x).
+- testDeleteSlow FAILED (TEST EXIT 65, 138.684 s, 1 failure): RoleFlowTests.swift:60 "sign up did not reach onboarding". The app reached the role pick ("Who are you?") — sign-out, door, email create and the Not Now prompt all worked — but the role tap landed nowhere TWICE: the log shows "Computed hit point (-1,-1) after scrolling to visible" at t=93.51s and again at t=106.43s. The button exists in the hierarchy before it is hittable (mid-transition after the Not Now dismissal at t=89.69s), so the tap synthesises at (-1,-1). Harness fault, not an app fault: the same role tap passed testSwipeDeck in round 4 and in run 5.
+- Fix: signUp's role step now polls for up to 45 s until the name field stands, tapping the role button only while it is hittable.
