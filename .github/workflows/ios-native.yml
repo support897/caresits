@@ -30,13 +30,13 @@ jobs:
           python3 genproj.py
           xcodebuild -version
 
-      - name: Compile for the simulator (no signing)
+      - name: Compile for the simulator (ad-hoc signed - the keychain needs a signature)
         working-directory: native
         run: |
           set -o pipefail
           xcodebuild build -project Caresitters.xcodeproj -scheme Caresitters \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
-            CODE_SIGNING_ALLOWED=NO 2>&1 | tee build.log | grep -E "error:|BUILD (SUCCEEDED|FAILED)" || true
+            CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= 2>&1 | tee build.log | grep -E "error:|BUILD (SUCCEEDED|FAILED)" || true
           grep -q "BUILD SUCCEEDED" build.log
 
       - name: Print errors on failure
@@ -53,7 +53,7 @@ jobs:
           xcrun simctl boot "$UDID" || true
           xcodebuild test -project Caresitters.xcodeproj -scheme Caresitters -destination "id=$UDID" \
             -only-testing:CaresittersUITests -resultBundlePath "$RUNNER_TEMP/ui.xcresult" \
-            CODE_SIGNING_ALLOWED=NO 2>&1 | tee ui.log | grep -E "Test Case|error:|Executed|TEST (SUCCEEDED|FAILED)" || true
+            CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= 2>&1 | tee ui.log | grep -E "Test Case|error:|Executed|TEST (SUCCEEDED|FAILED)" || true
           grep -q "TEST SUCCEEDED" ui.log
 
       - name: Upload test bundle

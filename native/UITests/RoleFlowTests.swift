@@ -23,7 +23,8 @@ final class RoleFlowTests: XCTestCase {
         app.launchArguments += ["-AppleLanguages", "(en)"]
         app.launch()
         // Leftover signed-in test user from an earlier run: sign out first.
-        if app.tabBars.buttons["Me"].waitForExistence(timeout: 5) { signOutFromMe() }
+        // The tab bar can lag under a busy Mac: a short wait misses a signed-in session and the run then taps the door on the deck.
+        if app.tabBars.buttons["Me"].waitForExistence(timeout: 30) { signOutFromMe() }
         // A previous interrupted run can leave a signed-in test user at the profile step: carry on with it, then it is deleted at the end.
         if app.textFields["Your name"].waitForExistence(timeout: 6) || app.buttons["Next"].exists { return }
         if app.buttons["I need care"].waitForExistence(timeout: 2) && !app.buttons["Use email"].exists { tap(side == "family" ? "I need care" : "I give care"); return }

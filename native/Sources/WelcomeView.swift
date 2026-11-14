@@ -93,7 +93,13 @@ struct EmailPage: View {
     }
     func go() async {
         busy = true; err = ""
-        do { try await s.email(email.trimmingCharacters(in: .whitespaces), pw, create: creating) } catch { err = error.localizedDescription }
+        do { try await s.email(email.trimmingCharacters(in: .whitespaces), pw, create: creating) } catch {
+            // The door never shows a raw system error: same shape as the Apple/Google door above.
+            let e = (error as NSError)
+            if e.domain == ASAuthorizationError.errorDomain || e.code == -5 { }
+            else if error is AppError { err = error.localizedDescription }
+            else { err = "Could not sign in. Please try again." }
+        }
         busy = false
     }
 }
