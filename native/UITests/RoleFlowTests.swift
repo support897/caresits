@@ -19,14 +19,14 @@ final class RoleFlowTests: XCTestCase {
     /// two matching buttons for one tab while the app settles (run 5: 9x "Me", 1x "Families"); a direct .tap()
     /// on the query then fails, while firstMatch never does. Give it a moment to settle to one, tap the first either way.
     func tapTab(_ name: String, timeout: TimeInterval = 30) {
-        let q = app.tabBars.buttons[name]
+        let q = app.tabBars.buttons.matching(NSPredicate(format: "label == %@", name))
         XCTAssertTrue(q.firstMatch.waitForExistence(timeout: timeout), "tab \(name) missing")
         let end = Date().addingTimeInterval(10)
         while q.count > 1 && Date() < end { sleep(1) }
         q.firstMatch.tap(); sleep(2)
     }
     func tabExists(_ name: String, timeout: TimeInterval = 30) -> Bool {
-        app.tabBars.buttons[name].firstMatch.waitForExistence(timeout: timeout)
+        app.tabBars.buttons.matching(NSPredicate(format: "label == %@", name)).firstMatch.waitForExistence(timeout: timeout)
     }
     func type(_ field: XCUIElement, _ text: String) { if !field.waitForExistence(timeout: 30) { XCTFail("field missing: " + String(app.debugDescription.prefix(1500))); return }; field.tap(); sleep(1); if !(field.value(forKey: "hasKeyboardFocus") as? Bool ?? true) { field.tap(); sleep(1) }; field.typeText(text) }
 

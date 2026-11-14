@@ -166,3 +166,8 @@ Full suite on the final tree: 17 of 20 passed first time. Failed in the full run
 - testCountryMap:379: an au pair pin showed though the family chose Filipino. The filter code is right (chosen from looking, role from careTypes, nationality from card); the test's assert was too broad (ANY pin fails it, including a legitimate other au pair's) and the family's write was never proven landed before the map read it. Fix: the au pair is now Zelda (a name no other test account carries), the pin check names her label exactly, and the family pick is proven landed by a terminate/relaunch re-read before the map opens, mirroring the au pair's own step-1 proof.
 - testDoorAfterApple:546: cascade — testDeleteTimeout failed at its post-relaunch Me tap and never deleted its account, so the app launched signed in. Fix: the test clears a leftover session first (tabExists probe, 5 s) before asserting the door. The Me fix removes the cascade's cause.
 - testUrgentBoard:620: at least 6 leftover posts stood ahead of this run's post. Fix: the pass cap rises 6 to 15.
+
+## RUN 6 GATE 1: MAC BUILD FAILED ON ONE LINE, FIXED (15 Nov 2026, ~05:4x)
+
+- The run-6 gate's build-for-testing on ff3a611 FAILED (exit 65): exactly one error — native/UITests/RoleFlowTests.swift:25:17: "value of type 'XCUIElement' has no member 'count'". The subscript app.tabBars.buttons[name] returns an XCUIElement, not a query, so tapTab's q.count did not compile. testDeleteSlow never ran.
+- Fix: both helpers now build the query with app.tabBars.buttons.matching(NSPredicate(format: "label == %@", name)) — a real XCUIElementQuery, so .count and .firstMatch both stand; the label predicate matches the same buttons the subscript matched (run 5 proved the label match). No other change.
