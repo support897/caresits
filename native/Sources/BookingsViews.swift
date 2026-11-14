@@ -22,6 +22,7 @@ struct BookingRow: View {
     var me: Person { s.meSafe }
     var isCarer: Bool { me.side == "carer" }
     var ended: Bool { (Backend.endDate(b.date, b.to) ?? .distantFuture) < Date() }
+    var started: Bool { (Backend.endDate(b.date, b.from) ?? .distantFuture) < Date() }
     var body: some View {
         Card { VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
@@ -44,6 +45,7 @@ struct BookingRow: View {
                     else { act("Cancel", "cancelled", Brand.field, ink: true) }
                 }
                 if isCarer && b.state == "accepted" && ended { act("Mark done", "completed", s.role.tint, icon: .sparkle) }
+                if isCarer && b.state == "accepted" && started { act("Family did not show", "noshow", Brand.field, ink: true) }
                 if isCarer && b.state == "accepted" && !ended { act("Cancel", "cancelled", Brand.field, ink: true) }
                 if !isCarer && b.state == "completed" && !reviewed { Button { showReview = true } label: { Chip(text: "Leave a review", on: true, tint: s.role.tint, icon: .star) } }
             }

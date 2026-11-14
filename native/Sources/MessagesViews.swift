@@ -73,8 +73,10 @@ struct ChatView: View {
     @State private var listener: ListenerRegistration?
     @State private var pick: PhotosPickerItem?; @State private var sending = false
     @State private var filledNote = false
+    @State private var held: Booking? = nil
     var body: some View {
         VStack(spacing: 0) {
+            if let hb = held, PayConfig.visible { PayActions(b: hb, reload: { await loadHeld() }).padding(.horizontal, 14).padding(.top, 8) }
             if filledNote { Text("This one is filled").font(.footnote.weight(.semibold)).foregroundStyle(Color(hex: 0x2D2A35)).padding(.horizontal, 14).padding(.vertical, 7).background(Brand.bunny).clipShape(Capsule()).padding(.top, 8).accessibilityIdentifier("filledNote") }
             ScrollViewReader { proxy in
                 ScrollView { LazyVStack(spacing: 8) {
@@ -102,13 +104,18 @@ struct ChatView: View {
         .background(Brand.cream.ignoresSafeArea()).navigationTitle(other?.firstName ?? "Chat").navigationBarTitleDisplayMode(.inline)
         .onChange(of: pick) { _, item in if let item { Task { await sendPhoto(item) } } }
         .onAppear { msgs = ChatCache.rows[rel.id] ?? msgs; listener = Backend.listenMessages(rel.id) { msgs = $0; ChatCache.rows[rel.id] = $0 } }.onDisappear { listener?.remove() }
-        .task { if s.me?.side == "carer" { filledNote = await Backend.filledElsewhere(familyUid: rel.familyUid, carerUid: s.uid ?? "") } }
+        .task { if s.me?.side == "carer" { filledNote = await Backend.filledElsewhere(familyUid: rel.familyUid, carerUid: s.uid ?? "") }; if s.me?.side == "family" { await loadHeld() } }
         .toolbar { if s.me?.side == "family", let o = other, o.side == "carer" { ToolbarItem(placement: .topBarTrailing) { Button { showBook = true } label: { IconLabel(icon: .calendar, text: "Book \(o.firstName)", size: 16) }.accessibilityIdentifier("bookFromChat") } } }
         .sheet(isPresented: $showBook) { if let o = other { BookSheet(carer: o) } }
         .backSwipe { dismissChat() }
     }
     @Environment(\.dismiss) private var dismissEnv
     func dismissChat() { dismissEnv() }
+    func loadHeld() async {
+        guard let uid = s.uid else { return }
+        let bs = await Backend.bookings(uid, side: "family")
+        held = bs.first { $0.pairId == rel.id && $0.pay?.state == "held" }
+    }
     func loadOlder() async {
         guard let first = (older + msgs).first else { return }
         let more = await Backend.olderMessages(rel.id, before: first.at)

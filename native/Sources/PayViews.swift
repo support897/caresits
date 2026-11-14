@@ -3,8 +3,11 @@ import SwiftUI
 /// PAYING THROUGH THE APP: screens and the flow shape only.
 /// The money path is NOT live. There are no Stripe keys in this app, no card or bank detail is ever read or kept here,
 /// and no charge, release or refund is made. Every action below ends in `PayService.notLive`.
-/// Open points that are Ilse's alone (any platform cut, the auto release time, who carries the processing fee, who rules a
-/// hold, every number in the rate ladder) are NOT assumed: a number only shows if the payment service sends it.
+/// The open points were settled after this file was first written: the cut is 10 percent paid by the family on top
+/// (her word, 13 Nov 2026); auto release is 24 hours after the job ends; Stripe's fee rides on the family side on top;
+/// went-wrong holds are ruled by Apex on both sides' messages (desk decisions, 14 Nov 2026, under her hands-off word).
+/// The booking screen works its preview numbers out from those settled values; once the service is live, its own
+/// numbers (PayInfo) are the truth on every booking.
 enum PayConfig {
     static let live = false
     /// The screens show only when the money path is live, or in the debug preview used for pictures.
@@ -91,8 +94,18 @@ struct CancelLadderLines: View {
 /// The family's price panel on the booking screen.
 struct PayPromise: View {
     let name: String; let estimate: Double
+    /// The settled shape: the app fee is 10 percent of the agreed amount, paid by the family on top; the carer
+    /// receives 100 percent of the agreed amount. The card fee is Stripe's standard Australian domestic card
+    /// rate, 1.65 percent plus 30 cents, worked out on the amount charged, and it rides on the family side too.
+    var appFee: Double { (estimate * 0.10 * 100).rounded() / 100 }
+    var cardFee: Double { ((estimate + appFee) * 0.0165 * 100).rounded() / 100 + 0.30 }
+    var total: Double { estimate + appFee + cardFee }
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
+            Text("Care: \(money(estimate))")
+            Text("App fee: \(money(appFee))")
+            Text("Card fee: \(money(cardFee))")
+            Text("You pay: \(money(total))").font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold))
             Text("You pay the app, not \(name). Your money is held by our payment partner until the job is done.").font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline))
             Text("Card details go to Stripe only. This app never sees them.").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted)
             CancelLadderLines()

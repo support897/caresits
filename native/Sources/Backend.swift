@@ -180,7 +180,7 @@ enum Backend {
                 guard let snap = try? await db.collection("relationships").document(r.id).collection("bookings").getDocuments() else { return [] }
                 return snap.documents.map { d in
                     let x = d.data()
-                    return Booking(id: d.documentID, pairId: r.id, familyUid: x["familyUid"] as? String ?? "", carerUid: x["carerUid"] as? String ?? "", date: x["date"] as? String ?? "", from: x["from"] as? String ?? "", to: x["to"] as? String ?? "", rate: (x["rate"] as? NSNumber)?.doubleValue ?? 0, estimate: (x["estimate"] as? NSNumber)?.doubleValue ?? 0, state: x["state"] as? String ?? "requested", note: x["note"] as? String ?? "", cancelledBy: x["cancelledBy"] as? String ?? "", pay: PayInfo(x["pay"] as? [String: Any]))
+                    return Booking(id: d.documentID, pairId: r.id, familyUid: x["familyUid"] as? String ?? "", carerUid: x["carerUid"] as? String ?? "", date: x["date"] as? String ?? "", from: x["from"] as? String ?? "", to: x["to"] as? String ?? "", rate: (x["rate"] as? NSNumber)?.doubleValue ?? 0, estimate: (x["estimate"] as? NSNumber)?.doubleValue ?? 0, state: x["state"] as? String ?? "requested", note: x["note"] as? String ?? "", cancelledBy: x["cancelledBy"] as? String ?? "", cancelledAt: (x["cancelledAt"] as? Timestamp)?.dateValue(), pay: PayInfo(x["pay"] as? [String: Any]))
                 }
             } }
             var all: [Booking] = []
@@ -231,6 +231,7 @@ enum Backend {
         let relRef = db.collection("relationships").document(b.pairId)
         var update: [String: Any] = ["state": to]
         if to != "cancelled" && to != "completed" { update["decidedAt"] = FieldValue.serverTimestamp() }
+        if to == "cancelled" { update["cancelledBy"] = actorUid; update["cancelledAt"] = FieldValue.serverTimestamp() }
         let batch = db.batch()
         batch.updateData(update, forDocument: ref)
         if to == "accepted" && actorIsCarer {

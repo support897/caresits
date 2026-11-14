@@ -53,7 +53,10 @@ struct DiscoverView: View {
     @State private var deckContact: (person: Person, mode: ContactMode)?
     var deck: [Person] {
         let base = shown.filter { !skipped.contains($0.id) }; guard let me = s.me else { return base }
-        let sorted = base.sorted { $0.match(with: me).percent > $1.match(with: me).percent }
+        let byMatch = base.sorted { $0.match(with: me).percent > $1.match(with: me).percent }
+        // The completion ladder: a carer finishing under 80 percent of bookings shows later, after every
+        // carer at or above the line. The match percent itself never changes; only the order does.
+        let sorted = byMatch.sorted { (($0.side == "carer" && ($0.completion?.rate ?? 1) < 0.8) ? 1 : 0) < (($1.side == "carer" && ($1.completion?.rate ?? 1) < 0.8) ? 1 : 0) }
         #if DEBUG
         // Test only: the proof run's own person goes first, so old test profiles in the live pool never hide it.
         if let first = UserDefaults.standard.stringArray(forKey: "cs.proof.first"), let i = sorted.firstIndex(where: { first.contains($0.id) }) { var a = sorted; let x = a.remove(at: i); a.insert(x, at: 0); return a }
@@ -352,6 +355,7 @@ struct BookSheet: View {
                     } }
                     TextField("Note (optional)", text: $note, axis: .vertical).lineLimit(3...5).padding(14).background(Brand.field).clipShape(RoundedRectangle(cornerRadius: 12))
                     if !err.isEmpty { Text(err).foregroundStyle(Brand.ink) }
+                    if let c = carer.completion, c.rate < 0.7 { Text("\(carer.firstName) is not taking new bookings right now. Carers under 70 percent finished pause new bookings while they finish the jobs they already have.").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted) }
                     BigButton(title: "Send request", tint: s.role.tint, busy: busy) { Task { await send() } }
                 }
             }.padding(20) }
@@ -359,6 +363,7 @@ struct BookSheet: View {
         }
     }
     func send() async {
+        if let c = carer.completion, c.rate < 0.7 { err = "\(carer.firstName) is not taking new bookings right now."; return }
         guard let uid = s.uid else { return }
         busy = true; err = ""; defer { busy = false }
         let day = Booking.fmt.string(from: date)

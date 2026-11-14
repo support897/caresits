@@ -65,6 +65,7 @@ struct MeView: View {
                         Button { showFamily = true } label: { IconLabel(icon: .pencil, text: me.postcode.isEmpty && me.suburb.isEmpty ? "Finish my family details" : "Edit my family") }.accessibilityIdentifier("editFamily")
                     } }.padding(.horizontal, 20)
                 }
+                if me.side == "family" { FamilyRecordCard(me: me).padding(.horizontal, 20) }
                 Card { VStack(alignment: .leading, spacing: 8) {
                     Text("Privacy").font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold))
                     IconLabel(icon: .lock, text: "Photos stay private until you connect", size: 14, color: Brand.muted).font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted)
@@ -199,5 +200,28 @@ struct ReauthSheet: View {
     }
     func run(_ f: @escaping () async throws -> Void) {
         Task { busy = true; err = ""; do { try await f(); dismiss(); onDone() } catch { err = "That did not work: " + error.localizedDescription }; busy = false }
+    }
+}
+
+/// A family's own record, in plain facts: late cancels and no shows, counted from their own bookings.
+/// A late cancel is one cancelled inside a day of the start. Cancelling earlier never counts here.
+struct FamilyRecordCard: View {
+    let me: Person
+    @State private var late = 0; @State private var noShow = 0; @State private var loaded = false
+    var body: some View {
+        Card { VStack(alignment: .leading, spacing: 6) {
+            IconLabel(icon: .calendar, text: "My record", size: 20).font(.custom("Atkinson Hyperlegible", size: 17, relativeTo: .headline).weight(.bold))
+            if loaded {
+                Text("Late cancels: \(late)")
+                Text("No shows: \(noShow)")
+                Text("Cancelling more than a day ahead is always free, and never counts here.").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted)
+            }
+        } }
+        .task {
+            let bs = await Backend.bookings(me.id, side: "family")
+            late = bs.filter { b in guard b.state == "cancelled", b.cancelledBy == me.id, let c = b.cancelledAt, let start = Backend.endDate(b.date, b.from) else { return false }; return c < start && start.timeIntervalSince(c) < 24 * 3600 }.count
+            noShow = bs.filter { $0.state == "noshow" && $0.familyUid == me.id }.count
+            loaded = true
+        }
     }
 }

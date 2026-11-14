@@ -70,15 +70,16 @@ struct Booking: Identifiable {
     var estimate: Double
     var state: String
     var note: String
-    var cancelledBy = ""          // set by the server when it records who cancelled; the app only reads it
+    var cancelledBy = ""          // who cancelled: written by the app on the cancel tap, read by both sides
+    var cancelledAt: Date? = nil  // when it was cancelled, written on the same tap
     var pay: PayInfo? = nil       // set by the payment service once it is live; the app only reads it
     var dateValue: Date { Booking.fmt.date(from: date) ?? .distantPast }
     static let fmt: DateFormatter = { let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; f.locale = Locale(identifier: "en_AU"); return f }()
     var stateLabel: String {
-        switch state { case "requested": return "Waiting"; case "accepted": return "Confirmed"; case "declined": return "Declined"; case "cancelled": return "Cancelled"; case "completed": return "Done"; default: return state.capitalized }
+        switch state { case "requested": return "Waiting"; case "accepted": return "Confirmed"; case "declined": return "Declined"; case "cancelled": return "Cancelled"; case "completed": return "Done"; case "noshow": return "No show"; default: return state.capitalized }
     }
     var stateIcon: BI {
-        switch state { case "requested": return .clock; case "accepted": return .checkCircle; case "declined": return .banned; case "cancelled": return .cross; case "completed": return .sparkle; default: return .circle }
+        switch state { case "requested": return .clock; case "accepted": return .checkCircle; case "declined": return .banned; case "cancelled": return .cross; case "completed": return .sparkle; case "noshow": return .warning; default: return .circle }
     }
 }
 
@@ -100,6 +101,7 @@ struct PayInfo {
 struct Completion {
     let finished: Int; let booked: Int
     var text: String { "Finished \(finished) of \(booked) bookings" }
+    var rate: Double { booked > 0 ? Double(finished) / Double(booked) : 1 }
 }
 extension Person {
     var completion: Completion? {
