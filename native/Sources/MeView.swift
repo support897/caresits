@@ -20,6 +20,7 @@ struct MeView: View {
         NavigationStack {
             ScrollView { VStack(spacing: 14) {
                 Header(role: role, title: "Me", subtitle: role == .family ? "" : "Free for carers, always")
+                NavigationLink { KindnessView() } label: { row(.gift, "Join the AI kindness revolution", "Give only if you want") }.buttonStyle(.plain).padding(.horizontal, 20).accessibilityIdentifier("openKindness")
                 PhotoProofBadge()
                 PhotosPicker(selection: $pick, matching: .images) {
                     ZStack(alignment: .bottomTrailing) {
