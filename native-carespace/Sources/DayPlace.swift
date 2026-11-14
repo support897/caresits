@@ -47,7 +47,6 @@ struct RosterView: View {
                     }
                 }
             }
-        }
             // Item 22: sick on the day names its own faster shape —
             // one tap raises today's time-off request; the other
             // side's accept is what moves the roster (the calendar
