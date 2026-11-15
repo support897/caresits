@@ -63,6 +63,21 @@ final class RoleFlowTests: XCTestCase {
 
 
     var testPw = ""; var testEmail = ""
+    /// A leftover signed-in session from an earlier run carries credentials this run never
+    /// set (gate 11: signUp returned early, deleteFlow then signed in with ""). Recover
+    /// them from the accounts file the runs append on the Mac: the last line is the most
+    /// recent account created, and since fix 11 the email and the password share one
+    /// epoch, so the password rebuilds exactly. On a cloud runner the file does not exist
+    /// and this returns false; the caller then fails fast and names the cure.
+    func recoverLeftoverCredentials() -> Bool {
+        guard let text = try? String(contentsOfFile: "/Users/ilseplacencia/cs181/test-accounts-made.txt"),
+              let email = text.split(separator: "\n").map({ $0.trimmingCharacters(in: .whitespaces) }).last(where: { $0.contains("@") }),
+              let at = email.firstIndex(of: "@") else { return false }
+        let local = String(email[..<at])
+        let digits = String(local.reversed().prefix(while: { $0.isNumber }).reversed())
+        guard !digits.isEmpty else { return false }
+        testEmail = email; testPw = "Nat-\(digits)-Zq9"; return true
+    }
     func signUp(side: String) {
         app.launchArguments += ["-AppleLanguages", "(en)"]
         app.launch()
@@ -70,12 +85,19 @@ final class RoleFlowTests: XCTestCase {
         // The tab bar can lag under a busy Mac: a short wait misses a signed-in session and the run then taps the door on the deck.
         if tabExists("Me") { signOutFromMe() }
         // A previous interrupted run can leave a signed-in test user at the profile step: carry on with it, then it is deleted at the end.
-        if app.textFields["Your name"].waitForExistence(timeout: 6) || app.buttons["Next"].exists { return }
-        if app.buttons["I need care"].waitForExistence(timeout: 2) && !app.buttons["Use email"].exists { tap(side == "family" ? "I need care" : "I give care"); return }
+        if app.textFields["Your name"].waitForExistence(timeout: 6) || app.buttons["Next"].exists {
+            if recoverLeftoverCredentials() { return }
+            XCTFail("leftover session at the profile step, credentials unknown, erase the sim and re-run"); return
+        }
+        if app.buttons["I need care"].waitForExistence(timeout: 2) && !app.buttons["Use email"].exists {
+            if recoverLeftoverCredentials() { tap(side == "family" ? "I need care" : "I give care") } else { XCTFail("leftover session at the role pick, credentials unknown, erase the sim and re-run") }
+            return
+        }
         tap("Use email")
-        let email = "projects.reports.ilse+nat\(side)\(Int(Date().timeIntervalSince1970))@gmail.com"
+        let epoch = Int(Date().timeIntervalSince1970)
+        let email = "projects.reports.ilse+nat\(side)\(epoch)@gmail.com"
         typeCredential(app.textFields["Email"], email, secure: false)
-        testPw = "Nat-\(Int(Date().timeIntervalSince1970))-Zq9"; testEmail = email
+        testPw = "Nat-\(epoch)-Zq9"; testEmail = email
         try? (email + "\n").appendLine(to: "/Users/ilseplacencia/cs181/test-accounts-made.txt")
         typeCredential(app.secureTextFields["Password (6+ letters)"], testPw, secure: true)
         shot("welcome-\(side)")
