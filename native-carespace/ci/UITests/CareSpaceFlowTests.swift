@@ -415,4 +415,118 @@ final class CareSpaceFlowTests: XCTestCase {
         print("DRIVE-DAYPLACE-ROWS-OK: true")
     }
 
+    // MARK: Item 13 — QA delete leg (HQ order 2026-11-15): fresh
+    // sign-up, delete the account in-app through Settings → Privacy
+    // → Delete my account, land back on the door, and prove the same
+    // credentials no longer sign in. The owner-side footprint read
+    // is Security's, commissioned on this leg's landing with the
+    // account named in the prints below.
+    func testDeleteAccountQA() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-carespace.theme", "light"]
+        app.launch()
+
+        func row(_ title: String) -> XCUIElement {
+            app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", title)).firstMatch
+        }
+
+        // Normalise the start (the keychain survives uninstalls, so
+        // the app may launch already signed in — sign out first).
+        if app.tabBars.buttons["Chats"].waitForExistence(timeout: 10) {
+            app.tabBars.buttons["Profile"].tap()
+            let out = app.buttons["Sign out"]
+            XCTAssertTrue(out.waitForExistence(timeout: 15), "Signed-in start: Sign out missing")
+            out.tap()
+            let confirmOut = app.sheets.buttons["Sign out"]
+            XCTAssertTrue(confirmOut.waitForExistence(timeout: 10))
+            confirmOut.tap()
+        }
+
+        let stamp = Int(Date().timeIntervalSince1970)
+        let email = "projects.reports.ilse+cs29del\(stamp)@gmail.com"
+        let password = "TraceTest29!"
+        print("DELETE-ACCOUNT-EMAIL: \(email)")
+
+        // Fresh sign-up (Family), the drive's proven shape.
+        let emailLink = app.buttons["Use email instead"]
+        XCTAssertTrue(emailLink.waitForExistence(timeout: 60), "Door did not stand")
+        emailLink.tap()
+        let familyPick = app.buttons["Family"]
+        XCTAssertTrue(familyPick.waitForExistence(timeout: 15), "Who-are-you pick did not stand")
+        familyPick.tap()
+        let nameField = app.textFields["Your name"]
+        XCTAssertTrue(nameField.waitForExistence(timeout: 15))
+        nameField.tap(); nameField.typeText("Delete Tester")
+        let emailField = app.textFields["Email"]
+        emailField.tap(); emailField.typeText(email)
+        let pwField = app.secureTextFields["Password"]
+        pwField.tap(); pwField.typeText(password)
+        print("DELETE-PW-LANDED-COUNT: \((pwField.value as? String)?.count ?? -1)")
+        app.buttons["Create my account"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Chats"].waitForExistence(timeout: 60), "Delete-leg sign-up did not land inside")
+        print("DELETE-SIGNUP-LANDED: true")
+
+        // Profile → Settings → Privacy → Delete my account.
+        app.tabBars.buttons["Profile"].tap()
+        XCTAssertTrue(row("Settings").waitForExistence(timeout: 15), "Settings row missing")
+        row("Settings").tap()
+        XCTAssertTrue(row("Privacy").waitForExistence(timeout: 15), "Privacy row missing")
+        row("Privacy").tap()
+        let deleteRow = row("Delete my account")
+        XCTAssertTrue(deleteRow.waitForExistence(timeout: 15), "Delete row missing in Privacy")
+        deleteRow.tap()
+
+        // The re-auth branch stands only when the session is older
+        // than 240 s (Session.needsReauth); a fresh sign-up normally
+        // goes straight to the delete button. Handle both.
+        let confirmMe = app.buttons["Confirm it is me"]
+        if confirmMe.waitForExistence(timeout: 6) {
+            let rePw = app.secureTextFields["Your password"]
+            XCTAssertTrue(rePw.waitForExistence(timeout: 10), "Re-auth password field missing")
+            rePw.tap(); rePw.typeText(password)
+            confirmMe.tap()
+        }
+        let deleteBtn = app.buttons["Delete my account"]
+        XCTAssertTrue(deleteBtn.waitForExistence(timeout: 15), "Delete button did not stand")
+        deleteBtn.tap()
+
+        // The confirmation dialog's destructive button — sheet scope
+        // first, because the view behind carries the same words.
+        let dialogTitle = app.staticTexts["Delete your account for good?"]
+        XCTAssertTrue(dialogTitle.waitForExistence(timeout: 10), "Delete confirm dialog did not stand")
+        var destructive = app.sheets.buttons["Delete my account"]
+        if !destructive.waitForExistence(timeout: 5) {
+            destructive = app.alerts.buttons["Delete my account"]
+        }
+        XCTAssertTrue(destructive.waitForExistence(timeout: 10), "Destructive delete button not found")
+        destructive.tap()
+
+        // Success shape: the delete lands, the app signs out, and
+        // the door stands again.
+        XCTAssertTrue(emailLink.waitForExistence(timeout: 60), "Door did not return after delete")
+        print("DELETE-LANDED-DOOR: true")
+
+        // Corroboration: the same credentials must NOT sign in now.
+        emailLink.tap()
+        let seg = app.segmentedControls.buttons["Sign in"]
+        XCTAssertTrue(seg.waitForExistence(timeout: 15))
+        seg.tap()
+        let emailField2 = app.textFields["Email"]
+        emailField2.tap(); emailField2.typeText(email)
+        let pwField2 = app.secureTextFields["Password"]
+        pwField2.tap(); pwField2.typeText(password)
+        let switchFrame = app.segmentedControls.firstMatch.frame
+        let signInMatches = app.buttons.matching(NSPredicate(format: "label == 'Sign in'"))
+        var submit: XCUIElement?
+        for i in 0..<signInMatches.count {
+            let el = signInMatches.element(boundBy: i)
+            if el.frame.minY > switchFrame.maxY { submit = el; break }
+        }
+        XCTAssertTrue(submit != nil, "Sign-in submit not found below the mode switch")
+        submit!.tap()
+        let relanded = app.tabBars.buttons["Chats"].waitForExistence(timeout: 25)
+        print("DELETE-RESIGNIN-LANDED: \(relanded)")
+        XCTAssertFalse(relanded, "Deleted account signed back in — the delete did not land server-side")
+        print("DELETE-LEG-OK: true")
+    }
 }
