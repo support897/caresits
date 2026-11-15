@@ -236,3 +236,11 @@ Faults found by the Polar drive, all fixed in this commit:
 - F6 "Nannys" chip: plural now Nannies.
 - F8 No Finish on the picks (Item 2): a Finish button closes the picks.
 F7 (kindness clouds, counter, wall empty before the website feed) stands by design.
+
+## HER PHONE FIXES (15 Nov 2026, her word 21:49-21:50, this desk builds)
+Faults she found on her phone on build 181, pictured by her:
+- Map invisible: the map carried a white wash at 0.8 over a muted style, so streets and place names could not be read. The wash is gone, the style is the full standard map (realistic elevation, automatic emphasis), and only a whisper of blush (0.1 multiply) stays for the brand feel. The map frame is now Bunny Pink at 2 points.
+- Pink too weak to read: Bunny Pink as text measures 1.87 to 1 on white. The strong pink of record (Deep Raspberry #C2345B, the map pin colour) now carries every pink word that must be read: page titles, the wordmark, links, the picked tab, the Message button, the heart and arrow on Find care. Measured 5.34 to 1 on white. The three pinks stay the fills; buttons keep ink words on Bunny Pink (7.53 to 1).
+- Picks page in one long scroll: it now goes one section at a time with Next and Back, a step count at the top, and Finish on the last step (asking-finish kept). The page title no longer runs under the back button (side padding 56).
+- Au pair step for everyone: the au pair step now stands only when the person is after au pair care (careTypes holds au_pair: the family picked au pair care, or the carer offers au pair work). Otherwise only the other steps show.
+Not tested by this desk (her ruling: tests ride the Polar journey when it resumes). Compiles unproven at this desk; the changes are token and layout level only, no write shapes touched.

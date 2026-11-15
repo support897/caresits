@@ -74,12 +74,12 @@ struct DiscoverView: View {
                         ForEach([10, 25, 50, 0], id: \.self) { k in Button(k == 0 ? "Any distance" : "\(k) km") { radius = k; skipped = [] } }
                     } label: { Text(radius == 0 ? "Any" : "\(radius) km").font(.custom("Atkinson Hyperlegible", size: 16).weight(.semibold)).foregroundStyle(Brand.ink).padding(.horizontal, 14).padding(.vertical, 10).background(Brand.field).clipShape(Capsule()) }.accessibilityIdentifier("radiusMenu")
                     Button { showMap.toggle() } label: { BrandIcon(kind: .pin, size: 24, color: Brand.ink, solid: showMap).padding(10).background(Brand.field).clipShape(Circle()) }.accessibilityLabel(showMap ? "Deck" : "Map").accessibilityIdentifier("mapToggle")
-                    Button { onlySaved.toggle(); skipped = [] } label: { BrandIcon(kind: .heart, size: 24, color: Brand.bunny, solid: onlySaved).padding(10).background(Brand.field).clipShape(Circle()) }.accessibilityLabel("Matches")
+                    Button { onlySaved.toggle(); skipped = [] } label: { BrandIcon(kind: .heart, size: 24, color: Brand.strongPink, solid: onlySaved).padding(10).background(Brand.field).clipShape(Circle()) }.accessibilityLabel("Matches")
                 }.padding(.horizontal, 20).padding(.top, 8)
                 if role == .family, let m = s.me, m.postcode.isEmpty && m.suburb.isEmpty {
                     HStack(spacing: 8) {
                         Text("Family details missing.").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted)
-                        Button { s.goMyFamily = true } label: { HStack(spacing: 4) { Text("Me → My family").font(.footnote.weight(.semibold)).underline(); BrandIcon(kind: .arrow, size: 14, color: role.tint) } }.accessibilityIdentifier("finishFamilyLink")
+                        Button { s.goMyFamily = true } label: { HStack(spacing: 4) { Text("Me → My family").font(.footnote.weight(.semibold)).underline(); BrandIcon(kind: .arrow, size: 14, color: Brand.strongPink) } }.accessibilityIdentifier("finishFamilyLink")
                         Spacer()
                     }.padding(.horizontal, 20)
                 }
@@ -101,7 +101,7 @@ struct DiscoverView: View {
                         BrandIcon(kind: .heart, size: 20, color: Brand.bunny, solid: true)
                         Text("Matched with \(b.firstName)").font(.custom("Atkinson Hyperlegible", size: 16).weight(.semibold)).foregroundStyle(Brand.ink)
                         Spacer()
-                        Button("Message") { deckContact = (b, .message); banner = nil }.font(.custom("Atkinson Hyperlegible", size: 16).weight(.semibold)).foregroundStyle(role.tint)
+                        Button("Message") { deckContact = (b, .message); banner = nil }.font(.custom("Atkinson Hyperlegible", size: 16).weight(.semibold)).foregroundStyle(Brand.strongPink)
                     }.padding(14).background(Brand.card).clipShape(RoundedRectangle(cornerRadius: 16)).overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.black.opacity(0.1), lineWidth: 1)).padding(.horizontal, 20).padding(.top, 00).transition(.move(edge: .top).combined(with: .opacity)).accessibilityIdentifier("matchBanner")
                 }
                 if showMap { mapView.padding(.horizontal, 20).frame(maxHeight: .infinity) } else if urgent { UrgentBoardView().frame(maxHeight: .infinity) } else { deckStack }
@@ -153,12 +153,12 @@ struct DiscoverView: View {
         let picked = pins.first { $0.id == pinSel }
         return MapReader { proxy in
             Map(position: $camera).accessibilityIdentifier("peopleMap")
-                .mapStyle(.standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll, showsTraffic: false))
+                .mapStyle(.standard(elevation: .realistic, emphasis: .automatic, pointsOfInterest: .excludingAll, showsTraffic: false))
                 .onMapCameraChange(frequency: .continuous) { ctx in mapRegion = ctx.region; camTick &+= 1 }
                 .onAppear { frame(pins) }.onChange(of: pins.count) { _, _ in frame(pins) }
-                // The wash: pale pink land and pale blue sea as near as MapKit allows. The pins sit above it so they stay raspberry.
-                .overlay { Color.white.opacity(0.8).allowsHitTesting(false) }
-                .overlay { Color(hex: 0xFFE3EC).opacity(0.25).blendMode(.multiply).allowsHitTesting(false) }
+                // The real map shows at full strength: streets and place names stay readable. Only a whisper
+                // of blush sits over it for the brand feel, never enough to hide the map. The pins sit above it.
+                .overlay { Color(hex: 0xFFE3EC).opacity(0.1).blendMode(.multiply).allowsHitTesting(false) }
                 .overlay {
                     ZStack(alignment: .topLeading) {
                         ForEach(pins) { p in
@@ -194,7 +194,7 @@ struct DiscoverView: View {
                 BunnyView(size: 64, mood: .hello)
             }.padding(.horizontal, 10).padding(.bottom, 8)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 24)).overlay(RoundedRectangle(cornerRadius: 24).stroke(Brand.bunnyBlush, lineWidth: 1.5))
+        .clipShape(RoundedRectangle(cornerRadius: 24)).overlay(RoundedRectangle(cornerRadius: 24).stroke(Brand.bunny, lineWidth: 2))
     }
     func mapBtn(_ icon: BI, _ label: String, _ f: @escaping () -> Void) -> some View {
         Button(action: f) { BrandIcon(kind: icon, size: 22, color: BunnyPin.raspberry).frame(width: 46, height: 46).background(Brand.card).clipShape(Circle()).shadow(color: .black.opacity(0.08), radius: 3, y: 1) }

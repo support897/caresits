@@ -108,27 +108,43 @@ struct AskingView: View {
     @State private var natOnly = false
     @State private var dev: [String: Any] = [:]       // DEVICE ONLY picks and chips
     @State private var open: Set<String> = []
+    @State private var step = 0
     @State private var saveErr = ""
     @State private var chain: Task<Void, Never>? = nil
     @Environment(\.dismiss) private var dismiss
     var side: String { s.me?.side ?? "family" }
 
+    /// One step at a time, then Next. The au pair step stands only when this person is after au pair
+    /// care: the family picked au pair among its care types, or the carer offers au pair work.
+    /// The card key careTypes holds the pick (au_pair). Otherwise only the other steps show.
+    var wantsAuPair: Bool { (s.me?.services ?? []).contains("au_pair") }
+    var steps: [PickSection] { Asking.sections(side).filter { $0.id != "aupair" || wantsAuPair } }
+
     var body: some View {
-        ScrollView { VStack(alignment: .leading, spacing: 18) {
-            Text("Tick what you are asking for.").font(Brand.title(28)).foregroundStyle(Brand.titleColor).frame(maxWidth: .infinity, alignment: .center).accessibilityIdentifier("askingTitle")
+        let secs = steps
+        let cur = secs[min(step, secs.count - 1)]
+        return ScrollView { VStack(alignment: .leading, spacing: 18) {
+            Text("Tick what you are asking for.").font(Brand.title(28)).foregroundStyle(Brand.titleColor).frame(maxWidth: .infinity, alignment: .center).padding(.horizontal, 56).accessibilityIdentifier("askingTitle")
             Text("One tap ticks a pick. No typing.").font(.custom("Atkinson Hyperlegible", size: 15, relativeTo: .subheadline)).foregroundStyle(Brand.muted).frame(maxWidth: .infinity, alignment: .center)
+            Text("Step \(min(step, secs.count - 1) + 1) of \(secs.count)").font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted).frame(maxWidth: .infinity, alignment: .center).accessibilityIdentifier("askingStep")
             if !saveErr.isEmpty { Text(saveErr).font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.ink).padding(.horizontal, 20) }
-            ForEach(Asking.sections(side)) { sec in
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(sec.title).font(Brand.title(20)).foregroundStyle(Brand.titleColor).padding(.horizontal, 20)
-                    Text(sec.note).font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted).padding(.horizontal, 20)
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
-                        ForEach(sec.picks) { p in TickCard(label: p.label, icon: p.icon, on: isOn(p)) { tap(p) } }
-                    }.padding(.horizontal, 20)
-                    ForEach(sec.picks.filter { open.contains($0.id) }) { p in chipRow(p).padding(.horizontal, 20) }
-                }.accessibilityIdentifier("sec-\(sec.id)")
-            }
-            BigButton(title: "Finish") { dismiss() }.padding(.horizontal, 20).accessibilityIdentifier("asking-finish")
+            VStack(alignment: .leading, spacing: 10) {
+                Text(cur.title).font(Brand.title(20)).foregroundStyle(Brand.titleColor).padding(.horizontal, 20)
+                Text(cur.note).font(.custom("Atkinson Hyperlegible", size: 13, relativeTo: .footnote)).foregroundStyle(Brand.muted).padding(.horizontal, 20)
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
+                    ForEach(cur.picks) { p in TickCard(label: p.label, icon: p.icon, on: isOn(p)) { tap(p) } }
+                }.padding(.horizontal, 20)
+                ForEach(cur.picks.filter { open.contains($0.id) }) { p in chipRow(p).padding(.horizontal, 20) }
+            }.accessibilityIdentifier("sec-\(cur.id)")
+            HStack(spacing: 12) {
+                if step > 0 { Button("Back") { withAnimation { step -= 1 } }.font(.custom("Atkinson Hyperlegible", size: 16).weight(.semibold)).foregroundStyle(Brand.strongPink).accessibilityIdentifier("asking-back") }
+                Spacer()
+                if min(step, secs.count - 1) < secs.count - 1 {
+                    BigButton(title: "Next") { withAnimation { step += 1 } }.frame(maxWidth: 200).accessibilityIdentifier("asking-next")
+                } else {
+                    BigButton(title: "Finish") { dismiss() }.frame(maxWidth: 200).accessibilityIdentifier("asking-finish")
+                }
+            }.padding(.horizontal, 20)
         }.padding(.vertical, 16).padding(.bottom, 100) }
         .background(Brand.cream.ignoresSafeArea())
         .task { await load() }

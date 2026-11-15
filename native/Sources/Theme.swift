@@ -33,6 +33,10 @@ enum Brand {
     static let paleGround = Color(hex: 0xFBEFF2)  // Pale Pink Ground (opening screen)
     static let porcelain = Color(hex: 0xFDF8F0)   // Warm Porcelain
     static let rose = Color(hex: 0xF2B8B5)        // Soft Rose (errors, pastel)
+    /// The strong pink: Deep Raspberry, the map pin colour of record. Bunny Pink as text measures under
+    /// 2 to 1 on white, so this one carries every pink word that must be read: titles, links, the picked tab.
+    /// It measures over 5 to 1 on white and porcelain. The three pinks above stay the fills; this is never a fill.
+    static let strongPink = Color(hex: 0xC2345B)  // Deep Raspberry
     // WAY B helpers, named at the desk against the brand sheet (the sheet names only the four colours above;
     // these helpers are named here in the open). ONLY two jobs: fast signs and telling the roles apart. Never leads, never fills.
     static let helperTeal = Color(hex: 0x9CC5B5)  // Morning Teal  : nanny
@@ -52,8 +56,8 @@ enum Brand {
     /// Input fields and quiet chips.
     static var field: Color { switch pick { case .light: return Color(hex: 0xF8F2F4); case .dark: return Color(hex: 0x3A2F34); case .beige: return Color(hex: 0xEBE0CE); case .brand: return Color(hex: 0xF6CBD3).opacity(0.45) } }
     static var line: Color { pick == .dark ? Color.white.opacity(0.14) : Color.black.opacity(0.08) }
-    /// Titles are Fraunces Black in Bunny Pink. Body text is Atkinson Hyperlegible.
-    static var titleColor: Color { bunny }
+    /// Titles are Fraunces Black in the strong pink. Body text is Atkinson Hyperlegible.
+    static var titleColor: Color { strongPink }
     static func title(_ size: CGFloat) -> Font { .custom("Fraunces-Black", size: size) }
     /// Body font of record: Atkinson Hyperlegible (the brand sheet), bundled in Resources.
     static let body = Font.custom("Atkinson Hyperlegible", size: 17)
@@ -110,8 +114,8 @@ struct Card<Content: View>: View {
 /// The in-app logo: the vector master logo-of-record.svg, exported to the asset. Transparent, never boxed.
 struct LogoView: View { var size: CGFloat = 120; var body: some View { Image("logo").resizable().scaledToFit().frame(width: size, height: size).accessibilityLabel("Caresitters") } }
 
-/// The wordmark: Fraunces Black in Bunny Pink.
-struct Wordmark: View { var size: CGFloat = 40; var body: some View { Text("Caresitters").font(Brand.title(size)).foregroundStyle(Brand.bunny) } }
+/// The wordmark: Fraunces Black in the strong pink.
+struct Wordmark: View { var size: CGFloat = 40; var body: some View { Text("Caresitters").font(Brand.title(size)).foregroundStyle(Brand.strongPink) } }
 
 /// Slide in from the left edge to go back, like a website. Used on every screen that is not the deck.
 struct BackSwipe: ViewModifier {

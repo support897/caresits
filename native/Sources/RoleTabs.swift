@@ -32,7 +32,7 @@ struct RoleTabs: View {
                 MessagesView().tabItem { tab("Chat", .chat) }.tag(3)
                 MeView().tabItem { tab("Me", .person) }.tag(4)
             }
-        }.tint(Brand.bunny)
+        }.tint(Brand.strongPink)
         .onChange(of: s.goMyFamily) { _, go in if go { s.tab = r == .family ? 3 : 4 } }
     }
 }
