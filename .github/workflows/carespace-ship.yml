@@ -78,11 +78,21 @@ jobs:
 
       - name: Distribution certificate and App Store profile (fastlane)
         run: |
-          fastlane --version | tail -1
-          fastlane run setup_ci
-          fastlane run cert api_key_path:"$API_JSON" team_id:"$TEAM_ID" 2>&1 | tail -30
+          set -eo pipefail
+          KC="$RUNNER_TEMP/build.keychain-db"
+          KCPW="ci-$(date +%s)"
+          security create-keychain -p "$KCPW" "$KC"
+          security set-keychain-settings -lut 21600 "$KC"
+          security unlock-keychain -p "$KCPW" "$KC"
+          security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
+          security default-keychain -s "$KC"
+          export KEYCHAIN_PATH="$KC" KEYCHAIN_PASSWORD="$KCPW"
+          fastlane run cert api_key_path:"$API_JSON" team_id:"$TEAM_ID" keychain_path:"$KC" keychain_password:"$KCPW" 2>&1 | tail -30
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KCPW" "$KC" >/dev/null
           fastlane run sigh api_key_path:"$API_JSON" app_identifier:"$BUNDLE_ID" team_id:"$TEAM_ID" provisioning_name:"$PROFILE_NAME" force:true 2>&1 | tail -30
-          security find-identity -v -p codesigning
+          security find-identity -v -p codesigning "$KC"
+          security find-identity -v -p codesigning "$KC" | grep -q "Apple Distribution"
+          ls "$HOME/Library/MobileDevice/Provisioning Profiles"
 
       - name: Archive
         working-directory: cs-ci
