@@ -58,7 +58,7 @@ final class CareSpaceFlowTests: XCTestCase {
         // State-normalising preamble (the drive tests share it): in a
         // full-class run an earlier test may leave the app signed in —
         // the keychain survives, so sign out first and let the door stand.
-        if app.tabBars.buttons["Chats"].waitForExistence(timeout: 10) {
+        if app.tabBars.buttons["Chats"].waitForExistence(timeout: 30) {
             app.tabBars.buttons["Profile"].tap()
             let out = app.buttons["Sign out"]
             XCTAssertTrue(out.waitForExistence(timeout: 15), "Signed-in start: Sign out missing")
@@ -168,7 +168,7 @@ final class CareSpaceFlowTests: XCTestCase {
         // uninstalls (proven at this desk 2026-11-15), so the app may
         // launch already signed in. If it did, sign out first so the
         // drive starts at the door like a fresh user.
-        if app.tabBars.buttons["Chats"].waitForExistence(timeout: 10) {
+        if app.tabBars.buttons["Chats"].waitForExistence(timeout: 30) {
             app.tabBars.buttons["Profile"].tap()
             let out = app.buttons["Sign out"]
             XCTAssertTrue(out.waitForExistence(timeout: 15), "Signed-in start: Sign out missing")
@@ -259,7 +259,7 @@ final class CareSpaceFlowTests: XCTestCase {
     func testDriveJourney() throws {
         let app = XCUIApplication()
         app.launch()
-        if app.tabBars.buttons["Chats"].waitForExistence(timeout: 10) {
+        if app.tabBars.buttons["Chats"].waitForExistence(timeout: 30) {
             app.tabBars.buttons["Profile"].tap()
             let out = app.buttons["Sign out"]
             XCTAssertTrue(out.waitForExistence(timeout: 15), "Signed-in start: Sign out missing")
@@ -360,7 +360,7 @@ final class CareSpaceFlowTests: XCTestCase {
     func testDriveToday() throws {
         let app = XCUIApplication()
         app.launch()
-        if app.tabBars.buttons["Chats"].waitForExistence(timeout: 10) {
+        if app.tabBars.buttons["Chats"].waitForExistence(timeout: 30) {
             app.tabBars.buttons["Profile"].tap()
             let out = app.buttons["Sign out"]
             XCTAssertTrue(out.waitForExistence(timeout: 15), "Signed-in start: Sign out missing")
@@ -421,7 +421,7 @@ final class CareSpaceFlowTests: XCTestCase {
     // credentials no longer sign in. The owner-side footprint read
     // is Security's, commissioned on this leg's landing with the
     // account named in the prints below.
-    func testDeleteAccountQA() throws {
+    func testZDeleteAccountQA() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-carespace.theme", "light"]
         app.launch()
@@ -432,7 +432,7 @@ final class CareSpaceFlowTests: XCTestCase {
 
         // Normalise the start (the keychain survives uninstalls, so
         // the app may launch already signed in — sign out first).
-        if app.tabBars.buttons["Chats"].waitForExistence(timeout: 10) {
+        if app.tabBars.buttons["Chats"].waitForExistence(timeout: 30) {
             app.tabBars.buttons["Profile"].tap()
             let out = app.buttons["Sign out"]
             XCTAssertTrue(out.waitForExistence(timeout: 15), "Signed-in start: Sign out missing")
