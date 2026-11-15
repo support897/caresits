@@ -1,0 +1,100 @@
+name: CareSpace ship to TestFlight (carespace-29)
+
+# Ilse's order 2026-11-15 ("push to TestFlight and repo"). Fires when this
+# file or native-carespace/SHIP-TRIGGER.txt changes on carespace-29.
+# Cloud-managed signing through the App Store Connect API key (no p12).
+# Uploads straight to TestFlight. Does NOT submit to App Review.
+
+on:
+  push:
+    branches: [carespace-29]
+    paths:
+      - ".github/workflows/carespace-ship.yml"
+      - "native-carespace/SHIP-TRIGGER.txt"
+
+jobs:
+  ship:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assemble the project from the repo tree
+        run: |
+          mkdir -p cs-ci/UITests
+          cp -R native-carespace/Sources cs-ci/Sources
+          cp -R native-carespace/Assets.xcassets cs-ci/Assets.xcassets
+          cp -R native-carespace/Fonts cs-ci/Fonts
+          cp native-carespace/Info.plist native-carespace/App.entitlements native-carespace/ActivitiesCatalogue.json native-carespace/LaunchScreen.storyboard cs-ci/
+          cp store-build/carespace-GoogleService-Info.plist cs-ci/GoogleService-Info.plist
+          cp native-carespace/ci/UITests/CareSpaceFlowTests.swift cs-ci/UITests/
+          cp native-carespace/ci/genproj_test.py cs-ci/
+
+      - name: Generate the project
+        working-directory: cs-ci
+        run: |
+          python3 genproj_test.py
+          xcodebuild -version
+
+      - name: Put the App Store Connect key in place
+        env:
+          KEY_B64: ${{ secrets.ASC_API_KEY_P8_B64 }}
+          KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/keys"
+          echo "$KEY_B64" | base64 --decode > "$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8"
+          echo "KEY_PATH=$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8" >> $GITHUB_ENV
+          echo "BUILD_NO=$(date -u +%y%m%d%H%M)" >> $GITHUB_ENV
+
+      - name: Archive
+        working-directory: cs-ci
+        env:
+          KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+          ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+        run: |
+          set -o pipefail
+          xcodebuild archive -project CareSpace.xcodeproj -scheme CareSpace \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/CareSpace.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$KEY_PATH" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID" \
+            DEVELOPMENT_TEAM=GZ9Z6BPTFR CODE_SIGN_STYLE=Automatic \
+            CURRENT_PROJECT_VERSION="$BUILD_NO" 2>&1 | tee archive.log | tail -40
+
+      - name: Export and upload to TestFlight
+        working-directory: cs-ci
+        env:
+          KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+          ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+        run: |
+          set -o pipefail
+          cat > export.plist <<'P'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>GZ9Z6BPTFR</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+          </dict></plist>
+          P
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/CareSpace.xcarchive" \
+            -exportOptionsPlist export.plist \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$KEY_PATH" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID" 2>&1 | tee export.log | tail -40
+
+      - name: Keep logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: carespace-ship-logs
+          path: |
+            cs-ci/archive.log
+            cs-ci/export.log
+          if-no-files-found: warn
