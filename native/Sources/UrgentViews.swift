@@ -96,7 +96,7 @@ struct UrgentPostRow: View {
             }
         } }
         .sheet(item: $chatWith) { p in ContactSheet(person: p, mode: .message) }
-        .task { await loadYeses() }
+        .task(id: job.state) { await loadYeses() }
     }
     func loadYeses() async {
         if job.state == "filled" { pickedPerson = await Backend.loadProfile(job.carerUid) }
@@ -126,7 +126,7 @@ struct UrgentPostForm: View {
     @Environment(\.dismiss) var dismiss
     var onPosted: () -> Void = {}
     @State private var day = Date()
-    @State private var start = Date()
+    @State private var start = Calendar.current.date(byAdding: .hour, value: 2, to: Date()) ?? Date()
     @State private var parts: Set<String> = []
     @State private var postcode = ""
     @State private var bandsOn: Set<String> = []

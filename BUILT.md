@@ -225,3 +225,14 @@ Full suite on the final tree: 17 of 20 passed first time. Failed in the full run
 - Gate 10's leftover is a pre-fix-11 account (two-epoch password), so recovery cannot rebuild its password exactly. Gate 12 therefore starts from an erased sim: the gate script now erases sim 77DE531F before the test step, and deletes the stale result bundle first. The erase is permanent in the script; the accounts file on the Mac filesystem survives it, so recovery still works for any future leftover.
 - Mac-side execution now belongs to the Mac Expert desk (Ilse, 10:49, sole Mac owner; 10:56 one typist, one queue). This desk does diagnosis, code, and the push; the Mac Expert desk installs the updated gate script, checks out the new head, erases the sim, launches gate 12, and reads the verdicts back.
 - NOTE: cloud run 6 is in flight on e29f723. Fix 11 rides the NEXT head, not run 6.
+
+## POLAR QA FIX ROUND (15 Nov 2026, Mac drive on e62b413)
+Faults found by the Polar drive, all fixed in this commit:
+- F1 Reviews did not save (Item Reviews): the profile review now writes to the sealed path profiles/{about}/reviews/{writer uid} (kind app, keys from, kind, stars, text, at, name), which the deployed rules already allow for an open pair. Reads come from the same path. No rules change.
+- F2 Pay lines hidden (Item 6): PayConfig.visible is now always true. Care, App fee, Card fee, You pay and the cancel ladder show on the booking screen. Every pay action still ends "Payments are not switched on yet. Nothing was charged."
+- F3 Theme leaked between accounts (standing theme law): on sign in the account's saved theme is applied, and an account with none opens in Light.
+- F4 Filled post did not name the carer (Item 4): the row reloads the picked carer's profile when the post state changes.
+- F5 Prefilled urgent post ended at once (Item 4): default start is now two hours ahead.
+- F6 "Nannys" chip: plural now Nannies.
+- F8 No Finish on the picks (Item 2): a Finish button closes the picks.
+F7 (kindness clouds, counter, wall empty before the website feed) stands by design.

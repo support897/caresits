@@ -110,6 +110,7 @@ struct AskingView: View {
     @State private var open: Set<String> = []
     @State private var saveErr = ""
     @State private var chain: Task<Void, Never>? = nil
+    @Environment(\.dismiss) private var dismiss
     var side: String { s.me?.side ?? "family" }
 
     var body: some View {
@@ -127,6 +128,7 @@ struct AskingView: View {
                     ForEach(sec.picks.filter { open.contains($0.id) }) { p in chipRow(p).padding(.horizontal, 20) }
                 }.accessibilityIdentifier("sec-\(sec.id)")
             }
+            BigButton(title: "Finish") { dismiss() }.padding(.horizontal, 20).accessibilityIdentifier("asking-finish")
         }.padding(.vertical, 16).padding(.bottom, 100) }
         .background(Brand.cream.ignoresSafeArea())
         .task { await load() }

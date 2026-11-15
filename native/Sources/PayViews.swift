@@ -12,10 +12,8 @@ enum PayConfig {
     static let live = false
     /// The screens show only when the money path is live, or in the debug preview used for pictures.
     static var visible: Bool {
-        #if DEBUG
-        if ProcessInfo.processInfo.environment["CS_PAYPREVIEW"] == "1" { return true }
-        #endif
-        return live
+        // Build 181 fix: the pay lines always show. Every pay action ends with the not switched on line until Stripe is live.
+        return true
     }
 }
 

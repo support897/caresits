@@ -32,7 +32,7 @@ final class Session: ObservableObject {
     var needsOnboarding: Bool { uid != nil && (me == nil || me!.services.isEmpty) }
     func reload() async {
         if let u = uid { me = await Backend.loadProfile(u)
-            if let t = me?.card["theme"] as? String, let p = ThemePick(rawValue: t), p != ThemeStore.shared.pick { ThemeStore.shared.pick = p } }
+            let p = ThemePick(rawValue: (me?.card["theme"] as? String) ?? "") ?? .light; if p != ThemeStore.shared.pick { ThemeStore.shared.pick = p } }
     }
     @Published var sideConfirmed = false
     func chooseSide(_ s: String) { chosenSide = s; UserDefaults.standard.set(s, forKey: "caresits.side") }

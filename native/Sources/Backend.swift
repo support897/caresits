@@ -305,17 +305,17 @@ enum Backend {
     /// A review left straight on a profile (Build 181, her words 13 Nov 22:13), by another person.
     /// Same reviews collection as the booking reviews; kind marks it apart. Real reviews only.
     static func addProfileReview(about: String, by: String, rating: Int, text: String) async throws {
-        try await db.collection("reviews").document("\(by)_\(about)_profile").setData(["aboutUid": about, "byUid": by, "kind": "profile", "rating": rating, "text": String(text.prefix(600)), "at": FieldValue.serverTimestamp()])
+        // Sealed rules: profiles/{about}/reviews/{writer uid}, kind app, one each, needs an open pair.
+        let name = String(((await loadProfile(by))?.firstName ?? "").prefix(40))
+        var d: [String: Any] = ["from": by, "kind": "app", "stars": rating, "text": String(text.prefix(500)), "at": FieldValue.serverTimestamp()]
+        if !name.isEmpty { d["name"] = name }
+        try await db.collection("profiles").document(about).collection("reviews").document(by).setData(d)
     }
     static func profileReviews(about: String) async -> [(rating: Int, text: String, by: String)] {
-        guard let snap = try? await db.collection("reviews").whereField("aboutUid", isEqualTo: about).limit(to: 20).getDocuments() else { return [] }
-        var out: [(rating: Int, text: String, by: String)] = []
-        for d in snap.documents {
-            let byUid = d.data()["byUid"] as? String ?? ""
-            let name = (await loadProfile(byUid))?.firstName ?? "Someone"
-            out.append((_rating(d), d.data()["text"] as? String ?? "", name))
+        guard let snap = try? await db.collection("profiles").document(about).collection("reviews").limit(to: 20).getDocuments() else { return [] }
+        return snap.documents.map { d in
+            ((d.data()["stars"] as? NSNumber)?.intValue ?? 0, d.data()["text"] as? String ?? "", (d.data()["name"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? "Someone")
         }
-        return out
     }
     static func _rating(_ d: QueryDocumentSnapshot) -> Int { (d.data()["rating"] as? NSNumber)?.intValue ?? 0 }
 

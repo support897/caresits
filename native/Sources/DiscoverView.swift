@@ -93,7 +93,7 @@ struct DiscoverView: View {
                 if role == .family && services.count > 1 && !showMap && !urgent {
                     ScrollView(.horizontal, showsIndicators: false) { HStack {
                         Button { filter = "all"; skipped = [] } label: { Chip(text: "All", on: filter == "all", tint: role.tint) }
-                        ForEach(services, id: \.self) { sv in Button { filter = sv; skipped = [] } label: { Chip(text: (serviceLabels[sv] ?? sv) + "s", on: filter == sv, tint: role.tint) } }
+                        ForEach(services, id: \.self) { sv in Button { filter = sv; skipped = [] } label: { Chip(text: { let l = serviceLabels[sv] ?? sv; return l.hasSuffix("y") ? String(l.dropLast()) + "ies" : l + "s" }(), on: filter == sv, tint: role.tint) } }
                     }.padding(.horizontal, 20) }
                 }
                 if let b = banner {
@@ -496,7 +496,7 @@ struct ProfileReviewSheet: View {
         guard let me = s.me else { return }
         busy = true; err = ""
         do { try await Backend.addProfileReview(about: person.id, by: me.id, rating: stars, text: text); onDone(); dismiss() }
-        catch { err = "Your review did not save. Please try again." }
+        catch { err = "You can review someone once you have connected, and once each. Please try again later." }
         busy = false
     }
 }
