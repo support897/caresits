@@ -101,11 +101,11 @@ enum Backend {
     /// device tokens, search index entries and the entitlement
     /// record. The app never half deletes from the client.
     static func deleteMyAccount() async throws {
-        // The callable's own contract (its source, read at this
-        // desk): the call must carry confirmed: true, it runs
-        // under App Check, and it deletes the auth user last.
+        // The callable's own contract (deleteMyAccount.ts line 81):
+        // the call must carry confirm: true (not "confirmed"), it
+        // runs under App Check, and it deletes the auth user last.
         let fn = Functions.functions().httpsCallable("deleteMyAccount")
-        _ = try await fn.call(["confirmed": true])
+        _ = try await fn.call(["confirm": true])
     }
 }
 
