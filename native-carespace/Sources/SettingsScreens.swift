@@ -359,7 +359,7 @@ struct DeleteAccountView: View {
                         try await Backend.deleteMyAccount()
                         done = true
                         s.signOut()
-                    } catch { err = "The delete could not finish. Check your connection and try again." }
+                    } catch { let ne = error as NSError; err = "The delete could not finish. Check your connection and try again. DIAG[\(ne.domain) \(ne.code) \(ne.localizedDescription) \(ne.userInfo)]" }
                     busy = false
                 }
             }
