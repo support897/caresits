@@ -86,13 +86,19 @@ final class RoleFlowTests: XCTestCase {
         // at hit point (-1,-1)). Poll until the name field stands, tapping whenever the button
         // exists. Do NOT gate on isHittable, and do NOT call element.tap(): this button is never
         // hittable per XCTest, so tap() computes hit point (-1,-1) and drops the tap - gate 8
-        // tapped 12 times and none landed. The coordinate tap hits the frame centre regardless.
+        // tapped 12 times and none landed. The element-coordinate tap hits the frame centre, but
+        // gate 10 still dropped 11 of them on a button the code leaves plain and enabled - so the
+        // mapping itself is flaky. Tap the same point as a raw screen tap, computed live from the
+        // button's frame against the app's frame, with no element resolution at all.
         let roleLabel = side == "family" ? "I need care" : "I give care"
         let nameField = app.textFields["Your name"]
         let roleButton = app.buttons.matching(NSPredicate(format: "label == %@", roleLabel)).firstMatch
         let roleEnd = Date().addingTimeInterval(45)
         while !nameField.exists && Date() < roleEnd {
-            if roleButton.waitForExistence(timeout: 2) { roleButton.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap() }
+            if roleButton.waitForExistence(timeout: 2) {
+                let af = app.frame, f = roleButton.frame
+                app.coordinate(withNormalizedOffset: CGVector(dx: f.midX / af.width, dy: f.midY / af.height)).tap()
+            }
             sleep(2)
         }
         if !nameField.waitForExistence(timeout: 5) { shot("after-create-\(side)"); XCTFail("sign up did not reach onboarding: " + String(app.debugDescription.prefix(1800))) }
