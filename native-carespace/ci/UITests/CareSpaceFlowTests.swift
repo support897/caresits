@@ -503,7 +503,15 @@ final class CareSpaceFlowTests: XCTestCase {
 
         // Success shape: the delete lands, the app signs out, and
         // the door stands again.
-        XCTAssertTrue(emailLink.waitForExistence(timeout: 60), "Door did not return after delete")
+        let doorBack = emailLink.waitForExistence(timeout: 60)
+        if !doorBack {
+            let texts = app.staticTexts.allElementsBoundByIndex.map { $0.label }.joined(separator: " | ")
+            let btns = app.buttons.allElementsBoundByIndex.map { $0.label }.joined(separator: " | ")
+            print("DELETE-SCREEN-TEXTS: \(texts)")
+            print("DELETE-SCREEN-BUTTONS: \(btns)")
+            print("DELETE-SCREEN-ALERTS: \(app.alerts.count) SHEETS: \(app.sheets.count)")
+        }
+        XCTAssertTrue(doorBack, "Door did not return after delete")
         print("DELETE-LANDED-DOOR: true")
 
         // Corroboration: the same credentials must NOT sign in now.
