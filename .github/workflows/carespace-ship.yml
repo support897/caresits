@@ -92,7 +92,7 @@ jobs:
           fastlane run sigh api_key_path:"$API_JSON" app_identifier:"$BUNDLE_ID" team_id:"$TEAM_ID" provisioning_name:"$PROFILE_NAME" force:true 2>&1 | tail -30
           security find-identity -v -p codesigning "$KC"
           security find-identity -v -p codesigning "$KC" | grep -q "Apple Distribution"
-          ls "$HOME/Library/MobileDevice/Provisioning Profiles"
+          ls "$HOME/Library/MobileDevice/Provisioning Profiles" "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles" 2>&1 || true
 
       - name: Archive
         working-directory: cs-ci
