@@ -103,7 +103,11 @@ final class RoleFlowTests: XCTestCase {
         shot("welcome-\(side)")
         tap("Create my account")
         let sb = XCUIApplication(bundleIdentifier: "com.apple.springboard")
-        for _ in 0..<8 { if sb.buttons["Not Now"].waitForExistence(timeout: 2) { sb.buttons["Not Now"].tap(); break }; if app.buttons["Not Now"].exists { app.buttons["Not Now"].tap(); break } }
+        for _ in 0..<8 {
+            let deny = sb.alerts.buttons["Don't Allow"]
+            if deny.waitForExistence(timeout: 2) { deny.tap(); continue }
+            if sb.buttons["Not Now"].waitForExistence(timeout: 2) { sb.buttons["Not Now"].tap(); break }; if app.buttons["Not Now"].exists { app.buttons["Not Now"].tap(); break }
+        }
         // The role pick can arrive mid-animation: a single tap can land nowhere (gate 2, twice
         // at hit point (-1,-1)). Poll until the name field stands, tapping whenever the button
         // exists. Do NOT gate on isHittable, and do NOT call element.tap(): this button is never
