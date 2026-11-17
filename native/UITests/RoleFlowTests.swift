@@ -524,9 +524,11 @@ final class RoleFlowTests: XCTestCase {
         if about.waitForExistence(timeout: 4) { type(about, "Kind and calm care"); dismissKb() }
         next(); tap("Finish", timeout: 20)
         let apEmail = testEmail, apPw = testPw
-        openAsking(); pickCountry("My country", chip: "Colombian"); qshot("country-1-aupair-picks-colombian")
+        openAsking(); askingPage("aupair", advances: 2)
+        pickCountry("My country", chip: "Colombian"); qshot("country-1-aupair-picks-colombian")
         app.terminate(); app.launch()
-        openAsking(); pickCountry("My country", chip: "Colombian", open: true)
+        openAsking(); askingPage("aupair", advances: 2)
+        pickCountry("My country", chip: "Colombian", open: true)
         qshot("country-2-aupair-after-relaunch-colombian-still-ticked")
         leaveAsking(); signOutFromMe(); sleep(1)
         // 2. the family picks Filipino: the Colombian au pair must not show on its map
@@ -534,10 +536,12 @@ final class RoleFlowTests: XCTestCase {
         type(app.textFields["Name or nickname"], "Mia"); dismissKb(); sleep(1); next()
         if !app.buttons["Finish"].waitForExistence(timeout: 6) { next() }
         tap("Finish", timeout: 20)
-        openAsking(); pickCountry("Countries you welcome", chip: "Filipino"); qshot("country-3-family-picks-filipino")
+        openAsking(); askingPage("aupair", advances: 2)
+        pickCountry("Countries you welcome", chip: "Filipino"); qshot("country-3-family-picks-filipino")
         // Prove the pick landed on the server before the map reads it: relaunch and read it back.
         app.terminate(); app.launch()
-        openAsking(); pickCountry("Countries you welcome", chip: "Filipino", open: true)
+        openAsking(); askingPage("aupair", advances: 2)
+        pickCountry("Countries you welcome", chip: "Filipino", open: true)
         qshot("country-3b-family-after-relaunch-filipino-still-ticked")
         leaveAsking(); app.tabBars.buttons.element(boundBy: 0).tap(); sleep(2)
         setMap(true); sleep(10)
@@ -548,7 +552,8 @@ final class RoleFlowTests: XCTestCase {
         qshot("country-4-filipino-chosen-no-colombian-au-pair-pin")
         setMap(false)
         // 3. the family switches to Colombian: her pin appears
-        openAsking(); pickCountry("Countries you welcome", chip: "Filipino", expect: "not ticked", open: false)
+        openAsking(); askingPage("aupair", advances: 2)
+        pickCountry("Countries you welcome", chip: "Filipino", expect: "not ticked", open: false)
         pickCountry("Countries you welcome", chip: "Colombian", open: false); qshot("country-5-family-switches-to-colombian")
         leaveAsking(); app.tabBars.buttons.element(boundBy: 0).tap(); sleep(2)
         setMap(true)
