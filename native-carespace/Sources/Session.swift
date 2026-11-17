@@ -1,4 +1,5 @@
 import SwiftUI
+import Foundation
 import FirebaseAuth
 import FirebaseCore
 import AuthenticationServices
@@ -11,6 +12,52 @@ enum AppError: Error { case msg(String) }
 /// a cancel or a walk-back. The door swallows it silently: a cancel is
 /// not an error and never paints a red line (F-CS27-2).
 struct SignInCancelled: Error {}
+
+/// One winner owns the continuation and worker handles. No task is awaited
+/// after completion. The lock protects every mutable field below.
+private final class TimeoutRace<Value>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var result: Result<Value, Error>?
+    private var continuation: CheckedContinuation<Value, Error>?
+    private var workers: [Task<Void, Never>] = []
+
+    func install(_ continuation: CheckedContinuation<Value, Error>) -> Bool {
+        lock.lock()
+        if let result = result {
+            lock.unlock()
+            continuation.resume(with: result)
+            return false
+        }
+        self.continuation = continuation
+        lock.unlock()
+        return true
+    }
+
+    func register(_ workers: [Task<Void, Never>]) {
+        lock.lock()
+        if result != nil {
+            lock.unlock()
+            workers.forEach { $0.cancel() }
+            return
+        }
+        self.workers = workers
+        lock.unlock()
+    }
+
+    func finish(_ result: Result<Value, Error>) {
+        lock.lock()
+        guard self.result == nil else { lock.unlock(); return }
+        self.result = result
+        let continuation = self.continuation
+        self.continuation = nil
+        let workers = self.workers
+        self.workers = []
+        lock.unlock()
+        // Resume first; cancellation must not delay delivery of the result.
+        continuation?.resume(with: result)
+        workers.forEach { $0.cancel() }
+    }
+}
 
 @MainActor
 final class Session: ObservableObject {
@@ -80,7 +127,13 @@ final class Session: ObservableObject {
         guard !clean.isEmpty else { throw AppError.msg("Please add your name.") }
         guard side == "family" || side == "carer" else { throw AppError.msg("Please tell us who you are: family or carer.") }
         Trace.log("signUp.call", "nameLen=\(clean.count)")
-        let r = try await Auth.auth().createUser(withEmail: email, password: password)
+        let r: AuthDataResult
+        do {
+            r = try await Self.withTimeout(seconds: 20,
+                timeoutError: AppError.msg("Sign up is taking too long. Check your connection and try again.")) {
+                try await Auth.auth().createUser(withEmail: email, password: password)
+            }
+        } catch { Trace.log("signUp.THROW", "\((error as NSError).domain) \((error as NSError).code) \(error.localizedDescription)"); throw error }
         Trace.log("signUp.created", "uid=\(r.user.uid.prefix(6))")
         // ITEM 1 FIX (the list's own words): the session owns the
         // name locally from the moment createUser returns — set
@@ -201,17 +254,33 @@ final class Session: ObservableObject {
 
     /// Runs `op` against a hard time limit; on timeout the caller gets the
     /// timeout error, so no sign-in path can sit dead and silent (F-CS27-3).
+        /// Losing work is cancelled but never awaited; side effects may finish later.
     static func withTimeout<T>(seconds: Double, timeoutError: Error, _ op: @escaping () async throws -> T) async throws -> T {
-        try await withThrowingTaskGroup(of: T.self) { group in
-            group.addTask { try await op() }
-            group.addTask {
-                try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-                throw timeoutError
-            }
-            guard let v = try await group.next() else { throw timeoutError }
-            group.cancelAll()
-            return v
-        }
+            let race = TimeoutRace<T>()
+            let priority = Task.currentPriority
+            let clock = ContinuousClock()
+            let deadlineInstant = clock.now.advanced(by: .seconds(seconds))
+            return try await withTaskCancellationHandler(operation: {
+                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<T, Error>) in
+                    guard race.install(continuation) else { return }
+                    let operation = Task.detached(priority: priority) {
+                        do {
+                            try Task.checkCancellation()
+                            let value = try await op()
+                            race.finish(.success(value))
+                        } catch { race.finish(.failure(error)) }
+                    }
+                    let deadline = Task.detached(priority: priority) {
+                        do {
+                            try await clock.sleep(until: deadlineInstant, tolerance: .zero)
+                        } catch { return }
+                        race.finish(.failure(timeoutError))
+                    }
+                    race.register([operation, deadline])
+                }
+            }, onCancel: {
+                race.finish(.failure(CancellationError()))
+            })
     }
     static func randomNonce(_ n: Int = 32) -> String {
         let cs = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
