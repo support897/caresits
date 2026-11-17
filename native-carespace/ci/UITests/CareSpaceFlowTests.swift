@@ -80,6 +80,26 @@ final class CareSpaceFlowTests: XCTestCase {
         // read listener.done with uidSet=false, the door state).
         let emailLink = app.buttons["Use email instead"]
         XCTAssertTrue(emailLink.waitForExistence(timeout: 60), "Door did not stand")
+
+        // CS-F-002 / CS-C-002: provider order at the real door.
+        // This email regression does not replace fresh Google sign-up
+        // proof on the shipped build.
+        let googleDoor = app.buttons["Continue with Google"]
+        let appleDoor = app.buttons["carespace.door.apple"]
+        XCTAssertTrue(googleDoor.waitForExistence(timeout: 15), "Google door button missing")
+        XCTAssertTrue(appleDoor.waitForExistence(timeout: 15), "Apple door button missing")
+        XCTAssertTrue(googleDoor.isHittable, "Google door button must be usable")
+        XCTAssertTrue(appleDoor.isHittable, "Apple door button must be usable")
+        XCTAssertTrue(emailLink.isHittable, "Small email door button must be usable")
+        let googleFrame = googleDoor.frame
+        let appleFrame = appleDoor.frame
+        let emailFrame = emailLink.frame
+        XCTAssertFalse(googleFrame.isEmpty, "Google door position unavailable")
+        XCTAssertFalse(appleFrame.isEmpty, "Apple door position unavailable")
+        XCTAssertFalse(emailFrame.isEmpty, "Email door position unavailable")
+        print("DOOR-ORDER: google=\(googleFrame) apple=\(appleFrame) email=\(emailFrame)")
+        XCTAssertLessThanOrEqual(googleFrame.maxY, appleFrame.minY, "Google must stand above Apple")
+        XCTAssertLessThanOrEqual(appleFrame.maxY, emailFrame.minY, "Apple must stand above the small email button")
         emailLink.tap()
 
         // Sign up (the segmented control starts on Sign up).

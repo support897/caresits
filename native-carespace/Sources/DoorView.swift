@@ -17,12 +17,6 @@ struct DoorView: View {
                 Text("CareSpace").font(Brand.title(40)).foregroundStyle(Brand.ink)
                 Spacer()
                 VStack(spacing: 12) {
-                    SignInWithAppleButton(.continue) { s.prepareApple($0) } onCompletion: { r in
-                        Task { await run { try await s.finishApple(r) } }
-                    }
-                    .signInWithAppleButtonStyle(.black)
-                    .frame(height: 54).clipShape(RoundedRectangle(cornerRadius: 16))
-
                     Button { Task { await run { try await s.google() } } } label: {
                         HStack(spacing: 10) {
                             GoogleG()
@@ -33,6 +27,13 @@ struct DoorView: View {
                         .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.gray.opacity(0.35)))
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                     }
+
+                    SignInWithAppleButton(.continue) { s.prepareApple($0) } onCompletion: { r in
+                        Task { await run { try await s.finishApple(r) } }
+                    }
+                    .signInWithAppleButtonStyle(.black)
+                    .frame(height: 54).clipShape(RoundedRectangle(cornerRadius: 16))
+                    .accessibilityIdentifier("carespace.door.apple")
 
                     NavigationLink {
                         EmailDoorView()
