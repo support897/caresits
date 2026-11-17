@@ -6,27 +6,23 @@ extension Color {
     }
 }
 
-/// CareSpace brand tokens — the Caresitters brand, whole match (Way B,
-/// locked 12 Nov): pastel colours, pink is the queen (about 80 pink,
-/// 20 soft helpers for fast signs and telling roles apart), NO dark
-/// green ever. Source: the Caresitters BRAND-OF-RECORD.md.
-/// `ink` is the pink family's reading shade: the brand record's own
-/// rule says a colour that must do a reading job uses the nearest
-/// family shade that still reads clearly — a deep rose, never green.
+/// CareSpace tokens follow the cured HTML (md5 75a4823c) and fences.
+/// Ink carries reading text. Sky and Sun are helper colours only.
+/// HQ ruling: functional body text has a 17 pt minimum.
 enum Brand {
-    static let ink = Color(hex: 0x8A4258)
+    static let ink = Color(hex: 0x2D2A35)
     static let cream = Color(hex: 0xFDF8F0)
     static let palePink = Color(hex: 0xFBEFF2)
     /// Helper colours are a BIT of blue and yellow shades only — her words,
     /// 13 Nov phone test ("Pastel colors we said, PINK, and shades of blue
     /// and yellow but a bit only"). The green sage is out of the palette.
-    static let sky = Color(hex: 0xBCD7F5)
-    static let sun = Color(hex: 0xF7E3A1)
+    static let sky = Color(hex: 0xB9D6EC)
+    static let sun = Color(hex: 0xF6D67C)
     static let blush = Color(hex: 0xF6CBD3)
     static let bunnyBlush = Color(hex: 0xF2C4CE)
     static let bunny = Color(hex: 0xF4A9BC)
     static func title(_ size: CGFloat) -> Font { .custom("Fraunces", size: size).weight(.semibold) }
-    static func body(_ size: CGFloat = 17) -> Font { .custom("Atkinson Hyperlegible", size: size) }
+    static func body(_ size: CGFloat = 17) -> Font { .custom("Atkinson Hyperlegible", size: max(17, size)) }
 }
 
 /// THEME LAW (standing): every app offers light, dark, beige and a brand
