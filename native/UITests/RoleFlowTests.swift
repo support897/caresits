@@ -392,6 +392,7 @@ final class RoleFlowTests: XCTestCase {
             if !app.buttons["Finish"].waitForExistence(timeout: 6) { next() }
         } else {
             signUp(side: "carer"); fillYou("Test QCarer Au Pair"); next(); tap("Au pair")
+            next()
             if app.buttons["Skip"].waitForExistence(timeout: 4) { tap("Skip") }
             if app.textFields["A few words about your care"].waitForExistence(timeout: 4) {
                 type(app.textFields["A few words about your care"], "Kind and calm care"); dismissKb()
