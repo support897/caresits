@@ -302,7 +302,14 @@ final class RoleFlowTests: XCTestCase {
         let a = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); a.name = name; a.lifetime = .keepAlways; add(a)
     }
     func reveal(_ el: XCUIElement, max: Int = 40) -> Bool {
-        for _ in 0..<max { if (el.exists || el.waitForExistence(timeout: 2)) && el.isHittable { return true }; app.swipeUp(velocity: .slow) }
+        for _ in 0..<max {
+            if (el.exists || el.waitForExistence(timeout: 2)) && el.isHittable { return true }
+            if el.exists && el.frame.maxY < app.frame.minY {
+                app.swipeDown(velocity: .slow)
+            } else {
+                app.swipeUp(velocity: .slow)
+            }
+        }
         return false
     }
     func openAsking() {
