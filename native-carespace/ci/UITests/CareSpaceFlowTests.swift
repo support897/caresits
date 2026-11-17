@@ -103,6 +103,7 @@ final class CareSpaceFlowTests: XCTestCase {
         print("SIGNUP-LANDED-INSIDE: \(landed) NAMEASK-STANDING: \(nameAsk.exists)")
         XCTAssertFalse(nameAsk.exists, "Item 1 fault: name re-asked after sign-up")
         XCTAssertTrue(landed, "Sign-up did not land inside")
+        XCTAssertTrue(app.staticTexts["Hello, \(name)"].waitForExistence(timeout: 15), "Greeting by typed name missing on Chats after sign-up")
 
         // Sign out from Profile.
         app.tabBars.buttons["Profile"].tap()
@@ -214,6 +215,26 @@ final class CareSpaceFlowTests: XCTestCase {
         XCTAssertTrue(app.buttons["Sign out"].exists, "Sign out missing")
         XCTAssertFalse(app.buttons["Theme"].exists, "SETTINGS LAW: Theme picker stands in Profile")
         XCTAssertFalse(app.staticTexts["Calm bunny"].exists, "SETTINGS LAW: Calm bunny stands in Profile")
+
+        // CS-F-038 / CS-C-034: compare every Profile menu action in
+        // one unchanged scroll position, excluding the tab bar.
+        // At this head the full menu has five RowLinks + Sign out.
+        let profileMenu = app.scrollViews.firstMatch
+        XCTAssertTrue(profileMenu.exists, "Profile menu scroll view missing")
+        let menuButtons = profileMenu.buttons
+        XCTAssertEqual(menuButtons.count, 6, "Profile menu inventory changed; review the full FIRST proof")
+        let kindnessMatches = menuButtons.matching(NSPredicate(format: "label BEGINSWITH %@", "Join the AI kindness revolution"))
+        XCTAssertEqual(kindnessMatches.count, 1, "Expected one Kindness row in the full Profile menu")
+        let kindness = kindnessMatches.firstMatch
+        let kindnessFrame = kindness.frame
+        XCTAssertFalse(kindnessFrame.isEmpty, "Kindness row has no accessibility position")
+        for other in menuButtons.allElementsBoundByIndex {
+            if other.label.hasPrefix("Join the AI kindness revolution") { continue }
+            let otherFrame = other.frame
+            XCTAssertFalse(otherFrame.isEmpty, "Profile row has no accessibility position: \(other.label)")
+            print("PROFILE-FIRST: kindness=\(kindnessFrame) other=\(other.label) frame=\(otherFrame)")
+            XCTAssertLessThanOrEqual(kindnessFrame.maxY, otherFrame.minY, "Kindness must stand above every Profile menu row: \(other.label)")
+        }
         print("DRIVE-PROFILE-OK: true")
 
         // Settings: the whole surface stands here, and only here.
@@ -415,12 +436,10 @@ final class CareSpaceFlowTests: XCTestCase {
         print("DRIVE-DAYPLACE-ROWS-OK: true")
     }
 
-    // MARK: Item 13 — QA delete leg (HQ order 2026-11-15): fresh
-    // sign-up, delete the account in-app through Settings → Privacy
-    // → Delete my account, land back on the door, and prove the same
-    // credentials no longer sign in. The owner-side footprint read
-    // is Security's, commissioned on this leg's landing with the
-    // account named in the prints below.
+    // MARK: Item 13 — today's failed-delete client contract.
+    // Success path blocked-on-Blaze, deleteMyAccount undeployed.
+    // Confirm deletion, show the real error and retain the signed-in
+    // session. This test does not claim account or server deletion.
     func testZDeleteAccountQA() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-carespace.theme", "light"]
@@ -501,40 +520,19 @@ final class CareSpaceFlowTests: XCTestCase {
         XCTAssertTrue(destructive.waitForExistence(timeout: 10), "Destructive delete button not found")
         destructive.tap()
 
-        // Success shape: the delete lands, the app signs out, and
-        // the door stands again.
-        let doorBack = emailLink.waitForExistence(timeout: 60)
-        if !doorBack {
-            let texts = app.staticTexts.allElementsBoundByIndex.map { $0.label }.joined(separator: " | ")
-            let btns = app.buttons.allElementsBoundByIndex.map { $0.label }.joined(separator: " | ")
-            print("DELETE-SCREEN-TEXTS: \(texts)")
-            print("DELETE-SCREEN-BUTTONS: \(btns)")
-            print("DELETE-SCREEN-ALERTS: \(app.alerts.count) SHEETS: \(app.sheets.count)")
+        // Success path blocked-on-Blaze, deleteMyAccount undeployed.
+        // A failed delete must not claim success or sign the user out.
+        let blockedLeg = "success path blocked-on-Blaze, deleteMyAccount undeployed"
+        let deleteError = app.staticTexts["The delete could not finish. Check your connection and try again."]
+        XCTAssertTrue(deleteError.waitForExistence(timeout: 60), "\(blockedLeg): failed-delete error must stand after destructive confirmation")
+        if !deleteError.isHittable { app.swipeUp() }
+        XCTAssertTrue(deleteError.isHittable, "\(blockedLeg): failed-delete error must be visible")
+        XCTAssertFalse(dialogTitle.exists, "\(blockedLeg): destructive confirmation must close")
+        for tab in ["Chats", "Calendar", "Care", "Activities", "Profile"] {
+            XCTAssertTrue(app.tabBars.buttons[tab].exists, "\(blockedLeg): failed delete must retain signed-in tab \(tab)")
         }
-        XCTAssertTrue(doorBack, "Door did not return after delete")
-        print("DELETE-LANDED-DOOR: true")
-
-        // Corroboration: the same credentials must NOT sign in now.
-        emailLink.tap()
-        let seg = app.segmentedControls.buttons["Sign in"]
-        XCTAssertTrue(seg.waitForExistence(timeout: 15))
-        seg.tap()
-        let emailField2 = app.textFields["Email"]
-        emailField2.tap(); emailField2.typeText(email)
-        let pwField2 = app.secureTextFields["Password"]
-        pwField2.tap(); pwField2.typeText(password)
-        let switchFrame = app.segmentedControls.firstMatch.frame
-        let signInMatches = app.buttons.matching(NSPredicate(format: "label == 'Sign in'"))
-        var submit: XCUIElement?
-        for i in 0..<signInMatches.count {
-            let el = signInMatches.element(boundBy: i)
-            if el.frame.minY > switchFrame.maxY { submit = el; break }
-        }
-        XCTAssertTrue(submit != nil, "Sign-in submit not found below the mode switch")
-        submit!.tap()
-        let relanded = app.tabBars.buttons["Chats"].waitForExistence(timeout: 25)
-        print("DELETE-RESIGNIN-LANDED: \(relanded)")
-        XCTAssertFalse(relanded, "Deleted account signed back in — the delete did not land server-side")
-        print("DELETE-LEG-OK: true")
+        XCTAssertFalse(emailLink.exists, "\(blockedLeg): failed delete must not return to the door")
+        XCTAssertFalse(app.staticTexts["Your account is deleted. Thank you for being here."].exists, "\(blockedLeg): failed delete must not claim account deletion")
+        print("DELETE-ERROR-CONTRACT-OK: \(blockedLeg)")
     }
 }
