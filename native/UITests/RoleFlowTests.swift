@@ -553,7 +553,7 @@ final class RoleFlowTests: XCTestCase {
         setMap(false)
         // 3. the family switches to Colombian: her pin appears
         openAsking(); askingPage("aupair", advances: 2)
-        pickCountry("Countries you welcome", chip: "Filipino", expect: "not ticked", open: false)
+        pickCountry("Countries you welcome", chip: "Filipino", expect: "not ticked", open: true)
         pickCountry("Countries you welcome", chip: "Colombian", open: false); qshot("country-5-family-switches-to-colombian")
         leaveAsking(); app.tabBars.buttons.element(boundBy: 0).tap(); sleep(2)
         setMap(true)
