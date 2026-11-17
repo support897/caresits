@@ -267,13 +267,15 @@ final class CareSpaceFlowTests: XCTestCase {
         XCTAssertTrue(row("Privacy").exists, "Privacy row missing in Settings")
 
         // CS-F-040 / CS-C-035: Kindness is FIRST in Settings too.
-        // Compare all six buttons and both switches before scrolling.
+        // Run 44088995123, testDriveSurfaces: the failure-time tree
+        // contains two nested Switch pairs for the two SwiftUI Toggles.
+        // Compare six buttons and four Switch elements before scrolling.
         let settingsMenu = app.scrollViews.firstMatch
         XCTAssertTrue(settingsMenu.exists, "Settings menu scroll view missing")
         let settingsButtons = settingsMenu.buttons
         let settingsSwitches = settingsMenu.switches
         XCTAssertEqual(settingsButtons.count, 6, "Settings button inventory changed; review the full FIRST proof")
-        XCTAssertEqual(settingsSwitches.count, 2, "Settings switch inventory changed; review the full FIRST proof")
+        XCTAssertEqual(settingsSwitches.count, 4, "Settings switch inventory changed; review the full FIRST proof")
         let settingsKindnessMatches = settingsButtons.matching(NSPredicate(format: "label BEGINSWITH %@", "Join the AI kindness revolution"))
         XCTAssertEqual(settingsKindnessMatches.count, 1, "Expected one Kindness row in Settings")
         let settingsKindnessFrame = settingsKindnessMatches.firstMatch.frame
