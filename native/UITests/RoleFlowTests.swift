@@ -85,6 +85,14 @@ final class RoleFlowTests: XCTestCase {
         guard !digits.isEmpty else { return false }
         testEmail = email; testPw = "Nat-\(digits)-Zq9"; return true
     }
+    func dismissAuthSheets() {
+        let sb = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        for _ in 0..<8 {
+            let deny = sb.alerts.buttons["Don't Allow"]
+            if deny.waitForExistence(timeout: 2) { deny.tap(); continue }
+            if sb.buttons["Not Now"].waitForExistence(timeout: 2) { sb.buttons["Not Now"].tap(); break }; if app.buttons["Not Now"].exists { app.buttons["Not Now"].tap(); break }
+        }
+    }
     func signUp(side: String) {
         app.launchArguments += ["-AppleLanguages", "(en)"]
         app.launch()
@@ -109,12 +117,7 @@ final class RoleFlowTests: XCTestCase {
         typeCredential(app.secureTextFields["Password (6+ letters)"], testPw, secure: true)
         shot("welcome-\(side)")
         tap("Create my account")
-        let sb = XCUIApplication(bundleIdentifier: "com.apple.springboard")
-        for _ in 0..<8 {
-            let deny = sb.alerts.buttons["Don't Allow"]
-            if deny.waitForExistence(timeout: 2) { deny.tap(); continue }
-            if sb.buttons["Not Now"].waitForExistence(timeout: 2) { sb.buttons["Not Now"].tap(); break }; if app.buttons["Not Now"].exists { app.buttons["Not Now"].tap(); break }
-        }
+        dismissAuthSheets()
         // The role pick can arrive mid-animation: a single tap can land nowhere (gate 2, twice
         // at hit point (-1,-1)). Poll until the name field stands, tapping whenever the button
         // exists. Do NOT gate on isHittable, and do NOT call element.tap(): this button is never
@@ -586,6 +589,7 @@ final class RoleFlowTests: XCTestCase {
         deleteThisAccount()
         tap("Use email"); tap("I already have an account")
         type(app.textFields["Email"], apEmail); type(app.secureTextFields["Password (6+ letters)"], apPw); dismissKb(); tap("Sign in")
+        dismissAuthSheets()
         testPw = apPw; XCTAssertTrue(tabExists("Me", timeout: 90), "au pair did not sign in"); deleteThisAccount()
     }
     func testMapFamily() { mapProof("family", side: "family") }
@@ -772,6 +776,7 @@ final class RoleFlowTests: XCTestCase {
         typeCredential(app.textFields["Email"], email, secure: false)
         typeCredential(app.secureTextFields["Password (6+ letters)"], pw, secure: true)
         tap("Sign in")
+        dismissAuthSheets()
         XCTAssertTrue(tabExists("Me", timeout: 60), "sign in did not land")
     }
     func ensureTicked(_ id: String) {
