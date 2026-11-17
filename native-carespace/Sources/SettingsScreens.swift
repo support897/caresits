@@ -13,6 +13,7 @@ struct SettingsView: View {
     @EnvironmentObject var th: ThemeStore
     var body: some View {
         Screen {
+            RowLink(icon: "care", title: "Join the AI kindness revolution", subtitle: "CareSpace stays free, kept free by kind humans") { KindnessView() }
             ThemePicker()
             BunnySettingsCard()
             RowLink(icon: "chat", title: "Language", subtitle: "Your language pick, saved for you") { LanguageView() }

@@ -265,6 +265,27 @@ final class CareSpaceFlowTests: XCTestCase {
         XCTAssertTrue(row("Notifications").exists, "Notifications row missing in Settings")
         XCTAssertTrue(row("Permissions").exists, "Permissions row missing in Settings")
         XCTAssertTrue(row("Privacy").exists, "Privacy row missing in Settings")
+
+        // CS-F-040 / CS-C-035: Kindness is FIRST in Settings too.
+        // Compare all six buttons and both switches before scrolling.
+        let settingsMenu = app.scrollViews.firstMatch
+        XCTAssertTrue(settingsMenu.exists, "Settings menu scroll view missing")
+        let settingsButtons = settingsMenu.buttons
+        let settingsSwitches = settingsMenu.switches
+        XCTAssertEqual(settingsButtons.count, 6, "Settings button inventory changed; review the full FIRST proof")
+        XCTAssertEqual(settingsSwitches.count, 2, "Settings switch inventory changed; review the full FIRST proof")
+        let settingsKindnessMatches = settingsButtons.matching(NSPredicate(format: "label BEGINSWITH %@", "Join the AI kindness revolution"))
+        XCTAssertEqual(settingsKindnessMatches.count, 1, "Expected one Kindness row in Settings")
+        let settingsKindnessFrame = settingsKindnessMatches.firstMatch.frame
+        XCTAssertFalse(settingsKindnessFrame.isEmpty, "Settings Kindness row has no accessibility position")
+        let settingsControls = settingsButtons.allElementsBoundByIndex + settingsSwitches.allElementsBoundByIndex
+        for other in settingsControls {
+            if other.label.hasPrefix("Join the AI kindness revolution") { continue }
+            let otherFrame = other.frame
+            XCTAssertFalse(otherFrame.isEmpty, "Settings control has no accessibility position: \(other.label)")
+            print("SETTINGS-FIRST: kindness=\(settingsKindnessFrame) other=\(other.label) frame=\(otherFrame)")
+            XCTAssertLessThanOrEqual(settingsKindnessFrame.maxY, otherFrame.minY, "Kindness must stand above every Settings control: \(other.label)")
+        }
         if !app.staticTexts["Calm bunny"].exists { app.swipeUp() }
         XCTAssertTrue(app.staticTexts["Calm bunny"].waitForExistence(timeout: 10), "Calm bunny missing in Settings")
         XCTAssertTrue(app.staticTexts["Less movement on screens with the bunny."].exists, "Less movement row missing in Settings")
