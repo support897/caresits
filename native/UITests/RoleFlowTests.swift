@@ -23,7 +23,14 @@ final class RoleFlowTests: XCTestCase {
         XCTAssertTrue(q.firstMatch.waitForExistence(timeout: timeout), "tab \(name) missing")
         let end = Date().addingTimeInterval(10)
         while q.count > 1 && Date() < end { sleep(1) }
-        q.firstMatch.tap(); sleep(2)
+        let button = q.firstMatch
+        let hittable = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in button.exists && button.isHittable }, object: nil)
+        let ready = XCTWaiter.wait(for: [hittable], timeout: timeout)
+        XCTAssertEqual(ready, .completed, "tab \(name) not hittable")
+        guard ready == .completed else { return }
+        button.tap()
+        let selected = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in button.exists && button.isSelected }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [selected], timeout: timeout), .completed, "tab \(name) did not become selected")
     }
     func tabExists(_ name: String, timeout: TimeInterval = 30) -> Bool {
         app.tabBars.buttons.matching(NSPredicate(format: "label == %@", name)).firstMatch.waitForExistence(timeout: timeout)
