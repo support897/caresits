@@ -243,6 +243,10 @@ enum CareRepo {
         // The deployed day check (validDayStory) requires childId on
         // every entry: a space-wide entry carries it as "".
         var data: [String: Any] = ["day": CareTime.dayKey(), "kind": kind.rawValue, "at": CareTime.iso(Date()), "text": String(text.prefix(500)), "by": uid, "asks": [], "childId": childId ?? ""]
+        if kind == .photo, (photoKey ?? "").isEmpty {
+            let ask = TimelineAsk(by: uid, text: String(text.prefix(500)), at: CareTime.iso(Date()), answeredAt: nil, answerText: nil)
+            data["asks"] = [["by": ask.by, "text": ask.text, "at": ask.at]]
+        }
         if let c = childId, !c.isEmpty { data["childId"] = c }
         if let m = mood { data["mood"] = m }
         if let p = photoKey, !p.isEmpty { data["photoKey"] = p }

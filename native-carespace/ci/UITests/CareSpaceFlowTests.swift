@@ -415,6 +415,36 @@ final class CareSpaceFlowTests: XCTestCase {
             XCTAssertTrue(row(place).waitForExistence(timeout: 10), "Day-place row missing: \(place)")
         }
         print("DRIVE-DAYPLACE-ROWS-OK: true")
+
+        // CS-F-011 / CS-C-010: creation and response-gate proof only.
+        // Stored ask.by, photoKey and the upload/answer legs need
+        // owner read-back and the seeded picker follow-up.
+        let photoQuestion = "Question: A photo of Mia, please"
+        let questions = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Question: "))
+        let answers = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Answer: "))
+        XCTAssertEqual(questions.count, 0, "Fresh journey must have no earlier questions")
+        XCTAssertEqual(answers.count, 0, "Fresh journey must have no earlier answers")
+        let requestPhoto = app.buttons["Ask for a photo of Mia"]
+        XCTAssertTrue(requestPhoto.waitForExistence(timeout: 15), "Mia photo-request button missing")
+        for _ in 0..<4 {
+            if requestPhoto.isHittable { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(requestPhoto.isHittable, "Mia photo-request button could not be revealed")
+        requestPhoto.tap()
+        XCTAssertTrue(app.staticTexts[photoQuestion].waitForExistence(timeout: 20), "Created photo question did not read back on Today")
+        XCTAssertEqual(questions.count, 1, "Photo request must render exactly one question")
+        XCTAssertEqual(answers.count, 0, "New photo request must remain unanswered")
+        let sendPhoto = app.buttons["Send the photo"]
+        let gateStands = sendPhoto.waitForExistence(timeout: 15)
+        if !gateStands { print("PHOTO-GATE-TREE: \(app.debugDescription)") }
+        XCTAssertTrue(gateStands, "Unanswered photo request did not expose the response picker button")
+        for _ in 0..<4 {
+            if sendPhoto.isHittable { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(sendPhoto.isHittable, "Photo response button could not be revealed")
+        print("PHOTO-REQUEST-GATE-OK: one question, no answer, response button usable")
     }
 
     // MARK: QA plan drive, batch 2b (split remainder, on QA's word):
