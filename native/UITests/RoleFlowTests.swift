@@ -234,7 +234,11 @@ final class RoleFlowTests: XCTestCase {
             type(app.secureTextFields["Password (6+ letters)"], "Nat-\(Int(Date().timeIntervalSince1970))-Zq9")
             tap("Create my account")
             let sb = XCUIApplication(bundleIdentifier: "com.apple.springboard")
-            for _ in 0..<8 { if sb.buttons["Not Now"].waitForExistence(timeout: 2) { sb.buttons["Not Now"].tap(); break }; if app.buttons["Not Now"].exists { app.buttons["Not Now"].tap(); break } }
+            for _ in 0..<8 {
+                let deny = sb.alerts.buttons["Don't Allow"]
+                if deny.waitForExistence(timeout: 2) { deny.tap(); continue }
+                if sb.buttons["Not Now"].waitForExistence(timeout: 2) { sb.buttons["Not Now"].tap(); break }; if app.buttons["Not Now"].exists { app.buttons["Not Now"].tap(); break }
+            }
             _ = app.buttons["I need care"].waitForExistence(timeout: 30); sleep(2)
         }
         pic("02-i-need-care-or-i-give-care")
