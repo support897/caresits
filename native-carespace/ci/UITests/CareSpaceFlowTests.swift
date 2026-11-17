@@ -445,6 +445,124 @@ final class CareSpaceFlowTests: XCTestCase {
         }
         XCTAssertTrue(sendPhoto.isHittable, "Photo response button could not be revealed")
         print("PHOTO-REQUEST-GATE-OK: one question, no answer, response button usable")
+
+        // CS-F-011 / CS-C-010: real picker, answer and reopen proof.
+        // Every-unanswered marking is NOT discriminated by this
+        // single-request fixture and remains the named next item.
+        func acceptPhotoPermission(_ alert: XCUIElement) -> Bool {
+            let tree = alert.debugDescription
+            guard tree.localizedCaseInsensitiveContains("photo") else { return false }
+            print("PHOTO-PERMISSION-TREE: \(tree)")
+            for title in ["Allow Full Access", "Allow Access to All Photos", "Allow"] {
+                let allow = alert.buttons[title]
+                if allow.exists { allow.tap(); return true }
+            }
+            return false
+        }
+        let photoMonitor = addUIInterruptionMonitor(withDescription: "Photo permission") { alert in
+            acceptPhotoPermission(alert)
+        }
+        defer { removeUIInterruptionMonitor(photoMonitor) }
+
+        func handlePhotoPermissionIfPresent() {
+            let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+            for alert in [springboard.alerts.firstMatch, app.alerts.firstMatch] where alert.exists {
+                _ = acceptPhotoPermission(alert)
+            }
+        }
+        func revealPhotoControl(_ control: XCUIElement, _ name: String) throws {
+            XCTAssertTrue(control.waitForExistence(timeout: 20), "\(name) missing")
+            for _ in 0..<6 {
+                if control.isHittable { break }
+                app.swipeUp()
+            }
+            guard control.isHittable else {
+                print("PHOTO-PICKER-TREE: \(app.debugDescription)")
+                XCTFail("\(name) could not be revealed")
+                throw NSError(domain: "CareSpacePhotoProof", code: 1)
+            }
+        }
+        func pickSeededPhoto(_ control: XCUIElement, _ name: String) throws {
+            try revealPhotoControl(control, name)
+            control.tap()
+            handlePhotoPermissionIfPresent()
+            // One seeded library photo. Query structure, never a
+            // version-dependent photo/date label.
+            let firstPhoto = app.collectionViews.cells.firstMatch
+            var found = firstPhoto.waitForExistence(timeout: 10)
+            if !found {
+                handlePhotoPermissionIfPresent()
+                found = firstPhoto.waitForExistence(timeout: 10)
+            }
+            guard found else {
+                print("PHOTO-PICKER-TREE: \(app.debugDescription)")
+                XCTFail("Seeded photo cell not found; inspect the picker tree")
+                throw NSError(domain: "CareSpacePhotoProof", code: 2)
+            }
+            handlePhotoPermissionIfPresent()
+            guard firstPhoto.isHittable else {
+                print("PHOTO-PICKER-TREE: \(app.debugDescription)")
+                XCTFail("Seeded photo cell is present but not hittable")
+                throw NSError(domain: "CareSpacePhotoProof", code: 3)
+            }
+            print("PHOTO-PICKER-CELL: \(firstPhoto.debugDescription)")
+            firstPhoto.tap()
+            handlePhotoPermissionIfPresent()
+        }
+
+        let photoAnswer = app.staticTexts["Answer: Photo sent"]
+        // TimelineRow renders this accessibility label through
+        // SpacePhoto only when the parsed item.photoKey is nonempty.
+        let carePhotos = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "Care photo"))
+        func assertAnsweredPhoto() -> Int {
+            let answered = photoAnswer.waitForExistence(timeout: 60)
+            if !answered { print("PHOTO-ANSWER-TREE: \(app.debugDescription)") }
+            XCTAssertTrue(answered, "Uploaded photo answer did not read back")
+            XCTAssertTrue(app.staticTexts[photoQuestion].exists, "Original photo question was lost")
+            XCTAssertEqual(questions.count, 1, "Answering must retain the one original question")
+            XCTAssertEqual(answers.count, 1, "Exactly one photo answer must read back")
+            XCTAssertFalse(sendPhoto.exists, "Answered request must close the photo-response gate")
+            XCTAssertTrue(carePhotos.firstMatch.waitForExistence(timeout: 20), "No care-photo view for the parsed nonempty photoKey")
+            return carePhotos.count
+        }
+        func reopenPhotoJourney() {
+            // Cold relaunch reconstructs SpaceModel and its listener.
+            // This proves UI read-back, not a server-only owner read.
+            app.terminate()
+            app.launch()
+            XCTAssertTrue(app.tabBars.buttons["Chats"].waitForExistence(timeout: 60), "Photo journey relaunch did not land inside")
+            XCTAssertTrue(row("Drive Family").waitForExistence(timeout: 45), "Photo journey space missing after relaunch")
+            row("Drive Family").tap()
+            XCTAssertTrue(app.buttons["Daily report"].waitForExistence(timeout: 20), "Today did not reopen")
+        }
+
+        // Item 3: a tap alone is never upload proof.
+        try pickSeededPhoto(sendPhoto, "Send the photo")
+        _ = assertAnsweredPhoto()
+        print("PHOTO-ANSWER-READBACK-OK: original question, Photo sent answer, nonempty-key photo view")
+
+        // Item 4: reopen and read the same result back.
+        reopenPhotoJourney()
+        let answeredPhotoCount = assertAnsweredPhoto()
+        print("PHOTO-REOPEN-OK: answer and photo retained, response gate closed")
+
+        // Item 5: use the actual completed-upload path, not a note.
+        let dailyReport = app.buttons["Daily report"]
+        try revealPhotoControl(dailyReport, "Daily report")
+        dailyReport.tap()
+        try pickSeededPhoto(app.buttons["Choose a photo"], "Choose a photo")
+        let completedPhoto = app.staticTexts["Photo added to today's report."]
+        let uploadedEntry = completedPhoto.waitForExistence(timeout: 60)
+        if !uploadedEntry { print("PHOTO-UPLOAD-TREE: \(app.debugDescription)") }
+        XCTAssertTrue(uploadedEntry, "Completed-upload entry did not read back in Daily report")
+        reopenPhotoJourney()
+        let totalPhotoCount = assertAnsweredPhoto()
+        XCTAssertTrue(completedPhoto.waitForExistence(timeout: 30), "Completed-upload entry did not survive reopen")
+        XCTAssertGreaterThan(totalPhotoCount, answeredPhotoCount, "Completed upload must add another nonempty-key photo view")
+        XCTAssertEqual(questions.count, 1, "Completed upload must not create another photo request")
+        XCTAssertEqual(answers.count, 1, "Completed upload must not create another answer")
+        XCTAssertFalse(sendPhoto.exists, "Completed upload must not open a photo-response gate")
+        print("PHOTO-UPLOADED-ENTRY-GUARD-OK: second photo retained, no new request")
     }
 
     // MARK: QA plan drive, batch 2b (split remainder, on QA's word):

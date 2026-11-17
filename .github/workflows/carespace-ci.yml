@@ -43,6 +43,11 @@ jobs:
           echo "UDID=$UDID" >> $GITHUB_ENV
           xcrun simctl boot "$UDID" || true
 
+      - name: Seed the photo proof fixture
+        run: |
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl addmedia "$UDID" native-carespace/Assets.xcassets/BunnyHello.imageset/bunny-hello.png
+
       - name: UI tests (AutoFill check + items 1 and 2 drive)
         working-directory: cs-ci
         run: |
