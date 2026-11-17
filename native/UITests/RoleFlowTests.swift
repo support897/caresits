@@ -312,7 +312,19 @@ final class RoleFlowTests: XCTestCase {
             XCTAssertTrue(reveal(nextButton, max: 15), "asking next missing before \(section)")
             nextButton.tap(); sleep(1)
         }
-        let current = app.descendants(matching: .any)["sec-\(section)"]
+        let pick: String
+        switch section {
+        case "care": pick = "Dancing"
+        case "who": pick = "Calm"
+        case "aupair": pick = "Own room"
+        default: XCTFail("unknown asking section: \(section)"); return
+        }
+        let current = app.buttons["tick-\(pick)"].firstMatch
+        // Next can leave the scroll position below the new section's first rows.
+        for _ in 0..<15 {
+            if current.exists && current.isHittable { break }
+            app.swipeDown(velocity: .slow)
+        }
         XCTAssertTrue(reveal(current, max: 15), "asking section missing: \(section)")
     }
     func asking(side: String) {
