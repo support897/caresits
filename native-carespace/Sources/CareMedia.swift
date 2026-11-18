@@ -97,9 +97,14 @@ enum SpaceMedia {
         var put = URLRequest(url: url); put.httpMethod = "PUT"
         for (h, v) in (link["headers"] as? [String: String]) ?? ["content-type": "image/jpeg"] where h.lowercased() != "content-length" { put.setValue(v, forHTTPHeaderField: h) }
         Trace.log("photo.put.begin")
-        let (_, resp) = try await URLSession.shared.upload(for: put, from: jpg)
+        let (putBody, resp) = try await URLSession.shared.upload(for: put, from: jpg)
         let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
         Trace.log("photo.put.return", "status=\(code)")
+        #if DEBUG
+        let jpegPrefix = jpg.prefix(4).map { String(format: "%02X", $0) }.joined()
+        let responseText = String(data: putBody.prefix(1024), encoding: .utf8) ?? "<non-UTF8>"
+        Trace.log("photo.put.evidence", "status=\(code) jpgBytes=\(jpg.count) first4=\(jpegPrefix) responseBytes=\(putBody.count) body=\(responseText.debugDescription)")
+        #endif
         guard (200..<300).contains(code) else { throw CareError(message: "The photo could not be saved (code \(code)).") }
         // Same third step as the web app (packages/core media upload): the
         // service only serves the file after this confirm call answers ok.
