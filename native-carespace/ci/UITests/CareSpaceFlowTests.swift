@@ -346,6 +346,7 @@ final class CareSpaceFlowTests: XCTestCase {
         emailField.tap(); emailField.typeText("projects.reports.ilse+cs29j\(stamp)@gmail.com")
         let pwField = app.secureTextFields["Password"]
         pwField.tap(); pwField.typeText("TraceTest29!")
+        let firstSignUpTime = ProcessInfo.processInfo.systemUptime
         app.buttons["Create my account"].tap()
         // One user retry only, and only on the exact hard-timeout error.
         // Keep the SAME email/password: a timeout does not prove that
@@ -359,6 +360,18 @@ final class CareSpaceFlowTests: XCTestCase {
         ], timeout: 60)
         XCTAssertEqual(firstOutcome, .completed, "Journey sign-up showed neither Chats nor the truthful timeout")
         if !app.tabBars.buttons["Chats"].exists && signUpTimeout.exists {
+        // Target +120s from the first submission, not from its timeout.
+        // A late landing ends this bounded wait and suppresses the retry.
+        let remaining = max(0, 120 - (ProcessInfo.processInfo.systemUptime - firstSignUpTime))
+        print("JOURNEY-SIGNUP-RECOVERY-WAIT: remaining=\(remaining)s target=first-submit+120s")
+        let lateLanding = NSPredicate { _, _ in
+            app.tabBars.buttons["Chats"].exists
+        }
+        let recoveryOutcome = XCTWaiter.wait(for: [
+            XCTNSPredicateExpectation(predicate: lateLanding, object: nil)
+        ], timeout: remaining)
+        XCTAssertTrue(recoveryOutcome == .completed || recoveryOutcome == .timedOut, "Sign-up recovery wait ended unexpectedly")
+        print("JOURNEY-SIGNUP-RECOVERY-END: elapsed=\(ProcessInfo.processInfo.systemUptime - firstSignUpTime)s outcome=\(recoveryOutcome.rawValue)")
             let retrySignUp = app.buttons["Create my account"]
             let retryReady = NSPredicate { _, _ in
                 !retrySignUp.exists || retrySignUp.isEnabled
