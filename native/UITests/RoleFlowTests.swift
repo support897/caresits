@@ -116,8 +116,28 @@ final class RoleFlowTests: XCTestCase {
         try? (email + "\n").appendLine(to: "/Users/ilseplacencia/cs181/test-accounts-made.txt")
         typeCredential(app.secureTextFields["Password (6+ letters)"], testPw, secure: true)
         shot("welcome-\(side)")
+        let firstSubmit = ProcessInfo.processInfo.systemUptime
         tap("Create my account")
         dismissAuthSheets()
+        let retryAt = firstSubmit + 120
+        let create = app.buttons["Create my account"]
+        let signupError = app.staticTexts["Could not sign in. Please try again."]
+        let landedName = app.textFields["Your name"]
+        let landedRole = app.buttons["I need care"]
+        while ProcessInfo.processInfo.systemUptime < retryAt &&
+                create.exists && !landedName.exists && !landedRole.exists {
+            sleep(1)
+        }
+        if signupError.exists && create.exists && create.isEnabled && create.isHittable &&
+                !landedName.exists && !landedRole.exists {
+            let sameEmail = (app.textFields["Email"].value as? String) == email
+            XCTAssertTrue(sameEmail, "signup retry must retain the original email")
+            if sameEmail {
+                print("SIGNUP PROOF retrying original identity after \(ProcessInfo.processInfo.systemUptime - firstSubmit) seconds")
+                tap("Create my account")
+                dismissAuthSheets()
+            }
+        }
         // The role pick can arrive mid-animation: a single tap can land nowhere (gate 2, twice
         // at hit point (-1,-1)). Poll until the name field stands, tapping whenever the button
         // exists. Do NOT gate on isHittable, and do NOT call element.tap(): this button is never
