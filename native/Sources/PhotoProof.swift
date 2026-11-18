@@ -96,6 +96,9 @@ struct ChatProofGate: View {
         if ready {
             ZStack(alignment: .topTrailing) {
                 RootGate()
+                Text(status).font(.system(size: 1)).lineLimit(1)
+                    .frame(width: 1, height: 1).opacity(0.02).allowsHitTesting(false)
+                    .accessibilityLabel(status).accessibilityIdentifier("chatProof")
                 Button("proofCleanup") { Task { await cleanup() } }.font(.custom("Atkinson Hyperlegible", size: 8)).opacity(0.02).accessibilityIdentifier("proofCleanup")
             }
         } else {
