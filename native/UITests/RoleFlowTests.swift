@@ -821,12 +821,7 @@ final class RoleFlowTests: XCTestCase {
         if !card.waitForExistence(timeout: 90) { qshot("urgent-FAIL-no-card"); XCTFail("urgent card never showed. Texts: " + app.staticTexts.allElementsBoundByIndex.map { $0.label }.joined(separator: " | ")); return }
         // Leftover posts from failed runs can stand ahead of this run's post in the deck: pass until this run's card stands.
         func topCardHasNote() -> Bool {
-            let found = app.descendants(matching: .any)["urgentCard"].firstMatch.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", note)).firstMatch.exists
-            if !found {
-                print("URGENT PROOF top-note miss; note \(note)")
-                print(app.debugDescription)
-            }
-            return found
+            return app.staticTexts.matching(NSPredicate(format: "identifier == %@ AND label CONTAINS %@", "urgentCard", note)).firstMatch.exists
         }
         var onMine = topCardHasNote()
         var passes = 0
