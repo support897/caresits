@@ -134,6 +134,12 @@ struct UrgentPostForm: View {
     @State private var busy = false; @State private var err = ""
     let partNames = ["Morning", "Afternoon", "Evening", "Night"]
     var when: Date {
+        #if DEBUG
+        // Explicit expiry fixture; still submitted through the normal posting path.
+        if ProcessInfo.processInfo.environment["CS_URGENT_EXPIRED_FIXTURE"] == "1" {
+            return Date().addingTimeInterval(-3600)
+        }
+        #endif
         let cal = Calendar.current
         let d = cal.dateComponents([.year, .month, .day], from: day)
         let t = cal.dateComponents([.hour, .minute], from: start)

@@ -849,6 +849,7 @@ final class RoleFlowTests: XCTestCase {
     }
     /// Item 4 expiry: a post whose start has passed reads Ended for the family and never shows to a carer.
     func testUrgentExpiry() {
+        app.launchEnvironment["CS_URGENT_EXPIRED_FIXTURE"] = "1"
         let note = "Urgent note PAST\(Int(Date().timeIntervalSince1970))"
         signUp(side: "family"); fillYou("Test XPFam"); next(); next()
         type(app.textFields["Name or nickname"], "Mia"); dismissKb(); next()
@@ -862,8 +863,10 @@ final class RoleFlowTests: XCTestCase {
         XCTAssertTrue(nf.waitForExistence(timeout: 10), "note field missing"); nf.tap(); sleep(1); nf.typeText(note)
         dismissKb()
         XCTAssertTrue(reveal(app.buttons["postJob"], max: 6), "post button missing"); app.buttons["postJob"].tap(); sleep(3)
-        // the start time was "now" as the form opened: by the time the list reads it back, it has passed
+        // Read back this run's post before checking the explicit past-start fixture.
+        XCTAssertTrue(app.staticTexts[note].waitForExistence(timeout: 30), "expired fixture was not read back in the family list")
         XCTAssertTrue(app.staticTexts["Ended"].waitForExistence(timeout: 30), "past post did not read Ended. Texts: " + app.staticTexts.allElementsBoundByIndex.map { $0.label }.joined(separator: " | "))
+        app.launchEnvironment.removeValue(forKey: "CS_URGENT_EXPIRED_FIXTURE")
         qshot("urgentx-1-family-ended")
         deleteThisAccount()
         signUp(side: "carer"); fillYou("Test XPCarer"); next(); tap("Nanny"); next(); tap("Skip")
