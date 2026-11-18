@@ -426,9 +426,24 @@ final class CareSpaceFlowTests: XCTestCase {
 
         // Write a tracker entry on Today; it must read back.
         app.tabBars.buttons["Chats"].tap()
-        if !row("Drive Family").waitForExistence(timeout: 45) {
-            app.tabBars.buttons["Chats"].tap()
+        // Switching tabs preserves the pushed SpaceView. Return explicitly;
+        // tapping the selected Chats tab is not a pop-to-root contract.
+        let spacesSearch = app.textFields["Search your spaces"]
+        let retainedSpaceBar = app.navigationBars["Drive Family"]
+        let chatsDestination = NSPredicate { _, _ in
+            spacesSearch.exists || retainedSpaceBar.exists
         }
+        XCTAssertEqual(XCTWaiter.wait(for: [
+            XCTNSPredicateExpectation(predicate: chatsDestination, object: nil)
+        ], timeout: 20), .completed, "Chats showed neither its list nor the retained space")
+        if !spacesSearch.exists {
+            let backToChats = retainedSpaceBar.buttons["Chats"]
+            XCTAssertTrue(backToChats.waitForExistence(timeout: 15), "Space navigation back button to Chats missing")
+            XCTAssertTrue(backToChats.isHittable, "Space navigation back button to Chats not hittable")
+            backToChats.tap()
+        }
+        XCTAssertTrue(spacesSearch.waitForExistence(timeout: 20), "Chats space list did not appear after explicit return")
+        print("DRIVE-SPACE-LIST-RETURN-OK: Chats list showing before card query")
         XCTAssertTrue(row("Drive Family").waitForExistence(timeout: 45), "Space card missing on return")
         row("Drive Family").tap()
         let moodPill = app.buttons["Mood"]
