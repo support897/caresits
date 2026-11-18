@@ -793,6 +793,7 @@ final class RoleFlowTests: XCTestCase {
     /// family picks the carer, the post reads filled and names the carer. Both accounts delete at the end.
     func testUrgentBoard() {
         let note = "Urgent note WALK\(Int(Date().timeIntervalSince1970))"
+        app.launchEnvironment["CS_URGENT_PROOF_NOTE"] = note
         signUp(side: "family"); fillYou("Test UFam"); next(); next()
         type(app.textFields["Name or nickname"], "Mia"); dismissKb(); next()
         tap("Finish", timeout: 20)
@@ -819,7 +820,14 @@ final class RoleFlowTests: XCTestCase {
         let card = app.descendants(matching: .any)["urgentCard"].firstMatch
         if !card.waitForExistence(timeout: 90) { qshot("urgent-FAIL-no-card"); XCTFail("urgent card never showed. Texts: " + app.staticTexts.allElementsBoundByIndex.map { $0.label }.joined(separator: " | ")); return }
         // Leftover posts from failed runs can stand ahead of this run's post in the deck: pass until this run's card stands.
-        func topCardHasNote() -> Bool { app.descendants(matching: .any)["urgentCard"].firstMatch.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", note)).firstMatch.exists }
+        func topCardHasNote() -> Bool {
+            let found = app.descendants(matching: .any)["urgentCard"].firstMatch.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", note)).firstMatch.exists
+            if !found {
+                print("URGENT PROOF top-note miss; note \(note)")
+                print(app.debugDescription)
+            }
+            return found
+        }
         var onMine = topCardHasNote()
         var passes = 0
         while !onMine && passes < 15 {

@@ -253,11 +253,24 @@ enum Backend {
     static func createJob(familyUid: String, when: Date, dayParts: [String], postcode: String, bands: [String], note: String) async throws {
         var data: [String: Any] = ["familyUid": familyUid, "when": Timestamp(date: when), "dayParts": dayParts, "postcode": postcode, "bands": bands, "note": String(note.prefix(1000)), "state": "open", "createdAt": FieldValue.serverTimestamp()]
         if let c = await Geo.coord(postcode: postcode) { data["latE2"] = Int((c.latitude * 100).rounded()); data["lngE2"] = Int((c.longitude * 100).rounded()) }
-        _ = try await db.collection("jobs").addDocument(data: data)
+        let posted = try await db.collection("jobs").addDocument(data: data)
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["CS_URGENT_PROOF_NOTE"] == note {
+            print("URGENT PROOF created id=\(posted.documentID) note=\(note) when=\(when.timeIntervalSince1970) postcode=\(postcode)")
+        }
+        #endif
     }
     /// Open posts, soonest first. Expiry is read time: a post whose start has passed never shows.
     static func openJobs() async -> [UrgentJob] {
         guard let snap = try? await db.collection("jobs").whereField("state", isEqualTo: "open").limit(to: 100).getDocuments() else { return [] }
+        #if DEBUG
+        if let expected = ProcessInfo.processInfo.environment["CS_URGENT_PROOF_NOTE"] {
+            let ids = snap.documents.map { $0.documentID }
+            let matches = snap.documents.filter { ($0.data()["note"] as? String) == expected }.map { $0.documentID }
+            print("URGENT PROOF fetchedCount=\(snap.documents.count) fromCache=\(snap.metadata.isFromCache) ids=\(ids)")
+            print("URGENT PROOF expectedNote=\(expected) arrived=\(!matches.isEmpty) matchingIds=\(matches)")
+        }
+        #endif
         return snap.documents.map { job($0) }.filter { $0.when > Date() }.sorted { $0.when < $1.when }
     }
     static func myJobs(_ familyUid: String) async -> [UrgentJob] {
