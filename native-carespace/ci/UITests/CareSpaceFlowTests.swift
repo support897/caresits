@@ -518,9 +518,13 @@ final class CareSpaceFlowTests: XCTestCase {
             try revealPhotoControl(control, name)
             control.tap()
             handlePhotoPermissionIfPresent()
-            // One seeded library photo. Query structure, never a
-            // version-dependent photo/date label.
-            let firstPhoto = app.collectionViews.cells.firstMatch
+            // Run #23: the picker exposes grid Images, not CollectionView
+            // Cells. The seeded photo precedes the simulator's stock photos.
+            // Query the observed structure, never a photo/date label.
+            let firstPhoto = app.otherElements
+                .matching(identifier: "PXGGridLayout-Group").firstMatch
+                .descendants(matching: .image)
+                .matching(identifier: "PXGGridLayout-Info").firstMatch
             var found = firstPhoto.waitForExistence(timeout: 10)
             if !found {
                 handlePhotoPermissionIfPresent()
