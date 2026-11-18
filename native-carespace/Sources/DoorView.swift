@@ -1,5 +1,6 @@
 import SwiftUI
 import AuthenticationServices
+import FirebaseAuth
 
 /// DOOR LAW — NEW SHAPE (standing): the first page shows ONLY Google and
 /// Apple, plus ONE small button for email instead. No unnecessary text.
@@ -66,6 +67,10 @@ struct DoorView: View {
     }
     static func spoken(_ e: Error) -> String {
         if case AppError.msg(let m) = e { return m }
+        let authError = e as NSError
+        if authError.domain == AuthErrorDomain && authError.code == 17007 {
+            return "That email already has an account. Use Sign in."
+        }
         let t = e.localizedDescription
         if t.contains("17011") || t.lowercased().contains("no user record") || t.lowercased().contains("user-not-found") {
             return "No account with that email. Use Sign up to make one."

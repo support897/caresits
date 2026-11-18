@@ -347,6 +347,38 @@ final class CareSpaceFlowTests: XCTestCase {
         let pwField = app.secureTextFields["Password"]
         pwField.tap(); pwField.typeText("TraceTest29!")
         app.buttons["Create my account"].tap()
+        // One user retry only, and only on the exact hard-timeout error.
+        // Keep the SAME email/password: a timeout does not prove that
+        // account creation had no server-side effect. Never mint a new email.
+        let signUpTimeout = app.staticTexts["Sign up is taking too long. Check your connection and try again."]
+        let signUpOutcome = NSPredicate { _, _ in
+            app.tabBars.buttons["Chats"].exists || signUpTimeout.exists
+        }
+        let firstOutcome = XCTWaiter.wait(for: [
+            XCTNSPredicateExpectation(predicate: signUpOutcome, object: nil)
+        ], timeout: 60)
+        XCTAssertEqual(firstOutcome, .completed, "Journey sign-up showed neither Chats nor the truthful timeout")
+        if !app.tabBars.buttons["Chats"].exists && signUpTimeout.exists {
+            let retrySignUp = app.buttons["Create my account"]
+            let retryReady = NSPredicate { _, _ in
+                !retrySignUp.exists || retrySignUp.isEnabled
+            }
+            XCTAssertEqual(XCTWaiter.wait(for: [
+                XCTNSPredicateExpectation(predicate: retryReady, object: nil)
+            ], timeout: 5), .completed, "Timed-out sign-up did not release its busy state")
+            // A late first completion may already have navigated inside.
+            if !app.tabBars.buttons["Chats"].exists && signUpTimeout.exists {
+                XCTAssertTrue(retrySignUp.exists, "Sign-up retry button missing after timeout")
+                XCTAssertTrue(retrySignUp.isEnabled, "Sign-up retry button still disabled after timeout")
+                for _ in 0..<4 {
+                    if retrySignUp.isHittable { break }
+                    app.swipeUp()
+                }
+                XCTAssertTrue(retrySignUp.isHittable, "Sign-up retry button could not be revealed")
+                print("JOURNEY-SIGNUP-RETRY: one retry, same credentials, after visible timeout")
+                retrySignUp.tap()
+            }
+        }
         XCTAssertTrue(app.tabBars.buttons["Chats"].waitForExistence(timeout: 60), "Journey sign-up did not land inside")
 
         func row(_ title: String) -> XCUIElement {
