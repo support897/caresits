@@ -103,6 +103,7 @@ struct TimelineRow: View {
     @EnvironmentObject var s: Session
     @EnvironmentObject var th: ThemeStore
     @State private var asking = false
+    @State private var photoNeedsRetry = false
     @State private var draft = ""
     @State private var answerIndex: Int? = nil
     var childName: String { model.children.first { $0.id == item.childId }?.name ?? "" }
@@ -136,14 +137,18 @@ struct TimelineRow: View {
                 }
                 // Item 20: a photo ask is answered with the photo.
                 if item.kind == .photo, item.asks.contains(where: { !$0.answered }), CareAccess.canPost(model.space.role), CareAccess.canSeePhotos(model.space.role, model.space.perms) {
-                    PhotoAddButton(spaceId: model.space.id, title: "Send the photo", onKey: { key in
+                    PhotoAddButton(spaceId: model.space.id, title: photoNeedsRetry ? "That photo didn't send. Tap to try again." : "Send the photo", onKey: { key in
                         Trace.log("photo.answer.onKey")
                         Task {
                             Trace.log("photo.answer.write.begin")
                             let saved = await CareRepo.answerPhotoAsk(spaceId: model.space.id, item: item, photoKey: key)
                             Trace.log("photo.answer.write.return", "saved=\(saved)")
+                            photoNeedsRetry = !saved
                         }
-                    }, onError: { _ in Trace.log("photo.answer.onError") })
+                    }, onError: { _ in
+                        Trace.log("photo.answer.onError")
+                        photoNeedsRetry = true
+                    })
                 }
                 HStack(spacing: 16) {
                     if asking {

@@ -28,7 +28,7 @@ enum SpaceMedia {
         throw CareError(message: "This photo could not be opened. If it is in iCloud, wait for it to download, or pick another.")
     }
 
-    /// Shrinks to 1600 px and saves as JPEG. That also removes location and camera details.
+    /// Shrinks to 1600 px, saves as JPEG, and explicitly removes APP1 Exif headers.
     static func prepare(_ data: Data) throws -> Data {
         guard let img = UIImage(data: data) else { throw CareError(message: "That picture could not be opened.") }
         let longest = max(img.size.width, img.size.height)
@@ -38,8 +38,56 @@ enum SpaceMedia {
         let fmt = UIGraphicsImageRendererFormat(); fmt.scale = 1; fmt.opaque = true
         let out = UIGraphicsImageRenderer(size: size, format: fmt).image { _ in img.draw(in: CGRect(origin: .zero, size: size)) }
         var q: CGFloat = 0.84
-        while q > 0.2 { if let j = out.jpegData(compressionQuality: q), j.count < 1_500_000 { return j }; q -= 0.15 }
+        while q > 0.2 {
+            if let j = out.jpegData(compressionQuality: q), j.count < 1_500_000 {
+                let bytes = [UInt8](j)
+                let segments = try exifSegments(in: bytes)
+                var clean = Data()
+                var start = 0
+                for segment in segments {
+                    clean.append(contentsOf: bytes[start..<segment.lowerBound])
+                    start = segment.upperBound
+                }
+                clean.append(contentsOf: bytes[start..<bytes.count])
+                guard try exifSegments(in: [UInt8](clean)).isEmpty else {
+                    throw CareError(message: "That photo could not be prepared safely.")
+                }
+                Trace.log("photo.prepare.exif", "removed=\(segments.count) remaining=0")
+                return clean
+            }
+            q -= 0.15
+        }
         throw CareError(message: "That picture is too big.")
+    }
+
+    /// Walk JPEG headers up to SOS, matching the worker's APP1 + Exif rule.
+    /// Reject malformed headers rather than return unchecked bytes.
+    private static func exifSegments(in bytes: [UInt8]) throws -> [Range<Int>] {
+        let invalid = CareError(message: "That photo could not be prepared safely.")
+        guard bytes.count >= 4, bytes[0] == 0xff, bytes[1] == 0xd8 else { throw invalid }
+        var offset = 2
+        var segments: [Range<Int>] = []
+        while offset < bytes.count {
+            let start = offset
+            guard bytes[offset] == 0xff else { throw invalid }
+            while offset < bytes.count && bytes[offset] == 0xff { offset += 1 }
+            guard offset < bytes.count else { throw invalid }
+            let marker = bytes[offset]
+            offset += 1
+            if marker == 0xd9 { return segments }
+            if marker == 0x01 || (0xd0...0xd7).contains(marker) { continue }
+            guard marker != 0x00, marker != 0xd8, offset + 2 <= bytes.count else { throw invalid }
+            let length = (Int(bytes[offset]) << 8) | Int(bytes[offset + 1])
+            guard length >= 2, length <= bytes.count - offset else { throw invalid }
+            let end = offset + length
+            if marker == 0xda { return segments }
+            if marker == 0xe1, length >= 6,
+                Array(bytes[(offset + 2)..<(offset + 6)]) == [0x45, 0x78, 0x69, 0x66] {
+                segments.append(start..<end)
+            }
+            offset = end
+        }
+        throw invalid
     }
 
     static func randomId() -> String { String((0..<20).map { _ in "abcdef0123456789".randomElement() ?? "0" }) }
