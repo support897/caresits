@@ -939,6 +939,21 @@ final class RoleFlowTests: XCTestCase {
         XCTAssertTrue(reveal(menu, max: 10), "urgent distance menu missing"); menu.tap(); sleep(1)
         tap("Any distance")
         app.tabBars.buttons.element(boundBy: 0).tap(); tapUrgent(); sleep(8)
+        // Reach this run's post at any depth within the fetched pool.
+        func topCardHasNote() -> Bool {
+            return app.staticTexts.matching(NSPredicate(format: "identifier == %@ AND label CONTAINS %@", "urgentCard", note)).firstMatch.exists
+        }
+        let card = app.descendants(matching: .any)["urgentCard"].firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 90), "no urgent card at Any distance")
+        var onMine = topCardHasNote()
+        var passes = 0
+        while !onMine && passes < 100 {
+            let passBtn = app.buttons["urgentPass"].firstMatch
+            if !passBtn.exists { break }
+            passBtn.tap(); sleep(3); passes += 1
+            onMine = topCardHasNote()
+        }
+        XCTAssertTrue(onMine, "the Any-distance deck never reached this run's post")
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", note)).firstMatch.waitForExistence(timeout: 60), "far post did not show at Any distance")
         qshot("urgentd-2-far-post-shown")
         deleteThisAccount()
