@@ -137,8 +137,13 @@ struct TimelineRow: View {
                 // Item 20: a photo ask is answered with the photo.
                 if item.kind == .photo, item.asks.contains(where: { !$0.answered }), CareAccess.canPost(model.space.role), CareAccess.canSeePhotos(model.space.role, model.space.perms) {
                     PhotoAddButton(spaceId: model.space.id, title: "Send the photo", onKey: { key in
-                        Task { _ = await CareRepo.answerPhotoAsk(spaceId: model.space.id, item: item, photoKey: key) }
-                    }, onError: { _ in })
+                        Trace.log("photo.answer.onKey")
+                        Task {
+                            Trace.log("photo.answer.write.begin")
+                            let saved = await CareRepo.answerPhotoAsk(spaceId: model.space.id, item: item, photoKey: key)
+                            Trace.log("photo.answer.write.return", "saved=\(saved)")
+                        }
+                    }, onError: { _ in Trace.log("photo.answer.onError") })
                 }
                 HStack(spacing: 16) {
                     if asking {

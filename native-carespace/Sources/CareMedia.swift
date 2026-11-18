@@ -46,49 +46,68 @@ enum SpaceMedia {
 
     static func call(_ body: [String: Any], path: String = "/v1/link") async throws -> [String: Any] {
         guard let user = Auth.auth().currentUser else { throw CareError(message: "Please sign in again.") }
+        Trace.log("photo.service.token.begin", "path=\(path)")
         let token = try await user.getIDToken()
+        Trace.log("photo.service.token.ok", "path=\(path)")
         guard let endpoint = URL(string: base + path) else { throw CareError(message: "The photo service address is wrong.") }
         var req = URLRequest(url: endpoint)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        Trace.log("photo.service.http.begin", "path=\(path)")
         let (data, resp) = try await URLSession.shared.data(for: req)
         let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
+        Trace.log("photo.service.http.return", "path=\(path) status=\(code)")
         guard code == 200, let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw CareError(message: "The photo service said no (code \(code)). Please try again.")
         }
+        Trace.log("photo.service.json.ok", "path=\(path)")
         return json
     }
 
     /// One automatic retry for a network hiccup. A clear refusal is not retried.
     static func uploadSafe(_ raw: Data, spaceId: String) async throws -> String {
         do { return try await upload(raw, spaceId: spaceId) }
-        catch let e as CareError { throw e }
-        catch { try? await Task.sleep(nanoseconds: 800_000_000); return try await upload(raw, spaceId: spaceId) }
+        catch let e as CareError { Trace.log("photo.upload.refused"); throw e }
+        catch {
+            Trace.log("photo.upload.retry", "code=\((error as NSError).code)")
+            try? await Task.sleep(nanoseconds: 800_000_000)
+            return try await upload(raw, spaceId: spaceId)
+        }
     }
 
     /// Returns the file key to save with the photo record.
     static func upload(_ raw: Data, spaceId: String) async throws -> String {
+        Trace.log("photo.upload.begin")
         guard let uid = Auth.auth().currentUser?.uid else { throw CareError(message: "Please sign in again.") }
+        Trace.log("photo.prepare.begin")
         let jpg = try prepare(raw)
+        Trace.log("photo.prepare.ok")
         let name = "photo-\(randomId()).jpg"
         let wanted = "spaces/\(spaceId)/gallery/\(name)"
+        Trace.log("photo.link.begin")
         let link = try await call(["class": "space-media", "name": name, "ownerUid": uid, "spaceId": spaceId,
                                    "bytes": jpg.count, "contentType": "image/jpeg", "op": "put"])
+        Trace.log("photo.link.return")
         guard let urlStr = link["url"] as? String, let url = URL(string: urlStr) else { throw CareError(message: "The photo service gave no upload link.") }
         let key = (link["key"] as? String) ?? wanted
         guard isKey(key, forSpace: spaceId) else { throw CareError(message: "The photo service picked a place outside this care space.") }
+        Trace.log("photo.link.validated")
         var put = URLRequest(url: url); put.httpMethod = "PUT"
         for (h, v) in (link["headers"] as? [String: String]) ?? ["content-type": "image/jpeg"] where h.lowercased() != "content-length" { put.setValue(v, forHTTPHeaderField: h) }
+        Trace.log("photo.put.begin")
         let (_, resp) = try await URLSession.shared.upload(for: put, from: jpg)
         let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
+        Trace.log("photo.put.return", "status=\(code)")
         guard (200..<300).contains(code) else { throw CareError(message: "The photo could not be saved (code \(code)).") }
         // Same third step as the web app (packages/core media upload): the
         // service only serves the file after this confirm call answers ok.
+        Trace.log("photo.confirm.begin")
         let confirmed = try await call(["class": "space-media", "name": name, "ownerUid": uid, "spaceId": spaceId,
                                         "bytes": jpg.count, "contentType": "image/jpeg"], path: "/v1/confirm")
         guard (confirmed["ok"] as? Bool) == true else { throw CareError(message: "The photo could not be checked. Choose it again.") }
+        Trace.log("photo.confirm.ok")
         return key
     }
 
@@ -162,8 +181,19 @@ struct PhotoAddButton: View {
             guard let item = item else { return }
             pick = nil; working = true
             Task {
-                do { let d = try await SpaceMedia.load(item); let k = try await SpaceMedia.uploadSafe(d, spaceId: spaceId); onKey(k) }
-                catch { onError(error.localizedDescription) }
+                do {
+                    Trace.log("photo.load.begin")
+                    let d = try await SpaceMedia.load(item)
+                    Trace.log("photo.load.ok")
+                    let k = try await SpaceMedia.uploadSafe(d, spaceId: spaceId)
+                    Trace.log("photo.onKey.begin")
+                    onKey(k)
+                    Trace.log("photo.onKey.return")
+                }
+                catch {
+                    Trace.log("photo.pipeline.THROW", "code=\((error as NSError).code)")
+                    onError(error.localizedDescription)
+                }
                 working = false
             }
         }
