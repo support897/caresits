@@ -807,6 +807,7 @@ final class RoleFlowTests: XCTestCase {
         dismissKb()
         XCTAssertTrue(reveal(app.buttons["postJob"], max: 6), "post button missing"); app.buttons["postJob"].tap(); sleep(3)
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Tomorrow")).firstMatch.waitForExistence(timeout: 30), "post not in the family list")
+        XCTAssertTrue(app.staticTexts[note].waitForExistence(timeout: 30), "this run's urgent post was not read back in the family list")
         qshot("urgent-1-family-post-live")
         signOutFromMe()
         // carer: the post stands as a swipe card; a yes writes interest and opens the chat at once
