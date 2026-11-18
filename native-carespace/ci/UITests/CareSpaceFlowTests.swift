@@ -564,6 +564,8 @@ final class CareSpaceFlowTests: XCTestCase {
                 throw NSError(domain: "CareSpacePhotoProof", code: 2)
             }
             handlePhotoPermissionIfPresent()
+            let pickerBar = app.navigationBars["Photos"]
+            XCTAssertTrue(pickerBar.waitForExistence(timeout: 15), "Photos picker navigation bar missing before selection")
             // Run #24: this picker Image has a visible frame but AX
             // reports activation point (-1, -1). Tap its frame centre.
             let photoFrame = firstPhoto.frame
@@ -581,6 +583,34 @@ final class CareSpaceFlowTests: XCTestCase {
                 .withOffset(CGVector(dx: photoFrame.midX - appFrame.minX,
                     dy: photoFrame.midY - appFrame.minY)).tap()
             handlePhotoPermissionIfPresent()
+            // Run #27: AX Images exist while thumbnails are still loading.
+            // Observe dismissal after the tap; allow one re-tap if still open.
+            let pickerDismissed = NSPredicate { _, _ in !pickerBar.exists }
+            var dismissal = XCTWaiter.wait(for: [
+                XCTNSPredicateExpectation(predicate: pickerDismissed, object: nil)
+            ], timeout: 15)
+            if dismissal == .timedOut && pickerBar.exists {
+                let retryFrame = firstPhoto.frame
+                let retryAppFrame = app.frame
+                guard retryFrame.width > 0, retryFrame.height > 0,
+                    retryFrame.midX.isFinite, retryFrame.midY.isFinite,
+                    retryAppFrame.contains(retryFrame) else {
+                    print("PHOTO-PICKER-TREE: \(app.debugDescription)")
+                    XCTFail("Seeded photo has no valid visible frame for the one selection retry")
+                    throw NSError(domain: "CareSpacePhotoProof", code: 4)
+                }
+                print("PHOTO-PICKER-RETRY: picker remained open for 15s; frame=\(retryFrame)")
+                app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
+                    .withOffset(CGVector(dx: retryFrame.midX - retryAppFrame.minX,
+                        dy: retryFrame.midY - retryAppFrame.minY)).tap()
+                handlePhotoPermissionIfPresent()
+                dismissal = XCTWaiter.wait(for: [
+                    XCTNSPredicateExpectation(predicate: pickerDismissed, object: nil)
+                ], timeout: 15)
+            }
+            if dismissal != .completed { print("PHOTO-PICKER-TREE: \(app.debugDescription)") }
+            XCTAssertEqual(dismissal, .completed, "Photos picker did not dismiss after selection and at most one re-tap")
+            print("PHOTO-PICKER-DISMISSED: upload read-back still required")
         }
 
         let photoAnswer = app.staticTexts["Answer: Photo sent"]
