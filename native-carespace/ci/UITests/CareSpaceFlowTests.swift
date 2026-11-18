@@ -536,13 +536,22 @@ final class CareSpaceFlowTests: XCTestCase {
                 throw NSError(domain: "CareSpacePhotoProof", code: 2)
             }
             handlePhotoPermissionIfPresent()
-            guard firstPhoto.isHittable else {
+            // Run #24: this picker Image has a visible frame but AX
+            // reports activation point (-1, -1). Tap its frame centre.
+            let photoFrame = firstPhoto.frame
+            let appFrame = app.frame
+            guard photoFrame.width > 0, photoFrame.height > 0,
+                photoFrame.midX.isFinite, photoFrame.midY.isFinite,
+                appFrame.contains(photoFrame) else {
                 print("PHOTO-PICKER-TREE: \(app.debugDescription)")
-                XCTFail("Seeded photo cell is present but not hittable")
+                XCTFail("Seeded photo image has no valid fully visible frame")
                 throw NSError(domain: "CareSpacePhotoProof", code: 3)
             }
             print("PHOTO-PICKER-CELL: \(firstPhoto.debugDescription)")
-            firstPhoto.tap()
+            print("PHOTO-PICKER-COORDINATE: frame=\(photoFrame) app=\(appFrame)")
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
+                .withOffset(CGVector(dx: photoFrame.midX - appFrame.minX,
+                    dy: photoFrame.midY - appFrame.minY)).tap()
             handlePhotoPermissionIfPresent()
         }
 
