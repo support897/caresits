@@ -412,6 +412,10 @@ final class SpaceModel: ObservableObject {
 
     init(space: SpaceSummary, uid: String) { self.space = space; self.uid = uid }
 
+    // Keep both listeners alive across pushes within this space.
+    // Release their registrations when the owning model is released.
+    deinit { listeners.forEach { $0.remove() } }
+
     func load() async {
         async let c = CareRepo.children(spaceId: space.id)
         async let m = CareRepo.members(spaceId: space.id)

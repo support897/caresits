@@ -137,7 +137,6 @@ struct SpaceView: View {
             }
         }
         .task { await model.load(); model.listen() }
-        .onDisappear { model.stop() }
     }
 }
 
