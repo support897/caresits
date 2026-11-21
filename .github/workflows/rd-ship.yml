@@ -1,9 +1,9 @@
 name: Redesign ship to TestFlight (build-182)
 
 # Fires when native/SHIP-TRIGGER.txt changes on build-182.
-# Same signing method as the CareSpace ship lane: fastlane cert and sigh through the
-# App Store Connect API key secrets, manual signed archive, export, upload to TestFlight.
-# Does NOT submit to App Review.
+# Cloud managed signing: xcodebuild asks Apple for the distribution signing through the
+# App Store Connect API key, so no certificate is stored on the runner.
+# Uploads to TestFlight. Does NOT submit to App Review.
 
 on:
   push:
@@ -12,8 +12,6 @@ on:
       - "native/SHIP-TRIGGER.txt"
 
 env:
-  PROFILE_NAME: "Caresitters AppStore CI"
-  BUNDLE_ID: com.ilse.caresits
   TEAM_ID: GZ9Z6BPTFR
 
 jobs:
@@ -30,30 +28,13 @@ jobs:
           if [ -z "$GOOGLE_SERVICE_INFO_PLIST_B64" ]; then echo "GOOGLE_SERVICE_INFO_PLIST_B64 secret is not set"; exit 1; fi
           echo "$GOOGLE_SERVICE_INFO_PLIST_B64" | base64 -d > native/GoogleService-Info.plist
 
-      - name: Generate the project and switch the app target to manual signing
+      - name: Generate the project
         working-directory: native
         run: |
           python3 genproj.py
-          python3 - <<'PY'
-          import re
-          p='Caresitters.xcodeproj/project.pbxproj'
-          s=open(p).read()
-          n=0
-          def fix(m):
-              global n
-              b=m.group(0)
-              if 'CODE_SIGN_ENTITLEMENTS' in b:
-                  n+=1
-                  b=b.replace('CODE_SIGN_STYLE = Automatic;','CODE_SIGN_STYLE = Manual; CODE_SIGN_IDENTITY = "Apple Distribution"; PROVISIONING_PROFILE_SPECIFIER = "Caresitters AppStore CI";')
-              return b
-          s=re.sub(r'buildSettings = \{.*?\n\t\t\t\};',fix,s,flags=re.S)
-          open(p,'w').write(s)
-          print('patched app configs:',n)
-          PY
-          grep -n "PROVISIONING_PROFILE_SPECIFIER" Caresitters.xcodeproj/project.pbxproj | head
           xcodebuild -version
 
-      - name: API key files
+      - name: API key file
         env:
           KEY_B64: ${{ secrets.ASC_API_KEY_P8_B64 }}
           KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
@@ -61,39 +42,19 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/keys"
           echo "$KEY_B64" | base64 --decode > "$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8"
-          python3 - <<'PY'
-          import json,os
-          d=os.environ['RUNNER_TEMP']
-          key=open(f"{d}/keys/AuthKey_{os.environ['KEY_ID']}.p8").read()
-          json.dump({"key_id":os.environ['KEY_ID'],"issuer_id":os.environ['ISSUER_ID'],"key":key,"in_house":False},open(f"{d}/keys/api_key.json","w"))
-          PY
-          echo "API_JSON=$RUNNER_TEMP/keys/api_key.json" >> $GITHUB_ENV
+          echo "KEY_PATH=$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8" >> $GITHUB_ENV
+          echo "KEY_ID=$KEY_ID" >> $GITHUB_ENV
+          echo "ISSUER_ID=$ISSUER_ID" >> $GITHUB_ENV
           echo "BUILD_NO=$(date -u +%y%m%d%H%M)" >> $GITHUB_ENV
-
-      - name: Distribution certificate and App Store profile (fastlane)
-        run: |
-          set -eo pipefail
-          KC="$RUNNER_TEMP/build.keychain-db"
-          KCPW="ci-$(date +%s)"
-          security create-keychain -p "$KCPW" "$KC"
-          security set-keychain-settings -lut 21600 "$KC"
-          security unlock-keychain -p "$KCPW" "$KC"
-          security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
-          security default-keychain -s "$KC"
-          export KEYCHAIN_PATH="$KC" KEYCHAIN_PASSWORD="$KCPW"
-          fastlane run cert api_key_path:"$API_JSON" team_id:"$TEAM_ID" keychain_path:"$KC" keychain_password:"$KCPW" 2>&1 | tail -30
-          security set-key-partition-list -S apple-tool:,apple: -s -k "$KCPW" "$KC" >/dev/null
-          fastlane run sigh api_key_path:"$API_JSON" app_identifier:"$BUNDLE_ID" team_id:"$TEAM_ID" provisioning_name:"$PROFILE_NAME" force:true 2>&1 | tail -30
-          security find-identity -v -p codesigning "$KC"
-          security find-identity -v -p codesigning "$KC" | grep -q "Apple Distribution"
 
       - name: Archive
         working-directory: native
         run: |
-          set -o pipefail
           xcodebuild archive -project Caresitters.xcodeproj -scheme Caresitters \
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/Caresitters.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$KEY_PATH" -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER_ID" \
             DEVELOPMENT_TEAM="$TEAM_ID" \
             CURRENT_PROJECT_VERSION="$BUILD_NO" > archive.log 2>&1 || true
           tail -5 archive.log
@@ -102,36 +63,35 @@ jobs:
       - name: Archive errors
         if: failure()
         working-directory: native
-        run: grep "error:" archive.log | sort -u | head -40 | while read l; do echo "::error::$l"; done
+        run: grep -E "error:|Error" archive.log | sort -u | head -40 | while read l; do echo "::error::$l"; done
 
-      - name: Export ipa
+      - name: Export and upload to TestFlight
         working-directory: native
         run: |
-          set -o pipefail
           cat > export.plist <<'P'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0"><dict>
             <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
             <key>teamID</key><string>GZ9Z6BPTFR</string>
-            <key>signingStyle</key><string>manual</string>
-            <key>signingCertificate</key><string>Apple Distribution</string>
-            <key>provisioningProfiles</key><dict>
-              <key>com.ilse.caresits</key><string>Caresitters AppStore CI</string>
-            </dict>
+            <key>signingStyle</key><string>automatic</string>
             <key>uploadSymbols</key><true/>
           </dict></plist>
           P
           xcodebuild -exportArchive \
             -archivePath "$RUNNER_TEMP/Caresitters.xcarchive" \
             -exportOptionsPlist export.plist \
-            -exportPath "$RUNNER_TEMP/export" 2>&1 | tee export.log | tail -40
-          ls "$RUNNER_TEMP/export"
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$KEY_PATH" -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER_ID" > export.log 2>&1 || true
+          tail -15 export.log
+          grep -qi "EXPORT SUCCEEDED\|Upload succeeded\|Uploaded" export.log
 
-      - name: Upload to TestFlight
-        run: |
-          IPA=$(ls "$RUNNER_TEMP"/export/*.ipa | head -1)
-          fastlane run upload_to_testflight api_key_path:"$API_JSON" ipa:"$IPA" skip_waiting_for_build_processing:true 2>&1 | tail -40
+      - name: Export errors
+        if: failure()
+        working-directory: native
+        run: grep -E "error:|Error|rror Domain" export.log | sort -u | head -30 | while read l; do echo "::error::$l"; done
 
       - name: Keep logs
         if: always()
