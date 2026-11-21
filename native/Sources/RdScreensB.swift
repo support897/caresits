@@ -523,7 +523,7 @@ struct RdList: View {
                         RdListRow(photo: x.carer.photos[0], name: x.carer.name, sub: x.m.unmet.map { $0.label + ": " + $0.detail }.joined(separator: ". "), pct: x.m.pct, nearly: true, role: x.carer.role).onTapGesture { st.go("profile") }
                     }
                 } else {
-                    let pool: [RdFamily] = RdData.families.filter { $0.kind == c.fam.kind }
+                    let pool: [RdFamily] = RdData.families.filter { $0.kind == c.fam.kind }.sorted { RdMatch.score($0, c.car).pct > RdMatch.score($1, c.car).pct }
                     ForEach(Array(pool.enumerated()), id: \.offset) { _, f in
                         let m = RdMatch.score(f, c.car)
                         RdListRow(photo: f.photos[0], name: f.name, sub: f.kids + " · " + f.payText, pct: m.pct, nearly: !m.passes, role: f.kind).onTapGesture { st.go("profile") }

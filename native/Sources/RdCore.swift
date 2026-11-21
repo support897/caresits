@@ -250,7 +250,7 @@ struct RdCta: View {
         Button(action: action) {
             HStack(spacing: 10) {
                 if let i = icon { RdIcon(name: i, size: small ? 20 : 24, color: fg) }
-                Text(title).font(RdF.bold(small ? 16 : 20)).foregroundColor(fg).lineLimit(1).minimumScaleFactor(0.7)
+                Text(title).font(RdF.bold(small ? 14 : 20)).foregroundColor(fg).lineLimit(1).minimumScaleFactor(0.7)
             }.frame(maxWidth: .infinity, minHeight: small ? 48 : 60).background(bgc).clipShape(Capsule())
             .overlay(Capsule().stroke(style == 1 ? RdC.ink : Color.clear, lineWidth: 2))
             .shadow(color: style == 0 && !small ? RdC.ras.opacity(0.22) : Color.clear, radius: 12, y: 8)
