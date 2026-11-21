@@ -18,9 +18,9 @@ struct CaresittersApp: App {
     }
     @ViewBuilder var root: some View {
         #if DEBUG
-        if ProcessInfo.processInfo.environment["CS_ICONS"] == "1" { IconGallery() } else if ProcessInfo.processInfo.environment["CS_CHATPROOF"] == "1" { ChatProofGate() } else { RootGate() }
+        if ProcessInfo.processInfo.environment["CS_ICONS"] == "1" { IconGallery() } else if ProcessInfo.processInfo.environment["CS_CHATPROOF"] == "1" { ChatProofGate() } else { RdRoot() }
         #else
-        RootGate()
+        RdRoot()
         #endif
     }
 }
