@@ -1,0 +1,62 @@
+name: Redesign build and screenshots
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write Firebase config from secret
+        env:
+          GOOGLE_SERVICE_INFO_PLIST_B64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_B64 }}
+        run: |
+          if [ -z "$GOOGLE_SERVICE_INFO_PLIST_B64" ]; then echo "GOOGLE_SERVICE_INFO_PLIST_B64 secret is not set"; exit 1; fi
+          echo "$GOOGLE_SERVICE_INFO_PLIST_B64" | base64 -d > native/GoogleService-Info.plist
+
+      - name: Generate the project
+        working-directory: native
+        run: python3 genproj.py
+
+      - name: Compile for the simulator
+        working-directory: native
+        run: |
+          set -o pipefail
+          xcodebuild build -project Caresitters.xcodeproj -scheme Caresitters \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/dd" \
+            CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= > build.log 2>&1 || true
+          grep -q "BUILD SUCCEEDED" build.log
+
+      - name: Show compile errors
+        if: failure()
+        working-directory: native
+        run: |
+          grep "error:" build.log | sort -u | head -60 | while read l; do echo "::error::$l"; done
+
+      - name: Screenshots of every view and screen
+        run: |
+          APP=$(find "$RUNNER_TEMP/dd" -name "Caresitters.app" -path "*iphonesimulator*" | head -1)
+          UDID=$(xcrun simctl list devices available | grep -E "iPhone 1[5-9]" | head -1 | grep -oE "[0-9A-F]{8}-([0-9A-F]{4}-){3}[0-9A-F]{12}")
+          [ -z "$UDID" ] && UDID=$(xcrun simctl list devices available | grep -E "iPhone" | head -1 | grep -oE "[0-9A-F]{8}-([0-9A-F]{4}-){3}[0-9A-F]{12}")
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b || true
+          xcrun simctl install "$UDID" "$APP"
+          mkdir -p shots
+          snap() { xcrun simctl terminate "$UDID" com.ilse.caresits >/dev/null 2>&1 || true; xcrun simctl launch "$UDID" com.ilse.caresits -rdview "$1" -rdscreen "$2" >/dev/null; sleep 4; xcrun simctl io "$UDID" screenshot "shots/$1_$2.png" >/dev/null 2>&1 || true; }
+          for v in v1 v2 v3 v4 v5; do
+            for s in home deck profile photos why book trial trialdone sent confirmed chat list filters map bookings inbox me menu settings; do snap $v $s; done
+          done
+          for s in splash role door email caretype sw sa ss sk sd sm photoup finding safety resume resumeview revreq revsent revwrite revapps settingsmatch; do snap v1 $s; done
+          ls shots | wc -l
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: shots
+          if-no-files-found: warn
