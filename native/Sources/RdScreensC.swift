@@ -413,7 +413,7 @@ struct RdSafety: View {
                 RdCard { RdReason(text: "Needed by many families. Recommended.", bold: "First aid") }
                 RdLabel(title: "Your checks")
                 RdCard { RdReason(text: "Checked 14 Aug 2026", bold: "Blue Card") }
-                RdCard { RdReason(text: "Uploaded, not yet checked", bold: "First aid", gap: true) }
+                RdCard { RdReason(text: "Uploaded, not yet checked", gap: true, bold: "First aid") }
                 RdMuted(text: "Uploaded is not checked. Verified means a real check with a date.").padding(.horizontal, 24).padding(.top, 8)
             }
         }

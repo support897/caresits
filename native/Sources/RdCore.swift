@@ -453,8 +453,13 @@ struct RdCtx {
         bio = fm ? car.bio : fam.bio
     }
     var subline: String {
-        if fm { return car.suburb + (au ? "" : ", " + (car.city.split(separator: " ").first.map(String.init) ?? "")) + " · " + String(car.years) + " years" }
-        return fam.suburb + ", " + (fam.city.split(separator: " ").first.map(String.init) ?? "") + " · " + fam.kids
+        if fm {
+            let town: String = car.city.split(separator: " ").first.map(String.init) ?? ""
+            let place: String = au ? car.suburb : car.suburb + ", " + town
+            return place + " · " + String(car.years) + " years"
+        }
+        let town: String = fam.city.split(separator: " ").first.map(String.init) ?? ""
+        return fam.suburb + ", " + town + " · " + fam.kids
     }
     var mainTitle: String { return fm ? "Book " + first : "Say yes to " + first }
     var mainIcon: String { return fm ? "calendar" : "check" }

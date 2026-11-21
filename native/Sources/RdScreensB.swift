@@ -79,6 +79,14 @@ struct RdSection: View {
 
 struct RdProfile: View {
     @EnvironmentObject var st: RdStore
+    static func checkLine(_ ck: RdCheck) -> String {
+        if ck.statusText.isEmpty { return ck.name + " · Verified " + ck.date }
+        return ck.name + " · " + ck.statusText
+    }
+    static func certLine(_ k: RdCert) -> String {
+        if k.status == "expired" { return k.name + " · Expired " + k.date }
+        return k.name + " · Sighted " + k.date
+    }
     var body: some View {
         let c = st.ctx()
         ZStack(alignment: .bottom) {
@@ -142,14 +150,14 @@ struct RdProfile: View {
                 let ok: Bool = ck.status == "verified"
                 HStack(spacing: 8) {
                     RdIcon(name: ok ? "shield" : "clock", size: 20)
-                    Text(ck.name + (ck.statusText.isEmpty ? (" · Verified " + ck.date) : (" · " + ck.statusText))).font(RdF.body(15)).foregroundColor(RdC.ink)
+                    Text(RdProfile.checkLine(ck)).font(RdF.body(15)).foregroundColor(RdC.ink)
                     Spacer(minLength: 0)
                 }
             }
             ForEach(Array(car.certs.enumerated()), id: \.offset) { _, k in
                 HStack(spacing: 8) {
                     RdIcon(name: k.status == "expired" ? "info" : "doc", size: 20)
-                    Text(k.name + (k.status == "expired" ? " · Expired " + k.date : " · Sighted " + k.date)).font(RdF.body(15)).foregroundColor(RdC.ink)
+                    Text(RdProfile.certLine(k)).font(RdF.body(15)).foregroundColor(RdC.ink)
                     Spacer(minLength: 0)
                 }
             }
@@ -204,13 +212,14 @@ struct RdWhy: View {
     var body: some View {
         let c = st.ctx()
         let m = c.m
+        let scoredLine: String = "You scored " + String(m.forFamily) + ". " + c.first + " scored " + String(m.forCarer) + ". We use the average of both."
         VStack(spacing: 0) {
             RdHeader(title: "Why you match")
             RdScroll {
                 VStack(spacing: 8) {
                     RdRing(pct: m.pct, size: 130, line: 12)
                     Text(m.label).font(RdF.title(24)).foregroundColor(RdC.ink)
-                    Text("You scored " + String(m.forFamily) + ". " + c.first + " scored " + String(m.forCarer) + ". We use the average of both.").font(RdF.body(14)).foregroundColor(RdC.mut).multilineTextAlignment(.center).padding(.horizontal, 30)
+                    Text(scoredLine).font(RdF.body(14)).foregroundColor(RdC.mut).multilineTextAlignment(.center).padding(.horizontal, 30)
                 }.padding(.vertical, 10)
                 RdCard(title: "How the score is made") {
                     ForEach(Array(m.buckets.enumerated()), id: \.offset) { _, b in
@@ -362,16 +371,29 @@ struct RdSent: View {
 
 struct RdConfirmed: View {
     @EnvironmentObject var st: RdStore
+    static func startText(_ c: RdCtx) -> String {
+        let f: RdFamily = c.fam
+        if f.needDays.isEmpty {
+            let when: String = c.fm ? c.car.visa.arrives : f.start
+            return "Starts " + when
+        }
+        let a: String = RdMatch.daysText(f.needDays)
+        let b: String = RdMatch.hourText(f.needFrom)
+        let e: String = RdMatch.hourText(f.needTo)
+        return a + ", " + b + " to " + e
+    }
     var body: some View {
         let c = st.ctx()
         let f = c.fam
+        let startLine: String = RdConfirmed.startText(c)
+        let saidYes: String = c.first + " said yes. " + (c.fm ? "Your booking is set." : "The booking is set.")
         VStack(spacing: 14) {
             Spacer()
             BunnyView(size: 120, mood: .celebrate)
             Text("It is a match").font(RdF.title(32)).foregroundColor(RdC.ink)
-            Text(c.first + " said yes. " + (c.fm ? "Your booking is set." : "The booking is set.")).font(RdF.body(17)).foregroundColor(RdC.ink)
+            Text(saidYes).font(RdF.body(17)).foregroundColor(RdC.ink)
             RdCard(tint: RdC.pale) {
-                Text(f.needDays.isEmpty ? "Starts " + (c.fm ? c.car.visa.arrives : f.start) : RdMatch.daysText(f.needDays) + ", " + RdMatch.hourText(f.needFrom) + " to " + RdMatch.hourText(f.needTo)).font(RdF.bold(16)).foregroundColor(RdC.ink)
+                Text(startLine).font(RdF.bold(16)).foregroundColor(RdC.ink)
                 Text("Starting next week").font(RdF.body(14)).foregroundColor(RdC.mut)
             }
             Spacer()
