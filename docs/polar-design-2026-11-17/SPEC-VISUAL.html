@@ -1,0 +1,787 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Caresitters · The Guide</title>
+<style>
+@font-face { font-family: "Atkinson"; src: url("fonts/Atkinson-Regular.ttf"); font-weight: 400; }
+@font-face { font-family: "Atkinson"; src: url("fonts/Atkinson-Bold.ttf"); font-weight: 700; }
+@font-face { font-family: "Newsreader"; src: url("fonts/Newsreader.ttf"); }
+:root {
+  --porcelain: #FDF8F0; --ink: #1E4D44; --teal: #9CC5B5; --butter: #F6D67C;
+  --apricot: #F2B880; --sage: #BFD8C0; --blush: #F6CBD3; --lavender: #CFC3E8;
+  --powder: #B9D6EC; --lemon: #FBE7A1; --card: #FFFDF8; --line: #E4DACA;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--porcelain); color: var(--ink); font-family: "Atkinson", sans-serif; font-size: 18px; line-height: 1.55; }
+.wrap { max-width: 1150px; margin: 0 auto; padding: 34px 22px 70px; }
+h1, h2, h3 { font-family: "Newsreader", serif; font-weight: 600; }
+.hero { text-align: center; padding: 26px 10px 8px; }
+.hero img { width: 86px; height: 86px; }
+.hero h1 { font-size: 46px; margin: 12px 0 6px; }
+.hero .sub { font-size: 20px; max-width: 720px; margin: 0 auto; }
+.gateStrip { background: var(--teal); color: var(--ink); border-radius: 16px; text-align: center; padding: 14px 18px; margin: 28px 0 8px; font-weight: 700; font-size: 17px; }
+.note { text-align: center; font-size: 16px; margin: 10px auto 0; max-width: 760px; }
+h2.sec { font-size: 33px; margin: 56px 0 6px; }
+.secLead { margin: 0 0 18px; max-width: 800px; }
+.bar { width: 64px; height: 5px; border-radius: 3px; background: var(--teal); margin: 10px 0 20px; }
+.mapFlow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 12px; margin: 18px 0 22px; }
+.node { background: var(--card); border: 1px solid var(--line); border-top: 7px solid var(--apricot); border-radius: 16px; padding: 16px 18px; flex: 1 1 210px; }
+.node h3 { margin: 0 0 4px; font-size: 22px; }
+.node p { margin: 0; font-size: 16px; }
+.arrow { align-self: center; font-size: 26px; font-weight: 700; }
+.mapGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.gCard { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px; }
+.gCard h3 { margin: 0 0 10px; font-size: 23px; }
+.gCard .cap { display: inline-block; padding: 3px 6px; border-radius: 999px; font-size: 12.5px; font-weight: 700; letter-spacing: .4px; margin-bottom: 10px; }
+.chipList { list-style: none; margin: 0; padding: 0; }
+.chipList li { background: var(--porcelain); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; margin: 0 0 8px; font-size: 16.5px; display: inline-block; margin-right: 6px; }
+.gTeal { border-top: 7px solid var(--teal); } .gBlush { border-top: 7px solid var(--blush); }
+.gPowder { border-top: 7px solid var(--powder); } .gLav { border-top: 7px solid var(--lavender); }
+.gButter { border-top: 7px solid var(--butter); } .gSage { border-top: 7px solid var(--sage); }
+.shapeGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin: 20px 0; }
+.shapeGrid figure, .shots figure { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px; text-align: center; }
+.shapeGrid img { max-width: 300px; width: 100%; border-radius: 12px; }
+.shots img { max-width: 300px; width: 100%; border-radius: 12px; }
+figcaption { font-size: 15.5px; margin-top: 10px; text-align: left; }
+.shapeWords { list-style: none; margin: 6px 0 0; padding: 0; }
+.shapeWords li { margin: 0 0 10px; padding-left: 20px; position: relative; }
+.shapeWords li::before { content: "·"; position: absolute; left: 4px; font-weight: 700; }
+.groupHead { font-size: 27px; margin: 52px 0 4px; }
+.groupLead { margin: 0 0 8px; }
+.area { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 30px; margin: 24px 0; display: grid; grid-template-columns: 1.25fr .85fr; gap: 30px; }
+.area h3 { font-size: 27px; margin: 0 0 4px; }
+.area .what { margin: 0 0 14px; font-size: 18.5px; }
+.insideTitle { font-weight: 700; margin: 16px 0 6px; }
+.inside { list-style: none; margin: 0; padding: 0; }
+.inside li { margin: 0 0 9px; padding-left: 20px; position: relative; }
+.inside li::before { content: "·"; position: absolute; left: 4px; font-weight: 700; }
+.inside li b { font-weight: 700; }
+.verdict { grid-column: 1 / -1; background: #FBF3D9; border: 1px solid var(--line); border-radius: 16px; padding: 16px 20px; }
+.verdict p { margin: 5px 0; }
+.waitCard { background: #FDF1F3; border: 1px solid var(--blush); border-radius: 18px; padding: 20px 24px; margin: 16px 0; }
+.waitCard h3 { margin: 0 0 6px; font-size: 22px; }
+.waitCard p { margin: 4px 0; }
+.record { background: var(--sage); border-radius: 18px; padding: 22px 26px; margin-top: 22px; }
+.record p { margin: 5px 0; }
+.mono { font-family: monospace; font-size: 15px; word-break: break-all; }
+@media (max-width: 840px) { .area { grid-template-columns: 1fr; } .shapeGrid { grid-template-columns: 1fr; } .hero h1 { font-size: 36px; } }
+
+.guideKicker{font-size:15px;font-weight:700;letter-spacing:.34em;color:var(--teal-deep,#2E7D6B);text-align:center;margin:0 0 2px}
+h1{margin-top:0}
+.guideSide{display:block;background:#fffdf8;border:2px solid var(--teal,#9CC5B5);border-radius:18px;padding:18px 18px 10px;margin:0 0 26px}
+.guideSide a{display:inline-block;color:var(--ink,#1E4D44);text-decoration:none;font-size:15px;padding:5px 9px;margin:0 4px 6px 0;border-radius:999px;background:#FDF3E3}
+.guideSide .gsBrand{font-weight:700;font-size:17px;color:var(--ink,#1E4D44);margin:0 0 10px}
+.guideSide .gsHead{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#7A8B84;margin:12px 0 6px}
+.guideSide .gsTop{font-weight:600}
+@media (min-width:1080px){
+  .guideSide{position:fixed;top:0;left:0;width:248px;height:100vh;overflow-y:auto;border:none;border-right:2px solid var(--teal,#9CC5B5);border-radius:0;padding:22px 18px 30px;z-index:50;margin:0}
+  .guideSide a{display:block;background:none;margin:0;padding:4px 8px;border-radius:8px}
+  .guideSide a:hover{background:#FDF3E3}
+  .gsBrand{font-weight:700;font-size:16px;color:var(--ink,#1E4D44);margin:0 0 14px}
+  .gsTop{font-weight:600}
+  .gsHead{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#7A8B84;margin:16px 0 4px 8px}
+  .wrap{margin-left:248px}
+  section.area{scroll-margin-top:20px}
+  h2.sec{scroll-margin-top:20px}
+}
+</style>
+</head>
+<body>
+<aside class="guideSide">
+  <p class="gsBrand">Caresitters · The Guide</p>
+  <a class="gsTop" href="#g-map">The whole app</a>
+  <a class="gsTop" href="#g-how">How the menu works</a>
+  <p class="gsHead">The way in</p>
+  <a href="#g-door">The Door</a>
+  <a href="#g-tour">The Bunny Tour</a>
+  <p class="gsHead">Top of the menu</p>
+  <a href="#g-home">Home</a>
+  <p class="gsHead">Finding care</p>
+  <a href="#g-questionnaire">Questionnaire</a>
+  <a href="#g-find">Find</a>
+  <a href="#g-matches">Matches</a>
+  <a href="#g-board">Urgent board</a>
+  <p class="gsHead">Our family</p>
+  <a href="#g-children">Children</a>
+  <a href="#g-daystory">Day Story</a>
+  <a href="#g-bin">Recently Deleted</a>
+  <a href="#g-emergency">Emergency</a>
+  <p class="gsHead">The week</p>
+  <a href="#g-calendar">Pair calendar</a>
+  <a href="#g-roster">Roster</a>
+  <a href="#g-timesheet">Timesheet</a>
+  <a href="#g-reminders">Reminders</a>
+  <p class="gsHead">Trust and us</p>
+  <a href="#g-checks">Checks</a>
+  <a href="#g-reviews">Reviews</a>
+  <a href="#g-profile">My Profile</a>
+  <a href="#g-privacy">Privacy policy</a>
+  <p class="gsHead">Foot of the menu</p>
+  <a href="#g-settings">Settings</a>
+  <p class="gsHead">The honest pages</p>
+  <a href="#g-notin">What is not in yet</a>
+  <a href="#g-record">The record</a>
+</aside>
+
+<div class="wrap">
+
+<header class="hero">
+  <img src="icon.svg" alt="The Caresitters heart">
+  <p class="guideKicker">GUIDE</p>
+  <h1>Caresitters</h1>
+  <p class="sub">The whole app on one page. Every menu in the order the sidebar carries it, what lives inside each one, and the real screens beside the words. Everything here was read from the build itself.</p>
+</header>
+
+<div class="gateStrip">This build stands at Quality PASS · Efficiency PASS · QA PASS · 17 October 2026 · Store Review certificate on the 100% build</div>
+<p class="note">Two kinds of account live in the app: families looking for care, and carers offering it. Both answer questions. Both get matched. Each area below says what you ordered, and what is built.</p>
+
+<h2 class="sec" id="g-map">The whole app on one page</h2>
+<div class="bar"></div>
+<div class="mapFlow">
+  <div class="node"><h3>The Door</h3><p>Joining. One screen, big and centred. Google, Apple, or email with your own password.</p></div>
+  <div class="arrow">→</div>
+  <div class="node"><h3>The Bunny Tour</h3><p>One pop up inside the app. She asks your name and walks you around.</p></div>
+  <div class="arrow">→</div>
+  <div class="node"><h3>Inside the app</h3><p>Home first, the menu tucked away, everything below within two taps.</p></div>
+</div>
+<div class="mapGrid">
+  <div class="gCard gSage"><span class="cap" style="background:var(--sage)">TOP OF THE MENU</span><h3>Home</h3><ul class="chipList"><li>Home</li></ul><p>The first screen, in two shapes: Finding care, and Our days once you have your person.</p></div>
+  <div class="gCard gTeal"><span class="cap" style="background:var(--teal)">GROUP ONE</span><h3>Finding care</h3><ul class="chipList"><li>Questionnaire</li><li>Find</li><li>Matches</li><li>Urgent board</li></ul><p>Answer, look, match, and the board for care needed fast.</p></div>
+  <div class="gCard gBlush"><span class="cap" style="background:var(--blush)">GROUP TWO</span><h3>Our family</h3><ul class="chipList"><li>Children</li><li>Day Story</li><li>Recently Deleted</li><li>Emergency</li></ul><p>Your children, their days, and the people to call.</p></div>
+  <div class="gCard gPowder"><span class="cap" style="background:var(--powder)">GROUP THREE</span><h3>The week</h3><ul class="chipList"><li>Pair calendar</li><li>Roster</li><li>Timesheet</li><li>Reminders</li></ul><p>The agreed week, the hours, and the nudges.</p></div>
+  <div class="gCard gLav"><span class="cap" style="background:var(--lavender)">GROUP FOUR</span><h3>Trust and us</h3><ul class="chipList"><li>Checks</li><li>Reviews</li><li>My Profile</li><li>Privacy policy</li></ul><p>Proof in honest words, and you as the app holds you.</p></div>
+  <div class="gCard gButter"><span class="cap" style="background:var(--butter)">FOOT OF THE MENU</span><h3>Settings</h3><ul class="chipList"><li>Settings</li></ul><p>Your background, your language, your data, your account.</p></div>
+  <div class="gCard gSage"><span class="cap" style="background:var(--sage)">NO MENU SEAT</span><h3>Messages</h3><ul class="chipList"><li>The chat</li></ul><p>The chat opens from a Message button on a card. It needs no seat of its own.</p></div>
+</div>
+
+<h2 class="sec" id="g-how">How the menu works</h2>
+<div class="bar"></div>
+<p class="secLead">Your sidebar shape, as the build carries it.</p>
+<ul class="shapeWords">
+  <li>The menu hides when the app opens. The screen stays calm and full.</li>
+  <li>Tap Menu and the menu takes most of the screen, about three quarters of it. The app shrinks to a thin sliver at the edge.</li>
+  <li>Tap the sliver, or tap Close, and the app is full again.</li>
+  <li>The four groups open one at a time. Open one and the others close.</li>
+  <li>Nothing about the menu is remembered between visits. Every visit starts with the full screen app.</li>
+</ul>
+<div class="shapeGrid">
+  <figure><img src="shell-closed.png" alt="The app full screen with the menu tucked away"><figcaption><b>The app, full.</b> The menu tucked away, the screen calm.</figcaption></figure>
+  <figure><img src="shell-open.png" alt="The menu open with the app as a thin sliver at the edge"><figcaption><b>The menu, open.</b> The menu takes most of the screen. The app rests as a sliver at the edge. Tap it to go back.</figcaption></figure>
+</div>
+
+<h2 class="groupHead">Before the menu: the way in</h2>
+<p class="groupLead">Two screens carry you from the shop door to your first tap inside.</p>
+
+<section class="area" id="g-door">
+  <div>
+    <h3>The Door</h3>
+    <p class="what">The one front door. Big and centred, nothing else on the screen.</p>
+    <p class="insideTitle">Inside it</p>
+    <ul class="inside">
+      <li>The heart mark, big, in the middle, with the word Caresitters and the line Find care. Share the day.</li>
+      <li>Two round buttons at the top: Google and Apple. Pictures only, no words on the buttons.</li>
+      <li>One field: your email. One round arrow button beside it: next.</li>
+      <li>Step two: your email shown back to you, with a Change button.</li>
+      <li>One field for your own password, and the Join Caresitters button.</li>
+      <li>A Forgot your password line.</li>
+      <li>A quiet line at the foot: Explore a demo first. No name field, no plan pick, no extra questions at the door.</li>
+    </ul>
+  </div>
+  <div class="shots">
+    <figure><img src="proof-pack/screens/01door.png" alt="The door of the real build"><figcaption><b>The real door.</b> Screen one of the build as it ships.</figcaption></figure>
+  </div>
+  <div class="verdict">
+    <p><b>You ordered:</b> the door you approved, door v4. The door only on screen one, the password on the next step, plans chosen later and never at joining.</p>
+    <p><b>It is built:</b> yes, as approved. Joining lands you inside the app at once.</p>
+    <p><b>Gate:</b> Quality PASS · Efficiency PASS · QA PASS on this build.</p>
+  </div>
+</section>
+
+<section class="area" id="g-tour">
+  <div>
+    <h3>The Bunny Tour</h3>
+    <p class="what">One pop up in the middle of the app, the moment you arrive. The Bunny walks you around.</p>
+    <p class="insideTitle">Inside it</p>
+    <ul class="inside">
+      <li><b>Stop 1:</b> Hello, I am the Caresitters bunny. I will walk you around. First things first: what is your name? One field for your name. A blank Next still walks on; the name is an offer, never a wall.</li>
+      <li><b>Stop 2:</b> This is your menu. Everything lives in here. It stays tucked away until you tap Menu, so your screen stays calm. The menu opens beside the card while she speaks.</li>
+      <li><b>Stop 3:</b> Find care, or be found. Find lines up the people who fit.</li>
+      <li><b>Stop 4:</b> Your family spaces. Children, Day Story and the roster grow here as you use them.</li>
+      <li><b>Stop 5:</b> You are all set, with a Done button.</li>
+      <li>A step count on every stop, in the words Step 1 of 5.</li>
+      <li>A cross at the top closes the tour at any time.</li>
+      <li>If the name stop closes with no name given, one small quiet bubble offers it once more on the next visit, then never again. A missing name blocks nothing in the app.</li>
+    </ul>
+  </div>
+  <div class="shots">
+    <figure><img src="proof-pack/screens/02tour.png" alt="The Bunny tour asking the name"><figcaption><b>The tour, stop 1.</b> The Bunny asks your name inside the app, never at the door.</figcaption></figure>
+  </div>
+  <div class="verdict">
+    <p><b>You ordered:</b> joining asks the name inside the app, in the tour. The app then speaks to each person by their own name.</p>
+    <p><b>It is built:</b> yes. The name is saved to the profile. Nobody else is ever named in the app.</p>
+    <p><b>Gate:</b> Quality PASS · Efficiency PASS · QA PASS on this build.</p>
+  </div>
+</section>
+
+<section class="area" id="g-home">
+  <div>
+    <h3>Home</h3>
+    <p class="what">The first screen inside the app, at the top of the menu. It now wears two shapes, with one small switch at the top. Finding care is the shape for looking. Our days is the shape for the daily life with your person, and it opens first once you have one.</p>
+    <p class="insideTitle">Inside Finding care</p>
+    <ul class="inside">
+      <li>A hello with your name, and the today line from the Day Story.</li>
+      <li>One find card: your postcode, with Find carers and See my matches.</li>
+      <li>Your questions card, with how far you have come. Finishing is what unlocks Perfect Pair matches.</li>
+      <li>Your top matches, with the pair number and the plain reasons.</li>
+      <li>One dark strip into the urgent board.</li>
+      <li>The Bunny, with one guiding line.</li>
+    </ul>
+    <p class="insideTitle">Inside Our days</p>
+    <ul class="inside">
+      <li>Your kids, with their ages and what they love.</li>
+      <li>The Today card: three activities made from their ages and what they love, and the week strip under it. The plan sits ready each morning.</li>
+      <li>Your family link: one link connects your profile to your carer. Copy it or share it.</li>
+      <li>Run the days together: the schedule, asking for time off, asking for extra care, messages, the shopping list, the Day Story.</li>
+      <li>Requests waiting for you, with the answer buttons. Time off and extra care live here.</li>
+      <li>The shared shopping list: both sides add and tick.</li>
+      <li>The Bunny, with one guiding line.</li>
+    </ul>
+  </div>
+  <div class="shots">
+    <figure><img src="proof-pack/screens/03home-days.png" alt="The Our days home of the real build"><figcaption><b>Home, the Our days shape.</b> The daily home of the real build: the kids, what they love, and the day plan made from them.</figcaption></figure>
+    <figure><img src="proof-pack/screens/03home-finding.png" alt="The Finding care home of the real build"><figcaption><b>Home, the Finding care shape.</b> The find card, your questions, and your top matches.</figcaption></figure>
+  </div>
+  <div class="verdict">
+    <p><b>You ordered:</b> a calm start, one clear first step, an app that never shouts. On the evening of 17 October you ordered the second shape too: a daily home for families and carers who already have each other, with the kids ages and loves making the day plan, one link that connects the profiles, and the days run from there.</p>
+    <p><b>It is built:</b> yes.</p>
+    <p><b>Gate:</b> Quality PASS · Efficiency PASS · QA PASS on this build.</p>
+  </div>
+</section>
+
+<h2 class="groupHead">Finding care</h2>
+<p class="groupLead">Group one of the menu. Answer, look, match.</p>
+
+<section class="area" id="g-questionnaire">
+  <div>
+    <h3>Questionnaire</h3>
+    <p class="what">The questions that build your profile and drive the matching.</p>
+    <p class="insideTitle">Inside it</p>
+    <ul class="inside">
+      <li><b>Step one: your country.</b> One pick from 21 country packs, from Australia to Switzerland.</li>
+      <li><b>Then your side and your role.</b> Families say the carer they are looking for. Carers pick from seven paths: Babysitter · Nanny · Au Pair, with a Demi Pair switch · Family Assistant · Newborn and Overnight · Governess and Tutor Nanny · Childminder and Family Day Care, which asks for registration proof.</li>
+      <li>Five pages of base questions a side: 23 for a family, 21 for a carer. Then the deeper levels open.</li>
+      <li><b>Every answer is a pick.</b> Chips you tap: age as a pick list of years, pay as amount picks, distance as kilometre picks, experience as years per age band. Almost nothing is typed.</li>
+      <li>The only typed answers: your name, your postcode, and two write in answers a side at the Full level.</li>
+      <li>Family write ins: Tell us about each child in a few words · What would make a carer feel at home in your house.</li>
+      <li>Carer write ins: Why do you love working with children · What are you best at, and what do you find hard.</li>
+      <li>Most family questions carry a strength pick: <b>Must have · I prefer · Either way.</b> A must is a hard line. The app never loosens a must for you; it can only suggest, and only you can act.</li>
+      <li>The food safety list is picks only: Peanuts · Tree nuts · Dairy · Eggs · Gluten · Soy · Sesame · Fish · Shellfish · Lupin · Other foods · None.</li>
+      <li>Pay words follow your country pack: a wage for a nanny, pocket money for an au pair, with your country scheme note beside it.</li>
+      <li>Your draft saves itself as you go. Stop any time and come back.</li>
+      <li>The time promise at the welcome: about 10 minutes for everything, and about half that to reach Quick Connect and finish later.</li>
+    </ul>
+    <p class="insideTitle">The four levels</p>
+    <ul class="inside">
+      <li><b>Explore:</b> look at everything, free, no questions needed, no connecting.</li>
+      <li><b>Quick Connect:</b> the base plus the safety and core set. Messaging, job posts and interest notes open here. Matches are labelled rough, never Perfect Pair.</li>
+      <li><b>Better Match:</b> scores with reasons. Still never Perfect Pair.</li>
+      <li><b>Full Match:</b> every match question answered. The only level that can earn Perfect Pair.</li>
+      <li>A pair is capped by the side that answered less. 100% can only ever mean all of the match questions answered, never a promise.</li>
+      <li>The cap you set stands: at most 50 questions a side. Family 50 · Carer 50. The rest are parked, by name, in the research file.</li>
+    </ul>
+  </div>
+  <div class="shots">
+    <figure><img src="proof-pack/screens/04country.png" alt="The country step of the questionnaire"><figcaption><b>Step one: your country.</b> The country comes before the role, before the form.</figcaption></figure>
+    <figure><img src="proof-pack/screens/05question.png" alt="A page of questions with picks"><figcaption><b>A question page.</b> Picks to tap, strengths to set.</figcaption></figure>
+  </div>
+  <div class="verdict">
+    <p><b>You ordered:</b> question based matching, your musts as hard lines, picks not typing, four levels, a cap of 50 questions a side, postcode in place of suburb.</p>
+    <p><b>It is built:</b> yes, all of it, counted in the build: Quick 25 · Better 47 · Full 20 · Optional 20 of 112, placed under the cap.</p>
+    <p><b>Gate:</b> Quality PASS · Efficiency PASS · QA PASS on this build. The depth, the shapes and the cap were approved by you on 15 October.</p>
+  </div>
+</section>
+
+<section class="area" id="g-find">
+  <div>
+    <h3>Find</h3>
+    <p class="what">The people who fit you, lined up. Looking is always free.</p>
+    <p class="insideTitle">Inside it</p>
+    <ul class="inside">
+      <li>A pool line at the top: how many are in your pool, and how many match your musts.</li>
+      <li>A List and Map switch.</li>
+      <li>The list: the first five first, then a View more button for the rest.</li>
+      <li>Each card: a photo, or a first letter circle where no photo stands. A name. A postcode, and how far away in kilometres.</li>
+      <li>A fit chip on every card: <b>Perfect Pair · Strong Fit · Good Fit</b>, with the pair score as a percent. The score is the average of both directions, yours for them and theirs for you.</li>
+      <li>Up to three reasons under each card, in plain words, from both sides of the match.</li>
+      <li>A quiet line on a card when a profile is quick: Quick profile, rough match.</li>
+      <li>A Message button on every card, and a quiet row under it: Report · Block.</li>
+      <li><b>The map:</b> pins at postcode area level only, with a standing note on the panel that says so. Tap a pin and its card opens with distance and the same percent the list shows.</li>
+      <li>Exploring with no profile: you see the pins and an invite line, and no personal percent anywhere. A distance appears only once your own postcode is on file. The app never guesses where you are.</li>
+      <li><b>The nearly list, for families only:</b> people who missed one must, with the missed must named in plain words. The carer is never told they missed.</li>
+      <li>No profile yet: a resting Bunny card walks you to the questionnaire, and the map still stands. Nobody matches: a calm empty card, never a dead end.</li>
+    </ul>
+  </div>
+  <div class="shots">
+    <figure><img src="proof-pack/screens/06find.png" alt="The Find list of the real build"><figcaption><b>Find, the list.</b> Cards with scores and reasons.</figcaption></figure>
+    <figure><img src="proof-pack/screens/07findmap.png" alt="The Find map of the real build"><figcaption><b>Find, the map.</b> Area level pins, the same percent on the pin card.</figcaption></figure>
+  </div>
+  <div class="verdict">
+    <p><b>You ordered:</b> browse everything free, the first five first, a map by area, match reasons you can read, family photos only for people you are matched with or talking to.</p>
+    <p><b>It is built:</b> yes. Browsing is never gated. The gate sits on messaging and posting, at Quick Connect.</p>
+    <p><b>Gate:</b> Quality PASS · Efficiency PASS · QA PASS on this build. QA walked Find end to end, list and map, and proved the percent equal in both.</p>
+  </div>
+</section>
+
+<section class="area" id="g-matches">
+  <div>
+    <h3>Matches</h3>
+    <p class="what">Your pairs, and where each one stands.</p>
+    <p class="insideTitle">Inside it</p>
+    <ul class="inside">
+      <li>One card per pair: the other name, and the state in plain words: <b>Waiting · In touch · Hired · Ended</b>.</li>
+      <li>Buttons only where the rules allow the move: Confirm contact when someone reaches out to you. Mark hired, when you are the family and you are in touch. End the pair, while it is live.</li>
+      <li>A quiet row on every card: Report · Block.</li>
+      <li>The empty state: the resting Bunny, and words that say your matches will stand here.</li>
+    </ul>
+    <p class="insideTitle">The chat</p>
+    <ul class="inside">
+      <li>The chat has no menu seat. It opens from the Message button on a Find or Matches card.</li>
+      <li>The other name at the top. The messages in a list, yours on one side, theirs on the other. A writing box and a Send button.</li>
+      <li>Before the first message can fly, the profile must stand at Quick Connect. An unfinished profile is walked to the questionnaire to finish, never scolded.</li>
+      <li><b>The free taste:</b> a family gets one free message a day. Carers write freely. Finding, Family Plus and an open Search Pass write freely.</li>
+      <li>Past the free taste, the words do not go, and the upgrade pop up opens at that moment only.</li>
+    </ul>
+    <p class="insideTitle">The upgrade pop up, in its own words</p>
+    <ul class="inside">
+      <li>The Bunny, cheering you on.</li>
+      <li><b>You found someone worth writing to</b></li>
+      <li>Your free message for today is on its way. Finding members can keep the conversation going, with as many messages as they like.</li>
+      <li>Finding is A$14.95 a month, and you can stop any time.</li>
+      <li>Family Plus is the everything plan: A$24.95 a month, with the first month free.</li>
+      <li>Three buttons, all standing as tall as each other: Join Finding · Join Family Plus · Not now.</li>
+      <li>After Not now, that pop up stays quiet for the rest of the visit. It never nags twice.</li>
+      <li>In another country the prices show in that country own money, with the Australian worth beside the figure.</li>
+    </ul>
+    <p class="insideTitle">Report and Block, up close</p>
+    <ul class="inside">
+      <li>The report sheet: six kinds to pick. Spam or scam · Rude or abusive · Fake profile · Child safety · Inappropriate · Other. A words box, if you want it. A Send the report button.</li>
+      <li>What the filer is told: Your report is with the operator. You will not hear the outcome, and that is on purpose: a report is a question for the operator, never a lever on another person.</li>
+      <li>The block sheet, in its own words: You will not see each other, messages stop, and any match between you ends. They are never told. Nothing is deleted.</li>
+      <li>A block between a pair ends their pair calendar too. Filed reports are kept by the operator as a case record. Only counts ever reach the owner screens, never the words.</li>
+    </ul>
+  </div>
+  <div class="shots">
+    <figure><img src="proof-pack/screens/08matchcard.png" alt="A match card of the real build"><figcaption><b>A match card.</b> Label, score, reasons, Message, Report, Block.</figcaption></figure>
+    <figure><img src="proof-pack/screens/09popup.png" alt="The upgrade pop up of the real build"><figcaption><b>The upgrade moment.</b> Your words, your prices, Not now standing tall.</figcaption></figure>
+  </div>
+  <div class="verdict">
+    <p><b>You ordered:</b> two sided matching with states in plain words, one free message a day, Finding at A$14.95 a month with no free month, Family Plus at A$24.95 with its first month free, a Search Pass at A$49 for a three month window.</p>
+    <p><b>It is built:</b> yes. One honest line: the Join buttons record that you are interested. They take no money yet. See the waiting list near the foot of this page.</p>
+    <p><b>Gate:</b> Quality PASS · Efficiency PASS · QA PASS on this build. The pop up words stand word for word as Quality passed them, pinned by a test that fails if a word moves.</p>
+  </div>
+</section>
+
+<section class="area" id="g-board">
+  <div>
+    <h3>Urgent board</h3>
+    <p class="what">The board for care that is needed fast. Its first words: Help needed soon, near you. Looking is always free.</p>
+    <p class="insideTitle">Inside it</p>
+    <ul class="inside">
+      <li><b>Families:</b> a Post a job card with three fields: When, in the words Today, tomorrow, this weekend · Your postcode · A few words about the help you need. And a Post the job button.</li>
+      <li>Each job stands as a card: the postcode, the when, the note.</li>
+      <li><b>Carers:</b> on each job card, a field for a short note in the words A short note. Why you fit, and a button to offer help.</li>
+      <li>The gate, in plain words on the card: Finish your profile and questions first, then this post can go up. The bunny will walk you there.</li>
+      <li>No job fee, ever. The board rides the Finding plan or an open Search Pass window. Carers use the board free, always.</li>
+      <li>When no jobs stand near you, the board says so in plain words: No urgent jobs near you right now.</li>
+    </ul>
+  </div>
+  <div class="shots">
+    <figure><img src="proof-pack/screens/06find.png" alt="A board style card from the real build"><figcaption><b>The board wears the same card shape as Find.</b> Jobs stand as cards with postcode, when and note.</figcaption></figure>
+  </div>
+  <div class="verdict">
+    <p><b>You ordered:</b> an urgent board where urgency is never charged by the job, and carers can put their hand up with a short note.</p>
+    <p><b>It is built:</b> yes.</p>
+    <p><b>Gate:</b> Quality PASS · Efficiency PASS · QA PASS on this build.</p>
+  </div>
+</section>
+
+<h2 class="groupHead">Our family</h2>
+<p class="groupLead">Group two of the menu. Your children, their days, and the people to call.</p>
+
+<section class="area" id="g-children">
+  <div>
+    <h3>Children</h3>
+    <p class="what">A card for each of your children, in a theme they love.</p>
+    <p class="insideTitle">Inside it</p>
+    <ul class="inside">
+      <li>One card per child: the name, the theme word, and a colour band across the top in the theme colour.</li>
+      <li>Six themes: <b>Flowers · Fairies · Space · Dinosaurs · Ocean · Plain</b>, each with its own colour.</li>
+      <li>An Add a child card: a name field, a theme pick list, an Add button.</li>
+      <li>Each child now carries their age in years and what they love, picked from ten loves: water play, drawing, music, park play, baking, story time, dancing, blocks, animals, sport. The age and the loves are what the day plan on Home is made from.</li>
+      <li>A Remove button on each card, guarded. A sheet opens first and says in plain words what will happen. Nothing is written before you tap Yes, remove.</li>
+      <li>A removed child rests in Recently Deleted for 30 days first. Nothing vanishes at a tap.</li>
+      <li>Child profiles never show in search or matching. They live in the family account alone.</li>
+      <li>The empty state: the Bunny, and the words that your children will stand here.</li>
+    </ul>
+  </div>
+  <div class="shots">
+    <figure><img src="proof-pack/screens/10children.png" alt="Child profiles in their themes"><figcaption><b>Children.</b> Two child profiles, in Fairies and in Space.</figcaption></figure>
+  </div>
+  <div class="verdict">
+    <p><b>You ordered:</b> child profiles inside the family account, with cute themes, fully yours.</p>
+    <p><b>It is built:</b> yes.</p>
+    <p><b>Gate:</b> Quality PASS · Efficiency PASS · QA PASS on this build.</p>
+  </div>
+</section>
+
+<section class="area" id="g-daystory">
+  <div>
+    <h3>Day Story</h3>
+    <p class="what">The story of the day, day by day, like a calendar. Its first words: the story of the day, as it happens.</p>
+    <p class="insideTitle">Inside it</p>
+    <ul class="inside">
+      <li>A Today card with fourteen tiles to tap: <b>Arrival · Meal · Drink · Nap · Nappy / Toilet · Mood · Activity · Outing · Medicine · Incident · Health · Photo moment · Milestone · Note to parents</b>.</li>
+      <li>A note box under the tiles, and a Save button.</li>
+      <li><b>Families: an Ask for a photo button.</b> One tap asks the carer for a photo of the children during the day, inside this same flow. The ask travels as its own record in the day.</li>
+      <li>Entries rest under their date, newest day first, each with its tile word and its note.</li>
+      <li>A Remove on each entry. A removed entry rests in Recently Deleted for 30 days.</li>
+      <li>The carer writes the day. The family reads the day. Both stand in the same story.</li>
+      <li>The empty state, in plain words: nothing in the story yet, and what will stand here.</li>
+    </ul>
+  </div>
+  <div class="shots">
+    <figure><img src="proof-pack/screens/11daystory.png" alt="The Day Story of the real build"><figcaption><b>Day Story.</b> Tiles, the photo ask, and entries resting under their date.</figcaption></figure>
+  </div>
+  <div class="verdict">
+    <p><b>You ordered:</b> a daily day log like a calendar, and a way to ask for a photo of your kids during the day.</p>
+    <p><b>It is built:</b> yes: the tiles, the notes, the days, the photo ask. One honest line: picture files are not stored in this build yet. They land with the storage wave. See the waiting list.</p>
+    <p><b>Gate:</b> Quality PASS · Efficiency PASS · QA PASS on this build.</p>
+  </div>
+</section>
+
+<section class="area" id="g-bin">
+  <div>
+    <h3>Recently Deleted</h3>
+    <p class="what">The resting place for things you removed. Its first words: Things you removed stay here for 30 days. You can put them back, or delete them forever.</p>
+    <p class="insideTitle">Inside it</p>
+    <ul class="inside">
+      <li>One card per item: a child name, or a Day Story note with its day and tile.</li>
+      <li>A days left line on every card, counting down the 30 days.</li>
+      <li>Two buttons on every card: <b>Put back · Delete forever</b>.</li>
+      <li>When the 30 days run out, the item is cleared the next time this screen opens. Until then, only you can clear it.</li>
+      <li>The empty state: Nothing here, with the resting Bunny.</li>
+      <li>This space is the owner alone. A partner can never see into it, not even a matched one. That was proven on the test twin, leg by leg.</li>
+    </ul>
+  </div>
+  <div class="shots">
+    <figure><img src="proof-pack/screens/14bin.png" alt="Recently Deleted in the real build"><figcaption><b>Recently Deleted.</b> Items resting, days left standing, Put back and Delete forever.</figcaption></figure>
+  </div>
+  <div class="verdict">
+    <p><b>You ordered:</b> Never Delete. Only the user deletes, with a plain warning and a download offered first, and a 30 day resting place for photos and the Day Story.</p>
+    <p><b>It is built:</b> yes.</p>
+    <p><b>Gate:</b> Quality PASS · Efficiency PASS · QA PASS on this build.</p>
+  </div>
+</section>
+
+<section class="area" id="g-emergency">
+  <div>
+    <h3>Emergency</h3>
+    <p class="what">The people to call when it matters, inside Our family.</p>
+    <p class="insideTitle">Inside it</p>
+    <ul class="inside">
+      <li>One card per contact: a name and a phone number.</li>
+      <li>An add card: a name field, a phone field, an Add button.</li>
+      <li>The empty state, in plain words: no contacts yet, and what will stand here.</li>
+    </ul>
+  </div>
+  <div class="shots">
+    <figure><img src="proof-pack/screens/10children.png" alt="An Our family screen in the build card shape"><figcaption><b>Emergency wears the same calm card shape</b> as the rest of Our family: a name, a number, an Add card.</figcaption></figure>
+  </div>
+  <div class="verdict">
+    <p><b>You ordered:</b> everything after hiring in one place, emergency contacts included.</p>
+    <p><b>It is built:</b> yes.</p>
+    <p><b>Gate:</b> Quality PASS · Efficiency PASS · QA PASS on this build.</p>
+  </div>
+</section>
+
+<h2 class="groupHead">The week</h2>
+<p class="groupLead">Group three of the menu. Everything after hiring, week by week.</p>
+
+<section class="area" id="g-calendar">
+  <div>
+    <h3>Pair calendar</h3>
+    <p class="what">One calendar for each pair. The agreed week, and every change by agreement.</p>
+    <p class="insideTitle">Inside it</p>
+    <ul class="inside">
+      <li>A combined view heads the screen: every pair together, every block carrying the other name. Nothing from one pair ever stands inside another.</li>
+      <li>Per pair, the week by day: regular blocks in the soft brand colour. One time blocks as outlines with a One time tag. A skipped day as an open outline with a Day off tag.</li>
+      <li><b>Waiting asks:</b> each ask shows its kind: Extra time · Day off · Move a time · Change the week, with its day and its times.</li>
+      <li>If an ask clashes with a block already there, the clash line stands on the ask, before you answer.</li>
+      <li>Accept and Decline buttons, when the ask is yours to answer. Accept is what lands the block on the calendar.</li>
+      <li>When the ask was yours, a line says you are waiting on the other name.</li>
+      <li>An Ask for a change form: a kind pick, a day pick, start and end times, a from date, and a Send button.</li>
+      <li>The rule of the house: changes are proposals. The calendar changes only on an accept. Nothing moves on its own.</li>
+      <li>The empty state: the resting Bunny, and words that say your pair calendars will stand here.</li>
+    </ul>
+  </div>
+  <div class="shots">
+    <figure><img src="proof-pack/screens/12calendar.png" alt="The pair calendar of the real build"><figcaption><b>The pair calendar.</b> Regular blocks, a one time block, a day off, and the clash line on a waiting ask.</figcaption></figure>
+  </div>
+  <div class="verdict">
+    <p><b>You ordered:</b> a shared week that only changes when both sides agree.</p>
+    <p><b>It is built:</b> yes: proposals, accepts, the clash line, the versioned week.</p>
+    <p><b>Gate:</b> Quality PASS · Efficiency PASS · QA PASS on this build.</p>
+  </div>
+</section>
+
+<section class="area" id="g-roster">
+  <div>
+    <h3>Roster</h3>
+    <p class="what">The regular week at a glance, day by day.</p>
+    <p class="insideTitle">Inside it</p>
+    <ul class="inside">
+      <li>One section per day that holds a session.</li>
+      <li>Each session as a block: the start and end times, and who the session is with.</li>
+      <li>The roster wears the pair calendar regular look, so the week reads the same in both places.</li>
+      <li>The empty state, in plain words.</li>
+    </ul>
+  </div>
+  <div class="shots">
+    <figure><img src="proof-pack/screens/12calendar.png" alt="The week blocks the roster shares with the calendar"><figcaption><b>The week, in blocks.</b> The roster reads the same blocks, day by day.</figcaption></figure>
+  </div>
+  <div class="verdict">
+    <p><b>You ordered:</b> the week after hiring, plain to read at a glance.</p>
+    <p><b>It is built:</b> yes.</p>
+    <p><b>Gate:</b> Quality PASS · Efficiency PASS · QA PASS on this build.</p>
+  </div>
+</section>
+
+<section class="area" id="g-timesheet">
+  <div>
+    <h3>Timesheet</h3>
+    <p class="what">The hours, added up in the open.</p>
+    <p class="insideTitle">Inside it</p>
+    <ul class="inside">
+      <li>A total line at the top: the hours so far.</li>
+      <li>One card per entry: the day, the hours, and who the hours were with.</li>
+      <li>An Add hours card: a day pick list, an hours field that moves in quarters of an hour, and an Add button.</li>
+    </ul>
+  </div>
+  <div class="shots">
+    <figure><img src="proof-pack/screens/12calendar.png" alt="The build card shape the timesheet wears"><figcaption><b>The timesheet wears the build calm card shape:</b> a total at the top, entries as cards, an Add card at the foot.</figcaption></figure>
+  </div>
+  <div class="verdict">
+    <p><b>You ordered:</b> hours tracked inside the app, nothing hidden.</p>
+    <p><b>It is built:</b> yes.</p>
+    <p><b>Gate:</b> Quality PASS · Efficiency PASS · QA PASS on this build.</p>
+  </div>
+</section>
+
+<section class="area" id="g-reminders">
+  <div>
+    <h3>Reminders</h3>
+    <p class="what">Plain reminders you set yourself.</p>
+    <p class="insideTitle">Inside it</p>
+    <ul class="inside">
+      <li>One card per reminder: your words, and the when.</li>
+      <li>An add card: a words field, a when field, an Add button.</li>
+      <li>The empty state, in plain words.</li>
+      <li>A reminder can also arrive as a note on your phone the day before, once phone notes are live. That part is written and waiting. See the waiting list.</li>
+    </ul>
+  </div>
+  <div class="shots">
+    <figure><img src="proof-pack/screens/12calendar.png" alt="The build card shape the reminders wear"><figcaption><b>Reminders wear the same card shape:</b> your words, the when, an Add card.</figcaption></figure>
+  </div>
+  <div class="verdict">
+    <p><b>You ordered:</b> notifications and reminders, like a note the day before.</p>
+    <p><b>It is built:</b> the reminders screen, yes. The phone notes ride with the sender, which is written and waiting.</p>
+    <p><b>Gate:</b> Quality PASS · Efficiency PASS · QA PASS on this build.</p>
+  </div>
+</section>
+
+<h2 class="groupHead">Trust and us</h2>
+<p class="groupLead">Group four of the menu. Proof in honest words.</p>
+
+<section class="area" id="g-checks">
+  <div>
+    <h3>Checks</h3>
+    <p class="what">The proof, in honest words. Its first line: Every badge says exactly what stands behind it, and its limit sits beside it.</p>
+    <p class="insideTitle">Inside it</p>
+    <ul class="inside">
+      <li><b>A card for your own country at the top:</b> the country, and inside Australia your state or territory, read from your postcode. The check by its real name. What it costs the worker. A link to the official page.</li>
+      <li>The register line, where a free register stands: This check can be verified free on the official register.</li>
+      <li>The honest line where none stands: There is no free public register for this check, so the strongest proof is the document itself, sighted.</li>
+      <li>Inside Australia: seven of the eight states and territories carry a free online checker. The ACT confirms by email only, and the card says so.</li>
+      <li>One card per shared check: its title, its proof level in plain words: <b>Register verified · Document sighted · Provided by the carer</b>, and its limit line under it.</li>
+      <li>The empty state: No checks yet, and the words that say what will stand here.</li>
+      <li>Checks are never sold in the app. The app never asks anyone to buy a check. Register checks are free, always.</li>
+      <li>These words, and the law words, stand in English in every language until a person checks the translation by hand. That is on purpose, and it never ships any other way.</li>
+    </ul>
+  </div>
+  <div class="shots">
+    <figure><img src="proof-pack/screens/13checks.png" alt="Checks speaking Germany in the real build"><figcaption><b>Checks, speaking Germany.</b> The German check by its real name, its cost, its official page, with the Australian register card under it.</figcaption></figure>
+  </div>
+  <div class="verdict">
+    <p><b>You ordered:</b> verifiable checks, kept in the app, free in every Australian state and territory, with badges that never claim more than the proof.</p>
+    <p><b>It is built:</b> yes: 21 country packs, Australia in eight parts, each fee and page read from official sources.</p>
+    <p><b>Gate:</b> Quality PASS · Efficiency PASS · QA PASS on this build.</p>
+  </div>
+</section>
+
+<section class="area" id="g-reviews">
+  <div>
+    <h3>Reviews</h3>
+    <p class="what">The reviews people leave, standing plain.</p>
+    <p class="insideTitle">Inside it</p>
+    <ul class="inside">
+      <li>One card per review: who it is from, the stars as star marks, and the words.</li>
+      <li>The empty state: no reviews yet, in plain words.</li>
+      <li>Reviews are never invented, here or anywhere in the app. The owner side reads real counts only.</li>
+    </ul>
+  </div>
+  <div class="shots">
+    <figure><img src="proof-pack/screens/15profile.png" alt="The build card shape the reviews wear"><figcaption><b>Reviews wear the same plain card:</b> a name, the stars, the words.</figcaption></figure>
+  </div>
+  <div class="verdict">
+    <p><b>You ordered:</b> reviews you can trust.</p>
+    <p><b>It is built:</b> yes.</p>
+    <p><b>Gate:</b> Quality PASS · Efficiency PASS · QA PASS on this build.</p>
+  </div>
+</section>
+
+<section class="area" id="g-profile">
+  <div>
+    <h3>My Profile</h3>
+    <p class="what">You, as the app holds you.</p>
+    <p class="insideTitle">Inside it</p>
+    <ul class="inside">
+      <li>A card with your name, your side in the words family or carer, your postcode, and a button into your questionnaire.</li>
+      <li><b>A photo card:</b> Add my photo, or Change my photo. The picture is made smaller on the device and saved to your own space. If the save cannot reach the store, the card tells you the photo lives on this device only. Nothing fails in silence.</li>
+      <li><b>Carers: a resume card.</b> Pick a file, words files and PDF both stand, or paste the words in, and tap Read my resume.</li>
+      <li>The read pulls out only what is truly there: a postcode, languages it can name, a first aid line, years of care experience counted and reported. A test fails the build if a resume ever invents a fact.</li>
+      <li>A draft list shows each find with the very words it came from.</li>
+      <li>A Use these in my questionnaire button saves the draft. It fills empty answers only, and nothing goes public until you walk the questionnaire yourself and finish it.</li>
+      <li>A PDF is kept in your own space and marked honestly as unread, never guessed at.</li>
+    </ul>
+  </div>
+  <div class="shots">
+    <figure><img src="proof-pack/screens/15profile.png" alt="My Profile with the photo and resume cards"><figcaption><b>My Profile.</b> The photo card and the resume card standing on a carer profile.</figcaption></figure>
+  </div>
+  <div class="verdict">
+    <p><b>You ordered:</b> rich profiles with photos, and a resume that does the typing for the carer.</p>
+    <p><b>It is built:</b> yes.</p>
+    <p><b>Gate:</b> Quality PASS · Efficiency PASS · QA PASS on this build.</p>
+  </div>
+</section>
+
+<section class="area" id="g-privacy">
+  <div>
+    <h3>Privacy policy</h3>
+    <p class="what">The promise, in plain words, one tap from the menu.</p>
+    <p class="insideTitle">Inside it</p>
+    <ul class="inside">
+      <li>A short plain paragraph inside the app.</li>
+      <li>One button that opens the full policy page.</li>
+      <li>The full policy says what the app truly does: accounts by Google, Apple, or email with your own password. The demo stays on the device.</li>
+      <li>Things are kept with Google Firebase in Sydney, Australia. Settings, your background picture and your draft stay on the device.</li>
+      <li>The map is area only. The app makes no location calls at all; it never asks the phone where it is.</li>
+      <li>Child profiles never show in search or matching. Nothing is sold. No ads, no trackers, no analytics.</li>
+      <li>The app never deletes on its own. Deleting your account on the account page removes your account and your data at once. A filed safety report stays with the operator as a case record.</li>
+      <li>The download line in the policy is true of this build: Download my data stands in Settings and on the account page.</li>
+    </ul>
+  </div>
+  <div class="shots">
+    <figure><img src="proof-pack/screens/16settings.png" alt="Settings, where the account and policy doors stand"><figcaption><b>Privacy stands one tap from the menu,</b> and the account page carries the policy promises beside the plan card.</figcaption></figure>
+  </div>
+  <div class="verdict">
+    <p><b>You ordered:</b> privacy in plain words, true to the build, never a promise the build cannot keep.</p>
+    <p><b>It is built:</b> yes. The policy was cut again on 17 October 2026 to match this build, line by line.</p>
+    <p><b>Gate:</b> Store Review read it on the served page and closed the item.</p>
+  </div>
+</section>
+
+<h2 class="groupHead">At the foot of the menu</h2>
+<p class="groupLead">One last seat, under the four groups.</p>
+
+<section class="area" id="g-settings">
+  <div>
+    <h3>Settings</h3>
+    <p class="what">Your choices, quietly in one place.</p>
+    <p class="insideTitle">Inside it</p>
+    <ul class="inside">
+      <li><b>Background:</b> four picks. Brand colours · White · Black · Your own picture. Your own picture is made smaller on the device, kept as your data, and a soft veil stands behind words over it so words always read. Reading ease never drops under the AA line. A Remove my picture button stands while a picture is yours.</li>
+      <li><b>Language:</b> seven picks. English · Español · Simplified Chinese · Arabic · Vietnamese · Cantonese in written Hong Kong form · Hindi. Your pick wins over the phone language. Arabic reads right to left, the whole app over.</li>
+      <li><b>Notifications:</b> two switches, Messages and Reminders, standing only on a phone where notes can truly work. A kind that is off is never sent. On sign out, the phone goes quiet at once.</li>
+      <li><b>Download my data:</b> one button. It saves one file with your profile, your answers, your child profiles, your Day Story, the messages you sent and your pair calendars, plus a readable summary that says honestly what stands in each part.</li>
+      <li><b>Your account:</b> a card that opens the account page. The account page holds your plan, with its price in your own money where a price stands, and the delete your account section.</li>
+    </ul>
+  </div>
+  <div class="shots">
+    <figure><img src="proof-pack/screens/16settings.png" alt="Settings in the real build"><figcaption><b>Settings.</b> Background picks, the language picks, Download my data.</figcaption></figure>
+    <figure><img src="proof-pack/screens/17arabic.png" alt="The app in Arabic, reading right to left"><figcaption><b>The app in Arabic.</b> A cold start, right to left, the fence holding: the checks words stand in English by design.</figcaption></figure>
+  </div>
+  <div class="verdict">
+    <p><b>You ordered:</b> every user picks their own background, the app speaks the user language, prices in the user own money, and your data is yours to take with you.</p>
+    <p><b>It is built:</b> yes, all of it: seven languages live, prices in the user own currency built from the Finance schedule, the download in one tap.</p>
+    <p><b>Gate:</b> Quality PASS · Efficiency PASS · QA PASS on this build.</p>
+  </div>
+</section>
+
+<h2 class="sec" id="g-notin">What is not in yet, said plainly</h2>
+<div class="bar"></div>
+<p class="secLead">Nothing in this section is hidden anywhere else on the page. Each card names what waits, and what it waits on.</p>
+
+<div class="waitCard">
+  <h3>Buying · WAITING</h3>
+  <p>The Join buttons record that you are interested, and nothing more. No money moves in this build: no card fields, no shop code, nothing to buy, proven by reading the bytes.</p>
+  <p>Turning buying on waits on your Paid Apps sitting: the agreement, tax and bank at Apple and Google, then the product IDs going live. The prices, and the prices in each country own money, are built and shown.</p>
+</div>
+
+<div class="waitCard">
+  <h3>Phone notes · WAITING</h3>
+  <p>The app side is built: the token keeping in your own private space, the switches, the quieting at sign out. The sender program is written, and Security passed its code with three fixes, all landed and tested.</p>
+  <p>It is not running yet. It runs when your keys exist: a dedicated key for this app, made by hand at your developer sitting. The privacy promise for notes is written, and it lands in the policy with the feature, never before the truth.</p>
+</div>
+
+<div class="waitCard">
+  <h3>Picture files in Day Story · WAITING</h3>
+  <p>The ask for a photo is built, and it travels in the day flow. The picture files themselves are not stored in this build. They land with the storage wave.</p>
+</div>
+
+<div class="waitCard">
+  <h3>The icon · YOUR WORD ASKED</h3>
+  <p>The icon that ships is the finished pink master from the Lab, byte for byte the same file in the build, on the web, and in the store pack. Its fingerprint is <span class="mono">md5 919f2ceec5644940bd0d651ecd852e1e</span>.</p>
+  <p>It was finished under your blanket go ahead of 14 October and finished by the desk under that go ahead. It was never picked by you directly. It stands unapproved of record, and your word on it is the approval.</p>
+</div>
+
+<div class="waitCard">
+  <h3>Lio the Lighthouse · OPEN ON THE RECORD</h3>
+  <p>An earlier guide design for this app was a lighthouse named Lio. The guide that ships is the Bunny, from your own drawing, standing pink, one ear flopped, waving, with the true logo in her belly heart.</p>
+  <p>Nothing was merged and nothing was retired. Whether Lio stands beside the Bunny one day, or the Bunny stays the guide alone, is a question that stands open on the record, for your word. It is stated here, not asked anywhere else.</p>
+</div>
+
+<div class="waitCard">
+  <h3>One small open tap · YOUR TAP</h3>
+  <p>The carer question Do you vape stands in the questions, and a family can set it as a must. Whether a family must on non smoking also catches vaping waits on your one tap. Today, the non smoker must reads smoking only.</p>
+</div>
+
+<div class="waitCard">
+  <h3>Country packs and the law · LAUNCH GATE</h3>
+  <p>The 21 packs are built, with fees and pages read from official sources. A few cells could not be verified, and the packs say so in their own words where that is true.</p>
+  <p>Opening each country for real hiring waits on the per country law checks: the trademark check, and the employment and au pair clearance for each place. Those gates bind the launch. They never bound the building.</p>
+</div>
+
+<h2 class="sec" id="g-record">The record</h2>
+<div class="bar"></div>
+<div class="record">
+  <p><b>Gates:</b> Quality PASS · Efficiency PASS · QA PASS, 17 October 2026, on this build.</p>
+  <p><b>Store Review:</b> the certificate stands on this 100% build. The app was sent to Apple on 17 October. Apple asked for more information, its new account questions, and found no fault in the app. By your order, the reply files on this build, and nothing files again until the app reads 100%.</p>
+  <p><b>The Bunny:</b> the Bunny in the app is your own drawing, byte for byte, with the true logo in her belly heart. Her shared fingerprint is <span class="mono">md5 22fd3985728c88182e1d870a6a6a8132</span>.</p>
+  <p><b>First of the five:</b> Caresitters is the first app of the five to stand fully certified at 100%.</p>
+</div>
+
+</div>
+</body>
+</html>
