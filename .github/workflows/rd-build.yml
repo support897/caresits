@@ -2,6 +2,10 @@ name: Redesign build and screenshots
 
 on:
   workflow_dispatch:
+  push:
+    branches: [build-182]
+    paths:
+      - ".github/workflows/rd-build.yml"
 
 jobs:
   build:
