@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Caresitters and CareSpace: build brief</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:wght@500;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+:root{--ink:#1E4D44;--ground:#FDF8F0;--sage:#9CC5B5;--blush:#F6CBD3;--card:#fff;--line:#D8E4DC;--muted:#4a6b63;--pink:#F4A9BC;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ink:#E6F2EC;--ground:#14211E;--sage:#3d6b5e;--blush:#4a3037;--card:#1c2d29;--line:#2f4741;--muted:#a9c4bb;color-scheme:dark}}
+:root[data-theme="dark"]{--ink:#E6F2EC;--ground:#14211E;--sage:#3d6b5e;--blush:#4a3037;--card:#1c2d29;--line:#2f4741;--muted:#a9c4bb;color-scheme:dark}
+*{box-sizing:border-box}html{scroll-padding-top:70px}
+body{margin:0;background:var(--ground);color:var(--ink);font:17px/1.55 "Atkinson Hyperlegible",system-ui,sans-serif}
+.wrap{max-width:720px;margin:0 auto;padding:0 18px 80px}
+h1,h2,h3,summary{font-family:"Newsreader",Georgia,serif;line-height:1.2}
+h1{font-size:2.1rem;margin:.2em 0}
+.hero{display:flex;gap:16px;align-items:center;padding:22px 0 8px}
+.hero p{margin:.3em 0;color:var(--muted)}
+#bunny{width:132px;flex:none;cursor:pointer;touch-action:manipulation}
+#bunny svg{width:100%;height:auto;overflow:visible}
+.bod{animation:br 3.6s ease-in-out infinite;transform-origin:100px 190px}
+.eyes{animation:bl 4.4s infinite;transform-origin:100px 96px}
+.earL{animation:tw 5.5s ease-in-out infinite;transform-origin:78px 62px}
+.earR{animation:tw 5.5s ease-in-out 1.8s infinite;transform-origin:122px 62px}
+#bunny.hop svg{animation:hop .7s ease-out}
+@keyframes br{50%{transform:scale(1.025,1.03)}}
+@keyframes bl{0%,92%,100%{transform:scaleY(1)}96%{transform:scaleY(.08)}}
+@keyframes tw{0%,80%,100%{transform:rotate(0)}86%{transform:rotate(-9deg)}92%{transform:rotate(5deg)}}
+@keyframes hop{30%{transform:translateY(-22px) rotate(-4deg)}60%{transform:translateY(0) rotate(3deg)}}
+@media (prefers-reduced-motion:reduce){.bod,.eyes,.earL,.earR,#bunny.hop svg{animation:none}}
+#bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--ground);padding:10px 0 8px;border-bottom:1px solid var(--line)}
+#bar div.t{height:10px;border-radius:9px;background:var(--line);overflow:hidden}
+#fill{height:100%;width:0;background:var(--ink);transition:width .35s}
+#bar p{margin:6px 0 0;font-size:.9rem;color:var(--muted);display:flex;justify-content:space-between;gap:8px}
+button{font:inherit;cursor:pointer}
+.btn{background:var(--ink);color:var(--ground);border:0;border-radius:999px;padding:10px 18px;font-weight:700}
+.btn.alt{background:none;color:var(--ink);border:1.5px solid var(--ink)}
+details{background:var(--card);border:1px solid var(--line);border-radius:16px;margin:12px 0;padding:0 16px}
+summary{cursor:pointer;font-size:1.25rem;font-weight:700;padding:14px 0;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";float:right;color:var(--muted)}details[open] summary::after{content:"–"}
+details>div{padding-bottom:14px}
+h3{font-size:1.05rem;margin:1.1em 0 .3em}
+ul{padding-left:20px;margin:.3em 0}li{margin:.25em 0}
+.sw{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.sw span{border-radius:12px;padding:10px 12px;font-size:.85rem;border:1px solid var(--line);min-width:96px}
+.rule{border-left:4px solid var(--pink);padding:2px 12px;margin:10px 0;background:var(--blush);border-radius:0 10px 10px 0;color:var(--ink)}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+.tw{overflow-x:auto}th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+.chk{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px dashed var(--line)}
+.chk input{width:22px;height:22px;margin-top:2px;accent-color:var(--ink);flex:none}
+.chk label{flex:1}.chk.done label{text-decoration:line-through;color:var(--muted)}
+.chk small{display:block;color:var(--muted)}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+:focus-visible{outline:3px solid var(--pink);outline-offset:2px}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--ground);padding:10px 16px;border-radius:999px;opacity:0;pointer-events:none;transition:opacity .25s}
+#toast.on{opacity:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="hero">
+<div id="bunny" role="button" tabindex="0" aria-label="Tap the bunny to see it hop">
+<svg viewBox="0 0 200 230" aria-hidden="true">
+<g class="earL"><ellipse cx="72" cy="38" rx="17" ry="42" transform="rotate(-8 72 38)" fill="#F4A9BC"/><ellipse cx="73" cy="42" rx="8" ry="28" transform="rotate(-8 72 42)" fill="#F9D3DC"/></g>
+<g class="earR"><ellipse cx="128" cy="38" rx="17" ry="42" transform="rotate(8 128 38)" fill="#F4A9BC"/><ellipse cx="127" cy="42" rx="8" ry="28" transform="rotate(8 128 42)" fill="#F9D3DC"/></g>
+<g class="bod"><ellipse cx="100" cy="168" rx="46" ry="52" fill="#F4A9BC"/><ellipse cx="100" cy="172" rx="29" ry="34" fill="#FBE6D3"/>
+<path d="M100 192c-17-12-24-21-24-30 0-8 6-12 12-12 5 0 9 3 12 7 3-4 7-7 12-7 6 0 12 4 12 12 0 9-7 18-24 30z" fill="#E6AD9E"/>
+<ellipse cx="78" cy="218" rx="16" ry="8" fill="#F4A9BC"/><ellipse cx="122" cy="218" rx="16" ry="8" fill="#F4A9BC"/>
+<circle cx="100" cy="96" r="46" fill="#F4A9BC"/><circle cx="72" cy="108" r="9" fill="#F6CBD3"/><circle cx="128" cy="108" r="9" fill="#F6CBD3"/>
+<g class="eyes"><circle cx="82" cy="94" r="8" fill="#2b2023"/><circle cx="118" cy="94" r="8" fill="#2b2023"/><circle cx="85" cy="91" r="2.8" fill="#fff"/><circle cx="121" cy="91" r="2.8" fill="#fff"/></g>
+<ellipse cx="100" cy="106" rx="5" ry="3.6" fill="#D6335F"/><path d="M92 114q8 8 16 0" stroke="#2b2023" stroke-width="2.4" fill="none" stroke-linecap="round"/></g>
+</svg></div>
+<div><h1>Caresitters and CareSpace</h1><p>Build brief for the AI that builds both apps. Tap the bunny: this is the kind of constant, gentle motion it needs everywhere.</p></div>
+</header>
+
+<div id="bar"><div class="t"><div id="fill"></div></div><p><span id="pct">0 of 0 steps done</span><span>Your ticks save on this device</span></p></div>
+<div class="row"><button class="btn" id="copy">Copy the whole brief</button><button class="btn alt" id="open">Open all</button><button class="btn alt" id="reset">Clear ticks</button></div>
+
+<main id="doc">
+
+<details open><summary>1. Your mission and the rules</summary><div>
+<p>Rebuild and extend the existing app (repo build 143, <em>caresits</em>). It is not a blank page. Make two connected apps on one account system and one backend: <strong>Caresitters</strong> (find care) and <strong>CareSpace</strong> (run the care day). Both must feel like the best childcare apps anyone has used.</p>
+<div class="rule">Never break these: (1) A carer is shown as verified only when a real check happened. (2) AI writes words and suggests; it never decides safety, allergies or who is qualified. (3) Carers pay nothing, ever. (4) No fake scarcity, no manipulative notifications. (5) Children’s data is private by default and shared only by a parent.</div>
+<p>Working names live in one place (<code>brand.js</code>): <code>APP1="Caresitters"</code>, <code>APP2="CareSpace"</code>. The CareSpace name has an unresolved trademark risk, so never hard-code it in strings, images or file names.</p>
+<p>Ask the owner (Ilse) before any large visual change the brief does not already approve. Approved: new logo with stronger contrast, animated bunny, same palette and fonts.</p>
+</div></details>
+
+<details><summary>2. What exists today (audit of build 143)</summary><div>
+<ul>
+<li>About 22k lines in <code>app2/</code>, 23 test files (<code>*-tests.mjs</code>), English plus six languages: Spanish, Arabic, Hindi, Vietnamese, Cantonese, Mandarin (Arabic needs right-to-left).</li>
+<li>Firebase Auth (Google, Apple, email and password), Firestore rules in <code>accounts/</code>, files through a Cloudflare R2 gatekeeper (<code>files-gatekeeper/</code>), payments through RevenueCat (<code>payments-receiver/</code>, <code>plans.js</code>, <code>prices.js</code>).</li>
+<li>Already built: door and role pick (<code>door.*</code>), questionnaire (<code>journey.js</code>), Find, Matches, Urgent board, Children, Day Story, Calendar, Roster, Timesheet, Emergency, Recently Deleted, trust and checks (<code>trust.js</code>), activities, shopping, au pair map (<code>world.js</code>, <code>countries.js</code>), a bunny tour (<code>tour.js</code>).</li>
+<li>Today everything is one app with three “sides” (family, career, communicate) and a Finding or Connected mode switch (<code>mode.js</code>, <code>shell.js</code>).</li>
+</ul>
+<h3>Problems to fix</h3>
+<ul>
+<li><strong>Name split:</strong> “Caresits” in README and manifest, “Caresitters” in the UI. Use Caresitters everywhere. Keep existing <code>caresits-*</code> storage keys, or migrate them, so no user loses data.</li>
+<li><strong>Logo:</strong> <code>icon.svg</code> is cream figures on a tan heart on a beige square. Contrast is weak at app-icon size.</li>
+<li><strong>Bunny:</strong> seven still PNGs (<code>app2/bunny/</code>). Six have opaque white backgrounds; only <em>hello</em> is transparent. Nothing moves.</li>
+<li><strong>One menu for everything:</strong> a long side drawer holds Find, Children, Roster and Calendar together. Marketplace and daily care need separate homes.</li>
+</ul>
+<h3>Market notes</h3>
+<p>Australian rivals include Sittr, Juggle Street, Babysits and Bubble, plus Care.com. Reviews complain about costly subscriptions, unclear background checks and high sitter commissions. Answer these openly in the product: free for carers, visible check status, plain prices.</p>
+</div></details>
+
+<details><summary>3. Brand: keep the look, fix three things</summary><div>
+<p>The palette and fonts are already right. Keep them as tokens.</p>
+<div class="sw"><span style="background:#1E4D44;color:#fff">Ink green #1E4D44</span><span style="background:#FDF8F0;color:#1E4D44">Cream #FDF8F0</span><span style="background:#9CC5B5;color:#1E4D44">Sage #9CC5B5</span><span style="background:#F6CBD3;color:#1E4D44">Blush #F6CBD3</span><span style="background:#F4A9BC;color:#1E4D44">Bunny pink #F4A9BC</span></div>
+<p>Fonts: Newsreader for headlines, Atkinson Hyperlegible for body (both are in <code>/fonts</code>). Add a dark theme using the same hues. Minimum body text 17px; contrast 4.5:1.</p>
+<h3>Logo</h3>
+<p>Keep the idea: a heart holding a carer and a child. Redraw as a bold single-colour shape, ink green heart with cream figures on a blush tile. Produce SVG plus 1024 app-icon, adaptive Android icon, favicon and a one-colour version. It must read at 29px. Show the owner two options before shipping.</p>
+<h3>The bunny (the memorable thing)</h3>
+<p>Keep the character: pink, heart on the belly, soft ears. Build one component, <code>bunny.js</code>, as a layered vector (Rive or Lottie, or SVG with CSS), transparent background, under 60 KB, with a mood API: <code>bunny.set("hello"|"point"|"celebrate"|"encourage"|"oops"|"rest"|"think")</code>. The seven PNG poses become these moods.</p>
+<ul>
+<li><strong>Always moving (idle):</strong> breathing, blinking every 3 to 5 seconds, ear twitch, occasional look-around, tiny weight shift.</li>
+<li><strong>Reacts:</strong> follows the finger with its eyes, hops when tapped, claps on a match, rests while a form loads, tilts its head when the user pauses.</li>
+<li><strong>Guides:</strong> walks to a spot, points at it and speaks a short caption (the tour).</li>
+<li><strong>Safe:</strong> respect <code>prefers-reduced-motion</code> (still pose, no loops), pause when off-screen, never block a tap, never nag. A “Turn the bunny down” setting.</li>
+<li>Replace every <code>&lt;img class="bunnyBig"&gt;</code> and the menu bunny in <code>find.js, calendar.js, bin.js, family.js, homes.js, journey.js, aupair-find.js, shell</code>.</li>
+</ul>
+<h3>Name</h3>
+<p>Caresitters is descriptive and sits near Sittr, Sittercity and Care.com. Protect it through the logo and bunny as a registered mark. Before launch: IP Australia trademark search, domain and store-name checks.</p>
+</div></details>
+
+<details><summary>4. Caresitters: the journey, screen by screen</summary><div>
+<ol>
+<li><strong>Welcome.</strong> Bunny waves. “Find care. Share the day.” Two big cards: I need care / I give care. Remember the pick.</li>
+<li><strong>Sign in.</strong> Google, Apple or email. One account can hold both roles; never duplicate the identity.</li>
+<li><strong>Bunny tour.</strong> 5 skippable steps, each pointing at the real screen. Resume if closed.</li>
+<li><strong>Family profile, in small steps.</strong> Progress ring, selection cards instead of forms: family, each child (name or nickname, age), care type (babysitter, nanny, au pair), schedule, budget, distance, values. Exact address and child photos stay private until the parent shares.</li>
+<li><strong>Carer profile.</strong> Photo, headline, intro, optional video, languages, experience, qualifications, rate, availability. Each qualification has its own status: submitted, under review, verified, expired, needs renewal. Uploading a document never makes someone “verified”.</li>
+<li><strong>Discover.</strong> Sections, not endless scroll: Best matches, Available this week, New verified, Recently active, Saved. Cards show photo, first name, distance, rate, rating, verified badges, availability.</li>
+<li><strong>Match score.</strong> Rule-based and explained (see section 6). Tap the score to see why.</li>
+<li><strong>Profile.</strong> Big photo, video intro, “why you match”, checks with dates, reviews, calendar, rate and estimated cost.</li>
+<li><strong>Book.</strong> Pick date and time, confirm rate and cost, send. At most five taps. Cancellation policy visible on this screen.</li>
+<li><strong>Accepted.</strong> One calm celebration: bunny claps, “You’re connected.” Only after a real acceptance.</li>
+<li><strong>Hand-off.</strong> “Set up your Care Space” invites the family and carer into CareSpace with one tap. Skippable.</li>
+<li><strong>Repeat.</strong> “Book my usual carer”, and recurring weekly bookings with automatic availability checks.</li>
+</ol>
+<h3>Au pair world</h3>
+<p>A separate placement path with its own screens: country map, host family profile (room, pocket money, hours, duties, languages, visa help), au pair profile, and a clear line between childcare duties and unrelated housework. Visa guidance is per country and per passport, comes from official government sources with a “last checked” date, and is shown as a separate status next to compatibility. Never imply someone is eligible when it is unknown.</p>
+</div></details>
+
+<details><summary>5. CareSpace: the daily care app</summary><div>
+<p>CareSpace is a calm daily tool, like a messenger built for childcare. It must be useful on day one even if the family never used the marketplace (they invite their own nanny, grandparent or au pair).</p>
+<div class="tw"><table><tr><th>Tab</th><th>What it does</th></tr>
+<tr><td>Chats</td><td>Messenger-style home. One private Care Space per family. A carer who works for three families sees three separate spaces and can never mix them up. Filters: All, Families, Carers, Unread, Requests.</td></tr>
+<tr><td>Calendar</td><td>Bookings, shifts, school, activities, pickups, time off. Views: mine, one family, team. Time-off request flows to the affected family, who approves, declines or proposes a swap. Never silently cancels a booking.</td></tr>
+<tr><td>Care</td><td>Child profiles with six sections: Health and safety, Meals, Sleep and routine, Mood, Learning, Memories. Daily report in seconds, with one tap, a note, photo or voice.</td></tr>
+<tr><td>Activities</td><td>Age-based ideas that match the child’s interests and what the family owns. Each has time, materials, steps, learning goal and a “simpler / more kids / Spanish version” button. Ties to the shopping list.</td></tr>
+<tr><td>Profile</td><td>Account, languages, notification choices, permissions, privacy, Care Team, the bunny setting.</td></tr></table></div>
+<h3>Today (the CareSpace home)</h3>
+<p>A timeline for the day: arrival, meals, naps, activities, pickup. Parents see what the child ate, drank, slept, their mood, photos and what is next. They can ask for an update on an item (“send a photo of the painting”) and it attaches to that item instead of a lost message.</p>
+<h3>Care Team and permissions</h3>
+<p>Roles: Admin (parents), Regular carer, Limited carer (e.g. weekend sitter), Family viewer (e.g. grandparent). The parent chooses who sees allergies, medication, photos, calendar and private messages. Access is revocable. A carer who leaves loses access; the family keeps its records.</p>
+<h3>Allergy safety</h3>
+<ul><li>Allergy alerts show on the child’s profile, on meal planning, on recipes and when logging a meal.</li>
+<li>Checks are conservative and rule-based, with explicit “unknown ingredient” and cross-contamination warnings. AI must not rule anything safe.</li>
+<li>Medication and emergency details are stored apart from daily notes, with tighter access. Only an authorised person can edit them, and each change alerts the care team.</li></ul>
+<h3>Shopping</h3>
+<p>One list from approved meals and activities: item, family, child, source, who buys, due date, bought, reimbursed. Lists never mix across families.</p>
+<h3>Notifications</h3>
+<p>One bell. Categories: messages, booking reminders, care updates, requests, calendar changes, shopping, allergy changes. Parents choose every update, key events or a daily recap. Carers can mute non-urgent items while working; safety alerts always get through.</p>
+<h3>How the two apps link</h3>
+<ul><li>A permanent message button in Caresitters opens CareSpace, or the store page if it is not installed (universal links).</li>
+<li>After an accepted booking: “Set up our Care Space.” On carer and family profiles: “Already working together? Manage it in CareSpace.”</li>
+<li>One sign-in, one user id, one backend. Separate analytics, notification settings and release schedules.</li></ul>
+</div></details>
+
+<details><summary>6. Matching and trust rules</summary><div>
+<ul>
+<li>Separate <strong>essentials</strong> (date and time, required checks, accepted ages, strict maximum budget) from <strong>preferences</strong> (Montessori, outdoor play, a Spanish speaker). A carer missing an essential is excluded or shows the unmet item. A high score never hides it.</li>
+<li>Score = weighted average of how well each criterion matches. Starting weights: experience 25, personality and care style 20, availability 20, budget 15, location 10, activities 10. Families can change weights.</li>
+<li>Match works both ways: carers see families that fit their rate, area, schedule and style.</li>
+<li>Every score shows “Why this match” as plain sentences, and says plainly when something is unchecked.</li>
+<li>Visa eligibility is a separate indicator, never folded into the percentage.</li>
+<li>AI helps write profiles and pulls preferences out of free text. The user confirms before saving. It must not invent qualifications or praise.</li>
+<li>Safety tools: report, block, emergency contacts, booking records, payments in-app. Include an in-booking safety check-in.</li>
+<li>Australia: model checks per state (Queensland Blue Card; other states use their own Working With Children Check). Check current official requirements before wording anything.</li>
+</ul>
+</div></details>
+
+<details><summary>7. Backend and data</summary><div>
+<ul>
+<li>Keep one Firebase project, <code>users/{uid}</code> ownership, entitlements at <code>_entitlements/{uid}</code>, and the existing Firestore rules style.</li>
+<li>Add <code>careSpaces/{spaceId}</code> with <code>members/{uid}</code> (role, permissions, status), plus <code>children</code>, <code>dayStory</code>, <code>calendar</code>, <code>shopping</code>, <code>messages</code> under the space. Access depends on membership, never on a client-written role.</li>
+<li>A user keeps a private child profile in <code>users/{uid}</code>; the parent links it to a space. Removing a member removes access instantly.</li>
+<li>Write rules <em>and tests</em> (<code>accounts/tests.mjs</code> pattern) proving: no cross-family reads, a carer can’t edit allergies, a removed member is locked out, entitlements can’t be client-written.</li>
+<li>Photos and files: reuse the R2 gatekeeper, keys under <code>spaces/&lt;id&gt;/…</code>, strip EXIF on the device, five-minute presigned links.</li>
+<li>Update <code>accounts/DATA-MODEL.md</code> with every change. Keep plan prices as they are (A$14.95 Finding, A$24.95 Family Plus, A$49 Search Pass; carers free).</li>
+<li>Universal links, push per app, offline reads for Today and Calendar, and queued writes when the connection drops.</li>
+<li>All new text goes through <code>lang.js</code> in all seven languages, with right-to-left checked for Arabic. Add a test per language like the existing <code>lang-*-tests.mjs</code>.</li>
+<li>Privacy: a children’s-data review against Australian privacy law and the App Store and Google Play family rules before launch. Get legal advice for the final wording.</li>
+</ul>
+</div></details>
+
+<details><summary>8. Tech stack and how to build</summary><div>
+<div class="rule">Decision: keep the web app plus Capacitor wrapper you already have. Do not rewrite in React Native or Expo. The 22k lines of tested logic and seven languages are the asset. Revisit only if profiling shows real jank.</div>
+<h3>Why not a fully native iPhone app (Swift)</h3>
+<ul>
+<li>Swift runs on iPhone only. Android would need a second full build.</li>
+<li>It would discard the existing logic, seven languages and tests, and cost months.</li>
+<li>This app is forms, lists, chat, calendar, photos and a mascot. Capacitor already covers camera, push, payments and offline storage.</li>
+<li>Rive animation runs well either way.</li>
+</ul>
+<p>Options: React with Capacitor (chosen, lowest effort, both platforms); React Native or Expo (smoother, needs a rewrite); native Swift (smoothest, iPhone only, rewrite twice).</p>
+<h3>When to add native parts</h3>
+<ul>
+<li>Real users report lag on older phones.</li>
+<li>You want Live Activities for a carer’s shift or home-screen widgets for today’s care. Add these as small native Swift modules without rewriting anything.</li>
+<li>The app grows enough to justify a dedicated mobile developer.</li>
+</ul>
+<div class="rule">Payments: store and Australian rules differ for in-app plans versus booking payments for real-world services. Have these checked before wiring booking payments.</div>
+<h3>Stack</h3>
+<ul>
+<li><strong>Language:</strong> TypeScript in strict mode for all new code. Old .js modules keep running (allowJs) and are converted when touched.</li>
+<li><strong>UI:</strong> React 18 with Vite and framer-motion for new screens (store-build/app3 already uses this). Old vanilla screens stay live beside them and are replaced one screen at a time.</li>
+<li><strong>Bunny:</strong> Rive state machine (.riv, @rive-app/canvas) with an SVG fallback.</li>
+<li><strong>Apps:</strong> Capacitor 8 for iOS and Android. Two apps, two bundle ids (Caresitters keeps com.ilse.caresits), one shared codebase.</li>
+<li><strong>Repo:</strong> one monorepo with pnpm workspaces: apps/caresitters, apps/carespace, packages/core (auth, Firebase, i18n, brand tokens, bunny, match engine, types), packages/rules (Firestore and storage rules with tests).</li>
+<li><strong>Backend:</strong> Firebase Auth and Firestore as now, plus Cloud Functions in TypeScript for anything that must be trusted: booking state changes, verification status, plan entitlements (RevenueCat webhook), push, account export and deletion. Keep R2 for files and RevenueCat for plans.</li>
+<li><strong>Shared checks:</strong> Zod schemas used by both the apps and the functions. Verified flags are written only by the server, never by a client.</li>
+<li><strong>Safety net:</strong> Firebase App Check, least-privilege rules, rate limits, no secrets in the client, crash reporting, privacy-friendly analytics.</li>
+</ul>
+<h3>Method</h3>
+<ul>
+<li>One checklist step per branch. Write the test first, then the code. Small commits.</li>
+<li>Replace piece by piece (strangler pattern). The app must run and pass its tests after every merge.</li>
+<li>Never change Firestore rules without emulator tests. Save each live version as a dated file like the existing firestore.rules.live-* files.</li>
+<li>New features sit behind flags (Firebase Remote Config) so you can switch them off.</li>
+<li>Tests: the existing *-tests.mjs files, Vitest for logic, Firebase Emulator for rules, Playwright on a phone-size screen, including Arabic right-to-left. A CI run (GitHub Actions) must pass before merging.</li>
+<li>Budgets: lazy-load screens, WebP images, first screen fast on a mid-range phone, bunny under 60 KB.</li>
+<li>Keep DATA-MODEL.md and README current as part of every change.</li>
+</ul>
+</div></details>
+
+<details open><summary>9. Build order: tick as you go</summary><div id="lists"></div></details>
+
+<details><summary>10. Done means</summary><div>
+<ul>
+<li>A new family finds, books and connects with a carer, then lands in a working Care Space, in one sitting with no dead ends.</li>
+<li>A family with an existing nanny uses CareSpace with no marketplace account.</li>
+<li>All existing tests still pass, and new rules and match tests pass.</li>
+<li>Every screen works at 360px width, with large text, screen readers, keyboard focus and Arabic right-to-left.</li>
+<li>The bunny moves on every screen where it appears, and stops cleanly with reduced motion.</li>
+<li>No screen shows “verified” without a real completed check.</li>
+</ul>
+<h3>Extra ideas to consider after launch</h3>
+<ul><li>Meet-and-greet video call before booking.</li><li>Trial shift with a short feedback form for both sides.</li><li>Backup carer suggestions when someone is sick.</li><li>Printable emergency sheet and a yearly records export.</li><li>Gentle milestone memories the parent can turn into a keepsake.</li></ul>
+</div></details>
+</main>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script>
+var PH=[
+["Phase 0: Prepare",[
+["a1","Clone build 143, run every *-tests.mjs file and record the baseline."],
+["a2","Create brand.js with APP1, APP2 and design tokens (colours, fonts, spacing, dark theme)."],
+["a3","Unify the name to Caresitters in README, manifest, titles and listings. Keep or migrate caresits-* storage keys."],
+["a4","Make transparent-background versions of the six opaque bunny PNGs (fallback art only)."]]],
+["Phase 1: Brand and bunny",[
+["b1","Redraw the logo and app icons; show the owner two options and wait for approval."],
+["b2","Build bunny.js with seven moods, idle loops, tap and eye-follow reactions."],
+["b3","Add reduced-motion handling, off-screen pause and the Turn the bunny down setting."],
+["b4","Replace every bunnyBig image and the menu bunny with the component."],
+["b5","Rebuild the tour (tour.js): the bunny walks, points and speaks a caption."]]],
+["Phase 2: Caresitters",[
+["c1","Welcome, role pick and sign-in in under a minute."],
+["c2","Small-step onboarding for families and carers with progress and live preview."],
+["c3","Qualification statuses (submitted, under review, verified, expired, renewal)."],
+["c4","Discover feed with sections, saved carers and clear cards."],
+["c5","Match engine: essentials versus preferences, weights, why-this-match text."],
+["c6","Profile screen with video intro, checks, reviews and cost estimate."],
+["c7","Five-tap booking, cancellation policy, acceptance moment."],
+["c8","Repeat and recurring bookings; Book my usual carer."],
+["c9","Au pair path: map, host family and au pair profiles, separate visa status."]]],
+["Phase 3: CareSpace",[
+["d1","Split into its own app shell with five tabs and one account."],
+["d2","Care Spaces, invites by link, email or phone, roles and permissions."],
+["d3","Chats organised by family, with filters and request threads."],
+["d4","Child profiles with six sections and a separate emergency and medication area."],
+["d5","Allergy alert system, rule-based, shown in meals, recipes and logging."],
+["d6","Today timeline and one-tap daily reports with photos and voice."],
+["d7","Shared calendar with three views and the time-off workflow."],
+["d8","Activity generator with adapt buttons, tied to shopping lists."],
+["d9","Notification centre with per-category and quiet controls."],
+["d10","Works with no marketplace account."]]],
+["Phase 4: Backend and links",[
+["e1","Add careSpaces and members to Firestore with rules and tests (no cross-family reads)."],
+["e2","Update DATA-MODEL.md and the rules history files."],
+["e3","Spaces file paths in the R2 gatekeeper with EXIF stripping."],
+["e4","Universal links and the message button between apps."],
+["e5","All new strings in seven languages with right-to-left checks."],
+["e6","Offline reads and queued writes for Today and Calendar."]]],
+["Phase 5: Quality and launch",[
+["f1","Accessibility pass: contrast, large text, screen reader, focus."],
+["f2","Performance: first screen fast on a mid-range phone, bunny under 60 KB."],
+["f3","Trademark searches (IP Australia) and store name and domain checks."],
+["f4","Privacy and children’s data review; store listings and screenshots."],
+["f5","Full run of the end-to-end journey on iPhone and Android."]]]];
+var KEY="cs-brief-ticks",S={};
+try{S=JSON.parse(localStorage.getItem(KEY)||"{}")||{}}catch(e){S={}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+var L=document.getElementById("lists"),total=0;
+PH.forEach(function(p){var h=document.createElement("h3");h.textContent=p[0];L.appendChild(h);
+p[1].forEach(function(it){total++;var d=document.createElement("div");d.className="chk";
+var c=document.createElement("input");c.type="checkbox";c.id="k"+it[0];c.checked=!!S[it[0]];
+var l=document.createElement("label");l.htmlFor=c.id;l.textContent=it[1];
+function sync(){d.className="chk"+(c.checked?" done":"")}sync();
+c.addEventListener("change",function(){if(c.checked)S[it[0]]=1;else delete S[it[0]];save();sync();upd()});
+d.appendChild(c);d.appendChild(l);L.appendChild(d)})});
+function upd(){var n=Object.keys(S).length;document.getElementById("fill").style.width=(total?n/total*100:0)+"%";
+document.getElementById("pct").textContent=n+" of "+total+" steps done"}upd();
+function toast(m){var t=document.getElementById("toast");t.textContent=m;t.className="on";setTimeout(function(){t.className=""},1800)}
+function plain(){var out=["CARESITTERS AND CARESPACE: BUILD BRIEF","(Rebuild on repo build 143. Follow the sections in order.)",""];
+document.querySelectorAll("#doc details").forEach(function(d){var s=d.querySelector("summary");out.push("## "+s.textContent);
+var b=d.querySelector("div");b.querySelectorAll("h3,p,li,tr,.chk").forEach(function(n){
+if(n.matches(".chk")){out.push((n.querySelector("input").checked?"[x] ":"[ ] ")+n.textContent)}
+else if(n.tagName==="H3"){out.push("### "+n.textContent)}
+else if(n.tagName==="LI"){out.push("- "+n.textContent)}
+else if(n.tagName==="TR"){out.push(Array.prototype.map.call(n.children,function(c){return c.textContent}).join(": "))}
+else if(!n.closest("li")&&!n.closest("td")){out.push(n.textContent)}});out.push("")});return out.join("\n")}
+document.getElementById("copy").addEventListener("click",function(){var t=plain();
+function ok(){toast("Copied. Paste it into your AI.")}
+if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(ok,fb)}else fb();
+function fb(){var a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();try{document.execCommand("copy");ok()}catch(e){toast("Copy blocked. Select the text by hand.")}document.body.removeChild(a)}});
+var all=false;document.getElementById("open").addEventListener("click",function(e){all=!all;document.querySelectorAll("#doc details").forEach(function(d){d.open=all});e.target.textContent=all?"Close all":"Open all"});
+document.getElementById("reset").addEventListener("click",function(){S={};save();document.querySelectorAll(".chk input").forEach(function(c){c.checked=false;c.parentNode.className="chk"});upd();toast("Ticks cleared")});
+var B=document.getElementById("bunny");function hop(){B.classList.remove("hop");void B.offsetWidth;B.classList.add("hop")}
+B.addEventListener("click",hop);B.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();hop()}});
+</script>
+</body>
+</html>
