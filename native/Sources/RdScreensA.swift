@@ -262,10 +262,12 @@ let rdSlots: [String] = ["Early 6 to 9", "Morning 9 to 12", "Afternoon 12 to 3",
 
 struct RdSlotCell: View {
     @State var on: Bool
+    var strong: Bool = false
+    var dashed: Bool = false
     var body: some View {
         Button { on.toggle() } label: {
-            RoundedRectangle(cornerRadius: 10).fill(on ? RdC.pink : RdC.field).frame(height: 34)
-                .overlay(RoundedRectangle(cornerRadius: 10).stroke(on ? RdC.ras.opacity(0.4) : Color.clear, lineWidth: 1))
+            RoundedRectangle(cornerRadius: 10).fill(on ? (strong ? RdC.ras : RdC.pink) : RdC.field).frame(height: 34)
+                .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(dashed && !on ? RdC.sun : Color.clear, style: StrokeStyle(lineWidth: 1.5, dash: [4])))
         }.buttonStyle(.plain)
     }
 }
@@ -275,6 +277,10 @@ struct RdCalendar: View {
     var days: [String]
     var from: Double
     var to: Double
+    var strong: Bool = false
+    var freeDays: [String] = []
+    var freeFrom: Double = 0
+    var freeTo: Double = 0
     var body: some View {
         VStack(spacing: 6) {
             HStack(spacing: 4) {
@@ -284,7 +290,7 @@ struct RdCalendar: View {
             ForEach(0..<rdSlots.count, id: \.self) { i in
                 HStack(spacing: 4) {
                     Text(rdSlots[i]).font(RdF.body(11)).foregroundColor(RdC.mut).frame(width: 78, alignment: .leading).lineLimit(2)
-                    ForEach(RdData.weekdays, id: \.self) { d in RdSlotCell(on: RdCalendar.slotOn(d, i, days, from, to)) }
+                    ForEach(RdData.weekdays, id: \.self) { d in RdSlotCell(on: RdCalendar.slotOn(d, i, days, from, to), strong: strong, dashed: RdCalendar.slotOn(d, i, freeDays, freeFrom, freeTo)) }
                 }
             }
         }.padding(.horizontal, 20)

@@ -30,35 +30,38 @@ struct RdDeck: View {
     var body: some View {
         let c = st.ctx()
         ZStack(alignment: .bottom) {
-            RdPhoto(key: c.photos[0]).ignoresSafeArea(edges: .top)
-            LinearGradient(colors: [Color.clear, Color.black.opacity(0.55)], startPoint: .center, endPoint: .bottom)
-            VStack { RdTopBar(on: "deck"); Spacer() }
-            VStack(spacing: 10) {
-                HStack(spacing: 6) { ForEach(0..<c.photos.count, id: \.self) { i in Capsule().fill(i == 0 ? Color.white : Color.white.opacity(0.5)).frame(height: 4) } }.padding(.horizontal, 20)
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 12) {
-                        RdRing(pct: c.m.pct, size: 76, line: 8)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(c.m.label).font(RdF.bold(14)).foregroundColor(RdC.ras)
-                            Text(c.name).font(RdF.title(24)).foregroundColor(RdC.ink).lineLimit(1).minimumScaleFactor(0.7)
-                            Text(c.subline).font(RdF.body(14)).foregroundColor(RdC.mut).lineLimit(1).minimumScaleFactor(0.8)
-                        }
-                        Spacer(minLength: 0)
-                    }
-                    HStack(spacing: 6) {
-                        RdPills(roles: c.pillRoles)
-                        if c.au && c.fm { RdVisaChip(visa: c.car.visa) }
-                        if c.fm && !c.au { RdChip(text: "Blue Card", icon: "shield", tone: 1) }
-                    }
-                    ForEach(Array(c.reasons.prefix(2).enumerated()), id: \.offset) { _, r in RdReason(text: r) }
-                    Button { st.go("why") } label: { Text("See why").font(RdF.bold(15)).foregroundColor(RdC.ras) }.buttonStyle(.plain)
-                }.padding(16).background(Color.white).clipShape(RoundedRectangle(cornerRadius: 28)).padding(.horizontal, 12)
-                    .onTapGesture { st.go("profile") }
-                HStack(spacing: 12) {
-                    RdCta(title: c.mainTitle, icon: c.mainIcon) { st.go("book") }
-                    RdMsgButton { st.go("chat") }
-                }.padding(.horizontal, 16).padding(.bottom, 10)
+            RdPhoto(key: c.photos[0]).ignoresSafeArea()
+            LinearGradient(colors: [Color.clear, Color.black.opacity(0.35)], startPoint: .center, endPoint: .bottom).ignoresSafeArea()
+            VStack(spacing: 8) {
+                HStack(spacing: 4) { ForEach(0..<c.photos.count, id: \.self) { i in Capsule().fill(i == 0 ? Color.white : Color.white.opacity(0.5)).frame(height: 3) } }.padding(.horizontal, 16)
+                RdTopBar(on: "deck")
+                HStack { Spacer(); Text("Sample").font(RdF.bold(11)).foregroundColor(.white).padding(.horizontal, 10).padding(.vertical, 3).background(Color.black.opacity(0.45)).clipShape(Capsule()) }.padding(.horizontal, 20)
+                Spacer()
             }
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 12) {
+                    RdRing(pct: c.m.pct, size: 76, line: 8)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(c.m.label).font(RdF.bold(12)).foregroundColor(.white).padding(.horizontal, 12).padding(.vertical, 3).background(RdC.ras).clipShape(Capsule())
+                        Text(c.name).font(RdF.title(26)).foregroundColor(RdC.ink).lineLimit(1).minimumScaleFactor(0.7)
+                        Text(c.subline).font(RdF.body(13)).foregroundColor(RdC.mut).lineLimit(1).minimumScaleFactor(0.8)
+                    }
+                    Spacer(minLength: 0)
+                }
+                HStack(spacing: 6) { RdPills(roles: c.pillRoles) }
+                HStack(spacing: 6) {
+                    if c.fm && !c.au { RdChip(text: "Blue Card", icon: "shield") }
+                    if c.au && c.fm { RdVisaChip(visa: c.car.visa) }
+                }
+                ForEach(Array(c.reasons.prefix(2).enumerated()), id: \.offset) { _, r in RdReason(text: r) }
+                Button { st.go("why") } label: { Text("See why " + String(c.m.pct) + " percent").font(RdF.bold(13)).foregroundColor(RdC.ras) }.buttonStyle(.plain)
+                HStack(spacing: 10) {
+                    RdIconButton(icon: "x", size: 52) { st.root(st.isFamily ? "famhome" : "carhome") }
+                    RdCta(title: c.mainTitle, icon: c.mainIcon) { st.go("book") }
+                    RdMsgButton(action: { st.go("chat") }, size: 52)
+                }.padding(.top, 4)
+            }.padding(14).background(Color.white.opacity(0.94)).clipShape(RoundedRectangle(cornerRadius: 28)).padding(.horizontal, 12).padding(.bottom, 12)
+                .onTapGesture { st.go("profile") }
         }
     }
 }
@@ -77,6 +80,38 @@ struct RdSection: View {
     }
 }
 
+struct RdBentoTile: View {
+    var key: String
+    var cap: String
+    var h: CGFloat
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            RdPhoto(key: key).frame(height: h).clipShape(RoundedRectangle(cornerRadius: 22))
+            Text(cap).font(RdF.bold(12)).foregroundColor(RdC.ink).lineLimit(2).padding(.horizontal, 10).padding(.vertical, 4).background(Color.white.opacity(0.9)).clipShape(Capsule()).padding(8)
+        }
+    }
+}
+
+struct RdBento: View {
+    var photos: [String]
+    var caps: [String]
+    func cap(_ i: Int) -> String { return i < caps.count ? caps[i] : "" }
+    var body: some View {
+        VStack(spacing: 6) {
+            RdBentoTile(key: photos[0], cap: cap(0), h: 230)
+            if photos.count > 2 {
+                HStack(spacing: 6) {
+                    RdBentoTile(key: photos[1], cap: cap(1), h: 120)
+                    RdBentoTile(key: photos[2], cap: cap(2), h: 120)
+                }
+            } else if photos.count > 1 {
+                RdBentoTile(key: photos[1], cap: cap(1), h: 120)
+            }
+            if photos.count > 3 { RdBentoTile(key: photos[3], cap: cap(3), h: 150) }
+        }
+    }
+}
+
 struct RdProfile: View {
     @EnvironmentObject var st: RdStore
     static func checkLine(_ ck: RdCheck) -> String {
@@ -92,16 +127,7 @@ struct RdProfile: View {
         ZStack(alignment: .bottom) {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(Array(c.photos.enumerated()), id: \.offset) { i, k in
-                                ZStack(alignment: .bottomLeading) {
-                                    RdPhoto(key: k).frame(width: 300, height: 330).clipShape(RoundedRectangle(cornerRadius: 24))
-                                    Text(i < c.caps.count ? c.caps[i] : "").font(RdF.bold(13)).foregroundColor(.white).padding(8).shadow(radius: 4)
-                                }.onTapGesture { st.go("photos") }
-                            }
-                        }.padding(.horizontal, 16)
-                    }.padding(.top, 56)
+                    RdBento(photos: c.photos, caps: c.caps).padding(.horizontal, 16).padding(.top, 56).onTapGesture { st.go("photos") }
                     HStack(spacing: 12) {
                         RdRing(pct: c.m.pct, size: 84, line: 9)
                         VStack(alignment: .leading, spacing: 2) {
@@ -243,6 +269,11 @@ struct RdWhy: View {
 
 struct RdBook: View {
     @EnvironmentObject var st: RdStore
+    static func timeLine(_ f: RdFamily) -> String {
+        let a: String = RdMatch.hourText(f.needFrom)
+        let b: String = RdMatch.hourText(f.needTo)
+        return a + " to " + b + ", starting next week"
+    }
     var body: some View {
         let c = st.ctx()
         let f = c.fam
@@ -251,8 +282,9 @@ struct RdBook: View {
             RdScroll {
                 HStack(spacing: 12) {
                     RdPhoto(key: c.photos[0]).frame(width: 56, height: 56).clipShape(Circle())
-                    VStack(alignment: .leading, spacing: 1) { Text(c.name).font(RdF.bold(17)).foregroundColor(RdC.ink); Text(String(c.m.pct) + " percent match").font(RdF.body(14)).foregroundColor(RdC.mut) }
+                    VStack(alignment: .leading, spacing: 1) { Text(c.name).font(RdF.bold(17)).foregroundColor(RdC.ink); Text(String(c.m.pct) + " percent, " + c.m.label).font(RdF.body(14)).foregroundColor(RdC.mut) }
                     Spacer()
+                    RdRing(pct: c.m.pct, size: 46, line: 6)
                 }.padding(.horizontal, 20).padding(.vertical, 8)
                 if c.au {
                     RdPick(items: ["3 months", "6 months", "Longer"], sel: 1).padding(.horizontal, 20)
@@ -265,15 +297,23 @@ struct RdBook: View {
                     RdSection(title: "Home extras", items: Array(f.offersHome.prefix(5)))
                 } else {
                     RdPick(items: ["One time", "Every week", "Permanent"], sel: 1).padding(.horizontal, 20)
-                    RdLabel(title: "Days and hours")
-                    RdCalendar(days: f.needDays, from: f.needFrom, to: f.needTo)
+                    RdMuted(text: "Permanent means ongoing, with a notice period. You can change it later.").padding(.horizontal, 20).padding(.top, 6)
+                    RdCard(title: "Your times") {
+                        RdCalendar(days: f.needDays, from: f.needFrom, to: f.needTo, strong: true, freeDays: c.car.availDays, freeFrom: c.car.availFrom, freeTo: c.car.availTo).padding(.horizontal, -20)
+                        HStack(spacing: 10) {
+                            HStack(spacing: 4) { RoundedRectangle(cornerRadius: 3).fill(RdC.ras).frame(width: 12, height: 12); Text("Booked and free").font(RdF.body(11)).foregroundColor(RdC.mut) }
+                            HStack(spacing: 4) { RoundedRectangle(cornerRadius: 3).fill(RdC.blush).frame(width: 12, height: 12); Text("Booked").font(RdF.body(11)).foregroundColor(RdC.mut) }
+                            HStack(spacing: 4) { RoundedRectangle(cornerRadius: 3).strokeBorder(RdC.sun, style: StrokeStyle(lineWidth: 1.5, dash: [3])).frame(width: 12, height: 12); Text("Free, not booked").font(RdF.body(11)).foregroundColor(RdC.mut) }
+                        }.padding(.top, 4)
+                        Text(RdBook.timeLine(f)).font(RdF.bold(15)).foregroundColor(RdC.ink).padding(.top, 6)
+                    }
                     RdCard(title: "Cost per week") {
                         let hrs: Double = (f.needTo - f.needFrom) * Double(f.needDays.count)
                         let sub: Double = hrs * f.payOffer
-                        let fee: Double = sub * 0.10
-                        RdBarRow(left: RdMatch.numText(hrs) + " hours at $" + RdMatch.numText(f.payOffer), value: "$" + RdMatch.numText(sub))
-                        RdBarRow(left: "Service fee, 10 percent", value: "$" + String(format: "%.2f", fee))
-                        RdBarRow(left: "You pay", value: "$" + String(format: "%.2f", sub + fee), boldLine: true)
+                        let fee: Double = (sub * 0.10).rounded()
+                        RdBarRow(left: RdMatch.numText(hrs) + " hours at $" + RdMatch.numText(f.payOffer), value: "$" + RdMatch.numText(sub), boldLine: true)
+                        RdBarRow(left: "Service fee 10 percent", value: "$" + RdMatch.numText(fee), boldLine: true)
+                        RdBarRow(left: "Family pays", value: "$" + RdMatch.numText(sub + fee), boldLine: true)
                         RdMuted(text: c.first + " gets 100 percent. The fee is paid by the family on top.")
                     }
                 }
@@ -281,7 +321,7 @@ struct RdBook: View {
             }
             RdBottomBar {
                 VStack(spacing: 8) {
-                    RdCta(title: c.fm ? "Send request" : "Send my yes", icon: "check") { st.go("sent") }
+                    RdCta(title: c.fm ? "Send booking request" : "Send my yes") { st.go("sent") }
                     HStack(spacing: 8) {
                         RdCta(title: "Try a paid trial day first", style: 1, small: true) { st.go("trial") }
                         RdCta(title: "Meet and greet first", style: 1, small: true) { st.go("chat") }

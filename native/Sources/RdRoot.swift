@@ -9,7 +9,7 @@ struct RdRoot: View {
     var body: some View {
         VStack(spacing: 0) {
             screen(st.current).frame(maxWidth: .infinity, maxHeight: .infinity).background(Color.white)
-            if tabScreens.contains(st.current) { RdTabs() }
+            if tabScreens.contains(st.current) && st.current != "deck" { RdTabs() }
         }
         .background(Color.white.ignoresSafeArea())
         .environmentObject(st)

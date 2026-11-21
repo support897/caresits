@@ -49,7 +49,7 @@ struct RdMap: View {
                         VStack(alignment: .leading, spacing: 3) {
                             Text(c.name).font(RdF.bold(17)).foregroundColor(RdC.ink).lineLimit(1)
                             Text(c.subline).font(RdF.body(12)).foregroundColor(RdC.mut).lineLimit(1)
-                            RdPills(roles: c.pillRoles)
+                            RdPills(roles: Array(c.pillRoles.prefix(1)))
                         }
                         Spacer(minLength: 0)
                         RdRing(pct: c.m.pct, size: 62, line: 7)
@@ -105,7 +105,7 @@ struct RdWorldMap: View {
                         BunnyPin().scaleEffect(0.4).position(x: 170, y: 70)
                         BunnyPin().scaleEffect(0.4).position(x: 200, y: 90)
                     }.frame(height: 220).padding(.horizontal, 16).padding(.top, 8)
-                    HStack(spacing: 6) { RdChip(text: "Visa ready", tone: 1); RdChip(text: "Already in Australia"); RdChip(text: "Arriving by February", tone: 2); Spacer() }.padding(.horizontal, 16)
+                    RdFlow(spacing: 6) { RdChip(text: "Visa ready", tone: 1); RdChip(text: "Already in Australia"); RdChip(text: "Arriving by February", tone: 2) }.padding(.horizontal, 16)
                     ForEach(Array(ap.enumerated()), id: \.offset) { _, a in
                         let m = RdMatch.score(RdData.family(id: "hartley"), a)
                         HStack(spacing: 12) {
@@ -200,13 +200,23 @@ struct RdCarHome: View {
 
 struct RdTabs: View {
     @EnvironmentObject var st: RdStore
+    static func tabIndex(_ id: String) -> Int {
+        switch id {
+        case "famhome", "carhome": return 0
+        case "deck", "list": return 1
+        case "map", "worldmap": return 2
+        case "bookings": return 3
+        case "inbox": return 4
+        default: return 0
+        }
+    }
     var body: some View {
         let items: [(String, String, String)] = [("Home", "home", st.isFamily ? "famhome" : "carhome"), (st.isFamily ? "Discover" : "Find Families", "search", "deck"), ("Map", "pin", "map"), ("Bookings", "calendar", "bookings"), ("Messages", "chat", "inbox")]
         VStack(spacing: 0) {
             Rectangle().fill(RdC.line).frame(height: 1)
             HStack(spacing: 0) {
                 ForEach(0..<items.count, id: \.self) { i in
-                    let on: Bool = st.tab == i
+                    let on: Bool = RdTabs.tabIndex(st.current) == i
                     Button { st.tab = i; st.root(items[i].2) } label: {
                         VStack(spacing: 3) {
                             RdIcon(name: items[i].1, size: 24, color: on ? RdC.ras : RdC.mut)

@@ -122,7 +122,7 @@ struct RdPill: View {
     var body: some View {
         HStack(spacing: 5) {
             RdIcon(name: RdPill.icon(role), size: 14)
-            Text(RdPill.name(role)).font(RdF.bold(13))
+            Text(RdPill.name(role)).font(RdF.bold(13)).lineLimit(1).fixedSize()
         }.padding(.horizontal, 12).padding(.vertical, 5).background(RdC.role(role)).clipShape(Capsule()).foregroundColor(RdC.ink)
     }
     static func icon(_ r: String) -> String {
