@@ -211,10 +211,10 @@ struct RdSetupAbout: View {
     @EnvironmentObject var st: RdStore
     var body: some View {
         let r = st.setupRole
-        RdStepFrame(title: r == "family" ? "Your home" : "Your details", step: 2, next: "ss") {
+        RdStepFrame(title: r == "family" ? "Your home" : "Your details", step: 2, next: "ss", onNext: { RdLive.saveSetup(st) }) {
             if r == "family" {
-                RdLabel(title: "Your children", sub: "Ages only. Never names or faces.")
-                RdTickGrid(items: ["Newborns", "Toddlers", "Ages 3 to 5", "Ages 6 to 12", "Teens"], on: ["Toddlers", "Ages 6 to 12"])
+                RdLabel(title: "Your children", sub: "How many and how old. No names.")
+                RdKidsEditor(ages: $st.kidsAges)
                 RdLabel(title: "At home")
                 RdTickGrid(items: ["Pets are fine", "Non smoker", "Own room", "Own bathroom"], on: ["Pets are fine", "Non smoker"])
                 RdLabel(title: "Languages at home")

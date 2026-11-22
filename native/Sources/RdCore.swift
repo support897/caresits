@@ -395,6 +395,7 @@ final class RdStore: ObservableObject {
     @Published var tab: Int = 0
     @Published var pickedCare: String = "nanny"
     @Published var firstName: String = ""
+    @Published var kidsAges: [Int] = []
     @Published var email: String = ""
     @Published var password: String = ""
     @Published var country: String = "Australia"

@@ -318,7 +318,7 @@ struct RdMe: View {
                     VStack(alignment: .leading) { Text(c.fm ? "Sofia Reyes" : "Maya Okafor").font(RdF.title(22)).foregroundColor(RdC.ink); Text(c.fm ? "Family" : "Nanny").font(RdF.body(15)).foregroundColor(RdC.mut) }
                     Spacer()
                 }.padding(20)
-                RdNavRow(icon: "person", title: "My profile") { st.go("profile") }
+                RdNavRow(icon: "person", title: "My profile") { st.go(RdLive.signedIn ? "myprofile" : "profile") }
                 RdNavRow(icon: "camera", title: "My photos") { st.go("photoup") }
                 RdNavRow(icon: "star", title: "Reviews") { st.go("revreq") }
                 RdNavRow(icon: "shield", title: "Safety and checks") { st.go("safety") }
@@ -396,7 +396,7 @@ struct RdMenu: View {
         case "Resume": st.go("resume")
         case "My photos": st.go("photoup")
         case "Switch role": st.root("role")
-        case "My profile", "My family profile": st.go("profile")
+        case "My profile", "My family profile": st.go(RdLive.signedIn ? "myprofile" : "profile")
         case "Rates and preferences": st.go("settingsmatch")
         default: break
         }

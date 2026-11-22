@@ -66,6 +66,23 @@ struct RdRemotePhoto: View {
 enum RdLive {
     static var uid: String? { Auth.auth().currentUser?.uid }
     static var signedIn: Bool { Auth.auth().currentUser != nil }
+    static func auPairMap(_ p: Person) -> [String: Any] { return (p.card["auPair"] as? [String: Any]) ?? [:] }
+    static func country(_ p: Person) -> String { return ((p.card["auPairHost"] as? [String: Any])?["country"] as? String) ?? (auPairMap(p)["homeCountry"] as? String) ?? "Australia" }
+    static func dests(_ p: Person) -> [String] { return (auPairMap(p)["destinations"] as? [String]) ?? [] }
+    static func visaOf(_ p: Person) -> String { return (auPairMap(p)["visaNotes"] as? String) ?? "" }
+    static func fromOf(_ p: Person) -> String { let h = (auPairMap(p)["homeCountry"] as? String) ?? ""; return h.isEmpty ? "abroad" : h }
+    static func bands(_ ages: [Int]) -> [String] {
+        var out: [String] = []
+        for a in ages { let b = a < 1 ? "newborn" : (a < 2 ? "infant" : (a < 4 ? "toddler" : (a < 6 ? "preschool" : "school"))); if !out.contains(b) { out.append(b) } }
+        return out
+    }
+    /// Card keys that the live rules allow. Radius is maxDistanceKm, country is auPairHost.country, au pair picks are the auPair map.
+    static func cardFor(_ st: RdStore) -> [String: Any] {
+        var card: [String: Any] = ["careTypes": [careType(st.pickedCare)], "maxDistanceKm": st.radius, "auPairHost": ["country": st.country]]
+        if st.setupRole == "aupair" { card["auPair"] = ["homeCountry": st.home, "destinations": st.dests, "visaNotes": st.visa] as [String: Any]; card["auPairHost"] = ["country": st.home.isEmpty ? st.country : st.home] }
+        if st.setupRole == "family" { card["kids"] = st.kidsAges.prefix(8).map { ["ageYears": $0] }; card["ageGroups"] = bands(st.kidsAges) }
+        return card
+    }
     static func careType(_ r: String) -> String { return r == "aupair" ? "au_pair" : r }
 
     /// My profile, or a stand in built from the setup answers when nothing is saved yet.
@@ -87,9 +104,7 @@ enum RdLive {
         guard let u = uid else { return }
         st.origin = nil
         let fam = st.setupRole == "family"
-        var card: [String: Any] = ["careTypes": [careType(st.pickedCare)], "country": st.country, "radiusKm": st.radius]
-        if st.setupRole == "aupair" { card["from"] = st.home; card["destinations"] = st.dests; card["visa"] = st.visa }
-        if fam { card["visaOnly"] = st.visaOnly; card["inCountryOnly"] = st.inCountryOnly }
+        var card = cardFor(st)
         Task {
             _ = await origin(st)
             do { try await Backend.saveProfile(u, side: fam ? "family" : "carer", name: st.firstName.isEmpty ? "Member" : st.firstName, postcode: st.postcode, card: card) }
@@ -107,10 +122,11 @@ enum RdLive {
             st.setupRole = st.isFamily ? "family" : st.pickedCare
             st.firstName = p.firstName
             st.postcode = p.postcode
-            st.country = (p.card["country"] as? String) ?? "Australia"
-            st.radius = (p.card["radiusKm"] as? NSNumber)?.intValue ?? 15
-            st.home = (p.card["from"] as? String) ?? ""
-            st.dests = (p.card["destinations"] as? [String]) ?? []
+            st.country = RdLive.country(p)
+            st.radius = (p.card["maxDistanceKm"] as? NSNumber)?.intValue ?? 15
+            st.home = RdLive.fromOf(p) == "abroad" ? "" : RdLive.fromOf(p)
+            st.dests = RdLive.dests(p)
+            st.kidsAges = p.kids.map { $0.age }
             st.viewKey = st.defaultViewKey()
             st.root(st.isFamily ? "famhome" : "carhome")
         }
@@ -601,11 +617,11 @@ extension RdLive {
         var out: [RdLivePerson] = []
         for p in found {
             let isAu = p.services.contains("au_pair")
-            let dests = (p.card["destinations"] as? [String]) ?? []
+            let dests = RdLive.dests(p)
             var km = -1.0
             var co: CLLocationCoordinate2D? = nil
             if world {
-                let ctry = (p.card["country"] as? String) ?? (p.card["from"] as? String) ?? "Australia"
+                let ctry = RdLive.country(p)
                 co = await Geo.coord(postcode: p.postcode.count >= 4 ? p.postcode : ctry, country: ctry)
                 if let o, let c = co { km = Geo.km(o, c) }
                 let sc0 = score(me: me, p: p, km: km, radius: 20000)
@@ -613,20 +629,20 @@ extension RdLive {
                 continue
             }
             if !(isAu && me.side == "family") {
-                let ctry = (p.card["country"] as? String) ?? "Australia"
+                let ctry = RdLive.country(p)
                 co = await Geo.coord(postcode: p.postcode, country: ctry)
                 if let o, let c = co { km = Geo.km(o, c) }
                 if km > Double(st.radius) { continue }
             }
             if me.side == "family" && isAu {
-                let visa = (p.card["visa"] as? String) ?? ""
+                let visa = RdLive.visaOf(p)
                 if st.visaOnly && visa != "Visa approved" && visa != "I live there already" { continue }
                 if st.inCountryOnly && visa != "I live there already" { continue }
             }
             var rank = 50
             if isAu && me.side == "family" { rank = dests.firstIndex(of: st.country) ?? 9 }
             if me.side == "carer" && st.pickedCare == "aupair" {
-                let c = (p.card["country"] as? String) ?? "Australia"
+                let c = RdLive.country(p)
                 guard let idx = st.dests.firstIndex(of: c) else { continue }
                 rank = idx
             }
@@ -669,7 +685,7 @@ struct RdLiveCard: View {
         let p = x.p
         let keys = ([p.photoKey] + p.gallery).filter { !$0.isEmpty }
         let isAu = p.services.contains("au_pair")
-        let dests = (p.card["destinations"] as? [String]) ?? []
+        let dests = RdLive.dests(p)
         VStack(alignment: .leading, spacing: 8) {
             TabView {
                 if keys.isEmpty { RdC.blush }
@@ -687,8 +703,8 @@ struct RdLiveCard: View {
                 if p.side == "family" { RdPill(role: "family") }
                 else { RdPill(role: isAu ? "aupair" : (p.services.first ?? "nanny")) }
             }
-            if isAu && x.rank == 0 { RdPlaceRibbon(text: "From " + ((p.card["from"] as? String) ?? "abroad") + ". " + st.country + " is the first choice", icon: "globe") }
-            else if isAu && !dests.isEmpty { RdPlaceRibbon(text: "From " + ((p.card["from"] as? String) ?? "abroad") + ". Picked " + dests.joined(separator: ", "), icon: "globe") }
+            if isAu && x.rank == 0 { RdPlaceRibbon(text: "From " + (RdLive.fromOf(p)) + ". " + st.country + " is the first choice", icon: "globe") }
+            else if isAu && !dests.isEmpty { RdPlaceRibbon(text: "From " + (RdLive.fromOf(p)) + ". Picked " + dests.joined(separator: ", "), icon: "globe") }
             else { RdPlaceRibbon(text: "Postcode " + p.postcode + (x.km >= 0 ? ", " + Geo.label(x.km) + " away" : "")) }
             if !p.headline.isEmpty { Text(p.headline).font(RdF.bold(16)).foregroundColor(RdC.ink) }
             if !p.about.isEmpty { Text(p.about).font(RdF.body(15)).foregroundColor(RdC.ink).fixedSize(horizontal: false, vertical: true) }

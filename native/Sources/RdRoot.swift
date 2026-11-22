@@ -55,6 +55,7 @@ struct RdRoot: View {
         case "carhome": RdCarHome()
         case "deck": if RdLive.signedIn { RdLiveDeck() } else { RdDeck() }
         case "profile": RdProfile()
+        case "myprofile": RdLiveProfile()
         case "photos": RdPhotosView()
         case "why": RdWhy()
         case "book": if st.bookWith.isEmpty { RdBook() } else { RdLiveBook() }
