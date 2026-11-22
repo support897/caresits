@@ -16,10 +16,12 @@ env:
 
 jobs:
   ship:
-    runs-on: macos-latest
+    runs-on: xcode-27
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
+      - name: Use Xcode 27.2
+        run: sudo xcode-select -s /Applications/Xcode_27.2.app
 
       - name: Write Firebase config from secret
         env:
@@ -85,7 +87,7 @@ jobs:
             -allowProvisioningUpdates \
             -authenticationKeyPath "$KEY_PATH" -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER_ID" > export.log 2>&1 || true
           tail -15 export.log
-          grep -qi "EXPORT SUCCEEDED\|Upload succeeded\|Uploaded" export.log
+          grep -qiE "EXPORT SUCCEEDED|Upload succeeded" export.log && ! grep -qE "error:|Error Domain" export.log
 
       - name: Export errors
         if: failure()
