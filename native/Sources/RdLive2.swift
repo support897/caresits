@@ -110,7 +110,7 @@ struct RdLiveHome: View {
     var body: some View {
         VStack(spacing: 0) {
             if st.postcode.isEmpty {
-                RdCard(tint: RdC.pale, title: "Finish your profile") {
+                RdCard(title: "Finish your profile", tint: RdC.pale) {
                     RdMuted(text: "Add your postcode to see people near you. The map and the world view work now.")
                     RdCta(title: "Finish my profile", small: true) { st.go("sw") }
                 }
