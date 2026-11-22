@@ -133,11 +133,12 @@ struct RdFamHome: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                VStack(alignment: .leading, spacing: 0) { Text("Good morning, Sofia").font(RdF.body(14)).foregroundColor(RdC.mut); Text("Your best pair today").font(RdF.title(26)).foregroundColor(RdC.ink) }
+                VStack(alignment: .leading, spacing: 0) { Text("Good morning, " + (st.firstName.isEmpty ? "Sofia" : st.firstName)).font(RdF.body(14)).foregroundColor(RdC.mut); Text("Your best pair today").font(RdF.title(26)).foregroundColor(RdC.ink) }
                 Spacer()
                 RdIconButton(icon: "menu") { st.go("menu") }
             }.padding(.horizontal, 20).padding(.top, 6)
             RdScroll {
+                if RdLive.signedIn { RdLiveHome() } else {
                 RdHomeCard(pct: 97, label: "Perfect Pair", name: "Maya Okafor", sub: "Nanny, 2.9 km away", photo: "n1").onTapGesture { st.viewKey = "v1"; st.go("profile") }
                 HStack(spacing: 12) {
                     RdCta(title: "Book Maya", icon: "calendar") { st.viewKey = "v1"; st.go("book") }
@@ -147,13 +148,14 @@ struct RdFamHome: View {
                     RdCta(title: "See all matches", style: 1, small: true) { st.viewKey = "v1"; st.root("deck") }
                     RdCta(title: "Map", style: 1, small: true) { st.viewKey = "v1"; st.root("map") }
                 }.padding(.horizontal, 16).padding(.top, 8)
+                }
                 RdLabel(title: "Need someone now?")
                 RdCard(tint: RdC.pale) {
                     RdMuted(text: "Post an urgent job. Carers near you see it in seconds and you can book right away.")
                     RdCta(title: "Post an urgent job", icon: "clock") { st.go("urgentpost") }
                 }
                 RdLabel(title: "This week")
-                RdCard { RdMuted(text: "No bookings yet. Book Maya to get started.") }
+                if RdLive.signedIn { RdLiveWeek() } else { RdCard { RdMuted(text: "No bookings yet. Book Maya to get started.") } }
                 RdLabel(title: "Need care another way?")
                 HStack(spacing: 10) {
                     RdCta(title: "Babysitter", icon: "moon", style: 1, small: true) { st.viewKey = "v2"; st.root("deck") }
@@ -169,17 +171,19 @@ struct RdCarHome: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                VStack(alignment: .leading, spacing: 0) { Text("Good morning, Maya").font(RdF.body(14)).foregroundColor(RdC.mut); Text("Families who fit you").font(RdF.title(26)).foregroundColor(RdC.ink) }
+                VStack(alignment: .leading, spacing: 0) { Text("Good morning, " + (st.firstName.isEmpty ? "Maya" : st.firstName)).font(RdF.body(14)).foregroundColor(RdC.mut); Text("Families who fit you").font(RdF.title(26)).foregroundColor(RdC.ink) }
                 Spacer()
                 RdIconButton(icon: "menu") { st.go("menu") }
             }.padding(.horizontal, 20).padding(.top, 6)
             RdScroll {
+                if RdLive.signedIn { RdLiveHome() } else {
                 RdHomeCard(pct: 97, label: "Perfect Pair", name: "The Reyes family", sub: "Offers $42 an hour", photo: "f1").onTapGesture { st.viewKey = "v4"; st.go("profile") }
                 RdCta(title: "Say yes to the Reyes family", icon: "check") { st.viewKey = "v4"; st.go("book") }.padding(.horizontal, 16).padding(.top, 4)
+                }
                 RdLabel(title: "Your profile")
-                RdCard { RdMuted(text: "Complete. Blue Card checked 14 Aug 2026. First aid sighted.") }
+                RdCard { RdMuted(text: RdLive.signedIn ? "Postcode " + st.postcode + ", travel up to " + String(st.radius) + " km." : "Complete. Blue Card checked 14 Aug 2026. First aid sighted.") }
                 RdLabel(title: "Your week")
-                RdCalendar(days: ["Mon", "Tue", "Wed", "Thu", "Fri"], from: 7, to: 18)
+                if RdLive.signedIn { RdLiveWeek() } else { RdCalendar(days: ["Mon", "Tue", "Wed", "Thu", "Fri"], from: 7, to: 18) }
             }
         }
     }

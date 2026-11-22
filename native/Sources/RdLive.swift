@@ -2,6 +2,8 @@ import SwiftUI
 import FirebaseAuth
 import FirebaseFirestore
 import CoreLocation
+import PhotosUI
+import UserNotifications
 
 // Live parts of the redesign: real sign in is in RdScreensA, here are inputs, postcode lookup,
 // the live urgent board, the live deck and live chat. All of it uses Backend.swift.
@@ -147,6 +149,21 @@ enum RdLive {
     }
 }
 
+struct RdComment: Identifiable {
+    var id: String; var uid: String; var name: String; var photoKey: String; var side: String; var role: String; var postcode: String; var text: String; var at: Date
+}
+
+extension RdLive {
+    static func notify(_ title: String, _ body: String) {
+        let c = UNUserNotificationCenter.current()
+        c.requestAuthorization(options: [.alert, .sound]) { ok, _ in
+            guard ok else { return }
+            let n = UNMutableNotificationContent(); n.title = title; n.body = body; n.sound = .default
+            c.add(UNNotificationRequest(identifier: UUID().uuidString, content: n, trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)))
+        }
+    }
+}
+
 struct RdMineJob: Identifiable {
     var id: String
     var job: UrgentJob
@@ -167,6 +184,9 @@ final class RdUrgentStore: ObservableObject {
     @Published var bookedName: String = ""
     @Published var bookedTime: String = ""
     var jobs: [String: UrgentJob] = [:]
+    var seen: Set<String> = []
+    @Published var comments: [RdComment] = []
+    var commentReg: ListenerRegistration? = nil
     static let empty = RdUrgentPostData(id: "", fam: "", av: "", whenText: "", time: "", left: "", rate: 0, hrs: 0, sub: "", pc: "", km: -1, kids: "", body: "", imgs: [], role: "babysitter", tags: [], applied: 0, pct: 0, qa: [])
 
     var visible: [RdUrgentPostData] {
@@ -188,7 +208,7 @@ final class RdUrgentStore: ObservableObject {
         let hrs = (n["h"] as? NSNumber)?.doubleValue ?? 3
         return RdUrgentPostData(id: j.id, fam: (n["fam"] as? String) ?? fam?.name ?? "A family", av: fam?.photoKey ?? "", whenText: RdLive.whenText(j.when), time: RdLive.timeText(j.when, hrs: hrs), left: RdLive.leftText(j.when),
                                 rate: rate, hrs: hrs, sub: (n["sub"] as? String) ?? fam?.suburb ?? "", pc: j.postcode, km: km, kids: (n["k"] as? String) ?? "", body: (n["t"] as? String) ?? "",
-                                imgs: [], role: (n["role"] as? String) ?? "babysitter", tags: (n["tags"] as? [String]) ?? [], applied: yes, pct: 0, qa: [])
+                                imgs: (n["img"] as? [String]) ?? [], role: (n["role"] as? String) ?? "babysitter", tags: (n["tags"] as? [String]) ?? [], applied: yes, pct: 0, qa: [])
     }
 
     func load(_ st: RdStore) async {
@@ -208,6 +228,9 @@ final class RdUrgentStore: ObservableObject {
         }
         out.sort { ($0.km < 0 ? 999 : $0.km) < ($1.km < 0 ? 999 : $1.km) }
         applied = mineApplied
+        let ids = Set(out.map { $0.id })
+        if loaded { for u in out where !seen.contains(u.id) { RdLive.notify("New urgent job near " + u.pc, "$" + String(u.rate) + " an hour. " + u.left) } }
+        seen = seen.union(ids)
         posts = out
         loaded = true
     }
@@ -222,6 +245,34 @@ final class RdUrgentStore: ObservableObject {
             out.append(RdMineJob(id: j.id, job: j, post: make(j, fam: nil, km: -1, yes: yes.count), applicants: yes.compactMap { ps[$0] }))
         }
         mine = out
+        for m in out { jobs[m.id] = m.job }
+    }
+
+    func listenComments(_ jobId: String) {
+        commentReg?.remove()
+        commentReg = Firestore.firestore().collection("jobs").document(jobId).collection("comments").order(by: "at").addSnapshotListener { [weak self] snap, _ in
+            let rows = (snap?.documents ?? []).map { d -> RdComment in
+                let x = d.data()
+                return RdComment(id: d.documentID, uid: x["uid"] as? String ?? "", name: x["name"] as? String ?? "Member", photoKey: x["photoKey"] as? String ?? "", side: x["side"] as? String ?? "carer",
+                                 role: x["role"] as? String ?? "nanny", postcode: x["postcode"] as? String ?? "", text: x["text"] as? String ?? "", at: (x["at"] as? Timestamp)?.dateValue() ?? Date())
+            }
+            Task { @MainActor in self?.comments = rows }
+        }
+    }
+    func stopComments() { commentReg?.remove(); commentReg = nil; comments = [] }
+
+    /// Public comment under the post, with my profile. A carer who applied also gets the private message to the family.
+    func comment(_ st: RdStore, job: UrgentJob, text: String) async -> Bool {
+        guard let u = RdLive.uid, let me = await RdLive.me(st) else { msg = "Please sign in first."; return false }
+        let role = me.side == "family" ? "family" : (me.services.first == "au_pair" ? "aupair" : (me.services.first ?? "nanny"))
+        var ok = true
+        do {
+            try await Firestore.firestore().collection("jobs").document(job.id).collection("comments").addDocument(data: ["uid": u, "name": me.name, "photoKey": me.photoKey, "side": me.side, "role": role, "postcode": me.postcode, "text": String(text.prefix(500)), "at": FieldValue.serverTimestamp()])
+        } catch { msg = "The public comment could not post: " + error.localizedDescription; ok = false }
+        if me.side == "carer" && applied.contains(job.id) {
+            if await RdLive.openChat(st, otherUid: job.familyUid) { try? await Backend.send(st.chatRel, from: u, text: "About your urgent job: " + text) }
+        }
+        return ok
     }
 
     func apply(_ id: String) async -> Bool {
@@ -242,10 +293,10 @@ final class RdUrgentStore: ObservableObject {
         } catch { msg = error.localizedDescription; return false }
     }
 
-    func create(_ st: RdStore, when: Date, chip: String, hrs: Double, rate: Int, role: String, kids: String, desc: String, tags: [String]) async -> Bool {
+    func create(_ st: RdStore, when: Date, chip: String, hrs: Double, rate: Int, role: String, kids: String, desc: String, tags: [String], imgs: [String] = []) async -> Bool {
         guard let u = RdLive.uid else { msg = "Please sign in first."; return false }
         let me = await RdLive.me(st)
-        let n: [String: Any] = ["t": String(desc.prefix(400)), "r": rate, "h": hrs, "k": String(kids.prefix(60)), "role": role, "tags": Array(tags.prefix(3)), "fam": me?.name ?? st.firstName, "sub": me?.suburb ?? ""]
+        let n: [String: Any] = ["t": String(desc.prefix(300)), "r": rate, "h": hrs, "k": String(kids.prefix(60)), "role": role, "tags": Array(tags.prefix(3)), "fam": me?.name ?? st.firstName, "sub": me?.suburb ?? "", "img": Array(imgs.prefix(3))]
         let note = (try? String(data: JSONSerialization.data(withJSONObject: n), encoding: .utf8)) ?? desc
         do { try await Backend.createJob(familyUid: u, when: when, dayParts: [chip], postcode: st.postcode, bands: [String(rate)], note: note); msg = ""; return true }
         catch { msg = error.localizedDescription; return false }
@@ -256,31 +307,44 @@ struct RdUrgentDetail: View {
     @EnvironmentObject var st: RdStore
     @ObservedObject var us = RdUrgentStore.shared
     @State private var q = ""
-    @State private var sent = false
+    @State private var busy = false
     var body: some View {
         let u = us.post(us.selected)
+        let job = us.jobs[u.id]
+        let owner = job?.familyUid == RdLive.uid
         VStack(spacing: 0) {
             RdHeader(title: "Urgent job")
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
                     RdUrgentCard(u: u, mine: true, detail: true)
                     RdCard(title: "Where") { RdMuted(text: u.sub + " " + u.pc + (u.km >= 0 ? ". " + String(format: "%.1f", u.km) + " km from you." : "")) }
-                    RdLabel(title: "Ask the family", sub: "Your question goes to them as a message.")
-                    RdInput(label: "Your question", text: $q)
-                    RdFlow(spacing: 8) {
-                        ForEach(["Is dinner made?", "Any allergies?", "What time is bedtime?"], id: \.self) { s in Button { q = s } label: { RdChip(text: s) }.buttonStyle(.plain) }
+                    RdLabel(title: "Questions and answers", sub: "Everyone can see these, like on a public post.")
+                    ForEach(us.comments) { c in
+                        HStack(alignment: .top, spacing: 10) {
+                            RdRemotePhoto(key: c.photoKey).frame(width: 44, height: 44).clipShape(Circle())
+                            VStack(alignment: .leading, spacing: 3) {
+                                HStack(spacing: 6) { Text(c.name).font(RdF.bold(15)).foregroundColor(RdC.ink); RdPill(role: c.role) }
+                                Text("Postcode " + c.postcode).font(RdF.body(12)).foregroundColor(RdC.mut)
+                                Text(c.text).font(RdF.body(15)).foregroundColor(RdC.ink).fixedSize(horizontal: false, vertical: true)
+                            }
+                            Spacer(minLength: 0)
+                        }.padding(12).background(RdC.field).clipShape(RoundedRectangle(cornerRadius: 20)).padding(.horizontal, 16).padding(.bottom, 8)
+                    }
+                    if us.comments.isEmpty { RdMuted(text: "No questions yet. Be the first.").padding(.horizontal, 20) }
+                    RdInput(label: owner ? "Reply to everyone" : "Ask a question", text: $q)
+                    if !owner { RdMuted(text: us.applied.contains(u.id) ? "You applied, so the family also gets it as a private message." : "Apply to also message the family privately.").padding(.horizontal, 20) }
+                    if !us.msg.isEmpty { Text(us.msg).font(RdF.body(13)).foregroundColor(RdC.ras).padding(.horizontal, 20).padding(.top, 4) }
+                    RdCta(title: busy ? "Sending" : (owner ? "Reply" : "Post question"), style: 1, small: true) {
+                        guard !q.trimmingCharacters(in: .whitespaces).isEmpty, let j = job else { return }
+                        busy = true
+                        Task { if await us.comment(st, job: j, text: q) { q = "" }; busy = false }
                     }.padding(.horizontal, 20).padding(.top, 8)
-                    if sent { Text("Sent.").font(RdF.bold(14)).foregroundColor(RdC.okFg).padding(.top, 8) }
-                    RdCta(title: "Send question", style: 1, small: true) {
-                        guard !q.isEmpty, let j = us.jobs[u.id] else { return }
-                        Task {
-                            if await RdLive.openChat(st, otherUid: j.familyUid), let uid = RdLive.uid { try? await Backend.send(st.chatRel, from: uid, text: q); sent = true; q = "" }
-                        }
-                    }.padding(.horizontal, 20).padding(.top, 10)
                 }.padding(.bottom, 20)
             }
-            RdBottomBar { RdCta(title: us.applied.contains(u.id) ? "Applied" : "Apply at $" + String(u.rate) + " an hour") { if !us.applied.contains(u.id) { st.go("urgentapply") } } }
+            if !owner { RdBottomBar { RdCta(title: us.applied.contains(u.id) ? "Applied" : "Apply at $" + String(u.rate) + " an hour") { if !us.applied.contains(u.id) { st.go("urgentapply") } } } }
         }
+        .onAppear { us.listenComments(u.id) }
+        .onDisappear { us.stopComments() }
     }
 }
 
@@ -341,6 +405,9 @@ struct RdUrgentPost: View {
     @State private var desc = ""
     @State private var tag: [String] = []
     @State private var busy = false
+    @State private var picks: [PhotosPickerItem] = []
+    @State private var imgKeys: [String] = []
+    @State private var imgBusy = false
     var chipBinding: Binding<[String]> { Binding(get: { [chip] }, set: { v in chip = v.first ?? chip; setDate() }) }
     var roleBinding: Binding<[String]> { Binding(get: { [role] }, set: { role = $0.first ?? role }) }
     func setDate() {
@@ -372,13 +439,31 @@ struct RdUrgentPost: View {
                 RdLabel(title: "What should they know?")
                 RdInput(label: "Short description", text: $desc)
                 RdSelChips(items: ["Dinner is made", "Bedtime routine", "Pets at home", "Allergies"], multi: true, max: 3, sel: $tag)
+                RdLabel(title: "Photos", sub: "Optional. Show your home, never your children.")
+                HStack(spacing: 8) {
+                    ForEach(imgKeys, id: \.self) { k in RdRemotePhoto(key: k).frame(width: 90, height: 90).clipShape(RoundedRectangle(cornerRadius: 16)) }
+                    if imgKeys.count < 3 {
+                        PhotosPicker(selection: $picks, maxSelectionCount: 3 - imgKeys.count, matching: .images) {
+                            RoundedRectangle(cornerRadius: 16).stroke(RdC.pink, style: StrokeStyle(lineWidth: 2, dash: [6])).frame(width: 90, height: 90).overlay(RdIcon(name: imgBusy ? "loop" : "plus", size: 30, color: RdC.ras))
+                        }
+                    }
+                    Spacer(minLength: 0)
+                }.padding(.horizontal, 20)
+                .onChange(of: picks) { _, items in
+                    guard !items.isEmpty else { return }
+                    imgBusy = true
+                    Task {
+                        for it in items { if imgKeys.count < 3, let d = try? await Media.load(it), let k = try? await Media.uploadSafe(d, kind: "gallery") { imgKeys.append(k) } }
+                        picks = []; imgBusy = false
+                    }
+                }
                 RdCard(tint: RdC.pale) { RdMuted(text: "Postcode " + st.postcode + ". Shown to carers within " + String(st.radius) + " km. Your street stays private.") }
                 if !us.msg.isEmpty { Text(us.msg).font(RdF.body(13)).foregroundColor(RdC.ras).padding(.horizontal, 20) }
             }
             RdBottomBar { RdCta(title: busy ? "Posting" : "Post now", icon: "clock") {
                 busy = true
                 Task {
-                    if await us.create(st, when: when, chip: chip, hrs: hrs, rate: rate, role: role.lowercased(), kids: kids, desc: desc, tags: tag) { st.go("urgentposted") }
+                    if await us.create(st, when: when, chip: chip, hrs: hrs, rate: rate, role: role.lowercased(), kids: kids, desc: desc, tags: tag, imgs: imgKeys) { st.go("urgentposted") }
                     busy = false
                 }
             } }
@@ -417,8 +502,8 @@ struct RdUrgentMine: View {
                     RdCard {
                         HStack { VStack(alignment: .leading) { Text(m.post.time).font(RdF.bold(16)).foregroundColor(RdC.ink); RdMuted(text: "$" + String(m.post.rate) + " an hour, " + m.post.pc + ", " + m.post.kids) }
                             RdTag(text: m.job.state == "open" ? "Open" : "Booked", fill: RdC.okBg, fg: RdC.okFg) }
-                        RdMuted(text: String(m.applicants.count) + " applied")
-                    }
+                        RdMuted(text: String(m.applicants.count) + " applied. Tap to see questions and reply.")
+                    }.onTapGesture { us.selected = m.id; st.go("urgentdetail") }
                     if m.job.state == "open" {
                         ForEach(m.applicants) { a in
                             VStack(spacing: 10) {
@@ -478,7 +563,67 @@ struct RdLivePerson: Identifiable {
     var p: Person
     var km: Double
     var rank: Int
+    var score: Int = 0
+    var why: [String] = []
+    var coord: CLLocationCoordinate2D? = nil
     var id: String { p.id }
+    var label: String { score >= 90 ? "Perfect Pair" : (score >= 80 ? "Great match" : "Good match") }
+}
+
+extension RdLive {
+    /// Match score. Distance, shared care type, budget and language. Visa never counts.
+    static func score(me: Person, p: Person, km: Double, radius: Int) -> (Int, [String]) {
+        var s = 55
+        var why: [String] = []
+        let mine = Set(me.services), theirs = Set(p.services)
+        if !mine.isDisjoint(with: theirs) { s += 15; why.append("You both want " + (mine.intersection(theirs).first ?? "").replacingOccurrences(of: "_", with: " ")) }
+        if km >= 0 { s += Int(15 * max(0, 1 - km / Double(max(radius, 1)))); why.append("Only " + Geo.label(km) + " away, inside your " + String(radius) + " km") } else { s += 8 }
+        if me.side == "family", p.rate > 0, me.budgetMax > 0 { if p.rate <= me.budgetMax { s += 10; why.append("Rate fits your budget") } }
+        else if me.side == "carer", me.rate > 0, p.budgetMax > 0 { if me.rate <= p.budgetMax { s += 10; why.append("Their budget fits your rate") } }
+        else { s += 5 }
+        let lang = Set(me.languages).intersection(Set(p.languages))
+        if let l = lang.first { s += 5; why.append("You both speak " + l) }
+        return (min(99, s), why)
+    }
+
+    /// Real people inside my radius, country picks first for au pairs, then best score.
+    static func people(_ st: RdStore) async -> [RdLivePerson] {
+        guard let me = await me(st) else { return [] }
+        var svc = me.services
+        if me.side == "family" { svc = ["nanny", "babysitter", "au_pair"] }
+        if svc.isEmpty { svc = [careType(st.pickedCare)] }
+        let found = await Backend.discover(me: me, services: svc)
+        let o = await origin(st)
+        var out: [RdLivePerson] = []
+        for p in found {
+            let isAu = p.services.contains("au_pair")
+            let dests = (p.card["destinations"] as? [String]) ?? []
+            var km = -1.0
+            var co: CLLocationCoordinate2D? = nil
+            if !(isAu && me.side == "family") {
+                let ctry = (p.card["country"] as? String) ?? "Australia"
+                co = await Geo.coord(postcode: p.postcode, country: ctry)
+                if let o, let c = co { km = Geo.km(o, c) }
+                if km > Double(st.radius) { continue }
+            }
+            if me.side == "family" && isAu {
+                let visa = (p.card["visa"] as? String) ?? ""
+                if st.visaOnly && visa != "Visa approved" && visa != "I live there already" { continue }
+                if st.inCountryOnly && visa != "I live there already" { continue }
+            }
+            var rank = 50
+            if isAu && me.side == "family" { rank = dests.firstIndex(of: st.country) ?? 9 }
+            if me.side == "carer" && st.pickedCare == "aupair" {
+                let c = (p.card["country"] as? String) ?? "Australia"
+                guard let idx = st.dests.firstIndex(of: c) else { continue }
+                rank = idx
+            }
+            let sc = score(me: me, p: p, km: km, radius: st.radius)
+            out.append(RdLivePerson(p: p, km: km, rank: rank, score: sc.0, why: sc.1, coord: co))
+        }
+        out.sort { $0.rank != $1.rank ? $0.rank < $1.rank : ($0.score != $1.score ? $0.score > $1.score : ($0.km < 0 ? 999 : $0.km) < ($1.km < 0 ? 999 : $1.km)) }
+        return out
+    }
 }
 
 struct RdLiveDeck: View {
@@ -500,38 +645,7 @@ struct RdLiveDeck: View {
         }.task { await load() }
     }
     func load() async {
-        guard let me = await RdLive.me(st) else { loaded = true; return }
-        var svc = me.services
-        if me.side == "family" { svc = ["nanny", "babysitter", "au_pair"] }
-        if svc.isEmpty { svc = [RdLive.careType(st.pickedCare)] }
-        let found = await Backend.discover(me: me, services: svc)
-        let o = await RdLive.origin(st)
-        var out: [RdLivePerson] = []
-        for p in found {
-            let isAu = p.services.contains("au_pair")
-            let dests = (p.card["destinations"] as? [String]) ?? []
-            var km = -1.0
-            if !(isAu && me.side == "family") {
-                let ctry = (p.card["country"] as? String) ?? "Australia"
-                if let o, let c = await Geo.coord(postcode: p.postcode, country: ctry) { km = Geo.km(o, c) }
-                if km > Double(st.radius) { continue }
-            }
-            if me.side == "family" && isAu {
-                let visa = (p.card["visa"] as? String) ?? ""
-                if st.visaOnly && visa != "Visa approved" && visa != "I live there already" { continue }
-                if st.inCountryOnly && visa != "I live there already" { continue }
-            }
-            var rank = 50
-            if isAu && me.side == "family" { rank = dests.firstIndex(of: st.country) ?? 9 }
-            if me.side == "carer" && st.pickedCare == "aupair" {
-                let c = (p.card["country"] as? String) ?? "Australia"
-                guard let idx = st.dests.firstIndex(of: c) else { continue }
-                rank = idx
-            }
-            out.append(RdLivePerson(p: p, km: km, rank: rank))
-        }
-        out.sort { $0.rank != $1.rank ? $0.rank < $1.rank : ($0.km < 0 ? 999 : $0.km) < ($1.km < 0 ? 999 : $1.km) }
-        people = out
+        people = await RdLive.people(st)
         loaded = true
     }
 }
@@ -549,7 +663,14 @@ struct RdLiveCard: View {
                 if keys.isEmpty { RdC.blush }
                 ForEach(keys, id: \.self) { k in RdRemotePhoto(key: k).frame(maxWidth: .infinity).frame(height: 340).clipped() }
             }.tabViewStyle(.page).frame(height: 340).clipShape(RoundedRectangle(cornerRadius: 24))
-            Text(p.name).font(RdF.title(26)).foregroundColor(RdC.ink)
+            HStack(spacing: 12) {
+                RdRing(pct: x.score, size: 70, line: 8)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(x.label).font(RdF.bold(12)).foregroundColor(.white).padding(.horizontal, 12).padding(.vertical, 3).background(RdC.ras).clipShape(Capsule())
+                    Text(p.name).font(RdF.title(26)).foregroundColor(RdC.ink)
+                }
+                Spacer(minLength: 0)
+            }
             HStack(spacing: 6) {
                 if p.side == "family" { RdPill(role: "family") }
                 else { RdPill(role: isAu ? "aupair" : (p.services.first ?? "nanny")) }
@@ -560,7 +681,11 @@ struct RdLiveCard: View {
             if !p.headline.isEmpty { Text(p.headline).font(RdF.bold(16)).foregroundColor(RdC.ink) }
             if !p.about.isEmpty { Text(p.about).font(RdF.body(15)).foregroundColor(RdC.ink).fixedSize(horizontal: false, vertical: true) }
             RdFlow(spacing: 6) { ForEach(p.services, id: \.self) { RdChip(text: $0.replacingOccurrences(of: "_", with: " ").capitalized) } }
-            RdCta(title: "Message and book", icon: "calendar") { Task { if await RdLive.openChat(st, otherUid: p.id) { st.go("chat") } } }
+            ForEach(Array(x.why.prefix(3).enumerated()), id: \.offset) { _, w in RdReason(text: w) }
+            HStack(spacing: 10) {
+                RdCta(title: st.isFamily ? "Book " + p.firstName : "Say yes", icon: "calendar") { st.bookWith = p.id; st.bookName = p.firstName; st.bookRate = p.rate; st.go("book") }
+                RdMsgButton { Task { if await RdLive.openChat(st, otherUid: p.id) { st.go("chat") } } }
+            }
         }.padding(14).background(Color.white).overlay(RoundedRectangle(cornerRadius: 28).stroke(RdC.line, lineWidth: 1)).padding(.horizontal, 12)
     }
 }

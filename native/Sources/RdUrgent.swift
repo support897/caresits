@@ -56,7 +56,7 @@ struct RdUrgentCard: View {
                 ForEach(u.tags, id: \.self) { RdChip(text: $0) }
             }
             if !u.imgs.isEmpty {
-                HStack(spacing: 6) { ForEach(u.imgs, id: \.self) { k in RdPhoto(key: k).frame(height: 104).clipShape(RoundedRectangle(cornerRadius: 16)) } }
+                HStack(spacing: 6) { ForEach(u.imgs, id: \.self) { k in RdRemotePhoto(key: k).frame(height: 104).clipShape(RoundedRectangle(cornerRadius: 16)) } }
             }
             if !mine && !detail {
                 HStack(spacing: 8) {

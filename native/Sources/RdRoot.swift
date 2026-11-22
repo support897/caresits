@@ -57,7 +57,7 @@ struct RdRoot: View {
         case "profile": RdProfile()
         case "photos": RdPhotosView()
         case "why": RdWhy()
-        case "book": RdBook()
+        case "book": if st.bookWith.isEmpty { RdBook() } else { RdLiveBook() }
         case "trial": RdTrial()
         case "trialdone": RdTrialDone()
         case "sent": RdSent()
@@ -65,9 +65,9 @@ struct RdRoot: View {
         case "chat": if st.chatRel.isEmpty { RdChat() } else { RdLiveChat() }
         case "list": RdList()
         case "filters": RdFilters()
-        case "map": if st.ctx().au && st.ctx().fm { RdWorldMap() } else { RdMap() }
+        case "map": if RdLive.signedIn { RdLiveMap() } else if st.ctx().au && st.ctx().fm { RdWorldMap() } else { RdMap() }
         case "worldmap": RdWorldMap()
-        case "bookings": RdBookings()
+        case "bookings": if RdLive.signedIn { RdLiveBookings() } else { RdBookings() }
         case "inbox": if RdLive.signedIn { RdLiveInbox() } else { RdInbox() }
         case "me": RdMe()
         case "settings": RdSettings()

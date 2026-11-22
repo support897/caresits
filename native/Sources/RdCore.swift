@@ -408,6 +408,9 @@ final class RdStore: ObservableObject {
     @Published var err: String = ""
     @Published var chatRel: String = ""
     @Published var chatName: String = ""
+    @Published var bookWith: String = ""
+    @Published var bookName: String = ""
+    @Published var bookRate: Double = 0
     @Published var origin: CLLocationCoordinate2D? = nil
     func defaultViewKey() -> String {
         if isFamily { return pickedCare == "aupair" ? "v3" : (pickedCare == "babysitter" ? "v2" : "v1") }
