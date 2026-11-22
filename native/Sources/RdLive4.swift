@@ -450,7 +450,7 @@ struct RdReviewSheet: View {
 
 @MainActor
 enum RdReviewLink {
-    static let base = "https://support897.github.io/caresits/review.html"
+    static let base = "https://support897.github.io/caresits-review/review.html"
     /// Makes a one time token the rules know (refInvites) and returns the link.
     static func make() async -> URL? {
         guard let u = RdLive.uid else { return nil }
