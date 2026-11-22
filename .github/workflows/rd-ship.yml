@@ -99,8 +99,8 @@ jobs:
         if: success()
         working-directory: native
         run: |
-          pip3 install --quiet pyjwt cryptography || pip install --quiet pyjwt cryptography
-          python3 tools/addgroup.py || true
+          python3 -m venv "$RUNNER_TEMP/v" && "$RUNNER_TEMP/v/bin/pip" install --quiet pyjwt cryptography
+          "$RUNNER_TEMP/v/bin/python" tools/addgroup.py || true
 
       - name: Export errors
         if: failure()

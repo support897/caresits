@@ -1,0 +1,23 @@
+name: Add build to Review group
+on:
+  push:
+    branches: [build-182]
+    paths: ["native/ADDGROUP-TRIGGER.txt"]
+jobs:
+  add:
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add
+        env:
+          KEY_B64: ${{ secrets.ASC_API_KEY_P8_B64 }}
+          KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+          ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+        working-directory: native
+        run: |
+          mkdir -p "$RUNNER_TEMP/keys"
+          echo "$KEY_B64" | base64 --decode > "$RUNNER_TEMP/keys/k.p8"
+          export KEY_PATH="$RUNNER_TEMP/keys/k.p8"
+          export BUILD_NO=$(head -1 ADDGROUP-TRIGGER.txt | awk '{print $1}')
+          python3 -m venv "$RUNNER_TEMP/v" && "$RUNNER_TEMP/v/bin/pip" install --quiet pyjwt cryptography
+          "$RUNNER_TEMP/v/bin/python" tools/addgroup.py
