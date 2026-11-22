@@ -1,0 +1,9 @@
+name = "caresitters-api"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+account_id = "b6d55c5c55e8a9c6a0c7b0cc1cb2e1c4"
+[triggers]
+crons = ["*/30 * * * *"]
+[[kv_namespaces]]
+binding = "KV"
+id = "87c21fa83956434db7d7e0ee71c75ce2"

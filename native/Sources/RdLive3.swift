@@ -77,7 +77,8 @@ struct RdLiveProfile: View {
                 }
                 RdLabel(title: "About you", sub: "Up to 300 letters")
                 RdInput(label: "A short hello", text: $about)
-                if !fam { RdAskReview().padding(.top, 8) }
+                if !fam { RdPayoutCard().padding(.top, 8); RdAskReview().padding(.top, 8) }
+                if let me = RdLive.uid { RdTrust(uid: me).padding(.horizontal, 20).padding(.top, 8) }
                 if !msg.isEmpty { Text(msg).font(RdF.body(13)).foregroundColor(msg.hasPrefix("Saved") ? RdC.okFg : RdC.ras).padding(.horizontal, 20).padding(.top, 6) }
             }
             RdBottomBar { RdCta(title: busy ? "Saving" : "Save") { save() } }

@@ -63,6 +63,7 @@ struct RdLiveBookings: View {
     @State private var loaded = false
     @State private var err = ""
     @State private var reviewing: Booking? = nil
+    @State private var paid: [String: String] = [:]
     var body: some View {
         VStack(spacing: 0) {
             HStack { Text("Bookings").font(RdF.title(26)).foregroundColor(RdC.ink); Spacer() }.padding(.horizontal, 20).padding(.top, 6).padding(.bottom, 8)
@@ -78,7 +79,14 @@ struct RdLiveBookings: View {
                             RdTag(text: b.state.capitalized, fill: b.state == "accepted" ? RdC.okBg : RdC.warnBg, fg: b.state == "accepted" ? RdC.okFg : RdC.warnFg)
                         }
                         RdMuted(text: "$" + String(Int(b.rate)) + " an hour, about $" + String(Int(b.estimate)))
+                        if let ps = paid[b.id], ps != "unpaid" { RdTag(text: ps == "held" ? "Paid, held safely" : "Paid out", fill: RdC.okBg, fg: RdC.okFg) }
                         HStack(spacing: 8) {
+                            if !isCarer && (b.state == "accepted" || b.state == "completed") && (paid[b.id] ?? "unpaid") == "unpaid" {
+                                RdCta(title: "Pay now", small: true) { pay(b) }
+                            }
+                            if !isCarer && paid[b.id] == "held" && (b.state == "accepted" || b.state == "completed") {
+                                RdCta(title: "Release to carer", style: 1, small: true) { releasePay(b) }
+                            }
                             if isCarer && b.state == "requested" {
                                 RdCta(title: "Accept", small: true) { act(b, "accepted", true) }
                                 RdCta(title: "Decline", style: 1, small: true) { act(b, "declined", true) }
@@ -98,6 +106,12 @@ struct RdLiveBookings: View {
         }.task { await load() }
         .sheet(item: $reviewing) { b in RdReviewSheet(booking: b) }
     }
+    func pay(_ b: Booking) {
+        Task { let r = await Api.call("/pay/checkout", ["pairId": b.pairId, "bookingId": b.id]); if let e = r?["error"] as? String { err = e } else { Api.open(r?["url"] as? String) } }
+    }
+    func releasePay(_ b: Booking) {
+        Task { let r = await Api.call("/pay/release", ["pairId": b.pairId, "bookingId": b.id]); if (r?["ok"] as? Bool) == true { paid[b.id] = "released" } else { err = (r?["error"] as? String) ?? (r?["why"] as? String) ?? "Could not release." } }
+    }
     func act(_ b: Booking, _ to: String, _ carer: Bool) {
         guard let u = RdLive.uid else { return }
         Task { do { try await Backend.transition(b, to: to, actorUid: u, actorIsCarer: carer); await load() } catch { err = error.localizedDescription } }
@@ -108,6 +122,7 @@ struct RdLiveBookings: View {
         let ps = await Backend.loadProfiles(bs.map { $0.familyUid == u ? $0.carerUid : $0.familyUid })
         rows = bs.map { ($0, ps[$0.familyUid == u ? $0.carerUid : $0.familyUid]) }
         loaded = true
+        for b in bs { let s = await Api.payStatus(b.id); paid[b.id] = s }
     }
 }
 

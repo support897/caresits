@@ -209,6 +209,7 @@ final class RdHeartStore: ObservableObject {
         let ref = Firestore.firestore().collection("profiles").document(other).collection("hearts").document(u)
         if on { try? await ref.setData(["at": FieldValue.serverTimestamp()]) } else { try? await ref.delete() }
         await Backend.setSaved(u, other, on)
+        if on { Api.notify(to: other, kind: "heart", text: "Open Messages to say hi.") }
     }
 }
 
@@ -296,6 +297,7 @@ struct RdLivePersonView: View {
                             RdChip(text: String(p.years) + (p.years == 1 ? " year" : " years") + " with children", icon: "cap")
                             if p.rate > 0 { RdChip(text: "$" + String(Int(p.rate)) + " an hour", icon: "rate") }
                         }.padding(.horizontal, 20).padding(.top, 8)
+                        RdTrust(uid: p.id).padding(.horizontal, 20).padding(.top, 6)
                     } else if !p.kids.isEmpty {
                         RdChip(text: "Children aged " + p.kids.map { String($0.age) }.joined(separator: ", "), icon: "child").padding(.horizontal, 20).padding(.top, 8)
                     }

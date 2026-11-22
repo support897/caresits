@@ -162,6 +162,7 @@ enum Backend {
     }
     static func send(_ relId: String, from: String, text: String) async throws {
         _ = try await db.collection("relationships").document(relId).collection("messages").addDocument(data: ["from": from, "kind": "text", "text": String(text.prefix(1000)), "at": FieldValue.serverTimestamp()])
+        Api.notify(to: Api.other(relId, me: from), kind: "message", text: "You have a new message.", rel: relId)
     }
 
     /// Chat photo. Same strip route as the profile photo: Media.prepare removes every metadata block, then the
@@ -224,6 +225,7 @@ enum Backend {
         }
         batch.setData(data, forDocument: bookingRef)
         try await batch.commit()
+        Api.notify(to: carerUid, kind: "booking", text: "New booking request.", rel: pid)
     }
 
     static func transition(_ b: Booking, to: String, actorUid: String, actorIsCarer: Bool) async throws {
@@ -239,6 +241,9 @@ enum Backend {
             if rel.data()?["state"] as? String == "pending" { batch.updateData(["state": "contact", "contactBy": actorUid], forDocument: relRef) }
         }
         try await batch.commit()
+        let other = actorUid == b.familyUid ? b.carerUid : b.familyUid
+        Api.notify(to: other, kind: "booking", text: "Booking " + to + ".", rel: b.pairId)
+        if to == "completed" || to == "cancelled" { Task { await Api.call("/stats/event", ["pairId": b.pairId, "bookingId": b.id]) } }
     }
 
     // MARK: Urgent board (jobs; the sealed v6 shape, no rules change)
@@ -285,6 +290,7 @@ enum Backend {
     /// A yes writes interest on the post; the chat opens at once through openChat (chat first, then book).
     static func sayYes(job: UrgentJob, carerUid: String) async throws {
         try await db.collection("jobs").document(job.id).collection("interest").document(carerUid).setData(["note": "", "createdAt": FieldValue.serverTimestamp()])
+        Api.notify(to: job.familyUid, kind: "job", text: "A carer said yes to your urgent job.")
     }
     static func pickCarer(job: UrgentJob, carerUid: String) async throws {
         try await db.collection("jobs").document(job.id).updateData(["state": "filled", "carerUid": carerUid])
@@ -339,6 +345,7 @@ enum Backend {
     }
     static func registerDevice(token: String) async {
         guard let uid = Auth.auth().currentUser?.uid else { return }
+        await Api.call("/register", ["token": token])
         let ref = db.collection("profiles").document(uid).collection("devices").document(deviceId)
         let kinds: [String: Bool] = ["message": NotifyKind.on(.message), "reminder": NotifyKind.on(.reminder)]
         let exists = (try? await ref.getDocument().exists) ?? false
