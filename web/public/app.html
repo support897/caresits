@@ -1,0 +1,202 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Caresitters</title><meta name="theme-color" content="#F4A9BC">
+<link rel="icon" href="bun.png"><link rel="stylesheet" href="style.css"></head><body>
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="i-heart" viewBox="0 0 24 24"><path fill="currentColor" d="M12 21s-7.5-4.6-9.6-9.3C.9 8.1 3 4.5 6.6 4.5c2 0 3.6 1 5.4 3 1.8-2 3.4-3 5.4-3 3.6 0 5.7 3.6 4.2 7.2C19.500 16.400 12 21 12 21z"/></symbol>
+<symbol id="i-home" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" d="M3 11l9-8 9 8v10h-6v-6H9v6H3z"/></symbol>
+<symbol id="i-bolt" viewBox="0 0 24 24"><path fill="currentColor" d="M13 2L4 14h6l-1 8 9-12h-6z"/></symbol>
+<symbol id="i-chat" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" d="M4 4h16v12H9l-5 4z"/></symbol>
+<symbol id="i-cal" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" d="M4 6h16v14H4zM4 10h16M8 3v4M16 3v4"/></symbol>
+<symbol id="i-me" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2.2"/><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M4 21c1-5 15-5 16 0"/></symbol></defs></svg>
+<div id="root"><div class="spin"></div></div><div id="fx"></div>
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import {getAuth,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,signInWithPopup,GoogleAuthProvider,signOut,sendPasswordResetEmail} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import {getFirestore,doc,getDoc,setDoc,addDoc,updateDoc,deleteDoc,collection,query,where,orderBy,limit,getDocs,onSnapshot,serverTimestamp,Timestamp,writeBatch} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+const app=initializeApp({apiKey:"AIzaSyDbi4vqhN6I7Zz7_-6-ZQSZzd3MnQiYBCE",authDomain:"caresits-812a0.firebaseapp.com",projectId:"caresits-812a0",appId:"1:908064912971:web:88858e5fa8751f66b23fce"});
+const auth=getAuth(app),db=getFirestore(app);
+const API="https://caresitters-api.placenciailse.workers.dev";
+const $=s=>document.querySelector(s),R=$("#root");
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const EMAIL=/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/,PHONE=/[0-9][0-9 ().-]{6,}[0-9]/;
+const bad=t=>EMAIL.test(t)||PHONE.test(t);
+const ROLES={family:"I need care",nanny:"I am a nanny",babysitter:"I am a babysitter",aupair:"I am an au pair"};
+const CT=r=>r==="aupair"?"au_pair":r;
+const label=t=>t==="au_pair"?"Au pair":t[0].toUpperCase()+t.slice(1);
+let me=null,prof=null,tab="discover",unsub=null,hearts={mine:new Set(),onMe:[]};
+const bun=(c="")=>`<img class="bun ${c}" src="bun.png" alt="">`;
+function toast(t){const d=document.createElement("div");d.className="toast";d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.remove(),2600)}
+function confetti(x,y){for(let i=0;i<14;i++){const d=document.createElement("div");d.className="conf";d.innerHTML='<svg width="22" height="22" style="color:'+["#C2345B","#F4A9BC","#F6D67C","#B9D6EC"][i%4]+'"><use href="#i-heart"/></svg>';d.style.left=x+"px";d.style.top=y+"px";d.style.setProperty("--dx",(Math.random()*240-120)+"px");d.style.setProperty("--dy",(Math.random()*-200-20)+"px");$("#fx").appendChild(d);setTimeout(()=>d.remove(),1200)}}
+async function api(path,body){const t=await auth.currentUser?.getIdToken();const r=await fetch(API+path,{method:body?"POST":"GET",headers:{authorization:"Bearer "+t,"content-type":"application/json"},body:body?JSON.stringify(body):undefined});return r.json().catch(()=>({}))}
+const notify=(to,kind,text,relId)=>{if(to)api("/notify",{toUid:to,kind,text,relId:relId||""}).catch(()=>{})};
+const pairId=(a,b)=>a<b?a+"_"+b:b+"_"+a;
+const person=(id,d)=>({id,side:d.side,name:d.displayName||"Member",first:(d.displayName||"Member").split(" ")[0],pc:d.postcode||"",about:d.about||"",card:d.card||{},types:(d.card||{}).careTypes||[],rate:(d.card||{}).rate||0,years:(d.card||{}).experienceYears||0,kids:((d.card||{}).kids||[]).map(k=>k.ageYears)});
+
+/* ---------- auth ---------- */
+function authView(mode){
+ const su=mode==="signup";
+ R.innerHTML=`<div class="authwrap"><div class="card">${bun()}<h2>${su?"Join Caresitters":"Welcome back"}</h2><div class="mut">${su?"One minute. Then say hi.":"Good to see you."}</div>
+ <button class="btn ghost" id="g" style="width:100%;margin-top:16px">Continue with Google</button><div class="or">or</div>
+ <label class="fld">Email</label><input id="e" type="email" autocomplete="email"><label class="fld">Password</label><input id="p" type="password" autocomplete="${su?"new-password":"current-password"}" placeholder="${su?"At least 8 characters":""}">
+ <div class="err" id="er"></div><button class="btn" id="go" style="width:100%">${su?"Create account":"Log in"}</button>
+ <p class="mut" style="text-align:center">${su?'Have an account? <a href="#login">Log in</a>':'New here? <a href="#signup">Sign up</a> &middot; <a href="#" id="fg">Forgot password</a>'}</p></div></div>`;
+ const er=m=>$("#er").textContent=m;
+ $("#go").onclick=async()=>{const e=$("#e").value.trim(),p=$("#p").value;if(!e||p.length<(su?8:1))return er(su?"Use at least 8 characters":"Type your password");$("#go").disabled=true;try{su?await createUserWithEmailAndPassword(auth,e,p):await signInWithEmailAndPassword(auth,e,p)}catch(x){$("#go").disabled=false;er(({"auth/email-already-in-use":"That email already has an account. Log in.","auth/invalid-credential":"Wrong email or password","auth/invalid-email":"Check your email","auth/weak-password":"Pick a stronger password","auth/operation-not-allowed":"Email sign in is not switched on yet"})[x.code]||x.code)}};
+ $("#g").onclick=async()=>{try{await signInWithPopup(auth,new GoogleAuthProvider())}catch(x){er(x.code==="auth/unauthorized-domain"?"Google sign in needs this site added in Firebase.":x.code)}};
+ if($("#fg"))$("#fg").onclick=async ev=>{ev.preventDefault();const e=$("#e").value.trim();if(!e)return er("Type your email first");await sendPasswordResetEmail(auth,e).catch(()=>{});toast("Reset email sent")};
+}
+
+/* ---------- setup ---------- */
+function setupView(){
+ let role="family",ages=[],picked={};
+ R.innerHTML=`<div class="authwrap"><div class="card">${bun()}<h2>Tell Bun about you</h2><div class="chips" id="rl">${Object.entries(ROLES).map(([k,v])=>`<button class="chip ${k==="family"?"on":""}" data-k="${k}">${v}</button>`).join("")}</div>
+ <label class="fld">First name</label><input id="nm" maxlength="30"><label class="fld">Postcode</label><input id="pc" maxlength="10" inputmode="text">
+ <label class="fld">Country</label><select id="co">${["Australia","United Kingdom","Ireland","New Zealand","Canada","United States","Germany","Netherlands","France","Other"].map(c=>`<option>${c}</option>`).join("")}</select>
+ <div id="x"></div><div class="err" id="er"></div><button class="btn" id="go" style="width:100%">Finish</button><p class="mut" style="text-align:center"><a href="#" id="sk">Skip for now</a></p></div></div>`;
+ const draw=()=>{$("#x").innerHTML=role==="family"?`<label class="fld">How old are your kids? Tap to add. No names.</label><div class="chips">${[0,1,2,3,4,5,6,7,8,9,10,11,12].map(a=>`<button class="chip" data-a="${a}">${a}</button>`).join("")}</div><div class="mut" id="ak">${ages.length?"Ages: "+ages.join(", "):"None added"} <a href="#" id="cl">clear</a></div>`:`<label class="fld">Your rate per hour (AUD)</label><input id="rt" type="number" min="15" max="120" value="30">`;
+  $("#x").querySelectorAll("[data-a]").forEach(b=>b.onclick=()=>{if(ages.length<8){ages.push(+b.dataset.a);$("#ak").firstChild.textContent="Ages: "+ages.join(", ")+" "}});const c=$("#cl");if(c)c.onclick=e=>{e.preventDefault();ages=[];draw()}};
+ draw();
+ $("#rl").onclick=e=>{const k=e.target.dataset.k;if(!k)return;role=k;$("#rl").querySelectorAll(".chip").forEach(c=>c.classList.toggle("on",c.dataset.k===k));draw()};
+ const save=async skip=>{const name=$("#nm").value.trim()||"Member",pc=$("#pc").value.trim(),co=$("#co").value;if(!skip&&!pc)return $("#er").textContent="Add your postcode";if(bad(name))return $("#er").textContent="No emails or numbers please";
+  $("#go").disabled=true;try{await saveProfile({side:role==="family"?"family":"carer",name,postcode:pc,country:co,role,ages,rate:+($("#rt")?.value||0)});await boot()}catch(x){$("#go").disabled=false;$("#er").textContent="Could not save: "+x.code}};
+ $("#go").onclick=()=>save(false);$("#sk").onclick=e=>{e.preventDefault();save(true)};
+}
+async function saveProfile(o){
+ const ref=doc(db,"profiles",me.uid),cur=(await getDoc(ref)).data()||{};
+ const card={...(cur.card||{})};
+ if(o.role){card.careTypes=[o.side==="family"?"nanny":CT(o.role)];card.maxDistanceKm=card.maxDistanceKm||15;card.auPairHost={country:o.country||"Australia"};
+  if(o.side==="family"){card.kids=o.ages.slice(0,8).map(a=>({ageYears:a}));card.ageGroups=[...new Set(o.ages.map(a=>a<1?"newborn":a<2?"infant":a<4?"toddler":a<6?"preschool":"school"))]}else if(o.role!=="aupair"&&o.rate>0)card.rate=o.rate}
+ if(o.card)Object.assign(card,o.card);
+ const next={side:o.side||cur.side,displayName:o.name??cur.displayName,postcode:o.postcode??cur.postcode,card,looking:cur.looking||{musts:{},prefs:{}},updatedAt:serverTimestamp()};
+ for(const k of ["photoUrl","about","level","learningPlan"])if(cur[k]!==undefined)next[k]=cur[k];
+ if(o.about!==undefined)next.about=o.about.slice(0,300);
+ if(!next.postcode)next.postcode="";
+ await setDoc(ref,next)}
+
+/* ---------- shell ---------- */
+const TABS=[["discover","Discover","i-home"],["urgent","Urgent","i-bolt"],["messages","Messages","i-chat"],["bookings","Bookings","i-cal"],["me","Me","i-me"]];
+function shell(skip){
+ const nav=cls=>TABS.map(([k,l,i])=>`<button class="nav ${tab===k?"on":""}" data-t="${k}"><svg><use href="#${i}"/></svg>${l}${k==="messages"&&hearts.onMe.length?'<span class="dot"></span>':""}</button>`).join("");
+ R.innerHTML=`<div class="shell"><aside class="side"><a class="brand" href="/" style="margin:4px 8px 14px"><img src="logo.png" alt="">Caresitters</a>${nav()}</aside><main class="main" id="m"></main></div><nav class="tabs">${nav()}</nav>`;
+ document.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{tab=b.dataset.t;if(unsub){unsub();unsub=null}shell()});
+ if(!skip)({discover,urgent,messages,bookings,me:meView})[tab]($("#m"));
+}
+const loading=el=>el.innerHTML='<div class="spin"></div>';
+const avatar=p=>`<div class="ph">${esc((p.first||"?")[0])}</div>`;
+
+/* ---------- discover ---------- */
+async function discover(el){
+ el.innerHTML=`<h1>${prof.side==="family"?"Find your carer":"Find families"}</h1>${hearts.onMe.length?`<div class="panel" style="background:var(--blush);border:0"><b>${hearts.onMe.length} ${hearts.onMe.length===1?"person":"people"} hearted you.</b> Say hi in Messages.</div>`:""}<div class="chips" id="f"></div><div id="l"></div>`;
+ const seen={};const types=prof.types.length?prof.types:["nanny"];
+ const want=prof.side==="family"?["nanny","babysitter","au_pair"]:["nanny","babysitter","au_pair"].filter(t=>types.includes(t));
+ const opp=prof.side==="family"?"carer":"family";
+ loading($("#l"));
+ for(const t of (prof.side==="family"?types:want)){try{const s=await getDocs(query(collection(db,"profiles"),where("side","==",opp),where("card.careTypes","array-contains",t),limit(60)));s.forEach(d=>{if(d.id!==me.uid)seen[d.id]=person(d.id,d.data())})}catch(e){}}
+ let list=Object.values(seen),flt="all";
+ const draw=()=>{const f=$("#f");f.innerHTML=["all",...new Set(list.flatMap(p=>p.types))].map(t=>`<button class="chip ${flt===t?"on":""}" data-f="${t}">${t==="all"?"Everyone":label(t)}</button>`).join("");
+  f.onclick=e=>{if(e.target.dataset.f){flt=e.target.dataset.f;draw()}};
+  const L=list.filter(p=>flt==="all"||p.types.includes(flt)).sort((a,b)=>(a.pc===prof.pc?-1:0)-(b.pc===prof.pc?-1:0)||a.name.localeCompare(b.name));
+  $("#l").innerHTML=L.length?`<div class="grid">${L.map(card).join("")}</div>`:`<div class="empty">${bun()}<h3>Nobody yet</h3><p>Invite a friend. Bun is waiting.</p></div>`;
+  $("#l").querySelectorAll("[data-h]").forEach(b=>b.onclick=async ev=>{await toggleHeart(b.dataset.h);confetti(ev.clientX,ev.clientY);draw()});
+  $("#l").querySelectorAll("[data-m]").forEach(b=>b.onclick=async()=>{const p=seen[b.dataset.m];await openChat(p);});
+  $("#l").querySelectorAll("[data-b]").forEach(b=>b.onclick=()=>bookForm(seen[b.dataset.b]));
+  list.forEach(async p=>{const s=await fetch(API+"/stats?uid="+p.id).then(r=>r.json()).catch(()=>null);const t=document.getElementById("s-"+p.id);if(t&&s)t.innerHTML=s.done?`<span class="pill sun">${s.done} job${s.done>1?"s":""} done</span>`+((s.done+s.cancelled)?`<span class="pill sky">${Math.round(s.done/(s.done+s.cancelled)*100)}% completed</span>`:""):""})};
+ const card=p=>`<div class="person"><div class="ph">${esc(p.first[0])}</div><div class="pb"><h3>${esc(p.name)}</h3><div>${p.types.map(t=>`<span class="pill">${label(t)}</span>`).join("")}</div><div class="mut">${p.pc?"Postcode "+esc(p.pc):""}${p.rate?" &middot; $"+p.rate+" an hour":""}${p.years?" &middot; "+p.years+" yrs":""}${p.kids.length?" &middot; Kids "+p.kids.join(", "):""}</div><div id="s-${p.id}"></div><div class="mut">${esc(p.about).slice(0,110)}</div>
+  <div class="row"><button class="heart ${hearts.mine.has(p.id)?"on":""}" data-h="${p.id}" aria-label="Heart"><svg width="24" height="24"><use href="#i-heart"/></svg></button><button class="btn sm pink" data-m="${p.id}">Message</button>${prof.side==="family"&&p.side==="carer"?`<button class="btn sm" data-b="${p.id}">Book</button>`:""}</div></div></div>`;
+ draw();
+}
+async function toggleHeart(other){const ref=doc(db,"profiles",other,"hearts",me.uid);if(hearts.mine.has(other)){hearts.mine.delete(other);await deleteDoc(ref).catch(()=>{})}else{hearts.mine.add(other);await setDoc(ref,{at:serverTimestamp()}).catch(()=>toast("Could not heart"));notify(other,"heart","Open Messages to say hi.")}}
+async function loadHearts(){try{const s=await getDocs(collection(db,"profiles",me.uid,"hearts"));hearts.onMe=s.docs.map(d=>d.id)}catch{}
+ try{const s=await getDocs(collection(db,"profiles",me.uid,"saved"));s.forEach(d=>hearts.mine.add(d.id))}catch{}}
+
+/* ---------- chat ---------- */
+async function openChat(other){
+ const fam=prof.side==="family"?me.uid:other.id,car=prof.side==="family"?other.id:me.uid,pid=pairId(fam,car),ref=doc(db,"relationships",pid);
+ let s=null;try{s=await getDoc(ref)}catch(e){}
+ try{if(s&&s.exists()){const st=s.data().state;if(st==="pending"&&s.data().createdBy!==me.uid)await updateDoc(ref,{state:"contact",contactBy:me.uid});else if(st==="pending")return toast(other.first+" has your booking request. Chat opens when they reply.");else if(st!=="contact"&&st!=="hired")return toast("This chat is closed.")}
+  else{const iso=new Date().toISOString();await setDoc(ref,{members:[fam,car].sort(),familyUid:fam,carerUid:car,state:"contact",createdBy:me.uid,createdAt:iso,createdDay:iso.slice(0,10)})}}catch(e){return toast("Could not open chat: "+(e.code||""))}
+ tab="messages";chatView(pid,other);
+}
+function chatView(pid,other){
+ if(unsub){unsub();unsub=null}shell(true);const el=$("#m");
+ el.innerHTML=`<h1>${esc(other.name)}</h1><div class="chat"><div class="msgs" id="ms"></div><div class="mut" style="font-size:13px">Emails and phone numbers are blocked. Use a call below.</div><div class="send"><input id="t" maxlength="1000" placeholder="Say hi"><button class="btn sm" id="s">Send</button><button class="btn sm pink" id="c">Call</button></div></div>`;
+ unsub=onSnapshot(query(collection(db,"relationships",pid,"messages"),orderBy("at","asc"),limit(100)),s=>{const m=$("#ms");if(!m)return;m.innerHTML=s.docs.map(d=>{const x=d.data(),t=x.text||"";if(/^CALL /.test(t)){const p=t.split(" ");return `<div class="m ${x.from===me.uid?"me":""}">${p[1]==="video"?"Video":"Phone"} call requested. <a style="color:inherit" target="_blank" href="https://meet.jit.si/${esc(p[3])}">Join call room</a></div>`}if(/^CALLOK /.test(t))return `<div class="m">Call accepted.</div>`;return `<div class="m ${x.from===me.uid?"me":""}">${esc(t)}</div>`}).join("");m.scrollTop=m.scrollHeight});
+ const send=async txt=>{if(!txt)return;if(bad(txt))return toast("Emails and phone numbers are not allowed. Use Call.");await addDoc(collection(db,"relationships",pid,"messages"),{from:me.uid,kind:"text",text:txt.slice(0,1000),at:serverTimestamp()}).catch(()=>toast("Could not send"));notify(other.id,"message","You have a new message.",pid)};
+ $("#s").onclick=()=>{const v=$("#t").value.trim();$("#t").value="";send(v)};$("#t").onkeydown=e=>{if(e.key==="Enter")$("#s").click()};
+ $("#c").onclick=()=>{const room="cs"+Math.random().toString(36).slice(2,12);send("CALL video x "+room);toast("Call room sent. Open it from the chat.")};
+}
+async function messages(el){
+ loading(el);const q1=await getDocs(query(collection(db,"relationships"),where(prof.side==="family"?"familyUid":"carerUid","==",me.uid)));
+ const rels=q1.docs.map(d=>({id:d.id,...d.data()})).filter(r=>r.state==="contact"||r.state==="hired");
+ const ids=rels.map(r=>prof.side==="family"?r.carerUid:r.familyUid);const ppl={};await Promise.all([...new Set([...ids,...hearts.onMe])].map(async i=>{const s=await getDoc(doc(db,"profiles",i)).catch(()=>null);if(s&&s.exists())ppl[i]=person(i,s.data())}));
+ el.innerHTML=`<h1>Messages</h1>${hearts.onMe.length?`<div class="panel"><b>Hearted you</b><div class="row" style="margin-top:8px">${hearts.onMe.filter(i=>ppl[i]).map(i=>`<button class="btn sm pink" data-hi="${i}">${esc(ppl[i].first)}</button>`).join("")}</div></div>`:""}`+(rels.length?rels.map(r=>{const o=ppl[prof.side==="family"?r.carerUid:r.familyUid];return o?`<div class="panel row" style="cursor:pointer" data-r="${r.id}" data-o="${o.id}"><div class="ph" style="width:52px;aspect-ratio:1;border-radius:50%;font-size:26px">${esc(o.first[0])}</div><b>${esc(o.name)}</b></div>`:""}).join(""):`<div class="empty">${bun()}<h3>No chats yet</h3><p>Heart someone on Discover.</p></div>`);
+ el.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>chatView(b.dataset.r,ppl[b.dataset.o]));
+ el.querySelectorAll("[data-hi]").forEach(b=>b.onclick=()=>openChat(ppl[b.dataset.hi]));
+}
+
+/* ---------- urgent ---------- */
+async function urgent(el){
+ el.innerHTML=`<h1>Urgent board</h1>${prof.side==="family"?`<div class="panel"><b>Need help fast?</b><div class="chips" id="wh">${["Today","Tonight","Tomorrow"].map((c,i)=>`<button class="chip ${i?"":"on"}" data-w="${c}">${c}</button>`).join("")}</div><label class="fld">What do you need?</label><textarea id="ds" rows="3" maxlength="300" placeholder="Pick up from school, 3 hours"></textarea><label class="fld">Pay per hour (AUD)</label><input id="rt" type="number" value="35" min="15" max="120"><div class="err" id="er"></div><button class="btn" id="pb" style="width:100%">Post urgent job</button></div>`:""}<div id="l"></div>`;
+ let when="Today";el.querySelectorAll("[data-w]").forEach(b=>b.onclick=()=>{when=b.dataset.w;el.querySelectorAll("[data-w]").forEach(c=>c.classList.toggle("on",c===b))});
+ if($("#pb"))$("#pb").onclick=async()=>{const t=$("#ds").value.trim();if(!t)return $("#er").textContent="Describe it";if(bad(t))return $("#er").textContent="No emails or phone numbers";
+  const d=new Date();if(when==="Tonight")d.setHours(18,0,0,0);else if(when==="Tomorrow"){d.setDate(d.getDate()+1);d.setHours(9,0,0,0)}else d.setHours(Math.max(d.getHours()+1,8),0,0,0);if(d<=new Date())d.setHours(d.getHours()+1);
+  const rate=+$("#rt").value||35,note=JSON.stringify({t:t.slice(0,300),r:rate,h:3,k:prof.kids.join(", ").slice(0,60),role:"babysitter",tags:[],fam:prof.name,sub:"",img:[]});
+  try{await addDoc(collection(db,"jobs"),{familyUid:me.uid,when:Timestamp.fromDate(d),dayParts:[when],postcode:prof.pc||"",bands:[String(rate)],note:note.slice(0,1000),state:"open",createdAt:serverTimestamp()});toast("Posted");urgent(el)}catch(e){$("#er").textContent="Could not post: "+e.code}};
+ loading($("#l"));
+ const s=await getDocs(query(collection(db,"jobs"),where("state","==","open"),limit(100))).catch(()=>null);
+ const jobs=(s?s.docs:[]).map(d=>({id:d.id,...d.data()})).filter(j=>j.when.toDate()>new Date()).sort((a,b)=>a.when.seconds-b.when.seconds);
+ const fams={};await Promise.all([...new Set(jobs.map(j=>j.familyUid))].map(async i=>{const x=await getDoc(doc(db,"profiles",i)).catch(()=>null);if(x&&x.exists())fams[i]=person(i,x.data())}));
+ $("#l").innerHTML=jobs.length?jobs.map(j=>{let n={};try{n=JSON.parse(j.note)}catch{n={t:j.note}};const f=fams[j.familyUid];return `<div class="panel"><div class="row" style="margin:0"><span class="pill sun">${esc(j.dayParts?.[0]||"Soon")}</span><span class="pill">$${esc(n.r||j.bands?.[0]||"")} an hour</span><span class="pill sky">Postcode ${esc(j.postcode)}</span></div><h3 style="margin:8px 0 4px">${esc(n.fam||f?.name||"A family")}</h3><div>${esc(n.t||"")}</div>${n.k?`<div class="mut">Kids ${esc(n.k)}</div>`:""}<div class="row">${prof.side==="carer"&&j.familyUid!==me.uid?`<button class="btn sm" data-y="${j.id}">I can help</button>`:""}${j.familyUid===me.uid?`<button class="btn sm ghost" data-x="${j.id}">Close</button>`:""}</div></div>`}).join(""):`<div class="empty">${bun()}<h3>No urgent jobs right now</h3></div>`;
+ el.querySelectorAll("[data-y]").forEach(b=>b.onclick=async ev=>{const j=jobs.find(x=>x.id===b.dataset.y);try{await setDoc(doc(db,"jobs",j.id,"interest",me.uid),{note:"",createdAt:serverTimestamp()});notify(j.familyUid,"job","A carer said yes to your urgent job.");confetti(ev.clientX,ev.clientY);b.textContent="Sent";b.disabled=true;const f=fams[j.familyUid];if(f)openChat(f)}catch(e){toast("Could not apply")}});
+ el.querySelectorAll("[data-x]").forEach(b=>b.onclick=async()=>{await updateDoc(doc(db,"jobs",b.dataset.x),{state:"closed"}).catch(()=>{});urgent(el)});
+}
+
+/* ---------- bookings ---------- */
+function bookForm(p){
+ const d=new Date(Date.now()+864e5).toISOString().slice(0,10);
+ R.insertAdjacentHTML("beforeend",`<div class="authwrap" id="bf" style="position:fixed;inset:0;z-index:50;background:rgba(45,42,53,.5)"><div class="card"><h2>Book ${esc(p.first)}</h2><label class="fld">Date</label><input id="bd" type="date" value="${d}"><label class="fld">From</label><input id="b1" type="time" value="09:00"><label class="fld">To</label><input id="b2" type="time" value="12:00"><label class="fld">Rate per hour</label><input id="br" type="number" value="${p.rate||35}"><div class="err" id="er"></div><button class="btn" id="bg" style="width:100%">Send request</button><p class="mut" style="text-align:center"><a href="#" id="bc">Cancel</a></p></div></div>`);
+ $("#bc").onclick=e=>{e.preventDefault();$("#bf").remove()};
+ $("#bg").onclick=async()=>{const date=$("#bd").value,from=$("#b1").value,to=$("#b2").value,rate=+$("#br").value;const m=t=>{const [h,mi]=t.split(":").map(Number);return h*60+mi};const hrs=Math.max(0,(m(to)-m(from))/60);
+  const end=new Date(new Date(date+"T"+to+":00Z").getTime()-8*3600e3);if(!hrs||end<=new Date())return $("#er").textContent="Pick a future time with an end after the start";
+  const pid=pairId(me.uid,p.id),rr=doc(db,"relationships",pid),br=doc(collection(db,"relationships",pid,"bookings")),ex=await getDoc(rr);const b=writeBatch(db);
+  if(!ex.exists()){const iso=new Date().toISOString();b.set(rr,{members:[me.uid,p.id].sort(),familyUid:me.uid,carerUid:p.id,state:"pending",createdBy:me.uid,createdAt:iso,createdDay:iso.slice(0,10)})}else if(!["contact","hired"].includes(ex.data().state))return $("#er").textContent="Not available right now";
+  b.set(br,{familyUid:me.uid,carerUid:p.id,date,from,to,endAt:Timestamp.fromDate(end),rate,estimate:Math.round(rate*hrs*100)/100,recurring:"none",weekdays:[],childIds:[],shareAddress:false,state:"requested",createdBy:me.uid,createdAt:serverTimestamp()});
+  try{await b.commit();notify(p.id,"booking","New booking request.",pid);$("#bf").remove();toast("Request sent");tab="bookings";shell()}catch(e){$("#er").textContent="Could not book: "+e.code}};
+}
+async function bookings(el){
+ loading(el);const q1=await getDocs(query(collection(db,"relationships"),where(prof.side==="family"?"familyUid":"carerUid","==",me.uid)));
+ const rows=[];for(const r of q1.docs){const s=await getDocs(collection(db,"relationships",r.id,"bookings")).catch(()=>null);(s?s.docs:[]).forEach(d=>rows.push({id:d.id,pid:r.id,...d.data()}))}
+ rows.sort((a,b)=>(b.date+b.from).localeCompare(a.date+a.from));
+ const ppl={};await Promise.all([...new Set(rows.map(r=>prof.side==="family"?r.carerUid:r.familyUid))].map(async i=>{const x=await getDoc(doc(db,"profiles",i)).catch(()=>null);if(x&&x.exists())ppl[i]=person(i,x.data())}));
+ const pay={};await Promise.all(rows.map(async r=>{pay[r.id]=(await fetch(API+"/pay/status?bookingId="+r.id).then(x=>x.json()).catch(()=>({}))).status||"unpaid"}));
+ el.innerHTML=`<h1>Bookings</h1>`+(rows.length?rows.map(r=>{const car=r.carerUid===me.uid,o=ppl[car?r.familyUid:r.carerUid];return `<div class="panel"><div class="row" style="margin:0"><b>${esc(o?.name||"Member")}</b><span class="pill ${r.state==="accepted"?"sun":""}">${esc(r.state)}</span>${pay[r.id]!=="unpaid"?`<span class="pill sky">${pay[r.id]==="held"?"Paid, held safely":"Paid out"}</span>`:""}</div><div class="mut">${esc(r.date)}, ${esc(r.from)} to ${esc(r.to)} &middot; $${r.rate} an hour, about $${Math.round(r.estimate)}</div><div class="row">
+  ${car&&r.state==="requested"?`<button class="btn sm" data-a="${r.id}|${r.pid}|accepted">Accept</button><button class="btn sm ghost" data-a="${r.id}|${r.pid}|declined">Decline</button>`:""}
+  ${!car&&r.state==="accepted"?`<button class="btn sm" data-a="${r.id}|${r.pid}|completed">Job done</button>`:""}
+  ${["requested","accepted"].includes(r.state)?`<button class="btn sm ghost" data-a="${r.id}|${r.pid}|cancelled">Cancel</button>`:""}
+  ${!car&&["accepted","completed"].includes(r.state)&&pay[r.id]==="unpaid"?`<button class="btn sm pink" data-p="${r.id}|${r.pid}">Pay now</button>`:""}
+  ${!car&&pay[r.id]==="held"?`<button class="btn sm pink" data-rl="${r.id}|${r.pid}">Release to carer</button>`:""}</div></div>`}).join(""):`<div class="empty">${bun()}<h3>No bookings yet</h3></div>`);
+ el.querySelectorAll("[data-a]").forEach(b=>b.onclick=async()=>{const [id,pid,to]=b.dataset.a.split("|");const u={state:to};if(to!=="cancelled"&&to!=="completed")u.decidedAt=serverTimestamp();if(to==="cancelled"){u.cancelledBy=me.uid;u.cancelledAt=serverTimestamp()}
+  try{const bt=writeBatch(db);bt.update(doc(db,"relationships",pid,"bookings",id),u);if(to==="accepted"){const rl=await getDoc(doc(db,"relationships",pid));if(rl.data()?.state==="pending")bt.update(doc(db,"relationships",pid),{state:"contact",contactBy:me.uid})}await bt.commit();
+   const r=rows.find(x=>x.id===id);notify(r.familyUid===me.uid?r.carerUid:r.familyUid,"booking","Booking "+to+".",pid);if(to==="completed"||to==="cancelled")api("/stats/event",{pairId:pid,bookingId:id});bookings(el)}catch(e){toast("Could not update")}});
+ el.querySelectorAll("[data-p]").forEach(b=>b.onclick=async()=>{const [id,pid]=b.dataset.p.split("|");const r=await api("/pay/checkout",{pairId:pid,bookingId:id});if(r.url)location.href=r.url;else toast(r.error||"Payments are not on yet")});
+ el.querySelectorAll("[data-rl]").forEach(b=>b.onclick=async()=>{const [id,pid]=b.dataset.rl.split("|");const r=await api("/pay/release",{pairId:pid,bookingId:id});toast(r.ok?"Released":(r.error||r.why||"Could not release"));bookings(el)});
+}
+
+/* ---------- me ---------- */
+function meView(el){
+ const fam=prof.side==="family";
+ el.innerHTML=`<h1>Me</h1><div class="panel"><div class="row" style="margin:0"><div class="ph" style="width:72px;aspect-ratio:1;border-radius:50%;font-size:34px">${esc(prof.first[0])}</div><div><h3>${esc(prof.name)}</h3><div class="mut">${esc(me.email||"")}</div></div></div><div id="st" style="margin-top:8px"></div></div>
+ <div class="panel"><label class="fld">First name</label><input id="nm" value="${esc(prof.name)}" maxlength="30"><label class="fld">Postcode</label><input id="pc" value="${esc(prof.pc)}" maxlength="10">${fam?`<label class="fld">Kids ages, separated by commas. No names.</label><input id="ak" value="${esc(prof.kids.join(", "))}">`:`<label class="fld">Rate per hour</label><input id="rt" type="number" value="${prof.rate||""}"><label class="fld">Years with children</label><input id="yr" type="number" value="${prof.years||0}">`}<label class="fld">About you</label><textarea id="ab" rows="3" maxlength="300">${esc(prof.about)}</textarea><div class="err" id="er"></div><button class="btn" id="sv" style="width:100%">Save</button></div>
+ ${fam?"":`<div class="panel"><b>Get paid</b><p class="mut">Set up payouts with Stripe. You keep 100 percent of your rate.</p><button class="btn sm" id="po">Set up payouts</button></div>`}
+ <button class="btn ghost" id="lo" style="width:100%">Log out</button>`;
+ fetch(API+"/stats?uid="+me.uid).then(r=>r.json()).then(s=>{$("#st").innerHTML=`<span class="pill sun">${s.done} jobs done</span><span class="pill sky">${s.done+s.cancelled?Math.round(s.done/(s.done+s.cancelled)*100)+"% completed":"New here"}</span>`}).catch(()=>{});
+ $("#sv").onclick=async()=>{const nm=$("#nm").value.trim(),ab=$("#ab").value.trim();if(bad(nm+" "+ab))return $("#er").textContent="No emails or phone numbers";const card={};if(fam){card.kids=($("#ak").value.match(/\d+/g)||[]).slice(0,8).map(a=>({ageYears:+a}))}else{if(+$("#rt").value>0)card.rate=+$("#rt").value;card.experienceYears=Math.max(0,Math.min(60,+$("#yr").value||0))}
+  try{await saveProfile({name:nm,postcode:$("#pc").value.trim(),about:ab,card});await loadProf();toast("Saved");shell()}catch(e){$("#er").textContent="Could not save: "+e.code}};
+ if($("#po"))$("#po").onclick=async()=>{const r=await api("/pay/onboard",{});if(r.url)location.href=r.url;else toast(r.error||"Payments are not on yet")};
+ $("#lo").onclick=()=>signOut(auth);
+}
+
+async function loadProf(){const s=await getDoc(doc(db,"profiles",me.uid));prof=s.exists()?person(me.uid,s.data()):null;return prof}
+async function boot(){await loadProf();if(!prof||!prof.side)return setupView();await loadHearts();shell()}
+onAuthStateChanged(auth,async u=>{me=u;if(!u){if(unsub){unsub();unsub=null}return authView(location.hash==="#signup"?"signup":"login")}try{await boot()}catch(e){R.innerHTML=`<div class="empty">${bun()}<h3>Something went wrong</h3><p>${esc(e.code||e.message)}</p><button class="btn" onclick="location.reload()">Try again</button></div>`}});
+addEventListener("hashchange",()=>{if(!auth.currentUser)authView(location.hash==="#signup"?"signup":"login")});
+</script></body></html>

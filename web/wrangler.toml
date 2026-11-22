@@ -1,0 +1,6 @@
+name = "caresitters-web"
+compatibility_date = "2025-01-01"
+account_id = "b6d55c5c55e8a9c6a0c7b0cc1cb2e1c4"
+[assets]
+directory = "./public"
+not_found_handling = "single-page-application"
