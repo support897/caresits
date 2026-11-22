@@ -1,6 +1,7 @@
 import SwiftUI
 import FirebaseAuth
 import FirebaseFirestore
+import MessageUI
 
 // ---------- contact blocking ----------
 enum RdSafe {
@@ -460,20 +461,66 @@ enum RdReviewLink {
     }
 }
 
+struct RdMailSheet: UIViewControllerRepresentable {
+    let to: String; let subject: String; let html: String
+    @Environment(\.dismiss) var dismiss
+    func makeUIViewController(context: Context) -> MFMailComposeViewController {
+        let v = MFMailComposeViewController()
+        v.mailComposeDelegate = context.coordinator
+        v.setToRecipients([to]); v.setSubject(subject); v.setMessageBody(html, isHTML: true)
+        return v
+    }
+    func updateUIViewController(_ u: MFMailComposeViewController, context: Context) {}
+    func makeCoordinator() -> Coord { Coord(self) }
+    final class Coord: NSObject, MFMailComposeViewControllerDelegate {
+        let p: RdMailSheet
+        init(_ p: RdMailSheet) { self.p = p }
+        func mailComposeController(_ c: MFMailComposeViewController, didFinishWith r: MFMailComposeResult, error: Error?) { p.dismiss() }
+    }
+}
+
 struct RdAskReview: View {
     @EnvironmentObject var st: RdStore
-    @State private var url: URL? = nil
+    @State private var theirName = ""
+    @State private var theirEmail = ""
     @State private var busy = false
+    @State private var mail: Bool = false
+    @State private var html = ""
+    @State private var plain = ""
+    @State private var shareURL: URL? = nil
+    var valid: Bool { theirEmail.contains("@") && theirEmail.contains(".") }
+    func page(_ url: URL) -> String {
+        let me = st.firstName.isEmpty ? "a Caresitters member" : st.firstName
+        let hi = theirName.isEmpty ? "Hi," : "Hi " + theirName + ","
+        return "<div style=\"font-family:-apple-system,Helvetica,Arial,sans-serif;color:#2D2A35;max-width:480px;margin:0 auto\"><div style=\"text-align:center;padding:18px 0;border-bottom:3px solid #F4A9BC\"><span style=\"font-size:26px;font-weight:800;color:#C2345B\">Caresitters</span></div><p style=\"font-size:16px\">\(hi)</p><p style=\"font-size:16px;line-height:1.5\">\(me) uses Caresitters and would love a short review of their work with you. It takes one minute. You confirm your email so the review is marked verified.</p><p style=\"text-align:center;margin:26px 0\"><a href=\"\(url.absoluteString)\" style=\"background:#C2345B;color:#fff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:999px;display:inline-block\">Write a review for \(me)</a></p><p style=\"font-size:13px;color:#777\">Or open this link: \(url.absoluteString)</p><p style=\"font-size:13px;color:#777\">Caresitters. Trusted care, verified reviews.</p></div>"
+    }
     var body: some View {
         RdCard(title: "Ask for a review") {
-            RdMuted(text: "Send a link to a family or a past employer. They sign in with their email and write a short review. It shows as verified.")
-            if let url = url {
-                ShareLink(item: url, message: Text("Hi, I use Caresitters. Could you write a short review of my work with you? It takes one minute. You sign in with your email so it counts as verified.")) {
-                    Text("Share my review link").font(RdF.bold(16)).foregroundColor(RdC.ink).frame(maxWidth: .infinity, minHeight: 48).background(RdC.pink).clipShape(Capsule())
+            RdMuted(text: "Type who should write it. We make a branded email for you to send. They confirm their email and write a short review. It shows as verified.")
+            RdInput(label: "Their first name", text: $theirName)
+            RdInput(label: "Their email", text: $theirEmail)
+            RdCta(title: busy ? "Making email" : "Send review request", small: true) {
+                guard valid else { st.err = "Type their email first."; return }
+                busy = true
+                Task {
+                    guard let url0 = await RdReviewLink.make() else { busy = false; st.err = "Could not make the link. Try again."; return }
+                    var url = url0
+                    if let c = URLComponents(url: url0, resolvingAgainstBaseURL: false) {
+                        var cc = c; cc.queryItems = (c.queryItems ?? []) + [URLQueryItem(name: "n", value: st.firstName)]
+                        url = cc.url ?? url0
+                    }
+                    html = page(url)
+                    plain = "Hi, " + (st.firstName.isEmpty ? "I" : st.firstName) + " uses Caresitters and would love a short review of their work with you. One minute. You confirm your email so it counts as verified: " + url.absoluteString
+                    shareURL = url
+                    busy = false
+                    if MFMailComposeViewController.canSendMail() { mail = true }
+                    else if let m = "mailto:\(theirEmail)?subject=\("Review request from Caresitters".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")&body=\(plain.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")".description as String?, let mu = URL(string: m) { UIApplication.shared.open(mu) }
                 }
-            } else {
-                RdCta(title: busy ? "Making link" : "Make my review link", small: true) { busy = true; Task { url = await RdReviewLink.make(); busy = false; if url == nil { st.err = "Could not make the link. Try again." } } }
+            }
+            if let u = shareURL {
+                ShareLink(item: u, message: Text(plain)) { Text("Or share by message").font(RdF.body(14)).foregroundColor(RdC.ras) }
             }
         }
+        .sheet(isPresented: $mail) { RdMailSheet(to: theirEmail, subject: "A review request from " + (st.firstName.isEmpty ? "a Caresitters member" : st.firstName) + " on Caresitters", html: html) }
     }
 }
