@@ -222,9 +222,12 @@ final class RdUrgentStore: ObservableObject {
             var km = -1.0
             if let o, let la = j.lat, let ln = j.lng { km = Geo.km(o, CLLocationCoordinate2D(latitude: la, longitude: ln)) }
             if km > Double(st.radius) { continue }
-            let yes = await Backend.jobYeses(j.id)
-            if let u = RdLive.uid, yes.contains(u) { mineApplied.insert(j.id) }
-            out.append(make(j, fam: profs[j.familyUid], km: km, yes: yes.count))
+            var cnt = 0
+            if let u = RdLive.uid {
+                if j.familyUid == u { cnt = (await Backend.jobYeses(j.id)).count }
+                else if let d = try? await Firestore.firestore().collection("jobs").document(j.id).collection("interest").document(u).getDocument(), d.exists { mineApplied.insert(j.id) }
+            }
+            out.append(make(j, fam: profs[j.familyUid], km: km, yes: cnt))
         }
         out.sort { ($0.km < 0 ? 999 : $0.km) < ($1.km < 0 ? 999 : $1.km) }
         applied = mineApplied
