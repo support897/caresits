@@ -1,0 +1,64 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Leave a review | Caresitters</title>
+<style>
+body{margin:0;font-family:-apple-system,system-ui,sans-serif;color:#2D2A35;background:#fff}
+main{max-width:440px;margin:0 auto;padding:28px 22px}
+h1{font-size:26px;margin:0 0 8px}p{line-height:1.45;color:#5b5766}
+input,textarea{width:100%;box-sizing:border-box;font:inherit;padding:14px;border:1.5px solid #F6CBD3;border-radius:14px;margin:6px 0 14px}
+button{width:100%;font:inherit;font-weight:700;padding:15px;border:0;border-radius:999px;background:#C2345B;color:#fff;margin-top:4px}
+button:disabled{opacity:.5}.stars{display:flex;gap:8px;margin:8px 0 16px}.stars span{font-size:40px;cursor:pointer;color:#F6CBD3;line-height:1}.stars span.on{color:#F6D67C}
+.err{color:#C2345B;font-weight:600}.box{background:#F6CBD3;border-radius:16px;padding:14px 16px;margin:14px 0}
+</style></head><body><main>
+<h1 id="h">Leave a review</h1><p id="sub"></p><div id="app"></div>
+</main>
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import {getAuth,isSignInWithEmailLink,signInWithEmailLink,sendSignInLinkToEmail,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import {getFirestore,doc,setDoc,getDoc,serverTimestamp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+const app=initializeApp({apiKey:"AIzaSyDbi4vqhN6I7Zz7_-6-ZQSZzd3MnQiYBCE",authDomain:"caresits-812a0.firebaseapp.com",projectId:"caresits-812a0",appId:"1:908064912971:web:88858e5fa8751f66b23fce"});
+const auth=getAuth(app),db=getFirestore(app);
+const q=new URLSearchParams(location.search),u=q.get("u"),t=q.get("t");
+const $=id=>document.getElementById(id),A=$("app"),H=$("h"),S=$("sub");
+const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function msg(x,e){const m=$("m");if(m){m.className=e?"err":"";m.textContent=x}}
+if(!u||!t){H.textContent="Link not valid";S.textContent="Ask the person to send you a new review link."}
+else start();
+async function start(){
+ S.textContent="Someone you worked with asked for a short review. It takes one minute. First confirm your email, so the review is marked verified.";
+ if(isSignInWithEmailLink(auth,location.href)){
+  let em=localStorage.getItem("rvEmail");
+  if(!em){em=prompt("Type your email to finish");}
+  try{await signInWithEmailLink(auth,em,location.href);localStorage.removeItem("rvEmail");form();}catch(e){emailStep("That link did not work or is old. Send a new one.")}
+ } else onAuthStateChanged(auth,x=>{ if(x&&!x.isAnonymous) form(); else emailStep(); },()=>emailStep());
+}
+function emailStep(err){
+ A.innerHTML=`<label>Your email</label><input id="em" type="email" placeholder="you@example.com" autocomplete="email"><button id="go">Send me a sign in link</button><p id="m" class="${err?"err":""}">${err||""}</p><div class="box">We only use your email to check you are a real person. It is never shown.</div>`;
+ $("go").onclick=async()=>{const em=$("em").value.trim();if(!/^\S+@\S+\.\S+$/.test(em))return msg("Type a valid email",1);
+  $("go").disabled=true;
+  try{await sendSignInLinkToEmail(auth,em,{url:location.href,handleCodeInApp:true});localStorage.setItem("rvEmail",em);
+   A.innerHTML=`<div class="box"><b>Check your email.</b><br>We sent a link to ${esc(em)}. Open it on this device to continue. Look in spam if you do not see it.</div>`;
+  }catch(e){$("go").disabled=false;msg("Could not send: "+(e.code||e.message),1)}};
+}
+function form(){
+ H.textContent="Your review";S.textContent="Be honest and kind. Do not write phone numbers or emails.";
+ let n=0;
+ A.innerHTML=`<label>Stars</label><div class="stars" id="st">${[1,2,3,4,5].map(i=>`<span data-i="${i}">&#9733;</span>`).join("")}</div>
+ <label>Your first name</label><input id="nm" maxlength="40" placeholder="First name">
+ <label>How do you know them?</label><input id="rel" maxlength="40" placeholder="Example: I hired them as a nanny">
+ <label>Your review</label><textarea id="tx" rows="5" maxlength="500" placeholder="What was it like?"></textarea>
+ <button id="sb">Send review</button><p id="m"></p>`;
+ $("st").onclick=e=>{const i=+e.target.dataset.i;if(!i)return;n=i;[...$("st").children].forEach((s,k)=>s.classList.toggle("on",k<i))};
+ $("sb").onclick=async()=>{
+  const tx=$("tx").value.trim();
+  if(!n)return msg("Pick stars",1);
+  if(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/.test(tx)||/[0-9][0-9 ().-]{6,}[0-9]/.test(tx))return msg("Please remove emails and phone numbers",1);
+  $("sb").disabled=true;
+  try{
+   const d={from:auth.currentUser.uid,kind:"link",stars:n,text:tx,at:serverTimestamp()};
+   const nm=$("nm").value.trim().slice(0,40),rl=$("rel").value.trim().slice(0,40);
+   if(nm)d.name=nm;if(rl)d.relation=rl;
+   await setDoc(doc(db,"profiles",u,"reviews",t),d);
+   H.textContent="Thank you";S.textContent="";A.innerHTML=`<div class="box">Your verified review was sent. You can close this page.</div>`;
+  }catch(e){$("sb").disabled=false;msg(e.code==="permission-denied"?"This link was already used or is not valid.":"Could not send: "+(e.code||e.message),1)}
+ };
+}
+</script></body></html>
