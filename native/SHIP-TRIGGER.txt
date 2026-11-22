@@ -1,1 +1,1 @@
-ship 6 signed archive
+ship 7 adhoc frameworks

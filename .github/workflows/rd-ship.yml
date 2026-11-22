@@ -55,12 +55,17 @@ jobs:
           xcodebuild archive -project Caresitters.xcodeproj -scheme Caresitters \
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/Caresitters.xcarchive" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$KEY_PATH" -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER_ID" \
-            DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
             CURRENT_PROJECT_VERSION="$BUILD_NO" > archive.log 2>&1 || true
           tail -5 archive.log
           grep -q "ARCHIVE SUCCEEDED" archive.log
+
+      - name: Sign embedded frameworks so export can re-sign them
+        run: |
+          APP="$RUNNER_TEMP/Caresitters.xcarchive/Products/Applications/Caresitters.app"
+          find "$APP/Frameworks" -maxdepth 1 -name "*.framework" -exec codesign --force --sign - --timestamp=none {} \;
+          ls "$APP/Frameworks" | head -20
 
       - name: Archive errors
         if: failure()
