@@ -147,6 +147,11 @@ struct RdFamHome: View {
                     RdCta(title: "See all matches", style: 1, small: true) { st.viewKey = "v1"; st.root("deck") }
                     RdCta(title: "Map", style: 1, small: true) { st.viewKey = "v1"; st.root("map") }
                 }.padding(.horizontal, 16).padding(.top, 8)
+                RdLabel(title: "Need someone now?")
+                RdCard(tint: RdC.pale) {
+                    RdMuted(text: "Post an urgent job. Carers near you see it in seconds and you can book right away.")
+                    RdCta(title: "Post an urgent job", icon: "clock") { st.go("urgentpost") }
+                }
                 RdLabel(title: "This week")
                 RdCard { RdMuted(text: "No bookings yet. Book Maya to get started.") }
                 RdLabel(title: "Need care another way?")
@@ -186,14 +191,15 @@ struct RdTabs: View {
         switch id {
         case "famhome", "carhome": return 0
         case "deck", "list": return 1
-        case "map", "worldmap": return 2
+        case "urgent", "urgentmine": return 2
+        case "map", "worldmap": return 1
         case "bookings": return 3
         case "inbox": return 4
         default: return 0
         }
     }
     var body: some View {
-        let items: [(String, String, String)] = [("Home", "home", st.isFamily ? "famhome" : "carhome"), (st.isFamily ? "Discover" : "Find Families", "search", "deck"), ("Map", "pin", "map"), ("Bookings", "calendar", "bookings"), ("Messages", "chat", "inbox")]
+        let items: [(String, String, String)] = [("Home", "home", st.isFamily ? "famhome" : "carhome"), (st.isFamily ? "Discover" : "Find Families", "search", "deck"), ("Urgent", "clock", st.isFamily ? "urgentmine" : "urgent"), ("Bookings", "calendar", "bookings"), ("Messages", "chat", "inbox")]
         VStack(spacing: 0) {
             Rectangle().fill(RdC.line).frame(height: 1)
             HStack(spacing: 0) {
@@ -368,7 +374,8 @@ struct RdMenu: View {
     var body: some View {
         let fam: [(String, String)] = [("child", "My children"), ("home", "My family profile"), ("heart", "Saved carers"), ("camera", "My photos"), ("shield", "Safety and checks"), ("bell", "Notifications"), ("group", "CareSpace"), ("info", "Help and support"), ("settings", "Settings"), ("loop", "Switch role")]
         let car: [(String, String)] = [("person", "My profile"), ("calendar", "Availability"), ("cap", "Qualifications"), ("camera", "My photos"), ("doc", "Resume"), ("rate", "Rates and preferences"), ("shield", "Safety"), ("group", "CareSpace"), ("bell", "Notifications"), ("settings", "Settings"), ("loop", "Switch role")]
-        let items: [(String, String)] = st.isFamily ? fam : car
+        var items: [(String, String)] = st.isFamily ? fam : car
+        items.insert(("clock", "Urgent jobs"), at: 0)
         VStack(spacing: 0) {
             RdHeader(title: "Menu")
             RdScroll {
@@ -380,6 +387,7 @@ struct RdMenu: View {
     }
     func route(_ t: String) {
         switch t {
+        case "Urgent jobs": st.go(st.isFamily ? "urgentmine" : "urgent")
         case "Settings": st.go("settings")
         case "Safety and checks", "Safety": st.go("safety")
         case "Resume": st.go("resume")

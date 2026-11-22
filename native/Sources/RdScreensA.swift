@@ -152,29 +152,37 @@ struct RdSetupWho: View {
     @EnvironmentObject var st: RdStore
     var body: some View {
         let r = st.setupRole
-        RdStepFrame(title: "About you", step: 1, next: "sa") {
+        RdStepFrame(title: "About you", step: 1, next: r == "aupair" ? "visacheck" : "sa") {
             if r == "aupair" {
-                RdLabel(title: "Which country are you from?", sub: "Families can find you by country.")
-                RdField(label: "Search", value: "Germany")
+                RdLabel(title: "Which country are you from?", sub: "Pick from the list. Families can find you by country.")
+                RdField(label: "Your country", value: "Germany")
                 RdWrap(items: ["Germany", "France", "Italy", "Ireland", "Taiwan", "Japan", "Brazil", "Spain"], on: ["Germany"])
-                RdLabel(title: "Where do you want to go?")
-                RdWrap(items: ["Australia", "New Zealand", "Ireland", "United Kingdom", "USA", "Canada", "Germany", "France"], on: ["Australia"])
-                RdLabel(title: "Your visa", sub: "We show this on your profile. It never changes your match score.")
+                RdLabel(title: "Where do you want to go?", sub: "Pick up to 3. Put your first choice first.")
+                RdVisaRow(n: 1, place: "Australia", status: "You can apply from Germany")
+                RdVisaRow(n: 2, place: "New Zealand", status: "You can apply from Germany")
+                RdVisaRow(n: 3, place: "Ireland", status: "Check the rules")
+                RdLabel(title: "Your visa for your first choice")
                 RdWrap(items: ["I live there already", "Visa approved", "Visa in progress", "I have not applied yet"], on: ["Visa approved"])
-            } else if r == "family" {
-                RdLabel(title: "Where is your home?", sub: "We show people near you. Your street stays private.")
-                RdField(label: "Country", value: "Australia")
-                RdField(label: "City", value: "Brisbane QLD")
-                RdField(label: "Suburb", value: "Paddington")
-                RdLabel(title: "Your family")
-                RdWrap(items: ["Two parents", "One parent", "Grandparents help", "Shared care"], on: ["Two parents"])
+                RdLabel(title: "When can you arrive?")
+                RdWrap(items: ["Now", "In 1 month", "In 2 months", "In 3 months", "Later"], on: ["In 2 months"])
             } else {
-                RdLabel(title: "Where do you work?", sub: "Families near you will find you.")
+                let fam = r == "family"
+                RdLabel(title: "Which country?")
                 RdField(label: "Country", value: "Australia")
-                RdField(label: "City", value: "Brisbane QLD")
-                RdField(label: "Suburb", value: "Ashgrove")
-                RdLabel(title: "How far can you travel?")
+                RdLabel(title: "Your postcode", sub: fam ? "We show you carers inside your distance. Carers see your postcode, not your street." : "Families see your postcode and how far you are. Never your street.")
+                RdField(label: "Postcode", value: "4064 , Paddington, Brisbane QLD")
+                RdLabel(title: fam ? "How far should carers be?" : "How far can you travel?", sub: "We only show people inside this circle.")
                 RdWrap(items: ["5 km", "10 km", "15 km", "25 km"], on: ["15 km"])
+                if fam {
+                    RdLabel(title: "Open to au pairs from", sub: "Pick countries, or leave empty for all.")
+                    RdWrap(items: ["Germany", "France", "Ireland", "Italy", "Taiwan", "Brazil", "Japan", "Spain"], on: [])
+                    RdWrap(items: ["Visa ready only", "Already in Australia"], on: ["Visa ready only"]).padding(.top, 8)
+                    RdLabel(title: "Your family")
+                    RdWrap(items: ["Two parents", "One parent", "Grandparents help", "Shared care"], on: ["Two parents"])
+                } else {
+                    RdLabel(title: "Work permission")
+                    RdWrap(items: ["Citizen", "Permanent resident", "Work visa"], on: ["Citizen"])
+                }
             }
         }
     }

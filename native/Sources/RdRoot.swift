@@ -3,8 +3,8 @@ import SwiftUI
 /// The root of the redesign. Holds the router, the edge swipe back, and the tab bar.
 struct RdRoot: View {
     @StateObject private var st = RdStore()
-    private let tabScreens: Set<String> = ["famhome", "carhome", "deck", "map", "worldmap", "list", "bookings", "inbox"]
-    private let noSwipe: Set<String> = ["deck", "splash", "famhome", "carhome", "bookings", "inbox", "map", "worldmap", "list"]
+    private let tabScreens: Set<String> = ["famhome", "carhome", "deck", "map", "worldmap", "list", "bookings", "inbox", "urgent", "urgentmine"]
+    private let noSwipe: Set<String> = ["deck", "splash", "famhome", "carhome", "bookings", "inbox", "map", "worldmap", "list", "urgent", "urgentmine"]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -80,6 +80,15 @@ struct RdRoot: View {
         case "revsent": RdRevSent()
         case "revwrite": RdRevWrite()
         case "revapps": RdRevApps()
+        case "urgent": RdUrgent()
+        case "urgentdetail": RdUrgentDetail()
+        case "urgentapply": RdUrgentApply()
+        case "urgentsent": RdUrgentSent()
+        case "urgentpost": RdUrgentPost()
+        case "urgentposted": RdUrgentPosted()
+        case "urgentmine": RdUrgentMine()
+        case "urgentbooked": RdUrgentBooked()
+        case "visacheck": RdVisaCheck()
         default: RdSplash()
         }
     }

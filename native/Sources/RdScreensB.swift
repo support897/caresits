@@ -48,6 +48,9 @@ struct RdDeck: View {
                     }
                     Spacer(minLength: 0)
                 }
+                if c.fm && c.au { RdPlaceRibbon(text: "From " + c.car.from + ". Picked Australia as first choice", icon: "globe") }
+                else if !c.fm && c.au { RdPlaceRibbon(text: "Postcode " + RdPostcode.of(c.fam.suburb) + ", " + c.fam.suburb + ". Open to au pairs from Germany first") }
+                else { RdPlaceRibbon(text: "Postcode " + RdPostcode.of(c.fm ? c.car.suburb : c.fam.suburb) + ", " + (c.fm ? c.car.suburb : c.fam.suburb) + ", inside your 15 km") }
                 HStack(spacing: 6) { RdPills(roles: c.pillRoles) }
                 HStack(spacing: 6) {
                     if c.fm && !c.au { RdChip(text: "Blue Card", icon: "shield") }
