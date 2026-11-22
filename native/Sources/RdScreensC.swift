@@ -374,8 +374,7 @@ struct RdMenu: View {
     var body: some View {
         let fam: [(String, String)] = [("child", "My children"), ("home", "My family profile"), ("heart", "Saved carers"), ("camera", "My photos"), ("shield", "Safety and checks"), ("bell", "Notifications"), ("group", "CareSpace"), ("info", "Help and support"), ("settings", "Settings"), ("loop", "Switch role")]
         let car: [(String, String)] = [("person", "My profile"), ("calendar", "Availability"), ("cap", "Qualifications"), ("camera", "My photos"), ("doc", "Resume"), ("rate", "Rates and preferences"), ("shield", "Safety"), ("group", "CareSpace"), ("bell", "Notifications"), ("settings", "Settings"), ("loop", "Switch role")]
-        var items: [(String, String)] = st.isFamily ? fam : car
-        items.insert(("clock", "Urgent jobs"), at: 0)
+        let items: [(String, String)] = [("clock", "Urgent jobs")] + (st.isFamily ? fam : car)
         VStack(spacing: 0) {
             RdHeader(title: "Menu")
             RdScroll {
