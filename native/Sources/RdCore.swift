@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreLocation
 import UIKit
 
 // Caresitters redesign: palette, fonts, icons, shared components and the little router.
@@ -393,6 +394,21 @@ final class RdStore: ObservableObject {
     @Published var isFamily: Bool = true
     @Published var tab: Int = 0
     @Published var pickedCare: String = "nanny"
+    @Published var firstName: String = ""
+    @Published var email: String = ""
+    @Published var password: String = ""
+    @Published var country: String = "Australia"
+    @Published var postcode: String = ""
+    @Published var radius: Int = 15
+    @Published var home: String = ""
+    @Published var dests: [String] = []
+    @Published var visa: String = "I have not applied yet"
+    @Published var visaOnly: Bool = false
+    @Published var inCountryOnly: Bool = false
+    @Published var err: String = ""
+    @Published var chatRel: String = ""
+    @Published var chatName: String = ""
+    @Published var origin: CLLocationCoordinate2D? = nil
     func defaultViewKey() -> String {
         if isFamily { return pickedCare == "aupair" ? "v3" : (pickedCare == "babysitter" ? "v2" : "v1") }
         return pickedCare == "aupair" ? "v5" : "v4"

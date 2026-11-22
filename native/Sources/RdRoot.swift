@@ -18,7 +18,7 @@ struct RdRoot: View {
         .gesture(DragGesture(minimumDistance: 24).onEnded { v in
             if v.startLocation.x < 28 && v.translation.width > 80 && !noSwipe.contains(st.current) { st.back() }
         })
-        .onAppear { launchArgs() }
+        .onAppear { launchArgs(); RdLive.restore(st) }
     }
 
     func launchArgs() {
@@ -53,7 +53,7 @@ struct RdRoot: View {
         case "finding": RdFinding()
         case "famhome": RdFamHome()
         case "carhome": RdCarHome()
-        case "deck": RdDeck()
+        case "deck": if RdLive.signedIn { RdLiveDeck() } else { RdDeck() }
         case "profile": RdProfile()
         case "photos": RdPhotosView()
         case "why": RdWhy()
@@ -62,13 +62,13 @@ struct RdRoot: View {
         case "trialdone": RdTrialDone()
         case "sent": RdSent()
         case "confirmed": RdConfirmed()
-        case "chat": RdChat()
+        case "chat": if st.chatRel.isEmpty { RdChat() } else { RdLiveChat() }
         case "list": RdList()
         case "filters": RdFilters()
         case "map": if st.ctx().au && st.ctx().fm { RdWorldMap() } else { RdMap() }
         case "worldmap": RdWorldMap()
         case "bookings": RdBookings()
-        case "inbox": RdInbox()
+        case "inbox": if RdLive.signedIn { RdLiveInbox() } else { RdInbox() }
         case "me": RdMe()
         case "settings": RdSettings()
         case "settingsmatch": RdSettingsMatch()

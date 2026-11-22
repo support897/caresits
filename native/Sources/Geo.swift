@@ -15,13 +15,14 @@ enum Geo {
     static func saveCache() {
         UserDefaults.standard.set(cache.mapValues { [$0.latitude, $0.longitude] }, forKey: defaultsKey)
     }
-    static func coord(postcode: String) async -> CLLocationCoordinate2D? {
-        let pc = postcode.trimmingCharacters(in: .whitespaces)
+    static func coord(postcode: String, country: String = "Australia") async -> CLLocationCoordinate2D? {
+        let pc0 = postcode.trimmingCharacters(in: .whitespaces)
+        let pc = country == "Australia" ? pc0 : country + "|" + pc0
         guard pc.count >= 4 else { return nil }
         loadCache()
         if let c = cache[pc] { return c }
         if misses.contains(pc) { return nil }
-        let marks = try? await CLGeocoder().geocodeAddressString("\(pc), Australia")
+        let marks = try? await CLGeocoder().geocodeAddressString("\(pc0), \(country)")
         if let c = marks?.first?.location?.coordinate { cache[pc] = c; saveCache(); return c }
         misses.insert(pc); return nil
     }

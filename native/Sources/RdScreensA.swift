@@ -1,4 +1,5 @@
 import SwiftUI
+import AuthenticationServices
 
 // Onboarding and setup screens. Same words and order as the approved mockup.
 
@@ -66,13 +67,19 @@ struct RdRole: View {
 
 struct RdDoor: View {
     @EnvironmentObject var st: RdStore
+    @EnvironmentObject var session: Session
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             RdBigTitle(text: "Hi, what is your name?")
-            RdField(label: "First name", value: "Sofia")
+            RdInput(label: "First name", text: $st.firstName)
             Spacer().frame(height: 18)
-            RdCta(title: "Continue with Google", style: 1) { st.go("caretype") }.padding(.horizontal, 20).padding(.bottom, 12)
-            RdCta(title: "Continue with Apple", style: 2) { st.go("caretype") }.padding(.horizontal, 20)
+            RdCta(title: "Continue with Google", style: 1) {
+                Task { do { try await session.google(); st.err = ""; st.go("caretype") } catch { st.err = error.localizedDescription } }
+            }.padding(.horizontal, 20).padding(.bottom, 12)
+            SignInWithAppleButton(.continue, onRequest: { session.prepareApple($0) }, onCompletion: { r in
+                Task { do { try await session.finishApple(r); st.err = ""; st.go("caretype") } catch { st.err = error.localizedDescription } }
+            }).signInWithAppleButtonStyle(.black).frame(height: 60).clipShape(Capsule()).padding(.horizontal, 20)
+            if !st.err.isEmpty { Text(st.err).font(RdF.body(13)).foregroundColor(RdC.ras).padding(.horizontal, 20).padding(.top, 10) }
             Button { st.go("email") } label: { Text("Use email").font(RdF.bold(15)).foregroundColor(RdC.mut).frame(maxWidth: .infinity).padding(.top, 18) }.buttonStyle(.plain)
             Spacer()
         }
@@ -81,13 +88,24 @@ struct RdDoor: View {
 
 struct RdEmail: View {
     @EnvironmentObject var st: RdStore
+    @EnvironmentObject var session: Session
+    @State private var creating = true
+    @State private var busy = false
     var body: some View {
         VStack(spacing: 0) {
-            RdHeader(title: "Email")
-            RdField(label: "Email", value: "sofia@example.com")
-            RdField(label: "Password", value: "........")
+            RdHeader(title: creating ? "Create account" : "Sign in")
+            RdInput(label: "Email", text: $st.email, keyboard: .emailAddress)
+            RdInput(label: "Password", text: $st.password, secure: true)
+            if !st.err.isEmpty { Text(st.err).font(RdF.body(13)).foregroundColor(RdC.ras).padding(.horizontal, 20).padding(.top, 8) }
+            Button { creating.toggle() } label: { Text(creating ? "I already have an account" : "Make a new account").font(RdF.bold(15)).foregroundColor(RdC.mut).padding(.top, 14) }.buttonStyle(.plain)
             Spacer()
-            RdBottomBar { RdCta(title: "Continue") { st.go("caretype") } }
+            RdBottomBar { RdCta(title: busy ? "One moment" : "Continue") {
+                busy = true
+                Task {
+                    do { try await session.email(st.email.trimmingCharacters(in: .whitespaces), st.password, create: creating); st.err = ""; busy = false; st.go("caretype") }
+                    catch { st.err = error.localizedDescription; busy = false }
+                }
+            } }
         }
     }
 }
@@ -137,51 +155,52 @@ struct RdStepFrame<Content: View>: View {
     var step: Int
     var next: String
     var nextLabel: String = "Next"
+    var onNext: (() -> Void)? = nil
     @ViewBuilder var content: () -> Content
     var body: some View {
         VStack(spacing: 0) {
             RdHeader(title: title)
             HStack(spacing: 4) { ForEach(0..<6, id: \.self) { i in Capsule().fill(i < step ? RdC.pink : RdC.line).frame(height: 5) } }.padding(.horizontal, 20).padding(.bottom, 4)
             RdScroll { content() }
-            RdBottomBar { RdCta(title: nextLabel) { st.go(next) } }
+            RdBottomBar { RdCta(title: nextLabel) { onNext?(); st.go(next) } }
         }
     }
 }
 
 struct RdSetupWho: View {
     @EnvironmentObject var st: RdStore
+    var radiusBinding: Binding<[String]> { Binding(get: { [String(st.radius) + " km"] }, set: { v in st.radius = Int((v.first ?? "15 km").split(separator: " ").first ?? "15") ?? 15 }) }
+    var homeBinding: Binding<[String]> { Binding(get: { st.home.isEmpty ? [] : [st.home] }, set: { st.home = $0.first ?? "" }) }
+    var countryBinding: Binding<[String]> { Binding(get: { [st.country] }, set: { st.country = $0.first ?? "Australia" }) }
+    var visaBinding: Binding<[String]> { Binding(get: { [st.visa] }, set: { st.visa = $0.first ?? st.visa }) }
+    func status(_ d: String) -> String {
+        if d == st.home { return "You live there" }
+        let l = (RdVisaBy.lines[d] ?? ["Not confirmed"])[0]
+        return (l.contains("Not confirmed") || l.contains("No au pair") || l.contains("no au pair")) ? "Check the rules" : "You can apply from " + (st.home.isEmpty ? "home" : st.home)
+    }
     var body: some View {
         let r = st.setupRole
-        RdStepFrame(title: "About you", step: 1, next: r == "aupair" ? "visacheck" : "sa") {
+        RdStepFrame(title: "About you", step: 1, next: r == "aupair" ? "visacheck" : "sa", onNext: { RdLive.saveSetup(st) }) {
             if r == "aupair" {
                 RdLabel(title: "Which country are you from?", sub: "Pick from the list. Families can find you by country.")
-                RdField(label: "Your country", value: "Germany")
-                RdWrap(items: ["Germany", "France", "Italy", "Ireland", "Taiwan", "Japan", "Brazil", "Spain"], on: ["Germany"])
-                RdLabel(title: "Where do you want to go?", sub: "Pick up to 3. Put your first choice first.")
-                RdVisaRow(n: 1, place: "Australia", status: "You can apply from Germany")
-                RdVisaRow(n: 2, place: "New Zealand", status: "You can apply from Germany")
-                RdVisaRow(n: 3, place: "Ireland", status: "Check the rules")
+                RdSelChips(items: RdVisaBy.homeList, multi: false, sel: homeBinding)
+                RdLabel(title: "Where do you want to go?", sub: "Pick up to 3. The first one you tap is your first choice.")
+                RdSelChips(items: RdVisaBy.destList, multi: true, max: 3, sel: $st.dests)
+                ForEach(Array(st.dests.enumerated()), id: \.offset) { i, d in RdVisaRow(n: i + 1, place: d, status: status(d)) }
                 RdLabel(title: "Your visa for your first choice")
-                RdWrap(items: ["I live there already", "Visa approved", "Visa in progress", "I have not applied yet"], on: ["Visa approved"])
-                RdLabel(title: "When can you arrive?")
-                RdWrap(items: ["Now", "In 1 month", "In 2 months", "In 3 months", "Later"], on: ["In 2 months"])
+                RdSelChips(items: ["I live there already", "Visa approved", "Visa in progress", "I have not applied yet"], multi: false, sel: visaBinding)
             } else {
                 let fam = r == "family"
                 RdLabel(title: "Which country?")
-                RdField(label: "Country", value: "Australia")
+                RdSelChips(items: RdVisaBy.destList, multi: false, sel: countryBinding)
                 RdLabel(title: "Your postcode", sub: fam ? "We show you carers inside your distance. Carers see your postcode, not your street." : "Families see your postcode and how far you are. Never your street.")
-                RdField(label: "Postcode", value: "4064 , Paddington, Brisbane QLD")
+                RdInput(label: "Postcode", text: $st.postcode, keyboard: .numbersAndPunctuation)
                 RdLabel(title: fam ? "How far should carers be?" : "How far can you travel?", sub: "We only show people inside this circle.")
-                RdWrap(items: ["5 km", "10 km", "15 km", "25 km"], on: ["15 km"])
+                RdSelChips(items: ["5 km", "10 km", "15 km", "25 km"], multi: false, sel: radiusBinding)
                 if fam {
-                    RdLabel(title: "Open to au pairs from", sub: "Pick countries, or leave empty for all.")
-                    RdWrap(items: ["Germany", "France", "Ireland", "Italy", "Taiwan", "Brazil", "Japan", "Spain"], on: [])
-                    RdWrap(items: ["Visa ready only", "Already in Australia"], on: ["Visa ready only"]).padding(.top, 8)
-                    RdLabel(title: "Your family")
-                    RdWrap(items: ["Two parents", "One parent", "Grandparents help", "Shared care"], on: ["Two parents"])
-                } else {
-                    RdLabel(title: "Work permission")
-                    RdWrap(items: ["Citizen", "Permanent resident", "Work visa"], on: ["Citizen"])
+                    RdLabel(title: "Au pairs", sub: "Only matters if you look for an au pair.")
+                    Toggle("Visa ready only", isOn: $st.visaOnly).font(RdF.bold(16)).padding(.horizontal, 20)
+                    Toggle("Already living in my country", isOn: $st.inCountryOnly).font(RdF.bold(16)).padding(.horizontal, 20).padding(.top, 6)
                 }
             }
         }
