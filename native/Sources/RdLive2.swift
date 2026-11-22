@@ -6,15 +6,16 @@ import FirebaseAuth
 
 struct RdLiveBook: View {
     @EnvironmentObject var st: RdStore
-    @State private var day = Date().addingTimeInterval(86400)
-    @State private var from = Calendar.current.date(bySettingHour: 17, minute: 0, second: 0, of: Date()) ?? Date()
-    @State private var to = Calendar.current.date(bySettingHour: 21, minute: 0, second: 0, of: Date()) ?? Date()
+    @State private var day = Calendar.current.date(bySettingHour: 17, minute: 0, second: 0, of: Date().addingTimeInterval(86400)) ?? Date()
+    @State private var hrs = 4.0
     @State private var rate = 40
     @State private var note = ""
     @State private var busy = false
     @State private var done = false
     @State private var err = ""
-    var hours: Double { max(0, to.timeIntervalSince(from) / 3600) }
+    var hours: Double { return hrs }
+    var from: Date { return day }
+    var to: Date { return day.addingTimeInterval(hrs * 3600) }
     var body: some View {
         VStack(spacing: 0) {
             RdHeader(title: "Book " + st.bookName)
@@ -27,9 +28,9 @@ struct RdLiveBook: View {
                 RdBottomBar { RdCta(title: "See my bookings") { st.root("bookings") } }
             } else {
                 RdScroll {
-                    DatePicker("Day", selection: $day, in: Date()..., displayedComponents: .date).font(RdF.bold(16)).padding(.horizontal, 20)
-                    DatePicker("From", selection: $from, displayedComponents: .hourAndMinute).font(RdF.bold(16)).padding(.horizontal, 20).padding(.top, 8)
-                    DatePicker("To", selection: $to, displayedComponents: .hourAndMinute).font(RdF.bold(16)).padding(.horizontal, 20).padding(.top, 8)
+                    RdLabel(title: "When?")
+                    RdDayTime(date: $day)
+                    Stepper("Hours: " + String(format: "%.1f", hrs), value: $hrs, in: 1...12, step: 0.5).font(RdF.bold(16)).padding(.horizontal, 20).padding(.top, 8)
                     RdLabel(title: "Pay per hour", sub: "About $" + String(Int(Double(rate) * hours)) + " for " + String(format: "%.1f", hours) + " hours. You pay 10 percent on top. The carer keeps 100 percent.")
                     HStack(spacing: 14) { RdIconButton(icon: "minus") { if rate > 20 { rate -= 1 } }; Text("$" + String(rate)).font(RdF.title(34)).foregroundColor(RdC.ras); RdIconButton(icon: "plus") { if rate < 120 { rate += 1 } } }.padding(.horizontal, 20)
                     RdInput(label: "Note to " + st.bookName, text: $note)
@@ -38,6 +39,7 @@ struct RdLiveBook: View {
                 }
                 RdBottomBar { RdCta(title: busy ? "Sending" : (st.isFamily ? "Send booking request" : "Message the family"), icon: "calendar") {
                     guard let u = RdLive.uid else { err = "Please sign in first."; return }
+                    if let p = RdSafe.problem([note]) { err = p; st.err = p; return }
                     if !st.isFamily { Task { if await RdLive.openChat(st, otherUid: st.bookWith) { st.go("chat") } }; return }
                     busy = true
                     let d = DateFormatter(); d.dateFormat = "yyyy-MM-dd"
@@ -60,6 +62,7 @@ struct RdLiveBookings: View {
     @State private var rows: [(Booking, Person?)] = []
     @State private var loaded = false
     @State private var err = ""
+    @State private var reviewing: Booking? = nil
     var body: some View {
         VStack(spacing: 0) {
             HStack { Text("Bookings").font(RdF.title(26)).foregroundColor(RdC.ink); Spacer() }.padding(.horizontal, 20).padding(.top, 6).padding(.bottom, 8)
@@ -79,8 +82,13 @@ struct RdLiveBookings: View {
                             if isCarer && b.state == "requested" {
                                 RdCta(title: "Accept", small: true) { act(b, "accepted", true) }
                                 RdCta(title: "Decline", style: 1, small: true) { act(b, "declined", true) }
+                            } else if b.state == "accepted" && !isCarer && b.dateValue < Date() {
+                                RdCta(title: "Job done", small: true) { act(b, "completed", false) }
+                                RdCta(title: "Cancel", style: 1, small: true) { act(b, "cancelled", false) }
                             } else if b.state == "requested" || b.state == "accepted" {
                                 RdCta(title: "Cancel", style: 1, small: true) { act(b, "cancelled", isCarer) }
+                            } else if b.state == "completed" && !isCarer {
+                                RdCta(title: "Write a review", small: true) { reviewing = b }
                             }
                         }
                     }
@@ -88,6 +96,7 @@ struct RdLiveBookings: View {
                 if !err.isEmpty { Text(err).font(RdF.body(13)).foregroundColor(RdC.ras).padding(.horizontal, 20) }
             }
         }.task { await load() }
+        .sheet(item: $reviewing) { b in RdReviewSheet(booking: b) }
     }
     func act(_ b: Booking, _ to: String, _ carer: Bool) {
         guard let u = RdLive.uid else { return }
@@ -109,12 +118,8 @@ struct RdLiveHome: View {
     @State private var loaded = false
     var body: some View {
         VStack(spacing: 0) {
-            if st.postcode.isEmpty {
-                RdCard(title: "Finish your profile", tint: RdC.pale) {
-                    RdMuted(text: "Add your postcode to see people near you. The map and the world view work now.")
-                    RdCta(title: "Finish my profile", small: true) { st.go("sw") }
-                }
-            }
+            RdMeter()
+            RdHeartsBanner()
             if let x = best {
                 HStack(spacing: 14) {
                     RdRemotePhoto(key: x.p.photoKey).frame(width: 72, height: 72).clipShape(RoundedRectangle(cornerRadius: 20))

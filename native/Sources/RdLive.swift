@@ -80,6 +80,7 @@ enum RdLive {
     static func cardFor(_ st: RdStore) -> [String: Any] {
         var card: [String: Any] = ["careTypes": [careType(st.pickedCare)], "maxDistanceKm": st.radius, "auPairHost": ["country": st.country]]
         if st.setupRole == "aupair" { card["auPair"] = ["homeCountry": st.home, "destinations": st.dests, "visaNotes": st.visa] as [String: Any]; card["auPairHost"] = ["country": st.home.isEmpty ? st.country : st.home] }
+        if st.setupRole != "family" && st.setupRole != "aupair" && st.rate > 0 { card["rate"] = Double(st.rate) }
         if st.setupRole == "family" { card["kids"] = st.kidsAges.prefix(8).map { ["ageYears": $0] }; card["ageGroups"] = bands(st.kidsAges) }
         return card
     }
@@ -127,6 +128,7 @@ enum RdLive {
             st.home = RdLive.fromOf(p) == "abroad" ? "" : RdLive.fromOf(p)
             st.dests = RdLive.dests(p)
             st.kidsAges = p.kids.map { $0.age }
+            st.photoKey = p.photoKey; st.about = p.about; st.rate = Int(p.rate)
             st.viewKey = st.defaultViewKey()
             st.root(st.isFamily ? "famhome" : "carhome")
         }
@@ -283,6 +285,7 @@ final class RdUrgentStore: ObservableObject {
     /// Public comment under the post, with my profile. A carer who applied also gets the private message to the family.
     func comment(_ st: RdStore, job: UrgentJob, text: String) async -> Bool {
         guard let u = RdLive.uid, let me = await RdLive.me(st) else { msg = "Please sign in first."; return false }
+        if let p = RdSafe.problem([text]) { msg = p; return false }
         let role = me.side == "family" ? "family" : (me.services.first == "au_pair" ? "aupair" : (me.services.first ?? "nanny"))
         var ok = true
         do {
@@ -314,6 +317,7 @@ final class RdUrgentStore: ObservableObject {
 
     func create(_ st: RdStore, when: Date, chip: String, hrs: Double, rate: Int, role: String, kids: String, desc: String, tags: [String], imgs: [String] = []) async -> Bool {
         guard let u = RdLive.uid else { msg = "Please sign in first."; return false }
+        if let p = RdSafe.problem([desc, kids]) { msg = p; return false }
         let me = await RdLive.me(st)
         let n: [String: Any] = ["t": String(desc.prefix(300)), "r": rate, "h": hrs, "k": String(kids.prefix(60)), "role": role, "tags": Array(tags.prefix(3)), "fam": me?.name ?? st.firstName, "sub": me?.suburb ?? "", "img": Array(imgs.prefix(3))]
         let note = (try? String(data: JSONSerialization.data(withJSONObject: n), encoding: .utf8)) ?? desc
@@ -446,8 +450,8 @@ struct RdUrgentPost: View {
             RdScroll {
                 RdMuted(text: "Takes one minute. Carers near you see it straight away.").padding(.horizontal, 20)
                 RdLabel(title: "When do you need care?")
-                RdSelChips(items: ["Now", "Tonight", "Tomorrow", "This weekend", "Pick a day"], multi: false, sel: chipBinding)
-                DatePicker("Starts", selection: $when, in: Date()...).font(RdF.bold(16)).padding(.horizontal, 20).padding(.top, 8)
+                RdSelChips(items: ["Now", "Tonight", "Tomorrow", "This weekend"], multi: false, sel: chipBinding)
+                RdDayTime(date: $when)
                 Stepper("Hours: " + String(hrs), value: $hrs, in: 1...12, step: 0.5).font(RdF.bold(16)).padding(.horizontal, 20)
                 RdLabel(title: "What kind of carer?")
                 RdSelChips(items: ["Nanny", "Babysitter"], multi: false, sel: roleBinding)
@@ -456,7 +460,7 @@ struct RdUrgentPost: View {
                 RdLabel(title: "Pay per hour", sub: "About $" + String(Int(Double(rate) * hrs)) + " in total")
                 HStack(spacing: 14) { RdIconButton(icon: "minus") { if rate > 20 { rate -= 1 } }; Text("$" + String(rate)).font(RdF.title(34)).foregroundColor(RdC.ras); RdIconButton(icon: "plus") { if rate < 120 { rate += 1 } } }.padding(.horizontal, 20)
                 RdLabel(title: "What should they know?")
-                RdInput(label: "Short description", text: $desc)
+                RdInput(label: "Short description. No phone or email.", text: $desc)
                 RdSelChips(items: ["Dinner is made", "Bedtime routine", "Pets at home", "Allergies"], multi: true, max: 3, sel: $tag)
                 RdLabel(title: "Photos", sub: "Optional. Show your home, never your children.")
                 HStack(spacing: 8) {
@@ -572,7 +576,7 @@ struct RdVisaCheck: View {
                 }
                 RdCard(tint: RdC.pale) { RdMuted(text: "Families can choose au pairs with an approved visa, or already living in the country.") }
             }
-            RdBottomBar { RdCta(title: "Continue") { st.go("sa") } }
+            RdBottomBar { RdCta(title: "Finish") { RdLive.saveSetup(st); st.root("carhome") } }
         }
     }
 }
@@ -712,46 +716,15 @@ struct RdLiveCard: View {
             ForEach(Array(x.why.prefix(3).enumerated()), id: \.offset) { _, w in RdReason(text: w) }
             HStack(spacing: 10) {
                 RdCta(title: st.isFamily ? "Book " + p.firstName : "Say yes", icon: "calendar") { st.bookWith = p.id; st.bookName = p.firstName; st.bookRate = p.rate; st.go("book") }
+                RdHeartButton(uid: p.id)
                 RdMsgButton { Task { if await RdLive.openChat(st, otherUid: p.id) { st.go("chat") } } }
             }
         }.padding(14).background(Color.white).overlay(RoundedRectangle(cornerRadius: 28).stroke(RdC.line, lineWidth: 1)).padding(.horizontal, 12)
+        .onTapGesture { st.viewing = x; st.go("person") }
     }
 }
 
 // ----- live chat and inbox -----
-struct RdLiveChat: View {
-    @EnvironmentObject var st: RdStore
-    @State private var msgs: [ChatMessage] = []
-    @State private var text = ""
-    @State private var reg: ListenerRegistration? = nil
-    var body: some View {
-        VStack(spacing: 0) {
-            RdHeader(title: st.chatName)
-            ScrollView {
-                LazyVStack(spacing: 8) {
-                    ForEach(msgs) { m in
-                        let mine = m.from == RdLive.uid
-                        HStack { if mine { Spacer(minLength: 50) }
-                            Text(m.text).font(RdF.body(16)).foregroundColor(RdC.ink).padding(.horizontal, 14).padding(.vertical, 9).background(mine ? RdC.blush : RdC.field).clipShape(RoundedRectangle(cornerRadius: 20))
-                            if !mine { Spacer(minLength: 50) } }
-                    }
-                }.padding(14)
-            }.defaultScrollAnchor(.bottom)
-            HStack(spacing: 8) {
-                TextField("Message", text: $text).font(RdF.body(16)).padding(.horizontal, 16).frame(height: 48).overlay(Capsule().stroke(RdC.line, lineWidth: 1))
-                RdIconButton(icon: "send") {
-                    let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard !t.isEmpty, let u = RdLive.uid else { return }
-                    text = ""
-                    Task { try? await Backend.send(st.chatRel, from: u, text: t) }
-                }
-            }.padding(.horizontal, 12).padding(.vertical, 8)
-        }
-        .onAppear { reg = Backend.listenMessages(st.chatRel) { msgs = $0 } }
-        .onDisappear { reg?.remove(); reg = nil }
-    }
-}
-
 struct RdLiveInbox: View {
     @EnvironmentObject var st: RdStore
     @State private var rows: [(Relationship, Person)] = []
@@ -760,6 +733,7 @@ struct RdLiveInbox: View {
         VStack(spacing: 0) {
             HStack { Text("Messages").font(RdF.title(26)).foregroundColor(RdC.ink); Spacer() }.padding(.horizontal, 20).padding(.top, 6).padding(.bottom, 8)
             RdScroll {
+                RdHeartsBanner()
                 if loaded && rows.isEmpty { RdCard { RdMuted(text: "No chats yet. Tap Message on someone you like.") } }
                 ForEach(0..<rows.count, id: \.self) { i in
                     Button { st.chatRel = rows[i].0.id; st.chatName = rows[i].1.firstName; st.go("chat") } label: {

@@ -396,6 +396,10 @@ final class RdStore: ObservableObject {
     @Published var pickedCare: String = "nanny"
     @Published var firstName: String = ""
     @Published var kidsAges: [Int] = []
+    @Published var photoKey: String = ""
+    @Published var about: String = ""
+    @Published var rate: Int = 0
+    @Published var viewing: RdLivePerson? = nil
     @Published var email: String = ""
     @Published var password: String = ""
     @Published var country: String = "Australia"

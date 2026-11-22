@@ -12,6 +12,8 @@ struct RdRoot: View {
             if tabScreens.contains(st.current) && st.current != "deck" { RdTabs() }
         }
         .background(Color.white.ignoresSafeArea())
+        .overlay { RdGuideView() }
+        .overlay { RdToast() }
         .environmentObject(st)
         .tint(RdC.pink)
         .preferredColorScheme(.light)
@@ -19,6 +21,9 @@ struct RdRoot: View {
             if v.startLocation.x < 28 && v.translation.width > 80 && !noSwipe.contains(st.current) { st.back() }
         })
         .onAppear { launchArgs(); RdLive.restore(st) }
+        .onChange(of: st.current) { _, v in
+            if (v == "famhome" || v == "carhome") && !RdGuide.done && !RdGuide.shared.active && RdLive.signedIn { RdGuide.shared.start() }
+        }
     }
 
     func launchArgs() {
@@ -56,6 +61,8 @@ struct RdRoot: View {
         case "deck": if RdLive.signedIn { RdLiveDeck() } else { RdDeck() }
         case "profile": RdProfile()
         case "myprofile": RdLiveProfile()
+        case "person": RdLivePersonView()
+        case "hearts": RdHearts()
         case "photos": RdPhotosView()
         case "why": RdWhy()
         case "book": if st.bookWith.isEmpty { RdBook() } else { RdLiveBook() }

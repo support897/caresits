@@ -77,6 +77,7 @@ struct RdLiveProfile: View {
                 }
                 RdLabel(title: "About you", sub: "Up to 300 letters")
                 RdInput(label: "A short hello", text: $about)
+                if !fam { RdAskReview().padding(.top, 8) }
                 if !msg.isEmpty { Text(msg).font(RdF.body(13)).foregroundColor(msg.hasPrefix("Saved") ? RdC.okFg : RdC.ras).padding(.horizontal, 20).padding(.top, 6) }
             }
             RdBottomBar { RdCta(title: busy ? "Saving" : "Save") { save() } }
@@ -86,6 +87,7 @@ struct RdLiveProfile: View {
     static func raw(_ l: String) -> String { return l == "Au pair" ? "au_pair" : l.lowercased() }
     func load() async {
         guard !loaded, let u = RdLive.uid, let p = await Backend.loadProfile(u) else { loaded = true; return }
+        let fam0 = st.isFamily
         name = p.name == "Member" ? st.firstName : p.name
         about = p.about
         photoKey = p.photoKey
@@ -98,10 +100,12 @@ struct RdLiveProfile: View {
         st.country = RdLive.country(p)
         st.radius = (p.card["maxDistanceKm"] as? NSNumber)?.intValue ?? st.radius
         if p.services.contains("au_pair") { st.home = RdLive.fromOf(p) == "abroad" ? "" : RdLive.fromOf(p); st.dests = RdLive.dests(p) }
+        st.photoKey = p.photoKey; st.about = p.about; st.rate = fam0 ? 0 : Int(p.rate)
         loaded = true
     }
     func save() {
         guard let u = RdLive.uid else { msg = "Please sign in first."; return }
+        if let pr = RdSafe.problem([about, name]) { msg = pr; st.err = pr; return }
         busy = true
         let fam = st.isFamily
         var card: [String: Any] = ["careTypes": types.isEmpty ? [RdLive.careType(st.pickedCare)] : types, "maxDistanceKm": st.radius, "auPairHost": ["country": st.country]]
@@ -111,7 +115,7 @@ struct RdLiveProfile: View {
         Task {
             do {
                 try await Backend.saveProfile(u, side: fam ? "family" : "carer", name: name.isEmpty ? "Member" : name, postcode: st.postcode, photoKey: photoKey.isEmpty ? nil : photoKey, about: about, card: card)
-                st.firstName = name; st.origin = nil
+                st.firstName = name; st.origin = nil; st.about = about; st.photoKey = photoKey; st.rate = fam ? 0 : rate
                 if let f = types.first { st.pickedCare = f == "au_pair" ? "aupair" : f }
                 msg = "Saved."
             } catch { msg = "Could not save: " + error.localizedDescription }

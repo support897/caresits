@@ -156,13 +156,14 @@ struct RdStepFrame<Content: View>: View {
     var next: String
     var nextLabel: String = "Next"
     var onNext: (() -> Void)? = nil
+    var finish: Bool = false
     @ViewBuilder var content: () -> Content
     var body: some View {
         VStack(spacing: 0) {
             RdHeader(title: title, trailing: AnyView(Button { RdLive.saveSetup(st); st.root(st.isFamily ? "famhome" : "carhome") } label: { Text("Skip for now").font(RdF.bold(14)).foregroundColor(RdC.ras) }.buttonStyle(.plain)))
             HStack(spacing: 4) { ForEach(0..<6, id: \.self) { i in Capsule().fill(i < step ? RdC.pink : RdC.line).frame(height: 5) } }.padding(.horizontal, 20).padding(.bottom, 4)
             RdScroll { content() }
-            RdBottomBar { RdCta(title: nextLabel) { onNext?(); st.go(next) } }
+            RdBottomBar { RdCta(title: nextLabel) { onNext?(); if finish { st.root(st.isFamily ? "famhome" : "carhome") } else { st.go(next) } } }
         }
     }
 }
@@ -180,7 +181,7 @@ struct RdSetupWho: View {
     }
     var body: some View {
         let r = st.setupRole
-        RdStepFrame(title: "About you", step: 1, next: r == "aupair" ? "visacheck" : "sa", onNext: { RdLive.saveSetup(st) }) {
+        RdStepFrame(title: "About you", step: 6, next: r == "aupair" ? "visacheck" : "sa", nextLabel: r == "aupair" ? "Next" : "Finish", onNext: { RdLive.saveSetup(st) }, finish: r != "aupair") {
             if r == "aupair" {
                 RdLabel(title: "Which country are you from?", sub: "Pick from the list. Families can find you by country.")
                 RdSelChips(items: RdVisaBy.homeList, multi: false, sel: homeBinding)
@@ -198,6 +199,8 @@ struct RdSetupWho: View {
                 RdLabel(title: fam ? "How far should carers be?" : "How far can you travel?", sub: "We only show people inside this circle.")
                 RdSelChips(items: ["5 km", "10 km", "15 km", "25 km"], multi: false, sel: radiusBinding)
                 if fam {
+                    RdLabel(title: "Your children", sub: "How many and how old. No names.")
+                    RdKidsEditor(ages: $st.kidsAges)
                     RdLabel(title: "Au pairs", sub: "Only matters if you look for an au pair.")
                     Toggle("Visa ready only", isOn: $st.visaOnly).font(RdF.bold(16)).padding(.horizontal, 20)
                     Toggle("Already living in my country", isOn: $st.inCountryOnly).font(RdF.bold(16)).padding(.horizontal, 20).padding(.top, 6)
