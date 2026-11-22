@@ -1,33 +1,7 @@
 import SwiftUI
+import MapKit
 
 // Map, home, bookings, messages, me, settings, menu, safety, resume and review screens.
-
-struct RdMapArt: View {
-    var body: some View {
-        Canvas { g, s in
-            g.fill(Path(CGRect(origin: .zero, size: s)), with: .color(Color(hex: 0xF4EEF1)))
-            var river = Path()
-            river.move(to: CGPoint(x: -10, y: s.height * 0.55))
-            river.addCurve(to: CGPoint(x: s.width * 0.55, y: s.height * 0.42), control1: CGPoint(x: s.width * 0.15, y: s.height * 0.72), control2: CGPoint(x: s.width * 0.35, y: s.height * 0.28))
-            river.addCurve(to: CGPoint(x: s.width + 10, y: s.height * 0.62), control1: CGPoint(x: s.width * 0.75, y: s.height * 0.56), control2: CGPoint(x: s.width * 0.9, y: s.height * 0.7))
-            g.stroke(river, with: .color(RdC.sky.opacity(0.9)), style: StrokeStyle(lineWidth: 30, lineCap: .round))
-            for i in 0..<7 {
-                var r = Path()
-                let y = s.height * (0.08 + 0.14 * Double(i))
-                r.move(to: CGPoint(x: 0, y: y)); r.addLine(to: CGPoint(x: s.width, y: y + (i % 2 == 0 ? 30 : -24)))
-                g.stroke(r, with: .color(Color.white), style: StrokeStyle(lineWidth: i % 3 == 0 ? 9 : 5, lineCap: .round))
-            }
-            for i in 0..<5 {
-                var r = Path()
-                let x = s.width * (0.08 + 0.2 * Double(i))
-                r.move(to: CGPoint(x: x, y: 0)); r.addLine(to: CGPoint(x: x + (i % 2 == 0 ? 40 : -30), y: s.height))
-                g.stroke(r, with: .color(Color.white), style: StrokeStyle(lineWidth: i % 2 == 0 ? 8 : 5, lineCap: .round))
-            }
-            let parks: [CGRect] = [CGRect(x: s.width * 0.1, y: s.height * 0.1, width: 90, height: 60), CGRect(x: s.width * 0.62, y: s.height * 0.72, width: 100, height: 70)]
-            for p in parks { g.fill(Path(roundedRect: p, cornerRadius: 22), with: .color(Color(hex: 0xDDEBD8))) }
-        }
-    }
-}
 
 struct RdMap: View {
     @EnvironmentObject var st: RdStore
@@ -35,8 +9,13 @@ struct RdMap: View {
         let c = st.ctx()
         GeometryReader { geo in
             ZStack(alignment: .bottom) {
-                RdMapArt().ignoresSafeArea()
-                pins(c, geo.size)
+                Map(initialPosition: .region(MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: -27.47, longitude: 153.02), span: MKCoordinateSpan(latitudeDelta: 0.22, longitudeDelta: 0.22)))) {
+                    ForEach(realPins(c), id: \.0) { p in
+                        Annotation("", coordinate: CLLocationCoordinate2D(latitude: p.1, longitude: p.2), anchor: .bottom) { BunnyPin(selected: p.3).scaleEffect(p.3 ? 0.6 : 0.46) }
+                    }
+                }
+                .mapStyle(.standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll))
+                .ignoresSafeArea()
                 VStack { RdTopBar(on: "map"); Spacer() }
                 VStack(spacing: 8) {
                     HStack(spacing: 6) {
@@ -61,6 +40,10 @@ struct RdMap: View {
                 }
             }
         }
+    }
+    func realPins(_ c: RdCtx) -> [(String, Double, Double, Bool)] {
+        if c.fm { return RdData.carers.filter { $0.role == c.role }.map { ($0.id, $0.lat, $0.lng, $0.id == c.car.id) } }
+        return RdData.families.filter { $0.kind == c.fam.kind }.map { ($0.id, $0.lat, $0.lng, $0.id == c.fam.id) }
     }
     @ViewBuilder func pins(_ c: RdCtx, _ size: CGSize) -> some View {
         let pts: [(String, Double, Double, Bool)] = mapPoints(c)
@@ -95,16 +78,15 @@ struct RdWorldMap: View {
             RdTopBar(on: "map")
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 8) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 24).fill(Color(hex: 0xF4EEF1))
-                        Canvas { g, s in
-                            let spots: [(Double, Double)] = [(0.5, 0.3), (0.52, 0.34), (0.55, 0.28), (0.5, 0.4), (0.2, 0.3), (0.25, 0.4), (0.3, 0.5), (0.7, 0.35), (0.78, 0.4), (0.8, 0.7), (0.85, 0.75), (0.5, 0.55), (0.55, 0.6), (0.6, 0.62)]
-                            for p in spots { g.fill(Path(ellipseIn: CGRect(x: s.width * p.0 - 14, y: s.height * p.1 - 12, width: 28, height: 24)), with: .color(RdC.blush.opacity(0.7))) }
+                    Map(initialPosition: .region(MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: 20, longitude: 40), span: MKCoordinateSpan(latitudeDelta: 110, longitudeDelta: 160)))) {
+                        ForEach(Array(ap.enumerated()), id: \.offset) { _, a in
+                            Annotation("", coordinate: RdWorld.coord(a.from), anchor: .bottom) { BunnyPin().scaleEffect(0.4) }
                         }
-                        BunnyPin(selected: true).scaleEffect(0.5).position(x: 330, y: 140)
-                        BunnyPin().scaleEffect(0.4).position(x: 170, y: 70)
-                        BunnyPin().scaleEffect(0.4).position(x: 200, y: 90)
-                    }.frame(height: 220).padding(.horizontal, 16).padding(.top, 8)
+                        Annotation("", coordinate: CLLocationCoordinate2D(latitude: -27.47, longitude: 153.02), anchor: .bottom) { BunnyPin(selected: true).scaleEffect(0.5) }
+                    }
+                    .mapStyle(.standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll))
+                    .clipShape(RoundedRectangle(cornerRadius: 24))
+                    .frame(height: 220).padding(.horizontal, 16).padding(.top, 8)
                     RdFlow(spacing: 6) { RdChip(text: "Visa ready", tone: 1); RdChip(text: "Already in Australia"); RdChip(text: "Arriving by February", tone: 2) }.padding(.horizontal, 16)
                     ForEach(Array(ap.enumerated()), id: \.offset) { _, a in
                         let m = RdMatch.score(RdData.family(id: "hartley"), a)
@@ -412,19 +394,33 @@ struct RdMenu: View {
 
 struct RdSafety: View {
     @EnvironmentObject var st: RdStore
+    @State private var sel = 0
     var body: some View {
+        let r = RdRules.all[sel]
         VStack(spacing: 0) {
             RdHeader(title: "Safety and checks")
             RdScroll {
-                RdLabel(title: "Your country")
-                RdField(label: "Country", value: "Australia, Queensland")
-                RdLabel(title: "What is needed here")
-                RdCard { RdReason(text: "Needed for nannies, babysitters and au pairs in Queensland.", bold: "Blue Card") }
-                RdCard { RdReason(text: "Needed by many families. Recommended.", bold: "First aid") }
+                RdLabel(title: "Your place")
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(0..<RdRules.all.count, id: \.self) { i in
+                            Button { sel = i } label: { RdChip(text: RdRules.all[i].place, tone: i == sel ? 1 : 0) }.buttonStyle(.plain)
+                        }
+                    }.padding(.horizontal, 20)
+                }
+                RdLabel(title: "Check for carers")
+                RdCard { RdReason(text: r.check, bold: "What is needed") }
+                RdCard { RdReason(text: r.law, bold: "Is it the law") }
+                RdCard { RdReason(text: r.issuer + ". Cost: " + r.cost + ". Valid: " + r.validity, bold: "Who, cost, how long") }
+                RdCard(title: "How to get it") { ForEach(0..<r.steps.count, id: \.self) { i in RdMuted(text: String(i + 1) + ". " + r.steps[i]) } }
+                RdLabel(title: "Au pair visa")
+                RdCard { RdReason(text: r.visa, bold: "Visa") }
+                RdCard { RdReason(text: "Age " + r.age + ". Stay " + r.stay + ". Hours " + r.hours, bold: "Limits") }
+                RdCard { RdReason(text: r.countries, bold: "Who can apply") }
                 RdLabel(title: "Your checks")
                 RdCard { RdReason(text: "Checked 14 Aug 2026", bold: "Blue Card") }
                 RdCard { RdReason(text: "Uploaded, not yet checked", gap: true, bold: "First aid") }
-                RdMuted(text: "Uploaded is not checked. Verified means a real check with a date.").padding(.horizontal, 24).padding(.top, 8)
+                RdMuted(text: "Uploaded is not checked. Verified means a real check with a date. Rules checked 22 Nov 2026 from official pages. Not confirmed means we could not confirm it. Source: " + r.source).padding(.horizontal, 24).padding(.top, 8)
             }
         }
     }
@@ -562,5 +558,13 @@ struct RdRevApps: View {
                 RdMuted(text: "Reviews from other apps show separately and are marked with the app name.").padding(.horizontal, 24).padding(.top, 8)
             }
         }
+    }
+}
+
+enum RdWorld {
+    static func coord(_ from: String) -> CLLocationCoordinate2D {
+        let t: [(String, Double, Double)] = [("Germany", 52.5, 13.4), ("France", 48.9, 2.3), ("Brazil", -15.8, -47.9), ("Colombia", 4.7, -74.1), ("Spain", 40.4, -3.7), ("Italy", 41.9, 12.5), ("Philippines", 14.6, 121), ("Japan", 35.7, 139.7), ("Denmark", 55.7, 12.6), ("Sweden", 59.3, 18.1), ("United Kingdom", 51.5, -0.1), ("Ireland", 53.3, -6.3), ("Canada", 45.4, -75.7), ("United States", 38.9, -77), ("Mexico", 19.4, -99.1), ("South Africa", -25.7, 28.2), ("Czech", 50.1, 14.4), ("Poland", 52.2, 21), ("Netherlands", 52.4, 4.9), ("Ukraine", 50.4, 30.5), ("Thailand", 13.8, 100.5), ("Chile", -33.4, -70.6), ("Argentina", -34.6, -58.4), ("Norway", 59.9, 10.8), ("Finland", 60.2, 24.9)]
+        for e in t where from.contains(e.0) { return CLLocationCoordinate2D(latitude: e.1, longitude: e.2) }
+        return CLLocationCoordinate2D(latitude: 48, longitude: 10)
     }
 }
