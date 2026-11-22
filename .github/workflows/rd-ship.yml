@@ -95,6 +95,13 @@ jobs:
           tail -15 export.log
           grep -qiE "EXPORT SUCCEEDED|Upload succeeded" export.log && ! grep -qE "error:|Error Domain" export.log
 
+      - name: Add the build to the Review group
+        if: success()
+        working-directory: native
+        run: |
+          pip3 install --quiet pyjwt cryptography || pip install --quiet pyjwt cryptography
+          python3 tools/addgroup.py || true
+
       - name: Export errors
         if: failure()
         working-directory: native
