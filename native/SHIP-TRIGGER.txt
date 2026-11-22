@@ -1,1 +1,1 @@
-ship 5 ios27 mapkit rules
+ship 6 signed archive

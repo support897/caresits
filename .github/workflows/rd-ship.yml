@@ -55,8 +55,9 @@ jobs:
           xcodebuild archive -project Caresitters.xcodeproj -scheme Caresitters \
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/Caresitters.xcarchive" \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
-            DEVELOPMENT_TEAM="$TEAM_ID" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$KEY_PATH" -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER_ID" \
+            DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic \
             CURRENT_PROJECT_VERSION="$BUILD_NO" > archive.log 2>&1 || true
           tail -5 archive.log
           grep -q "ARCHIVE SUCCEEDED" archive.log
