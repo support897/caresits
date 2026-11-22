@@ -159,7 +159,7 @@ struct RdStepFrame<Content: View>: View {
     @ViewBuilder var content: () -> Content
     var body: some View {
         VStack(spacing: 0) {
-            RdHeader(title: title)
+            RdHeader(title: title, trailing: AnyView(Button { RdLive.saveSetup(st); st.root(st.isFamily ? "famhome" : "carhome") } label: { Text("Skip for now").font(RdF.bold(14)).foregroundColor(RdC.ras) }.buttonStyle(.plain)))
             HStack(spacing: 4) { ForEach(0..<6, id: \.self) { i in Capsule().fill(i < step ? RdC.pink : RdC.line).frame(height: 5) } }.padding(.horizontal, 20).padding(.bottom, 4)
             RdScroll { content() }
             RdBottomBar { RdCta(title: nextLabel) { onNext?(); st.go(next) } }

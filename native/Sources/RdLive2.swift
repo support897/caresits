@@ -109,6 +109,12 @@ struct RdLiveHome: View {
     @State private var loaded = false
     var body: some View {
         VStack(spacing: 0) {
+            if st.postcode.isEmpty {
+                RdCard(tint: RdC.pale, title: "Finish your profile") {
+                    RdMuted(text: "Add your postcode to see people near you. The map and the world view work now.")
+                    RdCta(title: "Finish my profile", small: true) { st.go("sw") }
+                }
+            }
             if let x = best {
                 HStack(spacing: 14) {
                     RdRemotePhoto(key: x.p.photoKey).frame(width: 72, height: 72).clipShape(RoundedRectangle(cornerRadius: 20))
@@ -159,11 +165,20 @@ struct RdLiveMap: View {
     @State private var people: [RdLivePerson] = []
     @State private var sel: String = ""
     @State private var loaded = false
+    @State private var world = false
+    @State private var types: [String] = []
+    @State private var pos: MapCameraPosition = .automatic
+    var typeBinding: Binding<[String]> { Binding(get: { types.isEmpty ? [RdLive.careType(st.pickedCare)] : types }, set: { types = $0 }) }
+    func recenter() {
+        let o = st.origin ?? CLLocationCoordinate2D(latitude: -27.47, longitude: 153.02)
+        if world { pos = .region(MKCoordinateRegion(center: o, span: MKCoordinateSpan(latitudeDelta: 100, longitudeDelta: 160))) }
+        else { let d = Double(max(st.radius, 5)) / 40; pos = .region(MKCoordinateRegion(center: o, span: MKCoordinateSpan(latitudeDelta: d, longitudeDelta: d))) }
+    }
     var body: some View {
         let o = st.origin
         ZStack(alignment: .bottom) {
-            Map(initialPosition: .region(MKCoordinateRegion(center: o ?? CLLocationCoordinate2D(latitude: -27.47, longitude: 153.02), span: MKCoordinateSpan(latitudeDelta: Double(max(st.radius, 5)) / 40, longitudeDelta: Double(max(st.radius, 5)) / 40)))) {
-                if let o { MapCircle(center: o, radius: Double(st.radius) * 1000).foregroundStyle(RdC.pink.opacity(0.12)).stroke(RdC.pink, lineWidth: 2) }
+            Map(position: $pos) {
+                if let o, !world { MapCircle(center: o, radius: Double(st.radius) * 1000).foregroundStyle(RdC.pink.opacity(0.12)).stroke(RdC.pink, lineWidth: 2) }
                 ForEach(people) { x in
                     if let c = x.coord {
                         Annotation("", coordinate: c, anchor: .bottom) { BunnyPin(selected: x.id == sel).scaleEffect(x.id == sel ? 0.6 : 0.46).onTapGesture { sel = x.id } }
@@ -172,14 +187,24 @@ struct RdLiveMap: View {
             }
             .mapStyle(.standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll))
             .ignoresSafeArea()
-            VStack { RdTopBar(on: "map"); Spacer() }
+            VStack(spacing: 6) {
+                RdTopBar(on: "map")
+                HStack(spacing: 6) {
+                    Button { world = false; recenter() } label: { RdChip(text: "My area", icon: "pin", on: !world) }.buttonStyle(.plain)
+                    Button { world = true; recenter() } label: { RdChip(text: "World", icon: "globe", on: world) }.buttonStyle(.plain)
+                    Spacer()
+                }.padding(.horizontal, 12)
+                RdSelChips(items: st.isFamily ? ["Nanny", "Babysitter", "Au pair"] : ["Wants a nanny", "Wants a babysitter", "Wants an au pair"], multi: true, sel: Binding(get: { typeBinding.wrappedValue.map { RdLiveMap.label($0, fam: st.isFamily) } }, set: { v in types = v.map { RdLiveMap.raw($0) } })).padding(.horizontal, -8)
+                Spacer()
+            }.padding(.top, 6)
             VStack(spacing: 8) {
+                if st.postcode.isEmpty && !world { Text("Add your postcode to see your area. World works now.").font(RdF.bold(13)).foregroundColor(RdC.ink).padding(10).background(Color.white).clipShape(Capsule()) }
                 if let x = people.first(where: { $0.id == sel }) {
                     HStack(spacing: 12) {
                         RdRemotePhoto(key: x.p.photoKey).frame(width: 64, height: 64).clipShape(RoundedRectangle(cornerRadius: 18))
                         VStack(alignment: .leading, spacing: 3) {
                             Text(x.p.name).font(RdF.bold(17)).foregroundColor(RdC.ink).lineLimit(1)
-                            Text("Postcode " + x.p.postcode + (x.km >= 0 ? ", " + Geo.label(x.km) + " away" : "")).font(RdF.body(12)).foregroundColor(RdC.mut)
+                            Text((x.p.postcode.isEmpty ? "" : "Postcode " + x.p.postcode) + (x.km >= 0 ? ", " + Geo.label(x.km) + " away" : "")).font(RdF.body(12)).foregroundColor(RdC.mut)
                         }
                         Spacer(minLength: 0)
                         RdRing(pct: x.score, size: 62, line: 7)
@@ -189,9 +214,19 @@ struct RdLiveMap: View {
                         RdMsgButton { Task { if await RdLive.openChat(st, otherUid: x.p.id) { st.go("chat") } } }
                     }.padding(.horizontal, 16)
                 } else if loaded {
-                    Text(people.isEmpty ? "Nobody inside " + String(st.radius) + " km yet." : "Tap a bunny to see who it is.").font(RdF.bold(14)).foregroundColor(RdC.ink).padding(10).background(Color.white).clipShape(Capsule())
+                    Text(people.isEmpty ? "Nobody here yet." : String(people.count) + " on the map. Tap a bunny.").font(RdF.bold(14)).foregroundColor(RdC.ink).padding(10).background(Color.white).clipShape(Capsule())
                 }
             }.padding(.bottom, 12)
-        }.task { _ = await RdLive.origin(st); people = await RdLive.people(st); loaded = true }
+        }
+        .onAppear { if types.isEmpty { types = [RdLive.careType(st.pickedCare)] } }
+        .task(id: String(world) + types.joined(separator: ",")) {
+            _ = await RdLive.origin(st); recenter()
+            people = await RdLive.people(st, world: world, types: types.isEmpty ? nil : types)
+            loaded = true
+        }
     }
+    static func label(_ r: String, fam: Bool) -> String {
+        switch r { case "nanny": return fam ? "Nanny" : "Wants a nanny"; case "babysitter": return fam ? "Babysitter" : "Wants a babysitter"; default: return fam ? "Au pair" : "Wants an au pair" }
+    }
+    static func raw(_ l: String) -> String { return l.lowercased().contains("nanny") ? "nanny" : (l.lowercased().contains("babysitter") ? "babysitter" : "au_pair") }
 }

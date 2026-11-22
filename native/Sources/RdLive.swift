@@ -590,11 +590,12 @@ extension RdLive {
     }
 
     /// Real people inside my radius, country picks first for au pairs, then best score.
-    static func people(_ st: RdStore) async -> [RdLivePerson] {
+    static func people(_ st: RdStore, world: Bool = false, types: [String]? = nil) async -> [RdLivePerson] {
         guard let me = await me(st) else { return [] }
         var svc = me.services
         if me.side == "family" { svc = ["nanny", "babysitter", "au_pair"] }
         if svc.isEmpty { svc = [careType(st.pickedCare)] }
+        if let t = types, !t.isEmpty { svc = t }
         let found = await Backend.discover(me: me, services: svc)
         let o = await origin(st)
         var out: [RdLivePerson] = []
@@ -603,6 +604,14 @@ extension RdLive {
             let dests = (p.card["destinations"] as? [String]) ?? []
             var km = -1.0
             var co: CLLocationCoordinate2D? = nil
+            if world {
+                let ctry = (p.card["country"] as? String) ?? (p.card["from"] as? String) ?? "Australia"
+                co = await Geo.coord(postcode: p.postcode.count >= 4 ? p.postcode : ctry, country: ctry)
+                if let o, let c = co { km = Geo.km(o, c) }
+                let sc0 = score(me: me, p: p, km: km, radius: 20000)
+                out.append(RdLivePerson(p: p, km: km, rank: 50, score: sc0.0, why: sc0.1, coord: co))
+                continue
+            }
             if !(isAu && me.side == "family") {
                 let ctry = (p.card["country"] as? String) ?? "Australia"
                 co = await Geo.coord(postcode: p.postcode, country: ctry)
