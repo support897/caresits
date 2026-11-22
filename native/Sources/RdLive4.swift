@@ -514,7 +514,11 @@ struct RdAskReview: View {
                     shareURL = url
                     busy = false
                     if MFMailComposeViewController.canSendMail() { mail = true }
-                    else if let m = "mailto:\(theirEmail)?subject=\("Review request from Caresitters".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")&body=\(plain.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")".description as String?, let mu = URL(string: m) { UIApplication.shared.open(mu) }
+                    else {
+                        let sub = "Review request from Caresitters".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+                        let bod = plain.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+                        if let mu = URL(string: "mailto:" + theirEmail + "?subject=" + sub + "&body=" + bod) { await UIApplication.shared.open(mu) }
+                    }
                 }
             }
             if let u = shareURL {
