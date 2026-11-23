@@ -141,7 +141,7 @@ export default {
       if (path === "/pay/onboard") {
         let acct = await env.KV.get("c:" + me.uid);
         if (!acct) { const a = await stripe(env, "accounts", { type: "express", "capabilities[transfers][requested]": "true", "metadata[uid]": me.uid }); acct = a.id; await env.KV.put("c:" + me.uid, acct); }
-        const l = await stripe(env, "account_links", { account: acct, refresh_url: SITE + "/pay-refresh", return_url: SITE + "/pay-done", type: "account_onboarding" });
+        const l = await stripe(env, "account_links", { account: acct, refresh_url: SITE + "/app?pay=refresh", return_url: SITE + "/app?pay=done", type: "account_onboarding" });
         return J({ url: l.url });
       }
       if (path === "/pay/ready") {
@@ -165,7 +165,7 @@ export default {
           "line_items[1][price_data][currency]": "aud", "line_items[1][price_data][product_data][name]": "Caresitters service fee", "line_items[1][price_data][unit_amount]": String(feeCents), "line_items[1][quantity]": "1",
           "payment_intent_data[transfer_group]": bookingId,
           "metadata[bookingId]": bookingId, "metadata[carerUid]": carerUid, "metadata[familyUid]": me.uid, "metadata[carerCents]": String(carerCents), "metadata[feeCents]": String(feeCents), "metadata[endAt]": String(endAt),
-          success_url: SITE + "/pay-done", cancel_url: SITE + "/pay-cancel",
+          success_url: SITE + "/app?pay=done", cancel_url: SITE + "/app?pay=cancel",
         });
         return J({ url: s.url });
       }

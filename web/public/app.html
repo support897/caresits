@@ -118,9 +118,10 @@ async function openChat(other){
 }
 function chatView(pid,other){
  if(unsub){unsub();unsub=null}shell(true);const el=$("#m");
- el.innerHTML=`<h1>${esc(other.name)}</h1><div class="chat"><div class="msgs" id="ms"></div><div class="mut" style="font-size:13px">Emails and phone numbers are blocked. Use a call below.</div><div class="send"><input id="t" maxlength="1000" placeholder="Say hi"><button class="btn sm" id="s">Send</button><button class="btn sm pink" id="c">Call</button></div></div>`;
+ el.innerHTML=`<h1>${esc(other.name)}</h1><div class="chat"><div class="msgs" id="ms"></div><div class="mut" style="font-size:13px">Emails and phone numbers are blocked. Use a call below.</div><div class="send"><input id="t" maxlength="1000" placeholder="Say hi"><button class="btn sm" id="s">Send</button><button class="btn sm pink" id="c">Call</button>${prof.side==="family"&&other.side==="carer"?`<button class="btn sm" id="bk">Book</button>`:""}</div></div>`;
  unsub=onSnapshot(query(collection(db,"relationships",pid,"messages"),orderBy("at","asc"),limit(100)),s=>{const m=$("#ms");if(!m)return;m.innerHTML=s.docs.map(d=>{const x=d.data(),t=x.text||"";if(/^CALL /.test(t)){const p=t.split(" ");return `<div class="m ${x.from===me.uid?"me":""}">${p[1]==="video"?"Video":"Phone"} call requested. <a style="color:inherit" target="_blank" href="https://meet.jit.si/${esc(p[3])}">Join call room</a></div>`}if(/^CALLOK /.test(t))return `<div class="m">Call accepted.</div>`;return `<div class="m ${x.from===me.uid?"me":""}">${esc(t)}</div>`}).join("");m.scrollTop=m.scrollHeight});
  const send=async txt=>{if(!txt)return;if(bad(txt))return toast("Emails and phone numbers are not allowed. Use Call.");await addDoc(collection(db,"relationships",pid,"messages"),{from:me.uid,kind:"text",text:txt.slice(0,1000),at:serverTimestamp()}).catch(()=>toast("Could not send"));notify(other.id,"message","You have a new message.",pid)};
+ if($("#bk"))$("#bk").onclick=()=>bookForm(other);
  $("#s").onclick=()=>{const v=$("#t").value.trim();$("#t").value="";send(v)};$("#t").onkeydown=e=>{if(e.key==="Enter")$("#s").click()};
  $("#c").onclick=()=>{const room="cs"+Math.random().toString(36).slice(2,12);send("CALL video x "+room);toast("Call room sent. Open it from the chat.")};
 }
@@ -192,11 +193,13 @@ function meView(el){
  $("#sv").onclick=async()=>{const nm=$("#nm").value.trim(),ab=$("#ab").value.trim();if(bad(nm+" "+ab))return $("#er").textContent="No emails or phone numbers";const card={};if(fam){card.kids=($("#ak").value.match(/\d+/g)||[]).slice(0,8).map(a=>({ageYears:+a}))}else{if(+$("#rt").value>0)card.rate=+$("#rt").value;card.experienceYears=Math.max(0,Math.min(60,+$("#yr").value||0))}
   try{await saveProfile({name:nm,postcode:$("#pc").value.trim(),about:ab,card});await loadProf();toast("Saved");shell()}catch(e){$("#er").textContent="Could not save: "+e.code}};
  if($("#po"))$("#po").onclick=async()=>{const r=await api("/pay/onboard",{});if(r.url)location.href=r.url;else toast(r.error||"Payments are not on yet")};
+ if($("#po"))api("/pay/ready",{}).then(r=>{if(r.ready){$("#po").parentElement.innerHTML="<b>Get paid</b><p class=\"mut\">Payouts are ready. Families pay safely and you get paid when the job is done.</p><span class=\"pill sky\">Payouts ready</span>"}}).catch(()=>{});
  $("#lo").onclick=()=>signOut(auth);
 }
 
 async function loadProf(){const s=await getDoc(doc(db,"profiles",me.uid));prof=s.exists()?person(me.uid,s.data()):null;return prof}
 async function boot(){await loadProf();if(!prof||!prof.side)return setupView();await loadHearts();shell()}
+{const q=new URLSearchParams(location.search).get("pay");if(q){history.replaceState(null,"",location.pathname);setTimeout(()=>toast(q==="done"?"Done. Thank you.":q==="cancel"?"Payment cancelled. No charge.":"Please finish setup"),1500)}}
 onAuthStateChanged(auth,async u=>{me=u;if(!u){if(unsub){unsub();unsub=null}return authView(location.hash==="#signup"?"signup":"login")}try{await boot()}catch(e){R.innerHTML=`<div class="empty">${bun()}<h3>Something went wrong</h3><p>${esc(e.code||e.message)}</p><button class="btn" onclick="location.reload()">Try again</button></div>`}});
 addEventListener("hashchange",()=>{if(!auth.currentUser)authView(location.hash==="#signup"?"signup":"login")});
 </script></body></html>
