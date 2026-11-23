@@ -60,7 +60,13 @@ async function release(env, bookingId) {
   if (!p || p.status !== "held") return { ok: false, why: "not held" };
   const acct = await env.KV.get("c:" + p.carerUid);
   if (!acct) return { ok: false, why: "carer has no payout account" };
-  await stripe(env, "transfers", { amount: String(p.carerCents), currency: p.currency, destination: acct, transfer_group: bookingId, "metadata[bookingId]": bookingId });
+  let charge = null;
+  if (p.pi) { const pi = await stripe(env, "payment_intents/" + p.pi, null, "GET"); charge = pi.latest_charge; }
+  else { const l = await stripe(env, "charges?transfer_group=" + encodeURIComponent(bookingId) + "&limit=1", null, "GET"); charge = l.data && l.data[0] && l.data[0].id; }
+  const tp = { amount: String(p.carerCents), currency: p.currency, destination: acct, transfer_group: bookingId, "metadata[bookingId]": bookingId };
+  if (charge) tp.source_transaction = charge;
+  const tr = await stripe(env, "transfers", tp);
+  if (tr.error) return { ok: false, why: tr.error.message || "transfer failed" };
   p.status = "released"; p.releasedAt = Date.now();
   await env.KV.put("p:" + bookingId, JSON.stringify(p));
   return { ok: true };
@@ -82,7 +88,7 @@ export default {
         const ev = JSON.parse(raw);
         if (ev.type === "checkout.session.completed") {
           const s = ev.data.object; const m = s.metadata || {};
-          if (m.bookingId) await env.KV.put("p:" + m.bookingId, JSON.stringify({ status: "held", carerUid: m.carerUid, familyUid: m.familyUid, carerCents: Number(m.carerCents), feeCents: Number(m.feeCents), currency: s.currency, endAt: Number(m.endAt), paidAt: Date.now() }));
+          if (m.bookingId) await env.KV.put("p:" + m.bookingId, JSON.stringify({ status: "held", carerUid: m.carerUid, familyUid: m.familyUid, carerCents: Number(m.carerCents), feeCents: Number(m.feeCents), currency: s.currency, pi: s.payment_intent, endAt: Number(m.endAt), paidAt: Date.now() }));
         }
         return J({ ok: true });
       }

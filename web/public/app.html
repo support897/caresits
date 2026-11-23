@@ -11,7 +11,7 @@
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {getAuth,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,signInWithPopup,GoogleAuthProvider,signOut,sendPasswordResetEmail} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import {getFirestore,doc,getDoc,setDoc,addDoc,updateDoc,deleteDoc,collection,query,where,orderBy,limit,getDocs,onSnapshot,serverTimestamp,Timestamp,writeBatch} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import {getFirestore,doc,getDoc,setDoc,addDoc,updateDoc,deleteDoc,collection,query,where,orderBy,limit,startAfter,getDocs,onSnapshot,serverTimestamp,Timestamp,writeBatch} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 const app=initializeApp({apiKey:"AIzaSyDbi4vqhN6I7Zz7_-6-ZQSZzd3MnQiYBCE",authDomain:"caresits-812a0.firebaseapp.com",projectId:"caresits-812a0",appId:"1:908064912971:web:88858e5fa8751f66b23fce"});
 const auth=getAuth(app),db=getFirestore(app);
 const API="https://caresitters-api.placenciailse.workers.dev";
@@ -90,12 +90,14 @@ async function discover(el){
  const want=prof.side==="family"?["nanny","babysitter","au_pair"]:["nanny","babysitter","au_pair"].filter(t=>types.includes(t));
  const opp=prof.side==="family"?"carer":"family";
  loading($("#l"));
- for(const t of (prof.side==="family"?types:want)){try{const s=await getDocs(query(collection(db,"profiles"),where("side","==",opp),where("card.careTypes","array-contains",t),limit(60)));s.forEach(d=>{if(d.id!==me.uid)seen[d.id]=person(d.id,d.data())})}catch(e){}}
- let list=Object.values(seen),flt="all";
+ const cur={},more={};const pull=async()=>{for(const t of (prof.side==="family"?types:want)){if(more[t]===false)continue;try{const s=await getDocs(query(collection(db,"profiles"),where("side","==",opp),where("card.careTypes","array-contains",t),...(cur[t]?[startAfter(cur[t])]:[]),limit(60)));s.forEach(d=>{if(d.id!==me.uid)seen[d.id]=person(d.id,d.data())});cur[t]=s.docs[s.docs.length-1];more[t]=s.size===60}catch(e){more[t]=false}}};
+ await pull();
+ let list=Object.values(seen),flt="all";const anyMore=()=>Object.values(more).some(v=>v===true);
  const draw=()=>{const f=$("#f");f.innerHTML=["all",...new Set(list.flatMap(p=>p.types))].map(t=>`<button class="chip ${flt===t?"on":""}" data-f="${t}">${t==="all"?"Everyone":label(t)}</button>`).join("");
   f.onclick=e=>{if(e.target.dataset.f){flt=e.target.dataset.f;draw()}};
   const L=list.filter(p=>flt==="all"||p.types.includes(flt)).sort((a,b)=>(a.pc===prof.pc?-1:0)-(b.pc===prof.pc?-1:0)||a.name.localeCompare(b.name));
-  $("#l").innerHTML=L.length?`<div class="grid">${L.map(card).join("")}</div>`:`<div class="empty">${bun()}<h3>Nobody yet</h3><p>Invite a friend. Bun is waiting.</p></div>`;
+  $("#l").innerHTML=L.length?`<div class="grid">${L.map(card).join("")}</div>${anyMore()?`<button class="btn" id="mo" style="margin:20px auto;display:block">Show more</button>`:""}`:`<div class="empty">${bun()}<h3>Nobody yet</h3><p>Invite a friend. Bun is waiting.</p></div>`;
+  if($("#mo"))$("#mo").onclick=async()=>{$("#mo").textContent="Loading";await pull();list=Object.values(seen);draw()};
   $("#l").querySelectorAll("[data-h]").forEach(b=>b.onclick=async ev=>{await toggleHeart(b.dataset.h);confetti(ev.clientX,ev.clientY);draw()});
   $("#l").querySelectorAll("[data-m]").forEach(b=>b.onclick=async()=>{const p=seen[b.dataset.m];await openChat(p);});
   $("#l").querySelectorAll("[data-b]").forEach(b=>b.onclick=()=>bookForm(seen[b.dataset.b]));
