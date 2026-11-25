@@ -233,7 +233,7 @@ enum Backend {
         let relRef = db.collection("relationships").document(b.pairId)
         var update: [String: Any] = ["state": to]
         if to != "cancelled" && to != "completed" { update["decidedAt"] = FieldValue.serverTimestamp() }
-        if to == "cancelled" { update["cancelledBy"] = actorUid; update["cancelledAt"] = FieldValue.serverTimestamp() }
+        // live rules only allow the state key on cancel; the server learns who cancelled from the caller of /pay/cancel
         let batch = db.batch()
         batch.updateData(update, forDocument: ref)
         if to == "accepted" && actorIsCarer {
