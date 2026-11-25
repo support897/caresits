@@ -55,15 +55,25 @@ struct RdPayoutCard: View {
     @EnvironmentObject var st: RdStore
     @State private var ready: Bool? = nil
     @State private var busy = false
+    @State private var askTerms = false
     var body: some View {
         RdCard(title: "Get paid") {
-            RdMuted(text: ready == true ? "Payouts are on. Families pay through Caresitters and the money reaches you after the job." : "Set up payouts in a few taps with Stripe. Families pay in the app. You keep 100 percent of your rate.")
+            RdMuted(text: ready == true ? "Payouts are on. Families pay through Caresitters and the money reaches you after the job." : "Set up payouts in a few taps with Stripe. Families pay in the app. You keep 100 percent of your rate. Your first payout can take longer.")
             if ready != true {
                 RdCta(title: busy ? "Opening" : "Set up payouts", small: true) {
                     busy = true
-                    Task { let r = await Api.call("/pay/onboard", [:]); busy = false; if let e = r?["error"] as? String { st.err = e } else { Api.open(r?["url"] as? String) } }
+                    Task {
+                        let t = await Api.call("/terms/status")
+                        if (t?["ok"] as? Bool) != true { busy = false; askTerms = true; return }
+                        let r = await Api.call("/pay/onboard", [:]); busy = false; if let e = r?["error"] as? String { st.err = e } else { Api.open(r?["url"] as? String) }
+                    }
                 }
             }
-        }.task { let r = await Api.call("/pay/ready", [:]); ready = r?["ready"] as? Bool }
+        }
+        .alert("Payment terms", isPresented: $askTerms) {
+            Button("I agree") { Task { await Api.call("/terms/accept", [:]); let r = await Api.call("/pay/onboard", [:]); if let e = r?["error"] as? String { st.err = e } else { Api.open(r?["url"] as? String) } } }
+            Button("Cancel", role: .cancel) {}
+        } message: { Text("You keep 100 percent of your rate. Money is released after the job. Your first payout can take longer while Stripe checks your account, and payouts arrive 7 days after release. A cancel or no-show is a strike: 3 strikes pause you for 14 days, 5 close your account. You agree to repay amounts reversed because of your conduct. Full terms: caresitters-web.placenciailse.workers.dev/payment-terms.html") }
+        .task { let r = await Api.call("/pay/ready", [:]); ready = r?["ready"] as? Bool }
     }
 }
