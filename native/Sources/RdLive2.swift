@@ -64,6 +64,11 @@ struct RdLiveBookings: View {
     @State private var err = ""
     @State private var reviewing: Booking? = nil
     @State private var paid: [String: String] = [:]
+    @State private var asked: Set<String> = []
+    @State private var askTerms = false
+    @State private var pendingPay: Booking? = nil
+    @State private var reporting: Booking? = nil
+    @State private var reportNote = ""
     var body: some View {
         VStack(spacing: 0) {
             HStack { Text("Bookings").font(RdF.title(26)).foregroundColor(RdC.ink); Spacer() }.padding(.horizontal, 20).padding(.top, 6).padding(.bottom, 8)
@@ -79,22 +84,27 @@ struct RdLiveBookings: View {
                             RdTag(text: b.state.capitalized, fill: b.state == "accepted" ? RdC.okBg : RdC.warnBg, fg: b.state == "accepted" ? RdC.okFg : RdC.warnFg)
                         }
                         RdMuted(text: "$" + String(Int(b.rate)) + " an hour, about $" + String(Int(b.estimate)))
-                        if let ps = paid[b.id], ps != "unpaid" { RdTag(text: ps == "held" ? "Paid, held safely" : "Paid out", fill: RdC.okBg, fg: RdC.okFg) }
+                        if let ps = paid[b.id], ps != "unpaid" { RdTag(text: ps == "held" ? (asked.contains(b.id) ? "Payment requested" : "Paid, held safely") : ps == "disputed" ? "Under review" : ps == "refunded" ? "Refunded" : ps == "split" ? "Part refunded" : ps == "late_cancel" ? "Late cancel" : "Paid out", fill: RdC.okBg, fg: RdC.okFg)
+                            if !isCarer && (paid[b.id] ?? "unpaid") == "unpaid" { RdMuted(text: "Plus service and payment fee $" + String(format: "%.2f", (b.estimate * 0.15).rounded() + 1.0)) } }
                         HStack(spacing: 8) {
                             if !isCarer && (b.state == "accepted" || b.state == "completed") && (paid[b.id] ?? "unpaid") == "unpaid" {
                                 RdCta(title: "Pay now", small: true) { pay(b) }
                             }
                             if !isCarer && paid[b.id] == "held" && (b.state == "accepted" || b.state == "completed") {
                                 RdCta(title: "Release to carer", style: 1, small: true) { releasePay(b) }
+                                RdCta(title: "Report a problem", style: 1, small: true) { reportNote = ""; reporting = b }
                             }
+                            if isCarer && paid[b.id] == "held" && !asked.contains(b.id) && b.dateValue < Date() {
+                                RdCta(title: "Request payment", small: true) { requestPay(b) }
+                            }
+                            if isCarer && asked.contains(b.id) && paid[b.id] == "held" { RdMuted(text: "Waiting for the family. It releases on its own in 24 hours.") }
                             if isCarer && b.state == "requested" {
                                 RdCta(title: "Accept", small: true) { act(b, "accepted", true) }
                                 RdCta(title: "Decline", style: 1, small: true) { act(b, "declined", true) }
                             } else if b.state == "accepted" && !isCarer && b.dateValue < Date() {
-                                RdCta(title: "Job done", small: true) { act(b, "completed", false) }
-                                RdCta(title: "Cancel", style: 1, small: true) { act(b, "cancelled", false) }
+                                RdCta(title: "Cancel", style: 1, small: true) { cancelPaid(b, false) }
                             } else if b.state == "requested" || b.state == "accepted" {
-                                RdCta(title: "Cancel", style: 1, small: true) { act(b, "cancelled", isCarer) }
+                                RdCta(title: "Cancel", style: 1, small: true) { cancelPaid(b, isCarer) }
                             } else if b.state == "completed" && !isCarer {
                                 RdCta(title: "Write a review", small: true) { reviewing = b }
                             }
@@ -105,9 +115,43 @@ struct RdLiveBookings: View {
             }
         }.task { await load() }
         .sheet(item: $reviewing) { b in RdReviewSheet(booking: b) }
+        .alert("Payment terms", isPresented: $askTerms) {
+            Button("I agree") { Task { await Api.call("/terms/accept", [:]); if let b = pendingPay { pay(b, agreed: true) } } }
+            Button("Cancel", role: .cancel) { pendingPay = nil }
+        } message: { Text("Money is held safely until the job is done. The family pays a service and payment fee of 15 percent plus $1. Cancel 24 hours or more before and the care price is refunded, the fee is kept. Cancel under 24 hours and half the care price is refunded. If the carer cancels, the family gets everything back. Pay only inside Caresitters. Full terms: caresitters-web.placenciailse.workers.dev/payment-terms.html") }
+        .alert("Report a problem", isPresented: Binding(get: { reporting != nil }, set: { if !$0 { reporting = nil } })) {
+            TextField("What went wrong?", text: $reportNote)
+            Button("Freeze the money") { if let b = reporting { reportProblem(b) } }
+            Button("Cancel", role: .cancel) { reporting = nil }
+        } message: { Text("Caresitters reviews it within 2 working days.") }
     }
-    func pay(_ b: Booking) {
-        Task { let r = await Api.call("/pay/checkout", ["pairId": b.pairId, "bookingId": b.id]); if let e = r?["error"] as? String { err = e } else { Api.open(r?["url"] as? String) } }
+    func pay(_ b: Booking, agreed: Bool = false) {
+        Task {
+            if !agreed { let t = await Api.call("/terms/status"); if (t?["ok"] as? Bool) != true { pendingPay = b; askTerms = true; return } }
+            let r = await Api.call("/pay/checkout", ["pairId": b.pairId, "bookingId": b.id]); if let e = r?["error"] as? String { err = e } else { Api.open(r?["url"] as? String) }
+        }
+    }
+    func requestPay(_ b: Booking) {
+        guard let u = RdLive.uid else { return }
+        Task {
+            try? await Backend.transition(b, to: "completed", actorUid: u, actorIsCarer: true)
+            let r = await Api.call("/pay/request", ["pairId": b.pairId, "bookingId": b.id])
+            if (r?["ok"] as? Bool) == true { asked.insert(b.id) } else { err = (r?["error"] as? String) ?? "Could not request payment." }
+            await load()
+        }
+    }
+    func reportProblem(_ b: Booking) {
+        let note = reportNote; reporting = nil
+        Task { let r = await Api.call("/pay/dispute", ["pairId": b.pairId, "bookingId": b.id, "note": note]); if (r?["ok"] as? Bool) == true { paid[b.id] = "disputed" } else { err = (r?["error"] as? String) ?? "Could not report." } }
+    }
+    func cancelPaid(_ b: Booking, _ carer: Bool) {
+        guard let u = RdLive.uid else { return }
+        Task {
+            do { try await Backend.transition(b, to: "cancelled", actorUid: u, actorIsCarer: carer) } catch { err = error.localizedDescription; return }
+            let r = await Api.call("/pay/cancel", ["pairId": b.pairId, "bookingId": b.id])
+            if let e = r?["error"] as? String { err = e }
+            await load()
+        }
     }
     func releasePay(_ b: Booking) {
         Task { let r = await Api.call("/pay/release", ["pairId": b.pairId, "bookingId": b.id]); if (r?["ok"] as? Bool) == true { paid[b.id] = "released" } else { err = (r?["error"] as? String) ?? (r?["why"] as? String) ?? "Could not release." } }
