@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Caresitters: Find care. Share the day.</title>
+<meta name="description" content="Caresitters is the best childcare app for Australian families. Free for all, supported by donations. Nannies, babysitters and au pairs, free to message.">
+<link rel="icon" type="image/png" href="logo-400.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,900&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --pink:#F4A9BC; --blush:#F2C4CE; --raspberry:#C2345B; --ink:#2D2A35;
+  --ground:#FBEFF2; --white:#ffffff; --soft:#FFF6F8;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:"Atkinson Hyperlegible",system-ui,sans-serif;color:var(--ink);background:var(--white);font-size:17px;line-height:1.6}
+h1,h2,h3{font-family:"Fraunces",serif;font-weight:900;line-height:1.12;margin:0 0 .4em}
+h1{font-size:clamp(2.4rem,6vw,4rem)}
+h2{font-size:clamp(1.8rem,4vw,2.6rem)}
+h3{font-size:1.3rem}
+p{margin:0 0 1em}
+a{color:var(--raspberry)}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+.topbar{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.96);backdrop-filter:blur(6px);border-bottom:1px solid var(--blush)}
+.topbar .wrap{display:flex;align-items:center;gap:16px;padding-top:10px;padding-bottom:10px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
+.brand img{height:44px;width:auto}
+.brand b{font-family:"Fraunces",serif;font-size:1.5rem}
+.nav{margin-left:auto;display:flex;gap:10px;align-items:center}
+.btn{display:inline-block;border:0;cursor:pointer;text-decoration:none;font-family:inherit;font-weight:700;font-size:1rem;padding:13px 24px;border-radius:999px;background:var(--raspberry);color:#fff;box-shadow:0 6px 18px rgba(194,52,91,.28)}
+.btn:hover{background:#a92c4f}
+.btn.ghost{background:#fff;color:var(--raspberry);border:2px solid var(--raspberry);box-shadow:none}
+.btn.light{background:#fff;color:var(--raspberry)}
+.hero{background:var(--white);padding:56px 0 40px;text-align:center}
+.hero .bunny{width:150px;height:auto;margin:0 auto 8px;display:block}
+.hero .free{font-family:"Fraunces",serif;font-weight:900;font-size:clamp(1.4rem,3vw,1.9rem);color:var(--raspberry);margin:0 0 10px}
+.hero p.lede{font-size:1.25rem;max-width:640px;margin:0 auto 26px}
+.hero .phone{max-width:340px;margin:28px auto 0;border-radius:36px;overflow:hidden;border:3px solid var(--pink);box-shadow:0 18px 50px rgba(194,52,91,.20)}
+.hero .phone video{display:block;width:100%;height:auto}
+.choice{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;max-width:820px;margin:0 auto}
+.pick{background:var(--ground);border:2px solid var(--pink);border-radius:26px;padding:28px;text-align:center}
+.pick.hot{border-color:var(--raspberry);box-shadow:0 14px 40px rgba(194,52,91,.16)}
+.pick h3{color:var(--raspberry)}
+.pick p{margin-bottom:18px}
+.strip{background:var(--raspberry);color:#fff;text-align:center;padding:18px 20px}
+.strip span{display:inline-block;margin:4px 14px;font-weight:700}
+.videos{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:8px}
+.clip{background:#fff;border-radius:20px;padding:14px;border:1px solid var(--blush)}
+.clip video{display:block;width:100%;height:auto;border-radius:14px;background:var(--ground)}
+.clip h3{color:var(--raspberry);font-size:1.15rem;margin:12px 0 4px}
+.clip p{margin:0;font-size:.98rem}
+.tour{max-width:420px;margin:28px auto 0;border-radius:28px;overflow:hidden;border:3px solid var(--pink);box-shadow:0 18px 50px rgba(194,52,91,.20)}
+.tour video{display:block;width:100%;height:auto}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:8px}
+.step{background:#fff;border-radius:20px;padding:22px;border:1px solid var(--blush)}
+.step .num{font-family:"Fraunces",serif;font-size:2rem;color:var(--raspberry);line-height:1}
+section{padding:56px 0}
+.alt{background:var(--ground)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.card{background:#fff;border-radius:20px;padding:22px;border:1px solid var(--blush)}
+.card h3{color:var(--raspberry)}
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+.plan{background:#fff;border-radius:20px;padding:24px;border:2px solid var(--blush);text-align:center}
+.plan.hot{border-color:var(--raspberry)}
+.plan .price{font-family:"Fraunces",serif;font-size:2rem;color:var(--raspberry)}
+.plan ul{text-align:left;padding-left:20px}
+.joinbox{max-width:560px;margin:0 auto;background:#fff;border:2px solid var(--pink);border-radius:24px;padding:28px;box-shadow:0 18px 50px rgba(194,52,91,.14)}
+.joinbox label{display:block;font-weight:700;margin:14px 0 4px}
+.joinbox input,.joinbox select{width:100%;padding:13px 14px;border:2px solid var(--blush);border-radius:12px;font-family:inherit;font-size:1rem;color:var(--ink);background:#fff}
+.joinbox input:focus,.joinbox select:focus{outline:3px solid var(--pink);border-color:var(--raspberry)}
+.fieldrow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tabs{display:flex;gap:8px;margin-bottom:6px}
+.tabs button{flex:1;padding:12px;border-radius:999px;border:2px solid var(--blush);background:#fff;font-family:inherit;font-weight:700;cursor:pointer;color:var(--ink)}
+.tabs button.on{background:var(--raspberry);border-color:var(--raspberry);color:#fff}
+.msg{border-radius:12px;padding:12px 14px;margin-top:14px;display:none}
+.msg.ok{display:block;background:#EAF7EE;color:#1d5c2e}
+.msg.err{display:block;background:#FDECEC;color:#8c1d1d}
+.muted{color:#6d6878;font-size:.95rem}
+footer{background:var(--ink);color:#fff;padding:36px 0}
+footer a{color:var(--pink)}
+footer .wrap{display:flex;flex-wrap:wrap;gap:24px;justify-content:space-between;align-items:flex-start}
+.kindness{background:linear-gradient(135deg,#F6CBD3,#FBEFF2);border-radius:26px;padding:34px;text-align:center}
+@media (max-width:560px){.fieldrow{grid-template-columns:1fr}.nav .btn{padding:10px 14px}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="logo.svg" alt="Caresitters logo"><b>Caresitters</b></a>
+    <nav class="nav">
+      <a class="btn ghost" href="#join">Use in browser</a>
+      <a class="btn" href="https://testflight.apple.com/join/r8UTRqSh">Get the app</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+<section class="hero">
+  <div class="wrap">
+    <img class="bunny" src="bunny.png" alt="The Caresitters bunny waving">
+    <h1>Find care. Share the day.</h1>
+    <p class="free">Free for all. No plans. No fees. No limits.</p>
+    <p class="lede">The best childcare app for Australian families. Nannies, babysitters and au pairs in one warm place, free for everyone.</p>
+    <div class="phone">
+      <video src="video/cold-hero.mp4" autoplay muted loop playsinline preload="metadata" aria-label="The Caresitters app opening on a real iPhone"></video>
+    </div>
+    <p class="muted" style="margin-top:14px">Watch the app open on a real phone. Then pick how you want to start.</p>
+  </div>
+</section>
+
+<section style="padding-top:0">
+  <div class="wrap">
+    <div class="choice">
+      <div class="pick">
+        <h3>Use it in your browser</h3>
+        <p>Start now, no download. Create your account here and it works in the app too.</p>
+        <p><a class="btn" href="#join">Start in your browser</a></p>
+      </div>
+      <div class="pick hot">
+        <h3>Get the app on TestFlight</h3>
+        <p>Download the app on your iPhone. Same account, same care, same free for all.</p>
+        <p><a class="btn" href="https://testflight.apple.com/join/r8UTRqSh">Download on TestFlight</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="strip">
+  <span>Carers keep 100% of their pay</span>
+  <span>Message anyone, free</span>
+  <span>Free for all, today and always</span>
+</div>
+
+<section>
+  <div class="wrap">
+    <h2>Watch it work</h2>
+    <p>Filmed inside the real app. Real buttons, real screens, real matches.</p>
+    <div class="videos">
+      <div class="clip">
+        <video src="video/clip-tour.mp4" autoplay muted loop playsinline preload="metadata" aria-label="The Caresitters bunny welcomes you"></video>
+        <h3>Say hello to Bun</h3>
+        <p>The bunny walks you around and learns your name first.</p>
+      </div>
+      <div class="clip">
+        <video src="video/clip-match.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Best matches in the app"></video>
+        <h3>See your best matches</h3>
+        <p>Your top matches stand out, with a Perfect Pair when it is real.</p>
+      </div>
+      <div class="clip">
+        <video src="video/clip-map.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Carers on the map"></video>
+        <h3>Find carers near you</h3>
+        <p>See carers on the map and open a profile with one tap.</p>
+      </div>
+      <div class="clip">
+        <video src="video/clip-day.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Planning the day together"></video>
+        <h3>Plan the day together</h3>
+        <p>Kids, plans and day stories, all in one family hub.</p>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:28px">
+      <h3>Watch the full tour</h3>
+      <p>Two and a half minutes, start to finish, inside the real app.</p>
+    </div>
+    <div class="tour">
+      <video src="video/app-tour.mp4" controls preload="metadata" aria-label="Full tour of the Caresitters app"></video>
+    </div>
+  </div>
+</section>
+
+<section class="alt" id="how">
+  <div class="wrap">
+    <h2>How it works</h2>
+    <p>Three easy steps. No fuss, no walls of forms.</p>
+    <div class="steps">
+      <div class="step"><div class="num">1</div><h3>Create your account</h3><p>Join in under a minute with your email or Google. Your account is saved forever and works in the Caresitters app too.</p></div>
+      <div class="step"><div class="num">2</div><h3>Tell us what you need</h3><p>Families share ages, days and the kind of care they want. Carers share experience, skills and when they are free.</p></div>
+      <div class="step"><div class="num">3</div><h3>Meet your match</h3><p>Message, plan the roster together and book. Families can change bookings, and everyone can see the plan in the family hub.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Why parents pick Caresitters</h2>
+    <p>Other apps charge to message, take a cut, or ask lots of questions first. We do none of that.</p>
+    <div class="cards">
+      <div class="card"><h3>Message anyone, free</h3><p>Other apps make you pay to message a carer. Here you say hello free, from the start.</p></div>
+      <div class="card"><h3>Carers keep 100%</h3><p>Other apps take a cut of the carer's pay. Here carers keep every cent of what you agree.</p></div>
+      <div class="card"><h3>Your questions are optional</h3><p>Other apps ask lots of questions before you can do anything. Here the questions are optional, never forced.</p></div>
+      <div class="card"><h3>Family, nanny and au pair, each their own</h3><p>One search covers every kind of care. Au pairs get countries and a map, all in the same place.</p></div>
+      <div class="card"><h3>Your match level, in plain sight</h3><p>Explore, Quick Connect, Better Match and Full Match. A Perfect Pair shows only when the match is real.</p></div>
+      <div class="card"><h3>Urgent care board</h3><p>Need someone today? Post an urgent job and nearby carers can answer fast.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <h2>Safe by design</h2>
+    <p>Trust is earned in the open, not promised in small print.</p>
+    <div class="cards">
+      <div class="card"><h3>Real profiles</h3><p>Every carer profile shows experience, skills and checks level, so families can see what a carer brings before the first message.</p></div>
+      <div class="card"><h3>Messages stay in the app</h3><p>Families and carers talk inside Caresitters, with the booking, the roster and the plan all in one family hub.</p></div>
+      <div class="card"><h3>Bookings are tracked</h3><p>Every booking is counted. Completion is tracked, cancellations are marked, and reviews stay on the profile for the next family to read.</p></div>
+      <div class="card"><h3>You stay in control</h3><p>Families can change bookings, and everyone can propose roster changes. Only agreed changes go ahead.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Free for all</h2>
+    <p>Everything in Caresitters is free for families and carers. No plans, no fees, no limits.</p>
+    <div class="plans">
+      <div class="plan hot"><h3>Free for all</h3><div class="price">Free</div><ul><li>Find and message carers</li><li>Full matching and family hub</li><li>Urgent care board</li><li>Change bookings any time</li></ul></div>
+      <div class="plan"><h3>Donations</h3><div class="price">Give what you can</div><ul><li>Donations keep care free</li><li>Help families who need it most</li><li>Give when you can, as much as you can</li></ul><p><a class="btn ghost" href="https://ilseplacencia.shop/kindness">Give to keep it free</a></p></div>
+    </div>
+    <p class="muted">Carers always receive 100% of the agreed amount.</p>
+  </div>
+</section>
+
+<section class="alt" id="join">
+  <div class="wrap">
+    <div class="joinbox">
+      <h2 style="text-align:center">Join Caresitters</h2>
+      <p style="text-align:center">Your account is saved forever and works in the Caresitters app too.</p>
+      <div class="tabs" role="tablist">
+        <button type="button" id="tabUp" class="on">Create account</button>
+        <button type="button" id="tabIn">Sign in</button>
+      </div>
+      <label for="role">I am</label>
+      <select id="role">
+        <option value="family">A family looking for care</option>
+        <option value="carer">A carer offering care</option>
+      </select>
+      <div id="nameRow">
+        <label for="displayName">Your name</label>
+        <input id="displayName" type="text" autocomplete="name" placeholder="Your first name">
+      </div>
+      <div id="postcodeRow">
+        <label for="postcode">Postcode</label>
+        <input id="postcode" type="text" inputmode="numeric" autocomplete="postal-code" placeholder="e.g. 4005">
+      </div>
+      <label for="email">Email</label>
+      <input id="email" type="email" autocomplete="email" placeholder="you@example.com">
+      <label for="password">Password</label>
+      <input id="password" type="password" autocomplete="new-password" placeholder="At least 6 characters">
+      <p style="margin-top:18px"><button class="btn" id="submitBtn" type="button" style="width:100%">Create my account</button></p>
+      <p style="text-align:center;margin:6px 0">or</p>
+      <p><button class="btn ghost" id="googleBtn" type="button" style="width:100%">Continue with Google</button></p>
+      <div class="msg ok" id="okMsg"></div>
+      <div class="msg err" id="errMsg"></div>
+      <p class="muted" style="text-align:center;margin-top:16px">By joining you agree to be kind, honest and safe with every family and carer here.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap" style="text-align:center">
+    <h2>Join the AI kindness revolution</h2>
+    <p>Kindness is the heart of Caresitters. See the kindness wall and give to keep care free for families who need it most.</p>
+    <p><a class="btn" href="https://ilseplacencia.shop/kindness">Join the AI kindness revolution</a></p>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div><b style="font-family:Fraunces,serif;font-size:1.3rem">Caresitters</b><p class="muted" style="color:#F2C4CE">Find care. Share the day.</p></div>
+    <div><a href="#join">Join</a><br><a href="#how">How it works</a><br><a href="https://testflight.apple.com/join/r8UTRqSh">Get the app</a></div>
+    <div><a href="https://ilseplacencia.shop/kindness">Kindness</a><br><a href="#top">Back to top</a></div>
+  </div>
+  <div class="wrap"><p class="muted" style="color:#B9B3C0;margin-top:24px">Caresitters connects families with nannies, babysitters and au pairs in Australia. Accounts created here work in the Caresitters app.</p></div>
+</footer>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+var firebaseConfig = {
+  apiKey: "AIzaSyDbi4vqhN6I7Zz7_-6-ZQSZzd3MnQiYBCE",
+  authDomain: "caresits-812a0.firebaseapp.com",
+  projectId: "caresits-812a0",
+  messagingSenderId: "908064912971"
+};
+firebase.initializeApp(firebaseConfig);
+var auth = firebase.auth();
+var db = firebase.firestore();
+var mode = "up";
+var okMsg = document.getElementById("okMsg");
+var errMsg = document.getElementById("errMsg");
+function showOk(t){ okMsg.textContent = t; okMsg.style.display = "block"; errMsg.style.display = "none"; }
+function showErr(t){ errMsg.textContent = t; errMsg.style.display = "block"; okMsg.style.display = "none"; }
+function friendly(code){
+  if(code === "auth/email-already-in-use") return "That email already has an account. Sign in instead.";
+  if(code === "auth/invalid-email") return "That email does not look right. Check it and try again.";
+  if(code === "auth/weak-password") return "Please choose a password with at least 6 characters.";
+  if(code === "auth/user-not-found" || code === "auth/wrong-password" || code === "auth/invalid-credential") return "No account matches that email and password. Check them or create an account.";
+  if(code === "auth/unauthorized-domain") return "Google sign in needs this site domain approved in Firebase first. Please use email for now.";
+  if(code === "auth/popup-closed-by-user") return "The Google window closed before sign in finished. Try again.";
+  if(code === "auth/network-request-failed") return "The network dropped. Check your connection and try again.";
+  return "Something went wrong. Please try again.";
+}
+function sideFor(){ return document.getElementById("role").value; }
+function profileFor(uid, name, postcode){
+  return {
+    side: sideFor(),
+    displayName: name || "",
+    postcode: postcode || "",
+    card: {},
+    looking: { musts: {}, prefs: {} },
+    level: "explore",
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+}
+function ensureProfile(user){
+  var ref = db.collection("profiles").doc(user.uid);
+  return ref.get().then(function(snap){
+    if(snap.exists) return;
+    var name = document.getElementById("displayName").value.trim();
+    var postcode = document.getElementById("postcode").value.trim();
+    return ref.set(profileFor(user.uid, name || (user.displayName || ""), postcode));
+  });
+}
+document.querySelectorAll(".role").forEach(function(btn){
+  btn.addEventListener("click", function(){
+    document.querySelectorAll(".role").forEach(function(b){ b.classList.remove("picked"); });
+    btn.classList.add("picked");
+    document.getElementById("role").value = btn.getAttribute("data-role");
+    document.getElementById("join").scrollIntoView({ behavior: "smooth" });
+  });
+});
+function setMode(m){
+  mode = m;
+  document.getElementById("tabUp").classList.toggle("on", m === "up");
+  document.getElementById("tabIn").classList.toggle("on", m === "in");
+  document.getElementById("nameRow").style.display = m === "up" ? "" : "none";
+  document.getElementById("postcodeRow").style.display = m === "up" ? "" : "none";
+  document.getElementById("submitBtn").textContent = m === "up" ? "Create my account" : "Sign in";
+  document.getElementById("password").setAttribute("autocomplete", m === "up" ? "new-password" : "current-password");
+}
+document.getElementById("tabUp").addEventListener("click", function(){ setMode("up"); });
+document.getElementById("tabIn").addEventListener("click", function(){ setMode("in"); });
+document.getElementById("submitBtn").addEventListener("click", function(){
+  var email = document.getElementById("email").value.trim();
+  var pw = document.getElementById("password").value;
+  if(!email || !pw){ showErr("Please add your email and password."); return; }
+  if(mode === "up"){
+    var name = document.getElementById("displayName").value.trim();
+    var postcode = document.getElementById("postcode").value.trim();
+    if(!name){ showErr("Please add your name."); return; }
+    auth.createUserWithEmailAndPassword(email, pw).then(function(cred){
+      return db.collection("profiles").doc(cred.user.uid).set(profileFor(cred.user.uid, name, postcode));
+    }).then(function(){
+      showOk("Welcome to Caresitters. Your account is saved forever and works in the Caresitters app too.");
+    }).catch(function(e){ showErr(friendly(e.code)); });
+  } else {
+    auth.signInWithEmailAndPassword(email, pw).then(function(){
+      showOk("Welcome back. You are signed in.");
+    }).catch(function(e){ showErr(friendly(e.code)); });
+  }
+});
+document.getElementById("googleBtn").addEventListener("click", function(){
+  var provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).then(function(cred){
+    return ensureProfile(cred.user);
+  }).then(function(){
+    showOk("Welcome to Caresitters. Your account is saved forever and works in the Caresitters app too.");
+  }).catch(function(e){ showErr(friendly(e.code)); });
+});
+auth.onAuthStateChanged(function(user){
+  if(user){
+    var who = user.displayName || user.email || "friend";
+    showOk("Signed in as " + who + ". Your account is saved and works in the Caresitters app too.");
+  }
+});
+</script>
+</body>
+</html>
