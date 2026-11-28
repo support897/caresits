@@ -606,6 +606,16 @@ extension RdLive {
         else { s += 5 }
         let lang = Set(me.languages).intersection(Set(p.languages))
         if let l = lang.first { s += 5; why.append("You both speak " + l) }
+        // The sign up picks (Montessori, swimming, calm, homework help and so on) now count.
+        let picks: [(String, String)] = [("routineStyle", "Same approach: "), ("activities", "You both enjoy "), ("personality", "Same style: "), ("tasks", "Help with ")]
+        for (k, lead) in picks {
+            let c = Set((me.card[k] as? [String]) ?? []).intersection(Set((p.card[k] as? [String]) ?? []))
+            if !c.isEmpty { s += min(6, c.count * 3); why.append(lead + c.sorted().joined(separator: ", ").lowercased()) }
+        }
+        func on(_ q: Person, _ k: String) -> Bool { (q.card[k] as? Bool) == true }
+        if on(me, "cooking") && on(p, "cooking") { s += 2; why.append("Cooking is a match") }
+        if on(me, "drives") && on(p, "drives") { s += 2; why.append("Driving licence is a match") }
+        if (on(me, "pets") && on(p, "petsOk")) || (on(me, "petsOk") && on(p, "pets")) { s += 2; why.append("Fine with pets") }
         return (min(99, s), why)
     }
 
