@@ -1,4 +1,5 @@
 import SwiftUI
+import FirebaseAuth
 import MapKit
 
 // Map, home, bookings, messages, me, settings, menu, safety, resume and review screens.
@@ -330,18 +331,42 @@ struct RdMe: View {
 
 struct RdSettings: View {
     @EnvironmentObject var st: RdStore
+    @EnvironmentObject var session: Session
+    @State private var confirmDelete = false
+    @State private var msg = ""
     var body: some View {
         VStack(spacing: 0) {
             RdHeader(title: "Settings")
             RdScroll {
-                RdNavRow(icon: "sun", title: "Theme", value: "Light") { }
-                RdNavRow(icon: "globe", title: "Language", value: "English") { }
-                RdNavRow(icon: "bunny", title: "Bunny", value: "Pink") { }
-                RdNavRow(icon: "bell", title: "Notifications", value: "On") { }
-                RdNavRow(icon: "sliders", title: "What matters to me") { st.go("settingsmatch") }
-                RdNavRow(icon: "loop", title: "Sign out") { st.root("splash") }
-                RdNavRow(icon: "x", title: "Delete account") { }
+                RdNavRow(icon: "sliders", title: "What matters to me") { st.go("askme") }
+                RdNavRow(icon: "person", title: "My profile") { st.go(RdLive.signedIn ? "myprofile" : "profile") }
+                RdNavRow(icon: "camera", title: "My photos") { st.go("photoup") }
+                RdNavRow(icon: "bell", title: "Notifications") { if let u = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(u) } }
+                RdNavRow(icon: "loop", title: "Sign out") { session.signOut(); st.root("splash") }
+                RdNavRow(icon: "x", title: "Delete account") { confirmDelete = true }
+                if !msg.isEmpty { Text(msg).font(RdF.body(13)).foregroundColor(RdC.ras).padding(.horizontal, 20).padding(.top, 8) }
             }
+        }
+        .alert("Delete your account?", isPresented: $confirmDelete) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                Task {
+                    do { try await Auth.auth().currentUser?.delete(); session.signOut(); st.root("splash") }
+                    catch { msg = "For safety, sign out, sign in again, then delete. " + error.localizedDescription }
+                }
+            }
+        } message: { Text("This removes your login. It cannot be undone.") }
+    }
+}
+
+/// Real picks from the sign up (Montessori, swimming, pets, au pair life...), editable any time.
+struct RdAskMe: View {
+    @EnvironmentObject var st: RdStore
+    var body: some View {
+        let fam = st.isFamily, au = st.pickedCare == "aupair"
+        VStack(spacing: 0) {
+            RdHeader(title: "What matters to me")
+            AskingView(sideOverride: fam ? "family" : "carer", auPairOverride: au || (fam && st.pickedCare == "aupair"), auOnly: au, onFinish: { st.back() })
         }
     }
 }
@@ -399,7 +424,11 @@ struct RdMenu: View {
         case "My photos": st.go("photoup")
         case "Switch role": st.root("role")
         case "My profile", "My family profile": st.go(RdLive.signedIn ? "myprofile" : "profile")
-        case "Rates and preferences": st.go("settingsmatch")
+        case "Rates and preferences": st.go("askme")
+        case "My children", "Availability", "Qualifications": st.go(RdLive.signedIn ? "myprofile" : "profile")
+        case "Saved carers": st.go("hearts")
+        case "Notifications": if let u = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(u) }
+        case "Help and support", "CareSpace": if let u = URL(string: "https://caresits.xyz") { UIApplication.shared.open(u) }
         default: break
         }
     }

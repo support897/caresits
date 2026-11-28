@@ -80,7 +80,8 @@ struct RdRoot: View {
         case "inbox": if RdLive.signedIn { RdLiveInbox() } else { RdInbox() }
         case "me": RdMe()
         case "settings": RdSettings()
-        case "settingsmatch": RdSettingsMatch()
+        case "settingsmatch": RdAskMe()
+        case "askme": RdAskMe()
         case "menu": RdMenu()
         case "safety": RdSafety()
         case "resume": RdResume()
