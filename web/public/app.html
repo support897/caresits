@@ -11,7 +11,7 @@
 <script src="icons.js"></script>
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import {getAuth,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,signInWithPopup,GoogleAuthProvider,signOut,sendPasswordResetEmail} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import {getAuth,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,signInWithPopup,GoogleAuthProvider,OAuthProvider,signOut,sendPasswordResetEmail} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import {getFirestore,doc,getDoc,setDoc,addDoc,updateDoc,deleteDoc,collection,query,where,orderBy,limit,startAfter,getDocs,onSnapshot,serverTimestamp,Timestamp,writeBatch} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 const app=initializeApp({apiKey:"AIzaSyDbi4vqhN6I7Zz7_-6-ZQSZzd3MnQiYBCE",authDomain:"caresits-812a0.firebaseapp.com",projectId:"caresits-812a0",appId:"1:908064912971:web:88858e5fa8751f66b23fce"});
 const auth=getAuth(app),db=getFirestore(app);
@@ -38,13 +38,15 @@ const person=(id,d)=>({id,side:d.side,name:d.displayName||"Member",first:(d.disp
 function authView(mode){
  const su=mode==="signup";
  R.innerHTML=`<div class="authwrap"><div class="card">${bun()}<h2>${su?"Join Caresitters":"Welcome back"}</h2><div class="mut">${su?"One minute. Then say hi.":"Good to see you."}</div>
- <button class="btn ghost" id="g" style="width:100%;margin-top:16px">Continue with Google</button><div class="or">or</div>
+ <button class="btn ghost" id="g" style="width:100%;margin-top:16px">Continue with Google</button><button class="btn ghost" id="ap" style="width:100%;margin-top:8px">Continue with Apple</button><div class="or">or</div>
  <label class="fld">Email</label><input id="e" type="email" autocomplete="email"><label class="fld">Password</label><input id="p" type="password" autocomplete="${su?"new-password":"current-password"}" placeholder="${su?"At least 8 characters":""}">
  <div class="err" id="er"></div><button class="btn" id="go" style="width:100%">${su?"Create account":"Log in"}</button>
  <p class="mut" style="text-align:center">${su?'Have an account? <a href="#login">Log in</a>':'New here? <a href="#signup">Sign up</a> &middot; <a href="#" id="fg">Forgot password</a>'}</p></div></div>`;
  const er=m=>$("#er").textContent=m;
  $("#go").onclick=async()=>{const e=$("#e").value.trim(),p=$("#p").value;if(!e||p.length<(su?8:1))return er(su?"Use at least 8 characters":"Type your password");$("#go").disabled=true;try{su?await createUserWithEmailAndPassword(auth,e,p):await signInWithEmailAndPassword(auth,e,p)}catch(x){$("#go").disabled=false;er(({"auth/email-already-in-use":"That email already has an account. Log in.","auth/invalid-credential":"Wrong email or password","auth/invalid-email":"Check your email","auth/weak-password":"Pick a stronger password","auth/operation-not-allowed":"Email sign in is not switched on yet"})[x.code]||x.code)}};
  $("#g").onclick=async()=>{try{await signInWithPopup(auth,new GoogleAuthProvider())}catch(x){er(x.code==="auth/unauthorized-domain"?"Google sign in needs this site added in Firebase.":x.code)}};
+ $("#ap").onclick=async()=>{try{const p=new OAuthProvider("apple.com");p.addScope("email");p.addScope("name");await signInWithPopup(auth,p)}catch(x){er(x.code==="auth/unauthorized-domain"?"Apple sign in needs this site added in Firebase.":x.code==="auth/popup-closed-by-user"?"":x.code)}};
+ $("#p").onkeydown=e=>{if(e.key==="Enter")$("#go").click()};
  if($("#fg"))$("#fg").onclick=async ev=>{ev.preventDefault();const e=$("#e").value.trim();if(!e)return er("Type your email first");await sendPasswordResetEmail(auth,e).catch(()=>{});toast("Reset email sent")};
 }
 
