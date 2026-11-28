@@ -8,6 +8,7 @@
 <symbol id="i-cal" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" d="M4 6h16v14H4zM4 10h16M8 3v4M16 3v4"/></symbol>
 <symbol id="i-me" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2.2"/><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M4 21c1-5 15-5 16 0"/></symbol></defs></svg>
 <div id="root"><div class="spin"></div></div><div id="fx"></div>
+<script src="icons.js"></script>
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {getAuth,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,signInWithPopup,GoogleAuthProvider,signOut,sendPasswordResetEmail} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
@@ -31,7 +32,7 @@ async function api(path,body){const t=await auth.currentUser?.getIdToken();const
 async function needTerms(){const s=await api("/terms/status");if(s.ok)return true;return new Promise(res=>{const d=document.createElement("div");d.style.cssText="position:fixed;inset:0;background:rgba(45,42,53,.5);z-index:99;display:flex;align-items:center;justify-content:center;padding:16px";d.innerHTML='<div class="panel" style="max-width:420px;background:#fff"><h3>Payment terms</h3><p class="mut">Money is held safely until the job is done. The family pays a service and payment fee. Cancel 24 hours or more before for a refund of the care price. Carer cancels: family gets everything back. Pay only inside Caresitters. Carers: your first payout can take longer, payouts are delayed 7 days, and you agree to repay amounts reversed because of your conduct.</p><p><a href="/payment-terms.html" target="_blank">Read the full terms</a></p><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="tc"> I agree to the payment and cancellation terms</label><div class="row" style="margin-top:12px"><button class="btn sm" id="ty" disabled>I agree</button><button class="btn sm ghost" id="tn">Not now</button></div></div>';document.body.appendChild(d);const c=d.querySelector("#tc"),y=d.querySelector("#ty");c.onchange=()=>y.disabled=!c.checked;d.querySelector("#tn").onclick=()=>{d.remove();res(false)};y.onclick=async()=>{await api("/terms/accept",{});d.remove();res(true)}})}
 const notify=(to,kind,text,relId)=>{if(to)api("/notify",{toUid:to,kind,text,relId:relId||""}).catch(()=>{})};
 const pairId=(a,b)=>a<b?a+"_"+b:b+"_"+a;
-const person=(id,d)=>({id,side:d.side,name:d.displayName||"Member",first:(d.displayName||"Member").split(" ")[0],pc:d.postcode||"",about:d.about||"",card:d.card||{},types:(d.card||{}).careTypes||[],rate:(d.card||{}).rate||0,years:(d.card||{}).experienceYears||0,kids:((d.card||{}).kids||[]).map(k=>k.ageYears)});
+const person=(id,d)=>({id,side:d.side,name:d.displayName||"Member",first:(d.displayName||"Member").split(" ")[0],pc:d.postcode||"",about:d.about||"",photo:d.photoUrl||"",gallery:(d.card||{}).gallery||[],lk:d.looking||{},card:d.card||{},types:(d.card||{}).careTypes||[],rate:(d.card||{}).rate||0,years:(d.card||{}).experienceYears||0,kids:((d.card||{}).kids||[]).map(k=>k.ageYears)});
 
 /* ---------- auth ---------- */
 function authView(mode){
@@ -47,28 +48,88 @@ function authView(mode){
  if($("#fg"))$("#fg").onclick=async ev=>{ev.preventDefault();const e=$("#e").value.trim();if(!e)return er("Type your email first");await sendPasswordResetEmail(auth,e).catch(()=>{});toast("Reset email sent")};
 }
 
-/* ---------- setup ---------- */
-function setupView(){
- let role="family",ages=[],picked={};
- R.innerHTML=`<div class="authwrap"><div class="card">${bun()}<h2>Tell Bun about you</h2><div class="chips" id="rl">${Object.entries(ROLES).map(([k,v])=>`<button class="chip ${k==="family"?"on":""}" data-k="${k}">${v}</button>`).join("")}</div>
- <label class="fld">First name</label><input id="nm" maxlength="30"><label class="fld">Postcode</label><input id="pc" maxlength="10" inputmode="text">
- <label class="fld">Country</label><select id="co">${["Australia","United Kingdom","Ireland","New Zealand","Canada","United States","Germany","Netherlands","France","Other"].map(c=>`<option>${c}</option>`).join("")}</select>
- <div id="x"></div><div class="err" id="er"></div><button class="btn" id="go" style="width:100%">Finish</button><p class="mut" style="text-align:center"><a href="#" id="sk">Skip for now</a></p></div></div>`;
- const draw=()=>{$("#x").innerHTML=role==="family"?`<label class="fld">How old are your kids? Tap to add. No names.</label><div class="chips">${[0,1,2,3,4,5,6,7,8,9,10,11,12].map(a=>`<button class="chip" data-a="${a}">${a}</button>`).join("")}</div><div class="mut" id="ak">${ages.length?"Ages: "+ages.join(", "):"None added"} <a href="#" id="cl">clear</a></div>`:`<label class="fld">Your rate per hour (AUD)</label><input id="rt" type="number" min="15" max="120" value="30">`;
-  $("#x").querySelectorAll("[data-a]").forEach(b=>b.onclick=()=>{if(ages.length<8){ages.push(+b.dataset.a);$("#ak").firstChild.textContent="Ages: "+ages.join(", ")+" "}});const c=$("#cl");if(c)c.onclick=e=>{e.preventDefault();ages=[];draw()}};
+/* ---------- setup (care or give first, then icon questions) ---------- */
+const NAT=["Australian","Filipino","Colombian","Brazilian","German","French","British","Irish","Spanish","Italian","Dutch","Polish","Japanese","Korean","Chinese","Indian","Indonesian","Thai","Vietnamese","South African","New Zealander","Canadian","American","Another background"];
+const LANGS=["English","Spanish","Mandarin","Cantonese","Hindi","Arabic","Vietnamese","Italian","Greek","French","German","Filipino"];
+const RT=[["nanny","Nanny","Regular care at home","nanny"],["babysitter","Babysitter","Evenings and weekends","moon"],["au_pair","Au pair","Live in help, from home or abroad","globe"]];
+const PK=(id,label,icon,home)=>({id,label,icon,home});
+function sections(side,types){
+ const fam=side==="family",au=types.includes("au_pair");
+ const care=[PK("montessori","Montessori","blocks",["list","routineStyle","Montessori"]),PK("strict","Strict","ruler",["list","routineStyle","Strict"]),PK("flexible","Flexible","bend",["list","routineStyle","Flexible"]),PK("dancing","Dancing","dance",["list","activities","Dancing"]),PK("swimming","Swimming","swim",["list","activities","Swimming"]),PK("homework","Homework help","book",["list","tasks","Homework help"]),PK("cooking","Cooking","pot",["flag","cooking"]),fam?PK("pets","Pets at home","paw",["flag","pets"]):PK("pets","Fine with pets","paw",["flag","petsOk"]),PK("languages","Languages","globe",["langs"])];
+ const who=[PK("calm","Calm","calm",["list","personality","Calm"]),PK("playful","Playful","balloon",["list","personality","Playful"]),PK("gentle","Gentle","gentle",["list","personality","Gentle"]),PK("firm","Firm","firm",["list","personality","Firm"]),PK("outdoorsy","Outdoorsy","tree",["list","personality","Outdoorsy"]),PK("musical","Musical","note",["list","personality","Musical"]),PK("licence","Driving licence","licence",["flag","drives"]),PK("owncar","Own car","car",["flag","ownCar"]),PK("firstaid","First aid","firstAid",["dev"]),PK("cpr","CPR","cpr",["dev"]),PK("education","Education","cap",["dev"])];
+ const ch=(a)=>["chips",a];
+ const aup=[fam?PK("country","Countries you welcome","passport",["country"]):PK("country","Where you are from","passport",["country"])].concat(fam?[PK("countryonly","Only these countries","shield",["onlynat"])]:[]).concat([
+  PK("ownroom","Own room","door",["dev"]),PK("ownbath","Own bathroom","bath",["dev"]),PK("sharedbath","Shared bathroom","shower",["dev"]),PK("fullboard","Full board","plate",["dev"]),
+  PK("pocket","Pocket money","rate",["chips",["$100","$150","$200","$250","$300"],fam?"payOffered":"payFloor"]),
+  PK("hours","Weekly hours","clock",["chips",["20 hours","25 hours","30 hours","35 hours","40 hours","45 hours"],null]),
+  PK("daysoff","Days off","calendar",["chips",["1 day","1.5 days","2 days"],null]),
+  PK("weekend","Weekend off a month","weekend",["dev"]),PK("holiday","Paid holiday","suitcase",["dev"]),
+  PK("stay","Stay length","hourglass",["chips",["3 months","6 months","9 months","12 months"],null]),
+  PK("start","Start window","flag",["chips",["As soon as possible","In a month","In 3 months"],null]),
+  PK("agreement","Duties in writing","doc",["dev"]),PK("usecar","Use of car","key",["dev"]),PK("phone","Phone help","phone",["dev"]),PK("flexhours","Flexible hours","loop",["dev"]),PK("bonus","Completion bonus","gift",["dev"]),PK("course","Language course help","chat",["dev"]),PK("transport","Transport help","bus",["dev"])]);
+ const S=[{id:"care",title:fam?"What type of care are you looking for?":"What type of care work are you looking for?",note:"Tap what fits. No typing.",picks:care},{id:"who",title:fam?"Your ideal candidate":"Your ideal family",note:fam?"Tap what you want in a carer.":"Tap what you bring, so we can match you.",picks:who}];
+ const AU={id:"aupair",title:fam?"Au pair: what does your family offer?":"Au pair: what do you look for?",note:fam?"Tap what your family offers an au pair.":"Tap what you look for as an au pair.",picks:aup};
+ if(au)S.unshift(AU);return S}
+function setupView(edit){
+ const S={step:0,side:null,types:[],name:"",pc:"",co:"Australia",ages:[],rate:30,err:""};
+ if(edit&&prof){S.side=prof.side;S.types=prof.types.length?prof.types:["nanny"];S.name=prof.name==="Member"?"":prof.name;S.pc=prof.pc;S.ages=prof.kids||[];S.rate=prof.rate||30;S.step=3}
+ const c0=(prof&&prof.card)||{};
+ const A={lists:{},flags:{},nums:{},dev:JSON.parse(localStorage.getItem("csdev_"+me.uid)||"{}"),nat:c0.nationality||null,natList:[],natOnly:false,open:null};
+ for(const k of ["personality","routineStyle","activities","languages","tasks"])if(Array.isArray(c0[k]))A.lists[k]=c0[k];
+ for(const k of ["drives","ownCar","cooking","pets","petsOk"])if(c0[k]===true)A.flags[k]=true;
+ for(const k of ["payOffered","payFloor"])if(typeof c0[k]==="number")A.nums[k]=c0[k];
+ {const lk=(rawProf&&rawProf.looking)||{},mu=(lk.musts||{}).nationality,pr=(lk.prefs||{}).nationality;if(Array.isArray(mu)&&mu.length){A.natList=mu;A.natOnly=true}else if(Array.isArray(pr))A.natList=pr}
+ const secs=()=>sections(S.side||"family",S.types),total=()=>3+secs().length,fam=()=>S.side==="family";
+ const isOn=p=>{const h=p.home;if(h[0]==="list")return(A.lists[h[1]]||[]).includes(h[2]);if(h[0]==="flag")return!!A.flags[h[1]];if(h[0]==="dev")return!!A.dev[p.id];if(h[0]==="langs")return(A.lists.languages||[]).length>0;if(h[0]==="country")return fam()?A.natList.length>0:!!A.nat;if(h[0]==="onlynat")return A.natOnly;if(h[0]==="chips")return h[2]?A.nums[h[2]]!=null:typeof A.dev[p.id]==="string";return false};
+ const tap=p=>{const h=p.home;
+  if(h[0]==="list"){const l=A.lists[h[1]]||[],i=l.indexOf(h[2]);i<0?l.push(h[2]):l.splice(i,1);A.lists[h[1]]=l}
+  else if(h[0]==="flag")A.flags[h[1]]=!A.flags[h[1]];
+  else if(h[0]==="dev"){A.dev[p.id]=!A.dev[p.id];localStorage.setItem("csdev_"+me.uid,JSON.stringify(A.dev))}
+  else if(h[0]==="onlynat")A.natOnly=!A.natOnly;
+  else A.open=A.open===p.id?null:p.id};
+ const opts=p=>p.home[0]==="langs"?LANGS:p.home[0]==="country"?NAT:p.home[1];
+ const chipOn=(p,o)=>{const h=p.home;if(h[0]==="langs")return(A.lists.languages||[]).includes(o);if(h[0]==="country")return fam()?A.natList.includes(o):A.nat===o;if(h[2])return A.nums[h[2]]===+o.replace(/\D/g,"");return A.dev[p.id]===o};
+ const chip=(p,o)=>{const h=p.home;
+  if(h[0]==="langs"){const l=A.lists.languages||[],i=l.indexOf(o);i<0?l.push(o):l.splice(i,1);A.lists.languages=l}
+  else if(h[0]==="country"){if(fam()){const i=A.natList.indexOf(o);i<0?A.natList.push(o):A.natList.splice(i,1)}else A.nat=A.nat===o?null:o}
+  else if(h[2]){const n=+o.replace(/\D/g,"");A.nums[h[2]]=A.nums[h[2]]===n?undefined:n}
+  else{A.dev[p.id]=A.dev[p.id]===o?undefined:o;localStorage.setItem("csdev_"+me.uid,JSON.stringify(A.dev))}};
+ const patch=()=>{const card={};for(const k of ["personality","routineStyle","activities","languages","tasks"])card[k]=(A.lists[k]||[]).length?A.lists[k]:null;for(const k of ["drives","ownCar","cooking","pets","petsOk"])card[k]=A.flags[k]?true:null;for(const k of ["payOffered","payFloor"])card[k]=A.nums[k]!=null?A.nums[k]:null;if(!fam())card.nationality=A.nat||null;
+  const looking=fam()?(A.natOnly?{musts:{nationality:A.natList.length?A.natList:null},prefs:{nationality:null}}:{prefs:{nationality:A.natList.length?A.natList:null},musts:{nationality:null}}):null;return{card,looking}};
+ const save=async skip=>{
+  if(!skip){if(!S.name.trim())return fail("Add your first name");if(!S.pc.trim())return fail("Add your postcode");if(bad(S.name))return fail("No emails or numbers please")}
+  const side=S.side||"family",types=S.types.length?S.types:["nanny"],{card,looking}=patch();
+  const go=$("#go");if(go)go.disabled=true;
+  try{await saveProfile({side,name:S.name.trim()||"Member",postcode:S.pc.trim(),country:S.co,types,ages:S.ages,rate:S.rate,card,looking});await boot()}catch(x){if(go)go.disabled=false;fail("Could not save: "+(x.code||x.message))}};
+ const fail=m=>{S.err=m;const e=$("#er");if(e)e.textContent=m};
+ const draw=()=>{
+  const n=S.step,ss=secs(),last=n===total()-1;let title="",sub="",body="";
+  if(n===0){title="What brings you here?";sub="Pick one. You can change this later.";body=`<div class="big">${[["family","I am looking for care","Nanny, babysitter or au pair for my children","home"],["carer","I give care","I am a nanny, babysitter or au pair","nanny"]].map(([k,t,d,i])=>`<button class="bigc ${S.side===k?"on":""}" data-side="${k}">${csi(i,38)}<span><b>${t}</b><small>${d}</small></span></button>`).join("")}</div>`}
+  else if(n===1){title=fam()?"What care fits?":"What do you do?";sub="Pick one or more. You can change this any time.";body=`<div class="big">${RT.map(([k,t,d,i])=>`<button class="bigc ${S.types.includes(k)?"on":""}" data-ty="${k}">${csi(i,38)}<span><b>${t}</b><small>${d}</small></span></button>`).join("")}</div>`}
+  else if(n===2){title="About you";sub=fam()?"Carers see your postcode, not your street.":"Families see your postcode, not your street.";body=`<label class="fld">First name</label><input id="nm" maxlength="30" value="${esc(S.name)}"><label class="fld">Postcode</label><input id="pc" maxlength="10" value="${esc(S.pc)}"><label class="fld">Country</label><select id="co">${["Australia","United Kingdom","Ireland","New Zealand","Canada","United States","Germany","Netherlands","France","Other"].map(c=>`<option ${c===S.co?"selected":""}>${c}</option>`).join("")}</select>`+(fam()?`<label class="fld">How old are your children? Tap to add. No names.</label><div class="chips">${[0,1,2,3,4,5,6,7,8,9,10,11,12].map(a=>`<button class="chip" data-a="${a}">${a}</button>`).join("")}</div><div class="mut" id="ak">${S.ages.length?"Ages: "+S.ages.join(", "):"None added"} <a href="#" id="cl">clear</a></div>`:`<label class="fld">Your rate per hour (AUD)</label><input id="rt" type="number" min="15" max="120" value="${S.rate}">`)}
+  else{const sec=ss[n-3];title=sec.title;sub=sec.note;body=`<div class="tiles">${sec.picks.map(p=>`<button class="tile ${isOn(p)?"on":""}" data-p="${p.id}">${csi(p.icon,30)}<span>${p.label}</span>${isOn(p)?'<em>&#10003;</em>':""}</button>`).join("")}</div>`+sec.picks.filter(p=>A.open===p.id).map(p=>`<div class="opts"><div class="mut">${p.home[0]==="langs"?"Which languages":p.home[0]==="country"?"Which country":p.label}</div><div class="chips">${opts(p).map(o=>`<button class="chip ${chipOn(p,o)?"on":""}" data-o="${esc(o)}" data-pp="${p.id}">${esc(o)}</button>`).join("")}</div></div>`).join("")}
+  R.innerHTML=`<div class="authwrap"><div class="card wiz"><div class="bar">${Array.from({length:total()},(_,i)=>`<i class="${i<=n?"on":""}"></i>`).join("")}</div><div class="wh">${bun()}<a href="#" id="sk">Skip for now</a></div><h2>${title}</h2><div class="mut">${sub}</div>${body}<div class="err" id="er">${esc(S.err)}</div><div class="row" style="margin-top:14px">${n>0?'<button class="btn ghost" id="bk">Back</button>':""}<button class="btn" id="go" style="flex:1">${last?"Finish":"Next"}</button></div></div></div>`;
+  $("#sk").onclick=e=>{e.preventDefault();save(true)};
+  if($("#bk"))$("#bk").onclick=()=>{S.err="";grab();S.step--;draw()};
+  $("#go").onclick=()=>{S.err="";grab();if(n===0&&!S.side)return fail("Pick one to go on");if(n===1&&!S.types.length)return fail("Pick at least one");if(n===2){if(!S.name.trim())return fail("Add your first name");if(!S.pc.trim())return fail("Add your postcode")}if(last)return save(false);S.step++;draw()};
+  R.querySelectorAll("[data-side]").forEach(b=>b.onclick=()=>{S.side=b.dataset.side;S.types=[];draw()});
+  R.querySelectorAll("[data-ty]").forEach(b=>b.onclick=()=>{const k=b.dataset.ty,i=S.types.indexOf(k);i<0?S.types.push(k):S.types.splice(i,1);draw()});
+  R.querySelectorAll("[data-a]").forEach(b=>b.onclick=()=>{grab();if(S.ages.length<8){S.ages.push(+b.dataset.a);draw()}});
+  if($("#cl"))$("#cl").onclick=e=>{e.preventDefault();grab();S.ages=[];draw()};
+  R.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{tap(ss[n-3].picks.find(p=>p.id===b.dataset.p));draw()});
+  R.querySelectorAll("[data-o]").forEach(b=>b.onclick=()=>{chip(ss[n-3].picks.find(p=>p.id===b.dataset.pp),b.dataset.o);draw()});
+  function grab(){if($("#nm"))S.name=$("#nm").value;if($("#pc"))S.pc=$("#pc").value;if($("#co"))S.co=$("#co").value;if($("#rt"))S.rate=+$("#rt").value||30}};
  draw();
- $("#rl").onclick=e=>{const k=e.target.dataset.k;if(!k)return;role=k;$("#rl").querySelectorAll(".chip").forEach(c=>c.classList.toggle("on",c.dataset.k===k));draw()};
- const save=async skip=>{const name=$("#nm").value.trim()||"Member",pc=$("#pc").value.trim(),co=$("#co").value;if(!skip&&!pc)return $("#er").textContent="Add your postcode";if(bad(name))return $("#er").textContent="No emails or numbers please";
-  $("#go").disabled=true;try{await saveProfile({side:role==="family"?"family":"carer",name,postcode:pc,country:co,role,ages,rate:+($("#rt")?.value||0)});await boot()}catch(x){$("#go").disabled=false;$("#er").textContent="Could not save: "+x.code}};
- $("#go").onclick=()=>save(false);$("#sk").onclick=e=>{e.preventDefault();save(true)};
 }
 async function saveProfile(o){
  const ref=doc(db,"profiles",me.uid),cur=(await getDoc(ref)).data()||{};
  const card={...(cur.card||{})};
- if(o.role){card.careTypes=[o.side==="family"?"nanny":CT(o.role)];card.maxDistanceKm=card.maxDistanceKm||15;card.auPairHost={country:o.country||"Australia"};
-  if(o.side==="family"){card.kids=o.ages.slice(0,8).map(a=>({ageYears:a}));card.ageGroups=[...new Set(o.ages.map(a=>a<1?"newborn":a<2?"infant":a<4?"toddler":a<6?"preschool":"school"))]}else if(o.role!=="aupair"&&o.rate>0)card.rate=o.rate}
- if(o.card)Object.assign(card,o.card);
- const next={side:o.side||cur.side,displayName:o.name??cur.displayName,postcode:o.postcode??cur.postcode,card,looking:cur.looking||{musts:{},prefs:{}},updatedAt:serverTimestamp()};
+ if(o.types){card.careTypes=o.types;card.maxDistanceKm=card.maxDistanceKm||15;card.auPairHost={country:o.country||"Australia"};
+  if(o.side==="family"){card.kids=o.ages.slice(0,8).map(a=>({ageYears:a}));card.ageGroups=[...new Set(o.ages.map(a=>a<1?"newborn":a<2?"infant":a<4?"toddler":a<6?"preschool":"school"))]}else if(o.rate>0&&!(o.types.length===1&&o.types[0]==="au_pair"))card.rate=o.rate}
+ if(o.card)for(const [k,v] of Object.entries(o.card)){if(v===null||v===undefined)delete card[k];else card[k]=v}
+ const lk=JSON.parse(JSON.stringify(cur.looking||{musts:{},prefs:{}}));lk.musts=lk.musts||{};lk.prefs=lk.prefs||{};
+ if(o.looking)for(const g of ["musts","prefs"])for(const [k,v] of Object.entries(o.looking[g]||{})){if(v===null)delete lk[g][k];else lk[g][k]=v}
+ const next={side:o.side||cur.side,displayName:o.name??cur.displayName,postcode:o.postcode??cur.postcode,card,looking:lk,updatedAt:serverTimestamp()};
  for(const k of ["photoUrl","about","level","learningPlan"])if(cur[k]!==undefined)next[k]=cur[k];
  if(o.about!==undefined)next.about=o.about.slice(0,300);
  if(!next.postcode)next.postcode="";
@@ -85,17 +146,57 @@ function shell(skip){
 const loading=el=>el.innerHTML='<div class="spin"></div>';
 const avatar=p=>`<div class="ph">${esc((p.first||"?")[0])}</div>`;
 
+const FILES="https://caresits-files.placenciailse.workers.dev",PHOTO={};
+async function photoUrl(key){if(!key)return"";if(PHOTO[key]!==undefined)return PHOTO[key];try{const t=await auth.currentUser.getIdToken();const r=await fetch(FILES+"/v1/link",{method:"POST",headers:{authorization:"Bearer "+t,"content-type":"application/json"},body:JSON.stringify({op:"get",key,ownerUid:me.uid})});const j=await r.json();PHOTO[key]=j.url||""}catch{PHOTO[key]=""}return PHOTO[key]}
+function scoreP(p){let s=55;const why=[],mine=prof.types||[],both=mine.filter(t=>p.types.includes(t));
+ if(both.length){s+=15;why.push("You both want "+both[0].replace("_"," "))}
+ if(p.pc&&prof.pc&&p.pc===prof.pc){s+=15;why.push("Same postcode "+p.pc)}else if(p.pc&&prof.pc&&p.pc.slice(0,3)===prof.pc.slice(0,3)){s+=10;why.push("Close by, postcode "+p.pc)}else s+=4;
+ const mc=prof.card||{},pc=p.card||{},bud=mc.budgetMax;
+ if(prof.side==="family"&&p.rate&&bud&&p.rate<=bud){s+=10;why.push("Rate fits your budget")}else s+=5;
+ const lg=(mc.languages||[]).filter(l=>(pc.languages||[]).includes(l));if(lg.length){s+=5;why.push("You both speak "+lg[0])}
+ for(const [k,lead] of [["routineStyle","Same approach: "],["activities","You both enjoy "],["personality","Same style: "],["tasks","Help with "]]){const c=(mc[k]||[]).filter(v=>(pc[k]||[]).includes(v));if(c.length){s+=Math.min(6,c.length*3);why.push(lead+c.join(", ").toLowerCase())}}
+ if(mc.cooking&&pc.cooking){s+=2;why.push("Cooking is a match")}if(mc.drives&&pc.drives){s+=2;why.push("Driving licence is a match")}
+ if((mc.pets&&pc.petsOk)||(mc.petsOk&&pc.pets)){s+=2;why.push("Fine with pets")}
+ return{s:Math.min(99,s),why}}
+const ring=pct=>`<svg viewBox="0 0 36 36" width="70" height="70"><circle cx="18" cy="18" r="15" fill="none" stroke="#f6cbd3" stroke-width="4"/><circle cx="18" cy="18" r="15" fill="none" stroke="#C2345B" stroke-width="4" stroke-linecap="round" stroke-dasharray="${(pct*.942).toFixed(1)} 94.2" transform="rotate(-90 18 18)"/><text x="18" y="22.2" text-anchor="middle" font-size="11.5" font-weight="800" fill="#2D2A35">${pct}</text></svg>`;
+let dmode="deck";
 /* ---------- discover ---------- */
 async function discover(el){
- el.innerHTML=`<h1>${prof.side==="family"?"Find your carer":"Find families"}</h1>${hearts.onMe.length?`<div class="panel" style="background:var(--blush);border:0"><b>${hearts.onMe.length} ${hearts.onMe.length===1?"person":"people"} hearted you.</b> Say hi in Messages.</div>`:""}<div class="chips" id="f"></div><div id="l"></div>`;
+ el.innerHTML=`<div class="dhead"><h1>${prof.side==="family"?"Find your carer":"Find families"}</h1><div class="seg" id="sg"><button data-v="deck" class="${dmode==="deck"?"on":""}">Deck</button><button data-v="list" class="${dmode==="list"?"on":""}">List</button></div></div>${hearts.onMe.length?`<div class="panel" style="background:var(--blush);border:0"><b>${hearts.onMe.length} ${hearts.onMe.length===1?"person":"people"} hearted you.</b> Say hi in Messages.</div>`:""}<div class="chips" id="f"></div><div id="l"></div>`;
  const seen={};const types=prof.types.length?prof.types:["nanny"];
  const want=prof.side==="family"?["nanny","babysitter","au_pair"]:["nanny","babysitter","au_pair"].filter(t=>types.includes(t));
  const opp=prof.side==="family"?"carer":"family";
  loading($("#l"));
- const cur={},more={};const pull=async()=>{for(const t of (prof.side==="family"?types:want)){if(more[t]===false)continue;try{const s=await getDocs(query(collection(db,"profiles"),where("side","==",opp),where("card.careTypes","array-contains",t),...(cur[t]?[startAfter(cur[t])]:[]),limit(60)));s.forEach(d=>{if(d.id!==me.uid)seen[d.id]=person(d.id,d.data())});cur[t]=s.docs[s.docs.length-1];more[t]=s.size===60}catch(e){more[t]=false}}};
+ const cur={},more={};const pull=async()=>{for(const t of (prof.side==="family"?["nanny","babysitter","au_pair"]:want)){if(more[t]===false)continue;try{const s=await getDocs(query(collection(db,"profiles"),where("side","==",opp),where("card.careTypes","array-contains",t),...(cur[t]?[startAfter(cur[t])]:[]),limit(60)));s.forEach(d=>{if(d.id!==me.uid)seen[d.id]=person(d.id,d.data())});cur[t]=s.docs[s.docs.length-1];more[t]=s.size===60}catch(e){more[t]=false}}};
  await pull();
  let list=Object.values(seen),flt="all";const anyMore=()=>Object.values(more).some(v=>v===true);
- const draw=()=>{const f=$("#f");f.innerHTML=["all",...new Set(list.flatMap(p=>p.types))].map(t=>`<button class="chip ${flt===t?"on":""}" data-f="${t}">${t==="all"?"Everyone":label(t)}</button>`).join("");
+ let ix=0;
+ const deckDraw=()=>{
+  $("#f").innerHTML="";
+  const L=list.map(p=>({p,...scoreP(p)})).sort((a,b)=>b.s-a.s),x=L[ix];
+  if(!x){$("#l").innerHTML=`<div class="empty">${bun()}<h3>${L.length?"That is everyone for now":"Nobody yet"}</h3><p>${L.length?"New people show here as they join.":"Invite a friend. Bun is waiting."}</p>${L.length?'<button class="btn" id="again">See them again</button>':""}</div>`;if($("#again"))$("#again").onclick=()=>{ix=0;deckDraw()};return}
+  const p=x.p,keys=[p.photo,...(p.gallery||[])].filter(Boolean),label=x.s>=90?"Perfect Pair":x.s>=80?"Great match":"Good match",au=p.types.includes("au_pair");let pi=0;
+  const role=p.side==="family"?"Family":(p.types[0]?label(p.types[0]):"Carer");
+  $("#l").innerHTML=`<div class="tdeck"><div class="tscroll" id="ts"><div class="thero" id="th"><div class="tdots" id="td">${keys.length>1?keys.map(()=>"<i></i>").join(""):""}</div><div class="tinitial">${esc(p.first[0])}</div><div class="tinfo"><div class="trow">${ring(x.s)}<div><span class="tlabel">${label}</span><h2>${esc(p.name)}</h2></div></div><div class="tribbon">${csi("pin",18)} ${p.pc?"Postcode "+esc(p.pc):"Near you"}${p.rate?" &middot; $"+p.rate+" an hour":""}${p.years?" &middot; "+p.years+" yrs":""}</div><div class="trow2">${p.types.map(t=>`<span class="pill">${label(t)}</span>`).join("")||`<span class="pill">${role}</span>`}<span class="tmoreh">Scroll for more &#8595;</span></div></div></div>
+  <div class="tmore"><h3>Why you match</h3>${x.why.length?x.why.map(w=>`<div class="why">${csi("check",20)}<span>${esc(w)}</span></div>`).join(""):'<p class="mut">Add more to your profile to see more reasons.</p>'}${(p.card&&p.card.headline)?`<h4>${esc(p.card.headline)}</h4>`:""}${p.about?`<p>${esc(p.about)}</p>`:""}${p.kids.length?`<p class="mut">Kids ${p.kids.join(", ")}</p>`:""}<div id="sx-${p.id}"></div>${keys.length>1?`<h3>Photos</h3>${keys.map((k,i)=>`<img class="tph" data-k="${esc(k)}" alt="">`).join("")}`:""}<div class="row"><button class="btn pink" data-m="${p.id}">Message</button></div></div></div>
+  <div class="tbtns"><button class="rb" id="px" aria-label="Pass">${csi("cross",26)}</button>${prof.side==="family"&&p.side==="carer"?`<button class="btn" id="bk" style="flex:1">Book ${esc(p.first)}</button>`:`<button class="btn" id="bk" style="flex:1">Say hi to ${esc(p.first)}</button>`}<button class="rb heart ${hearts.mine.has(p.id)?"on":""}" id="lk" aria-label="Heart"><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21C5 15.5 3 11.5 3 8.5C3 5.5 5.3 3.5 7.8 3.5C9.7 3.5 11.2 4.6 12 6.2C12.8 4.6 14.3 3.5 16.2 3.5C18.7 3.5 21 5.5 21 8.5C21 11.5 19 15.5 12 21Z"/></svg></button></div></div>`;
+  const th=$("#th"),dots=[...$("#td").children];
+  const setP=async()=>{dots.forEach((d,i)=>d.classList.toggle("on",i===pi));const u=await photoUrl(keys[pi]);if(u){th.style.backgroundImage=`url("${u}")`;th.classList.add("hasp")}};
+  setP();$("#l").querySelectorAll(".tph").forEach(async im=>{const u=await photoUrl(im.dataset.k);if(u)im.src=u});
+  fetch(API+"/stats?uid="+p.id).then(r=>r.json()).then(s=>{const t=document.getElementById("sx-"+p.id);if(t&&s&&s.done)t.innerHTML=`<span class="pill sun">${s.done} job${s.done>1?"s":""} done</span>`}).catch(()=>{});
+  const nextP=(like)=>{const el=$(".tdeck");el.style.transition="transform .2s,opacity .2s";el.style.transform=`translateX(${like?600:-600}px) rotate(${like?12:-12}deg)`;el.style.opacity="0";setTimeout(()=>{ix++;deckDraw()},200)};
+  const doLike=async ev=>{if(!hearts.mine.has(p.id)){await toggleHeart(p.id);if(ev&&ev.clientX)confetti(ev.clientX,ev.clientY)}nextP(true)};
+  let sx=null,dx=0,moved=false;
+  th.style.touchAction="pan-y";
+  th.onpointerdown=e=>{sx=e.clientX;dx=0;moved=false;th.setPointerCapture(e.pointerId)};
+  th.onpointermove=e=>{if(sx===null)return;dx=e.clientX-sx;if(Math.abs(dx)>8)moved=true;if(moved){const el=$(".tdeck");el.style.transition="none";el.style.transform=`translateX(${dx}px) rotate(${dx/30}deg)`}};
+  th.onpointerup=e=>{if(sx===null)return;const el=$(".tdeck");sx=null;if(dx>110)return doLike(e);if(dx<-110)return nextP(false);el.style.transition="transform .2s";el.style.transform="";if(!moved){const r=th.getBoundingClientRect();if(e.clientX-r.left<r.width/2){if(pi>0){pi--;setP()}}else if(pi<keys.length-1){pi++;setP()}}};
+  th.onpointercancel=()=>{sx=null;const el=$(".tdeck");el.style.transform=""};
+  $("#px").onclick=()=>nextP(false);$("#lk").onclick=doLike;
+  $("#bk").onclick=()=>prof.side==="family"&&p.side==="carer"?bookForm(p):openChat(p);
+  $("#l").querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>openChat(p));
+ };
+ const draw=()=>{if(dmode==="deck")return deckDraw();const f=$("#f");f.innerHTML=["all",...new Set(list.flatMap(p=>p.types))].map(t=>`<button class="chip ${flt===t?"on":""}" data-f="${t}">${t==="all"?"Everyone":label(t)}</button>`).join("");
   f.onclick=e=>{if(e.target.dataset.f){flt=e.target.dataset.f;draw()}};
   const L=list.filter(p=>flt==="all"||p.types.includes(flt)).sort((a,b)=>(a.pc===prof.pc?-1:0)-(b.pc===prof.pc?-1:0)||a.name.localeCompare(b.name));
   $("#l").innerHTML=L.length?`<div class="grid">${L.map(card).join("")}</div>${anyMore()?`<button class="btn" id="mo" style="margin:20px auto;display:block">Show more</button>`:""}`:`<div class="empty">${bun()}<h3>Nobody yet</h3><p>Invite a friend. Bun is waiting.</p></div>`;
@@ -106,6 +207,7 @@ async function discover(el){
   list.forEach(async p=>{const s=await fetch(API+"/stats?uid="+p.id).then(r=>r.json()).catch(()=>null);const t=document.getElementById("s-"+p.id);if(t&&s)t.innerHTML=s.done?`<span class="pill sun">${s.done} job${s.done>1?"s":""} done</span>`+((s.done+s.cancelled)?`<span class="pill sky">${Math.round(s.done/(s.done+s.cancelled)*100)}% completed</span>`:""):""})};
  const card=p=>`<div class="person"><div class="ph">${esc(p.first[0])}</div><div class="pb"><h3>${esc(p.name)}</h3><div>${p.types.map(t=>`<span class="pill">${label(t)}</span>`).join("")}</div><div class="mut">${p.pc?"Postcode "+esc(p.pc):""}${p.rate?" &middot; $"+p.rate+" an hour":""}${p.years?" &middot; "+p.years+" yrs":""}${p.kids.length?" &middot; Kids "+p.kids.join(", "):""}</div><div id="s-${p.id}"></div><div class="mut">${esc(p.about).slice(0,110)}</div>
   <div class="row"><button class="heart ${hearts.mine.has(p.id)?"on":""}" data-h="${p.id}" aria-label="Heart"><svg width="24" height="24"><use href="#i-heart"/></svg></button><button class="btn sm pink" data-m="${p.id}">Message</button>${prof.side==="family"&&p.side==="carer"?`<button class="btn sm" data-b="${p.id}">Book</button>`:""}</div></div></div>`;
+ $("#sg").onclick=e=>{const v=e.target.dataset.v;if(v&&v!==dmode){dmode=v;$("#sg").querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));ix=0;draw()}};
  draw();
 }
 async function toggleHeart(other){const ref=doc(db,"profiles",other,"hearts",me.uid);if(hearts.mine.has(other)){hearts.mine.delete(other);await deleteDoc(ref).catch(()=>{})}else{hearts.mine.add(other);await setDoc(ref,{at:serverTimestamp()}).catch(()=>toast("Could not heart"));notify(other,"heart","Open Messages to say hi.")}}
@@ -194,7 +296,9 @@ function meView(el){
  el.innerHTML=`<h1>Me</h1><div class="panel"><div class="row" style="margin:0"><div class="ph" style="width:72px;aspect-ratio:1;border-radius:50%;font-size:34px">${esc(prof.first[0])}</div><div><h3>${esc(prof.name)}</h3><div class="mut">${esc(me.email||"")}</div></div></div><div id="st" style="margin-top:8px"></div></div>
  <div class="panel"><label class="fld">First name</label><input id="nm" value="${esc(prof.name)}" maxlength="30"><label class="fld">Postcode</label><input id="pc" value="${esc(prof.pc)}" maxlength="10">${fam?`<label class="fld">Kids ages, separated by commas. No names.</label><input id="ak" value="${esc(prof.kids.join(", "))}">`:`<label class="fld">Rate per hour</label><input id="rt" type="number" value="${prof.rate||""}"><label class="fld">Years with children</label><input id="yr" type="number" value="${prof.years||0}">`}<label class="fld">About you</label><textarea id="ab" rows="3" maxlength="300">${esc(prof.about)}</textarea><div class="err" id="er"></div><button class="btn" id="sv" style="width:100%">Save</button></div>
  ${fam?"":`<div class="panel"><b>Get paid</b><p class="mut">Set up payouts with Stripe. You keep 100 percent of your rate. Note: your first payout can take longer while Stripe checks your account.</p><button class="btn sm" id="po">Set up payouts</button></div>`}
+ <button class="btn ghost" id="pk" style="width:100%;margin-bottom:10px">Change what I am asking for</button>
  <button class="btn ghost" id="lo" style="width:100%">Log out</button>`;
+ if($("#pk"))$("#pk").onclick=()=>setupView(true);
  fetch(API+"/stats?uid="+me.uid).then(r=>r.json()).then(s=>{$("#st").innerHTML=`<span class="pill sun">${s.done} jobs done</span><span class="pill sky">${s.done+s.cancelled?Math.round(s.done/(s.done+s.cancelled)*100)+"% completed":"New here"}</span>${s.strikes?`<span class="pill">${s.strikes} strike${s.strikes>1?"s":""}${s.status==="paused"?" (paused)":s.status==="closed"?" (closed)":""}</span>`:""}`}).catch(()=>{});
  $("#sv").onclick=async()=>{const nm=$("#nm").value.trim(),ab=$("#ab").value.trim();if(bad(nm+" "+ab))return $("#er").textContent="No emails or phone numbers";const card={};if(fam){card.kids=($("#ak").value.match(/\d+/g)||[]).slice(0,8).map(a=>({ageYears:+a}))}else{if(+$("#rt").value>0)card.rate=+$("#rt").value;card.experienceYears=Math.max(0,Math.min(60,+$("#yr").value||0))}
   try{await saveProfile({name:nm,postcode:$("#pc").value.trim(),about:ab,card});await loadProf();toast("Saved");shell()}catch(e){$("#er").textContent="Could not save: "+e.code}};
@@ -203,7 +307,7 @@ function meView(el){
  $("#lo").onclick=()=>signOut(auth);
 }
 
-async function loadProf(){const s=await getDoc(doc(db,"profiles",me.uid));prof=s.exists()?person(me.uid,s.data()):null;return prof}
+let rawProf=null;async function loadProf(){const s=await getDoc(doc(db,"profiles",me.uid));rawProf=s.exists()?s.data():null;prof=s.exists()?person(me.uid,s.data()):null;return prof}
 async function boot(){await loadProf();if(!prof||!prof.side)return setupView();await loadHearts();shell()}
 {const q=new URLSearchParams(location.search).get("pay");if(q){history.replaceState(null,"",location.pathname);setTimeout(()=>toast(q==="done"?"Done. Thank you.":q==="cancel"?"Payment cancelled. No charge.":"Please finish setup"),1500)}}
 onAuthStateChanged(auth,async u=>{me=u;if(!u){if(unsub){unsub();unsub=null}return authView(location.hash==="#signup"?"signup":"login")}try{await boot()}catch(e){R.innerHTML=`<div class="empty">${bun()}<h3>Something went wrong</h3><p>${esc(e.code||e.message)}</p><button class="btn" onclick="location.reload()">Try again</button></div>`}});
