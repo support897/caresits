@@ -48,6 +48,7 @@ struct RdRoot: View {
         case "door": RdDoor()
         case "email": RdEmail()
         case "caretype": RdCareType()
+        case "ask": RdAsk()
         case "sw": RdSetupWho()
         case "sa": RdSetupAbout()
         case "ss": RdSetupStyle()
@@ -58,7 +59,7 @@ struct RdRoot: View {
         case "finding": RdFinding()
         case "famhome": RdFamHome()
         case "carhome": RdCarHome()
-        case "deck": if RdLive.signedIn { RdLiveDeck() } else { RdDeck() }
+        case "deck": if RdLive.signedIn { RdTinderDeck() } else { RdDeck() }
         case "profile": RdProfile()
         case "myprofile": RdLiveProfile()
         case "person": RdLivePersonView()

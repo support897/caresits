@@ -57,9 +57,9 @@ struct RdRole: View {
     @EnvironmentObject var st: RdStore
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            RdBigTitle(text: "Who are you?", sub: "Pick one. You can switch later.")
-            RdBigChoice(icon: "home", title: "Family", sub: "I want care for my children", fill: RdC.lav) { st.isFamily = true; st.go("door") }
-            RdBigChoice(icon: "nanny", title: "Carer", sub: "Nanny, babysitter or au pair", fill: RdC.blush) { st.isFamily = false; st.go("door") }
+            RdBigTitle(text: "What brings you here?", sub: "Pick one. You can switch later.")
+            RdBigChoice(icon: "home", title: "I am looking for care", sub: "Nanny, babysitter or au pair for my children", fill: RdC.lav) { st.isFamily = true; st.go("door") }
+            RdBigChoice(icon: "nanny", title: "I give care", sub: "I am a nanny, babysitter or au pair", fill: RdC.blush) { st.isFamily = false; st.go("door") }
             Spacer()
         }
     }
@@ -138,7 +138,7 @@ struct RdCareType: View {
     @EnvironmentObject var st: RdStore
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            RdHeader(title: st.isFamily ? "What care fits?" : "What do you do?")
+            RdHeader(title: st.isFamily ? "What care fits?" : "What do you do?", trailing: AnyView(Button { RdLive.saveSetup(st); st.root(st.isFamily ? "famhome" : "carhome") } label: { Text("Skip for now").font(RdF.bold(14)).foregroundColor(RdC.ras) }.buttonStyle(.plain)))
             RdMuted(text: st.isFamily ? "Pick one or more. You can change this any time." : "Pick one or more. You can change this any time.").padding(.horizontal, 20).padding(.bottom, 8)
             RdCareOpt(role: "nanny", sub: "Regular care at home")
             RdCareOpt(role: "babysitter", sub: "Evenings and weekends")
@@ -181,7 +181,7 @@ struct RdSetupWho: View {
     }
     var body: some View {
         let r = st.setupRole
-        RdStepFrame(title: "About you", step: 6, next: r == "aupair" ? "visacheck" : "sa", nextLabel: r == "aupair" ? "Next" : "Finish", onNext: { RdLive.saveSetup(st) }, finish: r != "aupair") {
+        RdStepFrame(title: "About you", step: 6, next: r == "aupair" ? "visacheck" : "ask", nextLabel: "Next", onNext: { RdLive.saveSetup(st) }, finish: false) {
             if r == "aupair" {
                 RdLabel(title: "Which country are you from?", sub: "Pick from the list. Families can find you by country.")
                 RdSelChips(items: RdVisaBy.homeList, multi: false, sel: homeBinding)
@@ -396,5 +396,20 @@ struct RdFinding: View {
                 st.root(st.isFamily ? "famhome" : "carhome")
             }.padding(.horizontal, 20).padding(.bottom, 30)
         }.padding(.horizontal, 20)
+    }
+}
+
+
+/// Sign up questions with icons: swimming, Montessori, pets, cooking, au pair living and more.
+/// Reuses the real asking (AskingView), so every tick is saved to the profile and matches on both sides.
+struct RdAsk: View {
+    @EnvironmentObject var st: RdStore
+    var body: some View {
+        let fam = st.isFamily
+        let au = st.pickedCare == "aupair"
+        VStack(spacing: 0) {
+            RdHeader(title: fam ? (au ? "Your au pair" : "Your ideal carer") : (au ? "Au pair life" : "Your ideal family"), trailing: AnyView(Button { st.root(fam ? "famhome" : "carhome") } label: { Text("Skip for now").font(RdF.bold(14)).foregroundColor(RdC.ras) }.buttonStyle(.plain)))
+            AskingView(sideOverride: fam ? "family" : "carer", auPairOverride: au, auOnly: au, onFinish: { st.root(fam ? "famhome" : "carhome") })
+        }
     }
 }

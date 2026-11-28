@@ -112,13 +112,23 @@ struct AskingView: View {
     @State private var saveErr = ""
     @State private var chain: Task<Void, Never>? = nil
     @Environment(\.dismiss) private var dismiss
-    var side: String { s.me?.side ?? "family" }
+    /// Sign up use: the setup flow passes the side, au pair and a finish action, because the profile may not be loaded yet.
+    var sideOverride: String? = nil
+    var auPairOverride: Bool? = nil
+    var auOnly: Bool = false
+    var onFinish: (() -> Void)? = nil
+    var side: String { sideOverride ?? s.me?.side ?? "family" }
 
     /// One step at a time, then Next. The au pair step stands only when this person is after au pair
     /// care: the family picked au pair among its care types, or the carer offers au pair work.
     /// The card key careTypes holds the pick (au_pair). Otherwise only the other steps show.
-    var wantsAuPair: Bool { (s.me?.services ?? []).contains("au_pair") }
-    var steps: [PickSection] { Asking.sections(side).filter { $0.id != "aupair" || wantsAuPair } }
+    var wantsAuPair: Bool { auPairOverride ?? (s.me?.services ?? []).contains("au_pair") }
+    var steps: [PickSection] {
+        let all = Asking.sections(side).filter { $0.id != "aupair" || wantsAuPair }
+        // An au pair (or a family after an au pair only) sees the au pair step first, then the rest.
+        if auOnly, let au = all.first(where: { $0.id == "aupair" }) { return [au] + all.filter { $0.id != "aupair" } }
+        return all
+    }
 
     var body: some View {
         let secs = steps
@@ -142,7 +152,7 @@ struct AskingView: View {
                 if min(step, secs.count - 1) < secs.count - 1 {
                     BigButton(title: "Next") { withAnimation { step += 1 } }.frame(maxWidth: 200).accessibilityIdentifier("asking-next")
                 } else {
-                    BigButton(title: "Finish") { dismiss() }.frame(maxWidth: 200).accessibilityIdentifier("asking-finish")
+                    BigButton(title: "Finish") { if let f = onFinish { f() } else { dismiss() } }.frame(maxWidth: 200).accessibilityIdentifier("asking-finish")
                 }
             }.padding(.horizontal, 20)
         }.padding(.vertical, 16).padding(.bottom, 100) }

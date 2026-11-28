@@ -576,7 +576,7 @@ struct RdVisaCheck: View {
                 }
                 RdCard(tint: RdC.pale) { RdMuted(text: "Families can choose au pairs with an approved visa, or already living in the country.") }
             }
-            RdBottomBar { RdCta(title: "Finish") { RdLive.saveSetup(st); st.root("carhome") } }
+            RdBottomBar { RdCta(title: "Next") { RdLive.saveSetup(st); st.go("ask") } }
         }
     }
 }
