@@ -163,9 +163,14 @@ function scoreP(p){let s=55;const why=[],mine=prof.types||[],both=mine.filter(t=
  return{s:Math.min(99,s),why}}
 const ring=pct=>`<svg viewBox="0 0 36 36" width="70" height="70"><circle cx="18" cy="18" r="15" fill="none" stroke="#f6cbd3" stroke-width="4"/><circle cx="18" cy="18" r="15" fill="none" stroke="#C2345B" stroke-width="4" stroke-linecap="round" stroke-dasharray="${(pct*.942).toFixed(1)} 94.2" transform="rotate(-90 18 18)"/><text x="18" y="22.2" text-anchor="middle" font-size="11.5" font-weight="800" fill="#2D2A35">${pct}</text></svg>`;
 let dmode="deck";
+const VF=JSON.parse(localStorage.getItem("csvf")||"{}");
+const visaOk=p=>{if(prof.side!=="family"||!p.types.includes("au_pair"))return true;const v=((p.card||{}).auPair||{}).visaNotes||"";if(VF.ready&&v!=="Visa approved"&&v!=="I live there already")return false;if(VF.inc&&v!=="I live there already")return false;return true};
+function loadLeaflet(){return new Promise(r=>{if(window.L)return r();const c=document.createElement("link");c.rel="stylesheet";c.href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";document.head.appendChild(c);const j=document.createElement("script");j.src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";j.onload=r;document.head.appendChild(j)})}
+const GEO=JSON.parse(localStorage.getItem("csgeo")||"{}");let geoLast=0;
+async function geoPc(pc){if(!pc)return null;if(GEO[pc]!==undefined)return GEO[pc];const w=geoLast+1100-Date.now();if(w>0)await new Promise(r=>setTimeout(r,w));geoLast=Date.now();try{const j=await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=au&postalcode="+encodeURIComponent(pc)).then(r=>r.json());GEO[pc]=j[0]?[+j[0].lat,+j[0].lon]:null}catch{return null}localStorage.setItem("csgeo",JSON.stringify(GEO));return GEO[pc]}
 /* ---------- discover ---------- */
 async function discover(el){
- el.innerHTML=`<div class="dhead"><h1>${prof.side==="family"?"Find your carer":"Find families"}</h1><div class="seg" id="sg"><button data-v="deck" class="${dmode==="deck"?"on":""}">Deck</button><button data-v="list" class="${dmode==="list"?"on":""}">List</button></div></div>${(()=>{const c=prof.card||{};return!["personality","routineStyle","activities","languages","tasks"].some(k=>(c[k]||[]).length)&&!["drives","ownCar","cooking","pets","petsOk"].some(k=>c[k])})()?`<div class="panel"><b>Tell us what matters to you</b><p class="mut">Tap what you want, like swimming, Montessori or pets. Your matches get better.</p><button class="btn sm" id="pk2">Choose now</button></div>`:""}${hearts.onMe.length?`<div class="panel" style="background:var(--blush);border:0"><b>${hearts.onMe.length} ${hearts.onMe.length===1?"person":"people"} hearted you.</b> Say hi in Messages.</div>`:""}<div class="chips" id="f"></div><div id="l"></div>`;
+ el.innerHTML=`<div class="dhead"><h1>${prof.side==="family"?"Find your carer":"Find families"}</h1><div class="seg" id="sg"><button data-v="deck" class="${dmode==="deck"?"on":""}">Deck</button><button data-v="map" class="${dmode==="map"?"on":""}">Map</button><button data-v="list" class="${dmode==="list"?"on":""}">List</button></div></div>${(()=>{const c=prof.card||{};return!["personality","routineStyle","activities","languages","tasks"].some(k=>(c[k]||[]).length)&&!["drives","ownCar","cooking","pets","petsOk"].some(k=>c[k])})()?`<div class="panel"><b>Tell us what matters to you</b><p class="mut">Tap what you want, like swimming, Montessori or pets. Your matches get better.</p><button class="btn sm" id="pk2">Choose now</button></div>`:""}${hearts.onMe.length?`<div class="panel" style="background:var(--blush);border:0"><b>${hearts.onMe.length} ${hearts.onMe.length===1?"person":"people"} hearted you.</b> Say hi in Messages.</div>`:""}<div class="chips" id="f"></div><div id="l"></div>`;
  const seen={};const types=prof.types.length?prof.types:["nanny"];
  const want=prof.side==="family"?["nanny","babysitter","au_pair"]:["nanny","babysitter","au_pair"].filter(t=>types.includes(t));
  const opp=prof.side==="family"?"carer":"family";
@@ -176,7 +181,7 @@ async function discover(el){
  let ix=0;
  const deckDraw=()=>{
   $("#f").innerHTML="";
-  const L=list.map(p=>({p,...scoreP(p)})).sort((a,b)=>b.s-a.s),x=L[ix];
+  const L=list.filter(visaOk).map(p=>({p,...scoreP(p)})).sort((a,b)=>b.s-a.s),x=L[ix];
   if(!x){$("#l").innerHTML=`<div class="empty">${bun()}<h3>${L.length?"That is everyone for now":"Nobody yet"}</h3><p>${L.length?"New people show here as they join.":"Invite a friend. Bun is waiting."}</p>${L.length?'<button class="btn" id="again">See them again</button>':""}</div>`;if($("#again"))$("#again").onclick=()=>{ix=0;deckDraw()};return}
   const p=x.p,keys=[p.photo,...(p.gallery||[])].filter(Boolean),lbl=x.s>=90?"Perfect Pair":x.s>=80?"Great match":"Good match",au=p.types.includes("au_pair");let pi=0;
   const role=p.side==="family"?"Family":(p.types[0]?label(p.types[0]):"Carer");
@@ -199,9 +204,19 @@ async function discover(el){
   $("#bk").onclick=()=>prof.side==="family"&&p.side==="carer"?bookForm(p):openChat(p);
   $("#l").querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>openChat(p));
  };
- const draw=()=>{if(dmode==="deck")return deckDraw();const f=$("#f");f.innerHTML=["all",...new Set(list.flatMap(p=>p.types))].map(t=>`<button class="chip ${flt===t?"on":""}" data-f="${t}">${t==="all"?"Everyone":label(t)}</button>`).join("");
+ const mapDraw=async()=>{
+  $("#f").innerHTML="";$("#l").innerHTML='<div id="cmap" style="height:calc(100dvh - 200px);min-height:420px;border-radius:24px;border:2px solid var(--line);z-index:0"></div><p class="mut" id="mp">Finding people near you...</p>';
+  await loadLeaflet();if(dmode!=="map")return;
+  const mp=L.map("cmap").setView([-27.47,153.02],11);L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:"&copy; OpenStreetMap"}).addTo(mp);
+  const pts=[],mine=await geoPc(prof.pc);if(mine){mp.setView(mine,12);L.circleMarker(mine,{radius:9,color:"#2D2A35",fillColor:"#2D2A35",fillOpacity:1}).addTo(mp).bindTooltip("You")}
+  window.__csopen=id=>{const p=list.find(x=>x.id===id);if(!p)return;prof.side==="family"&&p.side==="carer"?bookForm(p):openChat(p)};
+  let n=0;for(const p of list.filter(visaOk).slice(0,40)){if(dmode!=="map")return;const c=await geoPc(p.pc);if(!c)continue;n++;const jit=(((p.id.charCodeAt(0)+p.id.charCodeAt(1))%10)-5)*0.0006;const ll=[c[0]+jit,c[1]-jit];pts.push(ll);
+   L.marker(ll).addTo(mp).bindPopup(`<b>${esc(p.name)}</b><br>${p.types.map(label).join(", ")||"Family"}${p.rate?" &middot; $"+p.rate+"/hr":""}<br>Postcode ${esc(p.pc)}<br><button style="margin-top:6px;padding:6px 12px;border:0;border-radius:99px;background:#C2345B;color:#fff;font-weight:700;cursor:pointer" onclick="__csopen('${p.id}')">${prof.side==="family"&&p.side==="carer"?"Book":"Say hi"}</button>`);
+   if(pts.length>1)mp.fitBounds(pts,{padding:[40,40],maxZoom:14})}
+  const mpe=$("#mp");if(mpe)mpe.textContent=n?n+" people on the map. Tap a pin.":"Nobody on the map yet. Postcodes need to be Australian."};
+ const draw=()=>{if(dmode==="map")return mapDraw();if(dmode==="deck")return deckDraw();const f=$("#f");f.innerHTML=["all",...new Set(list.flatMap(p=>p.types))].map(t=>`<button class="chip ${flt===t?"on":""}" data-f="${t}">${t==="all"?"Everyone":label(t)}</button>`).join("");
   f.onclick=e=>{if(e.target.dataset.f){flt=e.target.dataset.f;draw()}};
-  const L=list.filter(p=>flt==="all"||p.types.includes(flt)).sort((a,b)=>(a.pc===prof.pc?-1:0)-(b.pc===prof.pc?-1:0)||a.name.localeCompare(b.name));
+  const L=list.filter(visaOk).filter(p=>flt==="all"||p.types.includes(flt)).sort((a,b)=>(a.pc===prof.pc?-1:0)-(b.pc===prof.pc?-1:0)||a.name.localeCompare(b.name));
   $("#l").innerHTML=L.length?`<div class="grid">${L.map(card).join("")}</div>${anyMore()?`<button class="btn" id="mo" style="margin:20px auto;display:block">Show more</button>`:""}`:`<div class="empty">${bun()}<h3>Nobody yet</h3><p>Invite a friend. Bun is waiting.</p></div>`;
   if($("#mo"))$("#mo").onclick=async()=>{$("#mo").textContent="Loading";await pull();list=Object.values(seen);draw()};
   $("#l").querySelectorAll("[data-h]").forEach(b=>b.onclick=async ev=>{await toggleHeart(b.dataset.h);confetti(ev.clientX,ev.clientY);draw()});
@@ -263,7 +278,7 @@ async function urgent(el){
 
 /* ---------- bookings ---------- */
 function bookForm(p){
- const d=new Date(Date.now()+864e5).toISOString().slice(0,10);
+ const sd=localStorage.getItem("csDate"),d=sd&&sd>new Date().toISOString().slice(0,10)?sd:new Date(Date.now()+864e5).toISOString().slice(0,10);
  R.insertAdjacentHTML("beforeend",`<div class="authwrap" id="bf" style="position:fixed;inset:0;z-index:50;background:rgba(45,42,53,.5)"><div class="card"><h2>Book ${esc(p.first)}</h2><label class="fld">Date</label><input id="bd" type="date" value="${d}"><label class="fld">From</label><input id="b1" type="time" value="09:00"><label class="fld">To</label><input id="b2" type="time" value="12:00"><label class="fld">Rate per hour</label><input id="br" type="number" value="${p.rate||35}"><div class="err" id="er"></div><button class="btn" id="bg" style="width:100%">Send request</button><p class="mut" style="text-align:center"><a href="#" id="bc">Cancel</a></p></div></div>`);
  $("#bc").onclick=e=>{e.preventDefault();$("#bf").remove()};
  $("#bg").onclick=async()=>{const date=$("#bd").value,from=$("#b1").value,to=$("#b2").value,rate=+$("#br").value;const m=t=>{const [h,mi]=t.split(":").map(Number);return h*60+mi};const hrs=Math.max(0,(m(to)-m(from))/60);
@@ -273,18 +288,27 @@ function bookForm(p){
   b.set(br,{familyUid:me.uid,carerUid:p.id,date,from,to,endAt:Timestamp.fromDate(end),rate,estimate:Math.round(rate*hrs*100)/100,recurring:"none",weekdays:[],childIds:[],shareAddress:false,state:"requested",createdBy:me.uid,createdAt:serverTimestamp()});
   try{await b.commit();notify(p.id,"booking","New booking request.",pid);$("#bf").remove();toast("Request sent");tab="bookings";shell()}catch(e){$("#er").textContent="Could not book: "+e.code}};
 }
+let calYM=new Date().toISOString().slice(0,7);
+function calDraw(box,rows,ppl){if(!box)return;const [y,m]=calYM.split("-").map(Number),first=new Date(y,m-1,1),days=new Date(y,m,0).getDate(),off=(first.getDay()+6)%7,today=new Date().toISOString().slice(0,10);
+ const by={};rows.filter(r=>!["cancelled","declined"].includes(r.state)).forEach(r=>(by[r.date]=by[r.date]||[]).push(r));
+ let cells="";for(let i=0;i<off;i++)cells+="<i></i>";for(let d=1;d<=days;d++){const k=calYM+"-"+String(d).padStart(2,"0"),b=by[k]||[];cells+=`<button class="cd ${b.length?"has":""} ${k===today?"td":""} ${k<today?"past":""}" data-d="${k}">${d}${b.length?`<s>${b.length}</s>`:""}</button>`}
+ box.innerHTML=`<div class="panel calp"><div class="row" style="margin:0;justify-content:space-between"><button class="btn sm ghost" id="cp">&lsaquo;</button><b>${first.toLocaleString("en-AU",{month:"long",year:"numeric"})}</b><button class="btn sm ghost" id="cn">&rsaquo;</button></div><div class="cg"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>${cells}</div><div class="mut" id="cinfo">${prof.side==="family"?"Tap a future day to choose your booking date, then pick a carer in Discover.":"Days with a number have bookings. Tap one to see it."}</div></div>`;
+ const mv=n=>{const d=new Date(y,m-1+n,1);calYM=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");calDraw(box,rows,ppl)};
+ $("#cp").onclick=()=>mv(-1);$("#cn").onclick=()=>mv(1);
+ box.querySelectorAll(".cd").forEach(b=>b.onclick=()=>{const k=b.dataset.d,l=by[k]||[];if(l.length){$("#cinfo").innerHTML=l.map(r=>{const o=ppl[r.carerUid===me.uid?r.familyUid:r.carerUid];return`<b>${esc(o?.name||"Member")}</b> ${esc(r.from)} to ${esc(r.to)} (${esc(r.state)})`}).join("<br>")}else if(prof.side==="family"&&k>=today){localStorage.setItem("csDate",k);box.querySelectorAll(".cd").forEach(x=>x.classList.toggle("pick",x===b));$("#cinfo").textContent="Date set to "+k+". Go to Discover and tap Book."}else $("#cinfo").textContent="Nothing booked."})}
 async function bookings(el){
  loading(el);const q1=await getDocs(query(collection(db,"relationships"),where(prof.side==="family"?"familyUid":"carerUid","==",me.uid)));
  const rows=[];for(const r of q1.docs){const s=await getDocs(collection(db,"relationships",r.id,"bookings")).catch(()=>null);(s?s.docs:[]).forEach(d=>rows.push({id:d.id,pid:r.id,...d.data()}))}
  rows.sort((a,b)=>(b.date+b.from).localeCompare(a.date+a.from));
  const ppl={};await Promise.all([...new Set(rows.map(r=>prof.side==="family"?r.carerUid:r.familyUid))].map(async i=>{const x=await getDoc(doc(db,"profiles",i)).catch(()=>null);if(x&&x.exists())ppl[i]=person(i,x.data())}));
  const pay={},req={};await Promise.all(rows.map(async r=>{const q=await fetch(API+"/pay/status?bookingId="+r.id).then(x=>x.json()).catch(()=>({}));pay[r.id]=q.status||"unpaid";req[r.id]=!!q.requested}));
- el.innerHTML=`<h1>Bookings</h1>`+(rows.length?rows.map(r=>{const car=r.carerUid===me.uid,o=ppl[car?r.familyUid:r.carerUid];return `<div class="panel"><div class="row" style="margin:0"><b>${esc(o?.name||"Member")}</b><span class="pill ${r.state==="accepted"?"sun":""}">${esc(r.state)}</span>${pay[r.id]!=="unpaid"?`<span class="pill sky">${pay[r.id]==="held"?(req[r.id]?"Payment requested":"Paid, held safely"):pay[r.id]==="disputed"?"Under review":pay[r.id]==="refunded"?"Refunded":pay[r.id]==="split"?"Part refunded":pay[r.id]==="late_cancel"?"Part refunded":"Paid out"}</span>`:""}</div><div class="mut">${esc(r.date)}, ${esc(r.from)} to ${esc(r.to)} &middot; $${r.rate} an hour, about $${Math.round(r.estimate)}${pay[r.id]==="unpaid"&&!car?` &middot; plus service and payment fee $${(Math.round(r.estimate*15)/100+1).toFixed(2)}`:""}</div><div class="row">
+ el.innerHTML=`<h1>Bookings</h1><div id="cal"></div>`+(rows.length?rows.map(r=>{const car=r.carerUid===me.uid,o=ppl[car?r.familyUid:r.carerUid];return `<div class="panel"><div class="row" style="margin:0"><b>${esc(o?.name||"Member")}</b><span class="pill ${r.state==="accepted"?"sun":""}">${esc(r.state)}</span>${pay[r.id]!=="unpaid"?`<span class="pill sky">${pay[r.id]==="held"?(req[r.id]?"Payment requested":"Paid, held safely"):pay[r.id]==="disputed"?"Under review":pay[r.id]==="refunded"?"Refunded":pay[r.id]==="split"?"Part refunded":pay[r.id]==="late_cancel"?"Part refunded":"Paid out"}</span>`:""}</div><div class="mut">${esc(r.date)}, ${esc(r.from)} to ${esc(r.to)} &middot; $${r.rate} an hour, about $${Math.round(r.estimate)}${pay[r.id]==="unpaid"&&!car?` &middot; plus service and payment fee $${(Math.round(r.estimate*15)/100+1).toFixed(2)}`:""}</div><div class="row">
   ${car&&r.state==="requested"?`<button class="btn sm" data-a="${r.id}|${r.pid}|accepted">Accept</button><button class="btn sm ghost" data-a="${r.id}|${r.pid}|declined">Decline</button>`:""}
   ${car&&pay[r.id]==="held"&&!req[r.id]?`<button class="btn sm pink" data-rq="${r.id}|${r.pid}">Request payment</button>`:""}${car&&req[r.id]&&pay[r.id]==="held"?`<span class="mut">Waiting for the family. It releases on its own in 24 hours.</span>`:""}
   ${["requested","accepted"].includes(r.state)?`<button class="btn sm ghost" data-a="${r.id}|${r.pid}|cancelled">Cancel</button>`:""}
   ${!car&&["accepted","completed"].includes(r.state)&&pay[r.id]==="unpaid"?`<button class="btn sm pink" data-p="${r.id}|${r.pid}">Pay now</button>`:""}
   ${!car&&pay[r.id]==="held"?`<button class="btn sm pink" data-rl="${r.id}|${r.pid}">Release to carer</button><button class="btn sm ghost" data-dp="${r.id}|${r.pid}">Report a problem</button>`:""}</div></div>`}).join(""):`<div class="empty">${bun()}<h3>No bookings yet</h3></div>`);
+ calDraw(el.querySelector("#cal"),rows,ppl);
  el.querySelectorAll("[data-a]").forEach(b=>b.onclick=async()=>{const [id,pid,to]=b.dataset.a.split("|");if(to==="cancelled"&&!confirm("Cancel this booking?\nFamily cancels 24 hours or more before: care price refunded, fee kept.\nFamily cancels under 24 hours: half the care price refunded, fee kept.\nCarer cancels: family gets everything back."))return;const u={state:to};if(to!=="cancelled"&&to!=="completed")u.decidedAt=serverTimestamp();
   try{const bt=writeBatch(db);bt.update(doc(db,"relationships",pid,"bookings",id),u);if(to==="accepted"){const rl=await getDoc(doc(db,"relationships",pid));if(rl.data()?.state==="pending")bt.update(doc(db,"relationships",pid),{state:"contact",contactBy:me.uid})}await bt.commit();
    const r=rows.find(x=>x.id===id);notify(r.familyUid===me.uid?r.carerUid:r.familyUid,"booking","Booking "+to+".",pid);if(to==="completed"||to==="cancelled")api("/stats/event",{pairId:pid,bookingId:id});if(to==="cancelled"){const rf=await api("/pay/cancel",{pairId:pid,bookingId:id}).catch(()=>({}));if(rf.status==="refunded")toast("Cancelled. Refund on its way");else if(rf.status==="late_cancel")toast("Cancelled. Part refund, carer keeps half")}bookings(el)}catch(e){toast("Could not update")}});
@@ -295,14 +319,29 @@ async function bookings(el){
 }
 
 /* ---------- me ---------- */
+const COUNTRIES=["Australia","New Zealand","United Kingdom","Ireland","Canada","United States","Germany","Netherlands","France","Italy","Spain"];
+const VISAS=["Visa approved","I live there already","Need to check"];
+function visaPanel(){const box=$("#vz");if(!box)return;const au=prof.types.includes("au_pair");if(!au)return;
+ if(prof.side==="family"){box.innerHTML=`<div class="panel"><b>Au pair visa check</b><p class="mut">Choose who you see. Visa never changes the match score.</p><div class="chips"><button class="chip ${VF.ready?"on":""}" data-vf="ready">Visa ready only</button><button class="chip ${VF.inc?"on":""}" data-vf="inc">Already in the country only</button></div></div>`;
+  box.querySelectorAll("[data-vf]").forEach(b=>b.onclick=()=>{VF[b.dataset.vf]=!VF[b.dataset.vf];localStorage.setItem("csvf",JSON.stringify(VF));b.classList.toggle("on",!!VF[b.dataset.vf])});return}
+ const ap={...(prof.card.auPair||{})};ap.destinations=ap.destinations||[];
+ const draw=()=>{box.innerHTML=`<div class="panel"><b>Your countries and visas</b><p class="mut">Your picks decide which families see you first. Visa never changes your match score.</p><label class="fld">Where you live now</label><select id="vh">${["",...NAT_C()].map(c=>`<option ${c===(ap.homeCountry||"")?"selected":""}>${c}</option>`).join("")}</select><label class="fld">Countries you would go to (up to 3)</label><div class="chips">${COUNTRIES.map(c=>`<button class="chip ${ap.destinations.includes(c)?"on":""}" data-vd="${c}">${c}</button>`).join("")}</div><label class="fld">Your visa</label><div class="chips">${VISAS.map(v=>`<button class="chip ${ap.visaNotes===v?"on":""}" data-vv="${v}">${v}</button>`).join("")}</div><div class="err" id="ve"></div><button class="btn sm" id="vs" style="margin-top:10px">Save countries and visa</button></div>`;
+  $("#vh").onchange=e=>{ap.homeCountry=e.target.value};
+  box.querySelectorAll("[data-vd]").forEach(b=>b.onclick=()=>{const c=b.dataset.vd,i=ap.destinations.indexOf(c);if(i>=0)ap.destinations.splice(i,1);else if(ap.destinations.length<3)ap.destinations.push(c);else return;draw()});
+  box.querySelectorAll("[data-vv]").forEach(b=>b.onclick=()=>{ap.visaNotes=ap.visaNotes===b.dataset.vv?"":b.dataset.vv;draw()});
+  $("#vs").onclick=async()=>{try{await saveProfile({card:{auPair:{...ap}}});await loadProf();toast("Saved");visaPanel()}catch(e){$("#ve").textContent="Could not save: "+(e.code||e.message)}}};
+ draw()}
+const NAT_C=()=>["Australia","Germany","France","United Kingdom","Ireland","New Zealand","Canada","United States","Brazil","Colombia","Philippines","Italy","Spain","Netherlands","Japan","Korea","China","India","Thailand","Vietnam","South Africa","Other"];
 function meView(el){
  const fam=prof.side==="family";
  el.innerHTML=`<h1>Me</h1><div class="panel"><div class="row" style="margin:0"><div class="ph" style="width:72px;aspect-ratio:1;border-radius:50%;font-size:34px">${esc(prof.first[0])}</div><div><h3>${esc(prof.name)}</h3><div class="mut">${esc(me.email||"")}</div></div></div><div id="st" style="margin-top:8px"></div></div>
  <div class="panel"><label class="fld">First name</label><input id="nm" value="${esc(prof.name)}" maxlength="30"><label class="fld">Postcode</label><input id="pc" value="${esc(prof.pc)}" maxlength="10">${fam?`<label class="fld">Kids ages, separated by commas. No names.</label><input id="ak" value="${esc(prof.kids.join(", "))}">`:`<label class="fld">Rate per hour</label><input id="rt" type="number" value="${prof.rate||""}"><label class="fld">Years with children</label><input id="yr" type="number" value="${prof.years||0}">`}<label class="fld">About you</label><textarea id="ab" rows="3" maxlength="300">${esc(prof.about)}</textarea><div class="err" id="er"></div><button class="btn" id="sv" style="width:100%">Save</button></div>
  ${fam?"":`<div class="panel"><b>Get paid</b><p class="mut">Set up payouts with Stripe. You keep 100 percent of your rate. Note: your first payout can take longer while Stripe checks your account.</p><button class="btn sm" id="po">Set up payouts</button></div>`}
+ <div id="vz"></div>
  <button class="btn ghost" id="pk" style="width:100%;margin-bottom:10px">What matters to me (change my picks)</button>
  <button class="btn ghost" id="lo" style="width:100%">Log out</button>`;
  if($("#pk"))$("#pk").onclick=()=>setupView(true);
+ visaPanel();
  fetch(API+"/stats?uid="+me.uid).then(r=>r.json()).then(s=>{$("#st").innerHTML=`<span class="pill sun">${s.done} jobs done</span><span class="pill sky">${s.done+s.cancelled?Math.round(s.done/(s.done+s.cancelled)*100)+"% completed":"New here"}</span>${s.strikes?`<span class="pill">${s.strikes} strike${s.strikes>1?"s":""}${s.status==="paused"?" (paused)":s.status==="closed"?" (closed)":""}</span>`:""}`}).catch(()=>{});
  $("#sv").onclick=async()=>{const nm=$("#nm").value.trim(),ab=$("#ab").value.trim();if(bad(nm+" "+ab))return $("#er").textContent="No emails or phone numbers";const card={};if(fam){card.kids=($("#ak").value.match(/\d+/g)||[]).slice(0,8).map(a=>({ageYears:+a}))}else{if(+$("#rt").value>0)card.rate=+$("#rt").value;card.experienceYears=Math.max(0,Math.min(60,+$("#yr").value||0))}
   try{await saveProfile({name:nm,postcode:$("#pc").value.trim(),about:ab,card});await loadProf();toast("Saved");shell()}catch(e){$("#er").textContent="Could not save: "+e.code}};
