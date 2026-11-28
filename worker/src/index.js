@@ -1,7 +1,7 @@
 import { createRemoteJWKSet, jwtVerify, SignJWT, importPKCS8 } from "jose";
 const PROJECT = "caresits-812a0";
 const JWKS = createRemoteJWKSet(new URL("https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com"));
-const SITE = "https://caresitters-web.placenciailse.workers.dev";
+const SITE = "https://caresits.xyz";
 const FEE = 0.15, FEE_FIXED = 100, TERMS_V = "2026-11-25"; // fee = 15% of care + A$1: covers worst-case Stripe card + payout cost plus Caresitters 10%
 const feeFor = (care) => Math.round(care * FEE) + FEE_FIXED;
 const cors = { "access-control-allow-origin": "*", "access-control-allow-headers": "authorization,content-type", "access-control-allow-methods": "GET,POST,OPTIONS" };
