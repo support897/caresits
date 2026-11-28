@@ -9,6 +9,7 @@
  <div><h1>Care that <em>clicks.</em></h1><p>Nannies. Babysitters. Au pairs. Near you. Today.</p>
  <form class="qs" id="qs" autocomplete="on"><div class="qh">Join in 10 seconds</div>
  <button type="button" class="btn ghost" id="qg" style="width:100%"><svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.5l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.6 5.9c4.4-4.1 7-10.1 7-17.6z"/><path fill="#FBBC05" d="M10.5 28.7a14.500 14.500 0 010-9.400l-7.900-6.100a24 24 0 000 21.600z"/><path fill="#34A853" d="M24 48c6.500 0 11.900-2.100 15.900-5.800l-7.600-5.900c-2.100 1.400-4.900 2.300-8.300 2.300-6.300 0-11.600-4.100-13.500-9.800l-7.900 6.100C6.500 42.600 14.600 48 24 48z"/></svg>Continue with Google</button>
+ <button type="button" class="btn ghost" id="qa" style="width:100%;margin-top:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M16.4 12.6c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.2-2.8.8-3.5.8s-1.800-.8-3-.8c-1.500 0-3 .9-3.800 2.300-1.600 2.800-.4 7 1.200 9.300.8 1.100 1.700 2.400 2.900 2.300 1.200 0 1.600-.7 3-.7s1.800.7 3 .7 2-1.100 2.800-2.200c.9-1.300 1.200-2.500 1.300-2.600-.1 0-2.500-1-2.500-3.800zM14.100 5.800c.6-.8 1.100-1.800.9-2.800-.9 0-2 .6-2.700 1.400-.6.700-1.100 1.700-1 2.700 1 .1 2.100-.5 2.800-1.300z"/></svg> Continue with Apple</button>
  <div class="or">or use email</div>
  <input id="qe" type="email" placeholder="Email" autocomplete="email" required><input id="qp" type="password" placeholder="Password (8+ characters)" autocomplete="new-password" required minlength="8">
  <button class="btn" id="qb" style="width:100%">Create my account</button><div class="qerr" id="qerr"></div>
@@ -33,7 +34,7 @@
 <script>const io=new IntersectionObserver(e=>e.forEach(x=>x.isIntersecting&&x.target.classList.add('in')),{threshold:.15});document.querySelectorAll('.reveal').forEach(e=>io.observe(e))</script>
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import {getAuth,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,signInWithPopup,GoogleAuthProvider} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import {getAuth,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,signInWithPopup,GoogleAuthProvider,OAuthProvider} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 const auth=getAuth(initializeApp({apiKey:"AIzaSyDbi4vqhN6I7Zz7_-6-ZQSZzd3MnQiYBCE",authDomain:"caresits-812a0.firebaseapp.com",projectId:"caresits-812a0",appId:"1:908064912971:web:88858e5fa8751f66b23fce"}));
 const $=i=>document.getElementById(i);let su=true;const go=()=>location.href="/app.html";
 onAuthStateChanged(auth,u=>{if(u){document.querySelectorAll('a[href="/app.html#login"],a[href="/app.html#signup"]').forEach(a=>{a.textContent="Open app";a.href="/app.html"})}});
@@ -42,5 +43,6 @@ const er=x=>$("qerr").textContent=msg[x.code]??x.code;
 $("qsw").onclick=e=>{e.preventDefault();su=!su;$("qb").textContent=su?"Create my account":"Log in";$("qsw").textContent=su?"Log in":"Sign up";document.querySelector(".qh").textContent=su?"Join in 10 seconds":"Welcome back";$("qp").autocomplete=su?"new-password":"current-password"};
 $("qs").onsubmit=async e=>{e.preventDefault();$("qerr").textContent="";$("qb").disabled=true;try{su?await createUserWithEmailAndPassword(auth,$("qe").value.trim(),$("qp").value):await signInWithEmailAndPassword(auth,$("qe").value.trim(),$("qp").value);go()}catch(x){$("qb").disabled=false;er(x)}};
 $("qg").onclick=async()=>{try{await signInWithPopup(auth,new GoogleAuthProvider());go()}catch(x){er(x)}};
+$("qa").onclick=async()=>{try{const p=new OAuthProvider("apple.com");p.addScope("email");p.addScope("name");await signInWithPopup(auth,p);go()}catch(x){er(x)}};
 </script>
 </body></html>
