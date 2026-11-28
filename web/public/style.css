@@ -135,3 +135,6 @@ input:focus,select:focus,textarea:focus{border-color:var(--ras)}
 .calp{padding:14px}.cg{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:10px 0;text-align:center}.cg span{font-size:12px;font-weight:700;color:var(--mut)}.cg i{display:block}
 .cd{position:relative;aspect-ratio:1;border:2px solid transparent;border-radius:14px;background:#fff;font:inherit;font-weight:700;cursor:pointer;color:var(--ink);padding:0}.cd.past{color:#bbb}.cd.td{border-color:var(--ink)}.cd.has{background:var(--blush)}.cd.pick{background:var(--ras);color:#fff}.cd s{position:absolute;right:3px;bottom:2px;font-size:10px;text-decoration:none;background:var(--ras);color:#fff;border-radius:9px;padding:0 5px}
 .leaflet-container{font-family:inherit}
+
+.cg .cd{aspect-ratio:auto;height:44px;min-height:0;box-shadow:none;margin:0;width:100%;font-size:15px}
+.calp .cnv{width:40px;height:40px;border-radius:50%;border:2px solid var(--line);background:#fff;font-size:22px;line-height:1;cursor:pointer;color:var(--ink);padding:0;box-shadow:none}
